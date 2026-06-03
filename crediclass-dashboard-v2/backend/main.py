@@ -5,9 +5,10 @@ import os
 from dotenv import load_dotenv
 from config import settings
 from sheets import get_service, read_all_rows, get_headers
-from models import GrupoResumido, GrupoComHistorico, ResponseMessage
+from models import GrupoResumido, GrupoComHistorico, GrupoUpdate, ResponseMessage
 from typing import List
 from fastapi import HTTPException
+from sheets import update_group
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -208,6 +209,79 @@ async def obter_grupo(grupo_id: str):
         raise
     except Exception as e:
         print(f"❌ Erro ao buscar grupo: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Etapa 5: Atualizar grupo
+@app.put("/api/grupos/{grupo_id}", response_model=ResponseMessage)
+async def atualizar_grupo(grupo_id: str, grupo_data: GrupoUpdate):
+    """Atualiza dados de um grupo existente"""
+    try:
+        # Verificar se grupo existe
+        rows = read_all_rows()
+        partes_id = grupo_id.split('-', 1)
+        if len(partes_id) != 2:
+            raise HTTPException(status_code=400, detail="Formato de ID inválido. Use: ADMINISTRADORA-GRUPO")
+
+        admin_search = partes_id[0].strip()
+        grupo_search = partes_id[1].strip()
+
+        grupo_existe = False
+        for row in rows:
+            if row.get('Administradora', '').strip() == admin_search and row.get('Grupo', '').strip() == grupo_search:
+                grupo_existe = True
+                break
+
+        if not grupo_existe:
+            raise HTTPException(status_code=404, detail=f"Grupo {grupo_id} não encontrado")
+
+        # Preparar dados para atualizar
+        dados_para_atualizar = {}
+
+        if grupo_data.dados_gerais:
+            # Mapear dados gerais para nomes de colunas do Google Sheets
+            mapeamento = {
+                'administradora': 'Administradora',
+                'grupo': 'Grupo',
+                'tipo_bem': 'Tipo de Bem',
+                'primeira_assembleia': 'Primeira Assembleia',
+                'data_termino': 'Data Término',
+                'prazo_grupo': 'Prazo do Grupo',
+                'prazo_restante': 'Prazo Restante',
+                'menor_credito': 'Menor Crédito',
+                'maior_credito': 'Maior Crédito',
+                'taxa_administracao': 'Taxa Administração',
+                'fundo_reserva': 'Fundo Reserva',
+                'prestacao_integral': 'Prestação Integral',
+                'categoria': 'Categoria',
+                'status': 'Status'
+            }
+
+            for campo_json, valor in grupo_data.dados_gerais.items():
+                if valor is not None and campo_json in mapeamento:
+                    coluna = mapeamento[campo_json]
+                    dados_para_atualizar[coluna] = str(valor)
+
+        # Se tem histórico, adicionar aos dados (será tratado em Etapas posteriores)
+        if grupo_data.historico:
+            # Por enquanto, apenas registrar que há histórico
+            print(f"⚠️  Histórico recebido para {grupo_id}: será processado em etapas posteriores")
+
+        # Executar atualização
+        sucesso = update_group(grupo_id, dados_para_atualizar)
+
+        if sucesso:
+            return ResponseMessage(
+                status="success",
+                message=f"Grupo {grupo_id} atualizado com sucesso",
+                data={"grupo_id": grupo_id}
+            )
+        else:
+            raise HTTPException(status_code=500, detail=f"Erro ao atualizar grupo {grupo_id}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Erro ao atualizar grupo: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 def _safe_float(value: str) -> float:

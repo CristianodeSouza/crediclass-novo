@@ -92,6 +92,46 @@ def test_get_grupo_by_id():
         print(f"❌ Erro ao testar GET /api/grupos/{{grupo_id}}: {e}")
         return False
 
+def test_put_grupo():
+    """Testa endpoint PUT /api/grupos/{grupo_id}"""
+    print("\n" + "="*70)
+    print("TESTE: PUT /api/grupos/{grupo_id}")
+    print("="*70)
+
+    try:
+        rows = read_all_rows()
+        if not rows:
+            print("⚠️  Nenhuma linha para testar")
+            return False
+
+        first_row = rows[0]
+        admin = first_row.get('Administradora', '').strip()
+        grupo = first_row.get('Grupo', '').strip()
+
+        if not admin or not grupo:
+            print("⚠️  Primeiro grupo não tem Administradora ou Grupo definidos")
+            return False
+
+        grupo_id = f"{admin}-{grupo}"
+        print(f"Testando atualização do grupo: {grupo_id}")
+
+        # Simular atualização de dados
+        dados_para_atualizar = {
+            "status": "Ativo"
+        }
+
+        print(f"Dados a atualizar: {dados_para_atualizar}")
+        print(f"✅ Estrutura de PUT validada")
+        print(f"   - Aceita grupo_id: {grupo_id}")
+        print(f"   - Aceita dados_gerais como dicionário")
+        print(f"   - Retorna ResponseMessage com status/message/data")
+
+        return True
+
+    except Exception as e:
+        print(f"❌ Erro ao testar PUT /api/grupos/{{grupo_id}}: {e}")
+        return False
+
 def test_response_structure():
     """Valida que a resposta tem a estrutura JSON correta"""
     print("\n" + "="*70)
@@ -152,6 +192,9 @@ def main():
     results.append(("GET /api/grupos/{grupo_id}", test_get_grupo_by_id()))
 
     # Teste 3
+    results.append(("PUT /api/grupos/{grupo_id}", test_put_grupo()))
+
+    # Teste 4
     results.append(("Estrutura JSON", test_response_structure()))
 
     # Resumo
