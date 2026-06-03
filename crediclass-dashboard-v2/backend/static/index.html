@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crediclass Dashboard Grupos V2</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container-fluid">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+            <div class="container-fluid">
+                <span class="navbar-brand mb-0 h1">Crediclass Dashboard</span>
+                <span class="navbar-text text-light">Gerenciamento de Grupos</span>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <h1>Sistema de Gerenciamento de Grupos</h1>
+                    <p class="text-muted">Versão 2 - Desenvolvido do zero com FastAPI + Bootstrap</p>
+                </div>
+                <div class="col-md-4 d-flex gap-2 align-items-start pt-3">
+                    <button class="btn btn-primary" id="btnNovoGrupo">
+                        <i class="bi bi-plus-circle"></i> Novo Grupo
+                    </button>
+                    <button class="btn btn-outline-secondary" id="btnAtualizarDados">
+                        <i class="bi bi-arrow-clockwise"></i> Atualizar Dados
+                    </button>
+                </div>
+            </div>
+
+            <!-- Seção de Filtros -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <label for="filtroAdministradora" class="form-label">Filtrar por Administradora</label>
+                    <select class="form-select" id="filtroAdministradora">
+                        <option value="">Todas as Administradoras</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="buscaGrupo" class="form-label">Buscar Grupo</label>
+                    <input type="text" class="form-control" id="buscaGrupo" placeholder="Digite número ou identificador">
+                </div>
+            </div>
+
+            <!-- Tabela de Grupos -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">Grupos Cadastrados</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Administradora</th>
+                                            <th>Grupo</th>
+                                            <th>Tipo de Bem</th>
+                                            <th>Menor Crédito</th>
+                                            <th>Maior Crédito</th>
+                                            <th>Prazo</th>
+                                            <th>Prestação Integral</th>
+                                            <th>Taxa Admin</th>
+                                            <th>Status</th>
+                                            <th>Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tabelaGrupos">
+                                        <tr>
+                                            <td colspan="10" class="text-center text-muted py-4">
+                                                Carregando grupos...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Edição/Criação -->
+    <div class="modal fade" id="modalGrupo" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Novo Grupo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        Modal de edição será implementada na Etapa 9
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
