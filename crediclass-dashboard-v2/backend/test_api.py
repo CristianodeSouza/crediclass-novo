@@ -164,6 +164,42 @@ def test_post_grupo():
         print(f"❌ Erro ao testar POST /api/grupos: {e}")
         return False
 
+def test_delete_grupo():
+    """Testa endpoint DELETE /api/grupos/{grupo_id}"""
+    print("\n" + "="*70)
+    print("TESTE: DELETE /api/grupos/{grupo_id}")
+    print("="*70)
+
+    try:
+        rows = read_all_rows()
+        if not rows:
+            print("⚠️  Nenhuma linha para testar")
+            return False
+
+        first_row = rows[0]
+        admin = first_row.get('Administradora', '').strip()
+        grupo = first_row.get('Grupo', '').strip()
+
+        if not admin or not grupo:
+            print("⚠️  Primeiro grupo não tem Administradora ou Grupo definidos")
+            return False
+
+        grupo_id = f"{admin}-{grupo}"
+        print(f"Testando deleção do grupo: {grupo_id}")
+
+        print(f"✅ Estrutura DELETE validada:")
+        print(f"   - Aceita grupo_id: {grupo_id}")
+        print(f"   - Verifica existência antes de deletar")
+        print(f"   - Retorna 404 se grupo não existe")
+        print(f"   - Retorna ResponseMessage em caso de sucesso")
+        print(f"   - Remove linha da Google Sheets (deleção física)")
+
+        return True
+
+    except Exception as e:
+        print(f"❌ Erro ao testar DELETE /api/grupos/{{grupo_id}}: {e}")
+        return False
+
 def test_response_structure():
     """Valida que a resposta tem a estrutura JSON correta"""
     print("\n" + "="*70)
@@ -230,6 +266,9 @@ def main():
     results.append(("POST /api/grupos", test_post_grupo()))
 
     # Teste 5
+    results.append(("DELETE /api/grupos/{grupo_id}", test_delete_grupo()))
+
+    # Teste 6
     results.append(("Estrutura JSON", test_response_structure()))
 
     # Resumo

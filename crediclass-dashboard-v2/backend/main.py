@@ -8,7 +8,7 @@ from sheets import get_service, read_all_rows, get_headers
 from models import GrupoResumido, GrupoComHistorico, GrupoUpdate, ResponseMessage
 from typing import List
 from fastapi import HTTPException
-from sheets import update_group, append_group
+from sheets import update_group, append_group, delete_group
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -367,6 +367,47 @@ async def criar_grupo(grupo_data: GrupoUpdate):
         raise
     except Exception as e:
         print(f"❌ Erro ao criar grupo: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Etapa 7: Deletar grupo
+@app.delete("/api/grupos/{grupo_id}", response_model=ResponseMessage)
+async def deletar_grupo(grupo_id: str):
+    """Deleta um grupo da planilha"""
+    try:
+        # Verificar se grupo existe
+        rows = read_all_rows()
+        partes_id = grupo_id.split('-', 1)
+        if len(partes_id) != 2:
+            raise HTTPException(status_code=400, detail="Formato de ID inválido. Use: ADMINISTRADORA-GRUPO")
+
+        admin_search = partes_id[0].strip()
+        grupo_search = partes_id[1].strip()
+
+        grupo_existe = False
+        for row in rows:
+            if row.get('Administradora', '').strip() == admin_search and row.get('Grupo', '').strip() == grupo_search:
+                grupo_existe = True
+                break
+
+        if not grupo_existe:
+            raise HTTPException(status_code=404, detail=f"Grupo {grupo_id} não encontrado")
+
+        # Executar deleção
+        sucesso = delete_group(grupo_id)
+
+        if sucesso:
+            return ResponseMessage(
+                status="success",
+                message=f"Grupo {grupo_id} deletado com sucesso",
+                data={"grupo_id": grupo_id}
+            )
+        else:
+            raise HTTPException(status_code=500, detail=f"Erro ao deletar grupo {grupo_id}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Erro ao deletar grupo: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 def _safe_float(value: str) -> float:
