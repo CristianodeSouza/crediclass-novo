@@ -49,8 +49,8 @@ Abra no navegador: `http://localhost:8000`
 - [x] Etapa 6: POST /api/grupos
 - [x] Etapa 7: DELETE /api/grupos/{grupo_id}
 - [x] Etapa 8: Frontend mínimo (tabela com carregamento de API)
-- [ ] Etapa 9: Modal com abas
-- [ ] Etapa 10: Salvar da modal
+- [x] Etapa 9: Modal com abas (Dados Gerais + Histórico 2024/2025/2026)
+- [ ] Etapa 10: Teste de ponta a ponta + Deploy Render
 
 ## Documentação
 

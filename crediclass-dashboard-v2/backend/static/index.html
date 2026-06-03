@@ -86,22 +86,164 @@
         </div>
     </div>
 
-    <!-- Modal de Edição/Criação -->
+    <!-- Modal de Edição/Criação com Abas -->
     <div class="modal fade" id="modalGrupo" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalTitle">Novo Grupo</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="alert alert-info">
-                        Modal de edição será implementada na Etapa 9
+                    <!-- Abas -->
+                    <ul class="nav nav-tabs mb-3" id="modalTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="tab-dados-gerais" data-bs-toggle="tab" data-bs-target="#painel-dados-gerais" type="button" role="tab">
+                                Dados Gerais
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-historico-2024" data-bs-toggle="tab" data-bs-target="#painel-historico-2024" type="button" role="tab">
+                                Histórico 2024
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-historico-2025" data-bs-toggle="tab" data-bs-target="#painel-historico-2025" type="button" role="tab">
+                                Histórico 2025
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="tab-historico-2026" data-bs-toggle="tab" data-bs-target="#painel-historico-2026" type="button" role="tab">
+                                Histórico 2026
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Conteúdo das Abas -->
+                    <div class="tab-content" id="modalTabsContent">
+                        <!-- Aba 1: Dados Gerais -->
+                        <div class="tab-pane fade show active" id="painel-dados-gerais" role="tabpanel">
+                            <form id="formDadosGerais">
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="inputAdministradora" class="form-label">Administradora *</label>
+                                        <input type="text" class="form-control" id="inputAdministradora" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="inputGrupo" class="form-label">Grupo *</label>
+                                        <input type="text" class="form-control" id="inputGrupo" required>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="inputTipoBem" class="form-label">Tipo de Bem</label>
+                                        <input type="text" class="form-control" id="inputTipoBem">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="inputCategoria" class="form-label">Categoria</label>
+                                        <input type="text" class="form-control" id="inputCategoria">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="inputMenorCredito" class="form-label">Menor Crédito</label>
+                                        <input type="number" class="form-control" id="inputMenorCredito" step="0.01">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="inputMaiorCredito" class="form-label">Maior Crédito</label>
+                                        <input type="number" class="form-control" id="inputMaiorCredito" step="0.01">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="inputPrazoGrupo" class="form-label">Prazo do Grupo (meses)</label>
+                                        <input type="number" class="form-control" id="inputPrazoGrupo">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="inputPrazoRestante" class="form-label">Prazo Restante (meses)</label>
+                                        <input type="number" class="form-control" id="inputPrazoRestante">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-4">
+                                        <label for="inputTaxaAdmin" class="form-label">Taxa Administração (%)</label>
+                                        <input type="number" class="form-control" id="inputTaxaAdmin" step="0.01">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="inputPrestacao" class="form-label">Prestação Integral</label>
+                                        <input type="number" class="form-control" id="inputPrestacao" step="0.01">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label for="inputFundoReserva" class="form-label">Fundo Reserva</label>
+                                        <input type="number" class="form-control" id="inputFundoReserva" step="0.01">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="inputPrimeiraAssembleia" class="form-label">Primeira Assembleia</label>
+                                        <input type="date" class="form-control" id="inputPrimeiraAssembleia">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="inputDataTermino" class="form-label">Data Término</label>
+                                        <input type="date" class="form-control" id="inputDataTermino">
+                                    </div>
+                                </div>
+
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label for="inputStatus" class="form-label">Status</label>
+                                        <select class="form-select" id="inputStatus">
+                                            <option value="Ativo">Ativo</option>
+                                            <option value="Inativo">Inativo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Aba 2: Histórico 2024 -->
+                        <div class="tab-pane fade" id="painel-historico-2024" role="tabpanel">
+                            <form id="formHistorico2024">
+                                <p class="text-muted mb-3">Adicione dados mensais do histórico de 2024</p>
+                                <div id="historico2024-container"></div>
+                                <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="adicionarMesHistorico(2024)">
+                                    + Adicionar Mês
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Aba 3: Histórico 2025 -->
+                        <div class="tab-pane fade" id="painel-historico-2025" role="tabpanel">
+                            <form id="formHistorico2025">
+                                <p class="text-muted mb-3">Adicione dados mensais do histórico de 2025</p>
+                                <div id="historico2025-container"></div>
+                                <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="adicionarMesHistorico(2025)">
+                                    + Adicionar Mês
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Aba 4: Histórico 2026 -->
+                        <div class="tab-pane fade" id="painel-historico-2026" role="tabpanel">
+                            <form id="formHistorico2026">
+                                <p class="text-muted mb-3">Adicione dados mensais do histórico de 2026</p>
+                                <div id="historico2026-container"></div>
+                                <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="adicionarMesHistorico(2026)">
+                                    + Adicionar Mês
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary">Salvar</button>
+                    <button type="button" class="btn btn-primary" id="btnSalvarGrupo" onclick="salvarGrupo()">Salvar</button>
                 </div>
             </div>
         </div>
