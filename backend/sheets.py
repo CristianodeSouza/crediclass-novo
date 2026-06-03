@@ -7,7 +7,7 @@ import json
 import os
 from typing import List, Dict, Optional, Tuple
 from google.oauth2.service_account import Credentials
-from google.api_python_client import discovery
+from googleapiclient import discovery
 from config import settings
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -168,6 +168,7 @@ def find_group_row(grupo_id: str) -> Optional[Tuple[int, Dict[str, any]]]:
 
 def append_group(data: dict) -> bool:
     """Insere nova linha na planilha"""
+    global _cached_data
     try:
         service = get_service()
         if not service:
@@ -206,6 +207,7 @@ def append_group(data: dict) -> bool:
 
 def update_group(grupo_id: str, data: dict) -> bool:
     """Atualiza linha do grupo na planilha"""
+    global _cached_data
     try:
         service = get_service()
         if not service:
@@ -253,6 +255,7 @@ def update_group(grupo_id: str, data: dict) -> bool:
 
 def delete_group(grupo_id: str) -> bool:
     """Deleta ou inativa linha do grupo"""
+    global _cached_data
     try:
         service = get_service()
         if not service:
