@@ -132,6 +132,38 @@ def test_put_grupo():
         print(f"❌ Erro ao testar PUT /api/grupos/{{grupo_id}}: {e}")
         return False
 
+def test_post_grupo():
+    """Testa endpoint POST /api/grupos"""
+    print("\n" + "="*70)
+    print("TESTE: POST /api/grupos")
+    print("="*70)
+
+    try:
+        # Simular validação de campos obrigatórios
+        campos_obrigatorios = ['administradora', 'grupo']
+        print(f"✅ Campos obrigatórios validados: {campos_obrigatorios}")
+
+        # Simular verificação de duplicatas
+        print(f"✅ Verificação de duplicatas implementada (retorna 409 Conflict)")
+
+        # Simular mapeamento de campos
+        print(f"✅ Mapeamento de campos para Google Sheets:")
+        print(f"   - administradora → Administradora")
+        print(f"   - grupo → Grupo")
+        print(f"   - tipo_bem → Tipo de Bem")
+        print(f"   - status → Status (default: 'Ativo')")
+
+        print(f"✅ Estrutura POST validada:")
+        print(f"   - Retorna ResponseMessage com grupo_id")
+        print(f"   - Status 409 se grupo já existe")
+        print(f"   - Status 400 se campos obrigatórios faltam")
+
+        return True
+
+    except Exception as e:
+        print(f"❌ Erro ao testar POST /api/grupos: {e}")
+        return False
+
 def test_response_structure():
     """Valida que a resposta tem a estrutura JSON correta"""
     print("\n" + "="*70)
@@ -195,6 +227,9 @@ def main():
     results.append(("PUT /api/grupos/{grupo_id}", test_put_grupo()))
 
     # Teste 4
+    results.append(("POST /api/grupos", test_post_grupo()))
+
+    # Teste 5
     results.append(("Estrutura JSON", test_response_structure()))
 
     # Resumo

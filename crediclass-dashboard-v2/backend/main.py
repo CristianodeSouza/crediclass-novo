@@ -8,7 +8,7 @@ from sheets import get_service, read_all_rows, get_headers
 from models import GrupoResumido, GrupoComHistorico, GrupoUpdate, ResponseMessage
 from typing import List
 from fastapi import HTTPException
-from sheets import update_group
+from sheets import update_group, append_group
 
 # Carregar variáveis de ambiente
 load_dotenv()
@@ -282,6 +282,91 @@ async def atualizar_grupo(grupo_id: str, grupo_data: GrupoUpdate):
         raise
     except Exception as e:
         print(f"❌ Erro ao atualizar grupo: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Etapa 6: Criar novo grupo
+@app.post("/api/grupos", response_model=ResponseMessage)
+async def criar_grupo(grupo_data: GrupoUpdate):
+    """Cria um novo grupo na planilha"""
+    try:
+        if not grupo_data.dados_gerais:
+            raise HTTPException(
+                status_code=400,
+                detail="dados_gerais é obrigatório para criar novo grupo"
+            )
+
+        # Validar campos obrigatórios
+        campos_obrigatorios = ['administradora', 'grupo']
+        for campo in campos_obrigatorios:
+            if campo not in grupo_data.dados_gerais or not grupo_data.dados_gerais[campo]:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Campo obrigatório ausente: {campo}"
+                )
+
+        # Verificar se grupo já existe
+        rows = read_all_rows()
+        admin_novo = str(grupo_data.dados_gerais.get('administradora', '')).strip()
+        grupo_novo = str(grupo_data.dados_gerais.get('grupo', '')).strip()
+
+        for row in rows:
+            if (row.get('Administradora', '').strip() == admin_novo and
+                row.get('Grupo', '').strip() == grupo_novo):
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Grupo {admin_novo}-{grupo_novo} já existe"
+                )
+
+        # Preparar dados para inserir
+        dados_para_inserir = {}
+
+        # Mapeamento de campos JSON para colunas do Google Sheets
+        mapeamento = {
+            'administradora': 'Administradora',
+            'grupo': 'Grupo',
+            'tipo_bem': 'Tipo de Bem',
+            'primeira_assembleia': 'Primeira Assembleia',
+            'data_termino': 'Data Término',
+            'prazo_grupo': 'Prazo do Grupo',
+            'prazo_restante': 'Prazo Restante',
+            'menor_credito': 'Menor Crédito',
+            'maior_credito': 'Maior Crédito',
+            'taxa_administracao': 'Taxa Administração',
+            'fundo_reserva': 'Fundo Reserva',
+            'prestacao_integral': 'Prestação Integral',
+            'categoria': 'Categoria',
+            'status': 'Status'
+        }
+
+        for campo_json, valor in grupo_data.dados_gerais.items():
+            if valor is not None and campo_json in mapeamento:
+                coluna = mapeamento[campo_json]
+                dados_para_inserir[coluna] = str(valor)
+
+        # Adicionar valor padrão para Status se não fornecido
+        if 'Status' not in dados_para_inserir:
+            dados_para_inserir['Status'] = 'Ativo'
+
+        # Executar inserção
+        sucesso = append_group(dados_para_inserir)
+
+        if sucesso:
+            grupo_id = f"{admin_novo}-{grupo_novo}"
+            return ResponseMessage(
+                status="success",
+                message=f"Grupo {grupo_id} criado com sucesso",
+                data={"grupo_id": grupo_id}
+            )
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="Erro ao criar novo grupo"
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ Erro ao criar grupo: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 def _safe_float(value: str) -> float:

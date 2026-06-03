@@ -46,7 +46,7 @@ Abra no navegador: `http://localhost:8000`
 - [x] Etapa 3: GET /api/grupos
 - [x] Etapa 4: GET /api/grupos/{grupo_id}
 - [x] Etapa 5: PUT /api/grupos/{grupo_id}
-- [ ] Etapa 6: POST /api/grupos
+- [x] Etapa 6: POST /api/grupos
 - [ ] Etapa 7: DELETE /api/grupos/{grupo_id}
 - [ ] Etapa 8: Frontend mínimo
 - [ ] Etapa 9: Modal com abas
