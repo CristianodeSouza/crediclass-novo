@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-31", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-32", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -85,6 +85,14 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('document.getElementById("screen-estudo").classList.contains("active")', app_js)
         self.assertIn("saveCurrentStudy().catch(() => setStudyState(\"error\"))", app_js)
         self.assertNotIn("Funcionalidade sera implementada na etapa correspondente.", app_js)
+
+    def test_estudo_financeiro_preserva_data_nascimento_conjuge(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('data_nascimento_conjuge: document.getElementById("viabilityNascimentoConjuge").value', app_js)
+        self.assertIn('data_nascimento_conjuge: currentStudy.payload.data_nascimento_conjuge', app_js)
+        self.assertIn('["Data nascimento conjuge", payload.data_nascimento_conjuge || "-"]', app_js)
+        self.assertIn('["Data nascimento conjuge", cliente.data_nascimento_conjuge || "-"]', app_js)
 
     def test_estudo_financeiro_exibe_metricas_historico_12_meses(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")

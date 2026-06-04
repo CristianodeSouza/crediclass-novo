@@ -157,6 +157,7 @@ class EstudoCliente(BaseModel):
     renda_total: float | None = Field(default=None, ge=0)
     parcela_desejada: float | None = Field(default=None, ge=0)
     data_nascimento: str = ""
+    data_nascimento_conjuge: str = ""
     estado_bem: str = ""
 
 
