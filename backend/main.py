@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from .config import get_settings
 from .estudos import create_estudo
 from .models import EstudoCreateResponse, EstudoRequest, GrupoDetalhe, GruposResponse, ViabilidadeRequest, ViabilidadeResponse
-from .sheets_client import clear_rows_cache, get_grupo, list_grupos, list_grupos_detalhe, normalize_header, read_sheet_headers, read_sheet_rows
+from .sheets_client import clear_rows_cache, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows
 from .viabilidade import analyze_viabilidade
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -48,24 +48,6 @@ def reload_data():
 
     logger.info("POST /api/reload recarregou total=%s", total)
     return {"success": True, "total": total}
-
-
-@app.get("/api/diagnostico/cabecalhos")
-def diagnostico_cabecalhos():
-    settings = get_settings()
-    if settings.environment != "production":
-        return JSONResponse(status_code=404, content={"success": False, "error": "Endpoint indisponivel"})
-    try:
-        headers = read_sheet_headers()
-    except Exception as error:
-        logger.exception("Erro ao diagnosticar cabecalhos")
-        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
-
-    return {
-        "total": len(headers),
-        "headers": [{"original": header, "normalizado": normalize_header(header)} for header in headers],
-        "primeira_linha": read_sheet_rows()[:1],
-    }
 
 
 @app.get("/api/grupos", response_model=GruposResponse)

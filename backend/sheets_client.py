@@ -40,6 +40,7 @@ FIELD_ALIASES = {
     ],
     "grupo": [
         "grupo",
+        "grup0",
         "grupos",
         "numero grupo",
         "numero do grupo",
@@ -54,20 +55,20 @@ FIELD_ALIASES = {
     "tipo_bem": ["tipo de bem", "tipo bem", "bem", "segmento", "categoria bem"],
     "credito_minimo": ["credito minimo", "menor credito", "credito min", "carta minima", "valor minimo"],
     "credito_maximo": ["credito maximo", "maior credito", "credito max", "carta maxima", "valor maximo"],
-    "taxa_adm": ["taxa administracao", "taxa adm", "taxa de administracao", "taxa administrativa", "tx adm", "tx administracao"],
-    "fundo_reserva": ["fundo reserva", "fundo de reserva"],
+    "taxa_adm": ["taxa administracao", "taxa adm", "taxa adm original", "taxa de administracao", "taxa administrativa", "tx adm", "tx administracao"],
+    "fundo_reserva": ["fundo reserva", "fundo de reserva", "fundo rsv"],
     "prazo_total": ["prazo total", "prazo do grupo", "prazo grupo"],
     "prazo_restante": ["prazo restante"],
     "primeira_assembleia": ["primeira assembleia", "1 assembleia", "1a assembleia"],
     "ultima_assembleia": ["ultima assembleia"],
     "data_termino": ["data termino", "data de termino", "termino"],
     "seguro_garantia": ["seguro garantia"],
-    "meia_parcela": ["meia parcela"],
+    "meia_parcela": ["meia parcela", "meia reduzida"],
     "lance_embutido": ["lance embutido"],
     "fgts": ["fgts", "fgts permitido"],
     "categoria": ["categoria"],
     "percentual_lance_embutido": ["percentual lance embutido", "lance embutido percentual", "lance embutido maximo"],
-    "percentual_lance_fixo": ["percentual lance fixo", "lance fixo"],
+    "percentual_lance_fixo": ["percentual lance fixo", "lance fixo", "lance quitacao"],
     "investidor": ["investidor"],
     "conservador": ["conservador"],
     "moderado": ["moderado"],
@@ -75,11 +76,11 @@ FIELD_ALIASES = {
     "super_agressivo": ["super agressivo", "superagressivo"],
     "parcela_reduzida": ["parcela reduzida"],
     "indice_correcao": ["indice correcao", "indice de correcao"],
-    "vencimento_parcela": ["vencimento parcela", "vencimento da parcela"],
+    "vencimento_parcela": ["vencimento parcela", "vencimento da parcela", "venc"],
     "vencimento_lance": ["vencimento lance", "vencimento do lance"],
     "regras_especiais": ["regras especiais"],
     "cadastrado_por": ["cadastrado por"],
-    "ultima_atualizacao": ["ultima atualizacao", "ultima atualizacao em"],
+    "ultima_atualizacao": ["ultima atualizacao", "ultima atualizacao em", "atualizacao de grupos", "data atualizacao"],
     "status": ["status"],
 }
 
@@ -156,13 +157,6 @@ def read_sheet_rows(force_reload: bool = False) -> list[dict[str, Any]]:
     _rows_cache["rows"] = rows
     _rows_cache["expires_at"] = now + CACHE_TTL_SECONDS
     return rows
-
-
-def read_sheet_headers() -> list[str]:
-    rows = read_sheet_rows()
-    if not rows:
-        return []
-    return list(rows[0].keys())
 
 
 def get_field(row: dict[str, Any], field: str) -> Any:

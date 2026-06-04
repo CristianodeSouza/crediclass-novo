@@ -32,11 +32,11 @@ class MapaGruposTest(unittest.TestCase):
     def test_row_to_grupo_accepts_sheet_header_variations(self):
         row = {
             "Consorciadora": "Porto Seguro",
-            "Nº Grupo": "901",
+            "Grup0": "901",
             "Segmento": "Imovel",
             "Carta Minima": "200.000,00",
             "Carta Maxima": "800.000,00",
-            "Tx Adm": "18%",
+            "Taxa Adm Original": "18%",
             "Prazo do Grupo": "180",
             "Status": "Ativo",
         }
