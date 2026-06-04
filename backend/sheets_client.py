@@ -41,6 +41,11 @@ FIELD_ALIASES = {
     "categoria": ["categoria"],
     "percentual_lance_embutido": ["percentual lance embutido", "lance embutido percentual", "lance embutido maximo"],
     "percentual_lance_fixo": ["percentual lance fixo", "lance fixo"],
+    "investidor": ["investidor"],
+    "conservador": ["conservador"],
+    "moderado": ["moderado"],
+    "agressivo": ["agressivo"],
+    "super_agressivo": ["super agressivo", "superagressivo"],
     "parcela_reduzida": ["parcela reduzida"],
     "indice_correcao": ["indice correcao", "indice de correcao"],
     "vencimento_parcela": ["vencimento parcela", "vencimento da parcela"],
@@ -235,6 +240,11 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
         "categoria": str(get_optional_field(row, "categoria")),
         "percentual_lance_embutido": parse_percent(get_optional_field(row, "percentual_lance_embutido")),
         "percentual_lance_fixo": parse_percent(get_optional_field(row, "percentual_lance_fixo")),
+        "investidor": parse_percent(get_optional_field(row, "investidor")),
+        "conservador": parse_percent(get_optional_field(row, "conservador")),
+        "moderado": parse_percent(get_optional_field(row, "moderado")),
+        "agressivo": parse_percent(get_optional_field(row, "agressivo")),
+        "super_agressivo": parse_percent(get_optional_field(row, "super_agressivo")),
         "parcela_reduzida": str(get_optional_field(row, "parcela_reduzida")),
         "indice_correcao": str(get_optional_field(row, "indice_correcao")),
         "vencimento_parcela": str(get_optional_field(row, "vencimento_parcela")),
@@ -250,6 +260,10 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
 
 def list_grupos() -> list[dict[str, Any]]:
     return [row_to_grupo(row) for row in read_sheet_rows()]
+
+
+def list_grupos_detalhe() -> list[dict[str, Any]]:
+    return [row_to_grupo_detalhe(row) for row in read_sheet_rows()]
 
 
 def get_grupo(grupo_id: str) -> dict[str, Any] | None:

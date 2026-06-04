@@ -39,6 +39,10 @@ const mapState = {
   lastLoadAt: null,
 };
 
+const viabilityState = {
+  lastResult: null,
+};
+
 let detailsModal = null;
 let detailsChart = null;
 
@@ -99,6 +103,11 @@ function parseNumberInput(value) {
   const text = String(value || "").trim();
   if (!text) return "";
   return text.replace(/\./g, "").replace(",", ".");
+}
+
+function toNumber(value) {
+  const parsed = Number(parseNumberInput(value));
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function getMapFilters() {
@@ -325,6 +334,129 @@ async function loadMapaGrupos() {
   }
 }
 
+function updateViabilityTotals() {
+  const fgts = toNumber(document.getElementById("viabilityFgtsTitular").value) + toNumber(document.getElementById("viabilityFgtsConjuge").value);
+  const renda = toNumber(document.getElementById("viabilityRendaTitular").value) + toNumber(document.getElementById("viabilityRendaConjuge").value);
+  document.getElementById("viabilityFgtsTotal").value = formatMoney(fgts);
+  document.getElementById("viabilityRendaTotal").value = formatMoney(renda);
+  return { fgts, renda };
+}
+
+function setViabilityState(state) {
+  document.getElementById("viabilityLoading").classList.toggle("d-none", state !== "loading");
+  document.getElementById("viabilityError").classList.toggle("d-none", state !== "error");
+  document.getElementById("viabilityEmpty").classList.toggle("d-none", state !== "empty");
+  document.getElementById("viabilityResults").classList.toggle("d-none", state !== "ready");
+}
+
+function collectViabilityPayload() {
+  const totals = updateViabilityTotals();
+  return {
+    objetivo: document.getElementById("viabilityObjetivo").value,
+    credito_desejado: toNumber(document.getElementById("viabilityCredito").value),
+    prazo_desejado: Number(document.getElementById("viabilityPrazoDesejado").value),
+    lance_proprio: toNumber(document.getElementById("viabilityLanceProprio").value),
+    fgts: totals.fgts,
+    renda_total: totals.renda,
+    parcela_desejada: toNumber(document.getElementById("viabilityParcela").value),
+    data_nascimento: document.getElementById("viabilityNascimento").value,
+    tipo_bem: "Imovel",
+  };
+}
+
+function validateViabilityPayload(payload) {
+  const required = [
+    ["credito_desejado", "Informe o credito desejado."],
+    ["prazo_desejado", "Informe o prazo desejado."],
+    ["lance_proprio", "Informe o lance proprio disponivel."],
+    ["renda_total", "Informe a renda total."],
+    ["parcela_desejada", "Informe a parcela maxima desejada."],
+  ];
+  const missing = required.find(([key]) => !payload[key]);
+  if (missing) {
+    showToast(missing[1], "warning");
+    return false;
+  }
+  return true;
+}
+
+function renderViabilityChecklist(checklist) {
+  document.querySelectorAll("#viabilityChecklist li").forEach((item) => {
+    const value = checklist?.[item.dataset.check];
+    item.classList.toggle("check-ok", value === true);
+    item.classList.toggle("check-fail", value === false);
+  });
+}
+
+function renderViabilitySummary(result) {
+  const items = result.melhores_grupos || [];
+  const administradoras = new Set(items.map((item) => item.administradora).filter(Boolean));
+  const top = items.filter((item) => item.afinidade >= 0.8).length;
+  const bestInstallment = items.reduce((best, item) => best === null || item.parcela_estimada < best ? item.parcela_estimada : best, null);
+  const maxCredit = items.reduce((best, item) => Math.max(best, item.credito || 0), 0);
+
+  document.getElementById("viabilityAdministradoras").textContent = administradoras.size;
+  document.getElementById("viabilityTotal").textContent = result.total_grupos_encontrados;
+  document.getElementById("viabilityTop").textContent = top;
+  document.getElementById("viabilityBestInstallment").textContent = formatMoney(bestInstallment);
+  document.getElementById("viabilityMaxCredit").textContent = formatMoney(maxCredit);
+  document.getElementById("viabilityRankingSubtitle").textContent = `${items.length} grupo(s) no ranking - perfil ${result.perfil}`;
+  document.getElementById("viabilityScenario").textContent = `${result.cenario} - perfil ${result.perfil}`;
+}
+
+function renderViabilityRanking(items) {
+  document.getElementById("viabilityRankingBody").innerHTML = items.map((item) => `
+    <tr>
+      <td>${item.ranking}</td>
+      <td>${escapeHtml(item.grupo)}</td>
+      <td>${escapeHtml(item.administradora)}</td>
+      <td>${escapeHtml(item.tipo_bem)}</td>
+      <td>${formatMoney(item.credito)}</td>
+      <td>${formatMoney(item.parcela_estimada)}</td>
+      <td>${formatPercent(item.lance_sugerido_percentual)}</td>
+      <td>${formatMoney(item.lance_sugerido_valor)}</td>
+      <td>${item.prazo} meses</td>
+      <td><span class="status-badge">${formatPercent(item.afinidade)}</span></td>
+      <td>
+        <div class="row-actions">
+          <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver</button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" data-viability-action="estudo" data-group-id="${escapeHtml(item.grupo_id)}">Estudo</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+async function analyzeViability() {
+  const payload = collectViabilityPayload();
+  if (!validateViabilityPayload(payload)) return;
+
+  setViabilityState("loading");
+  try {
+    const result = await apiPost("/viabilidade/analisar", payload);
+    viabilityState.lastResult = result;
+    renderViabilityChecklist(result.checklist);
+    if (!result.melhores_grupos.length) {
+      setViabilityState("empty");
+      return;
+    }
+    renderViabilitySummary(result);
+    renderViabilityRanking(result.melhores_grupos);
+    setViabilityState("ready");
+    showToast("Analise de viabilidade concluida.", "success");
+  } catch (error) {
+    setViabilityState("error");
+  }
+}
+
+function resetViabilityForm() {
+  document.getElementById("viabilityForm").reset();
+  updateViabilityTotals();
+  renderViabilityChecklist({});
+  document.getElementById("viabilityScenario").textContent = "Aguardando analise";
+  setViabilityState("idle");
+}
+
 async function loadHealth() {
   const health = await apiGet("/health");
   document.getElementById("environmentLabel").textContent = health.environment;
@@ -335,6 +467,10 @@ document.querySelectorAll(".nav-item").forEach((item) => {
 });
 
 document.getElementById("primaryAction").addEventListener("click", () => {
+  if (document.getElementById("screen-viabilidade").classList.contains("active")) {
+    analyzeViability();
+    return;
+  }
   showToast("Funcionalidade sera implementada na etapa correspondente.", "info");
 });
 
@@ -398,8 +534,30 @@ document.getElementById("detailsEditBtn").addEventListener("click", () => {
   showToast("Edicao sera implementada na etapa CRUD Google Sheets.", "info");
 });
 
+document.getElementById("viabilityForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  analyzeViability();
+});
+
+["viabilityFgtsTitular", "viabilityFgtsConjuge", "viabilityRendaTitular", "viabilityRendaConjuge"].forEach((id) => {
+  document.getElementById(id).addEventListener("input", updateViabilityTotals);
+});
+
+document.getElementById("clearViabilityBtn").addEventListener("click", resetViabilityForm);
+
+document.getElementById("viabilityRankingBody").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-viability-action]");
+  if (!button) return;
+  if (button.dataset.viabilityAction === "visualizar") {
+    openGroupDetails(button.dataset.groupId);
+    return;
+  }
+  showToast("Selecao para Estudo Financeiro sera implementada na proxima etapa.", "info");
+});
+
 loadHealth().catch(() => {
   document.getElementById("environmentLabel").textContent = "indisponivel";
 });
 
 loadMapaGrupos();
+updateViabilityTotals();

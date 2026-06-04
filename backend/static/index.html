@@ -189,10 +189,175 @@
         </section>
 
         <section id="screen-viabilidade" class="screen-panel">
-          <div class="placeholder-card">
-            <div class="state-badge">Placeholder</div>
-            <h2>Viabilidade</h2>
-            <p>Esta tela sera implementada somente apos conclusao do Mapa de Grupos e Detalhes do Grupo.</p>
+          <div class="viability-layout">
+            <div class="content-card">
+              <div class="table-toolbar">
+                <div>
+                  <h2>Cenario do Cliente</h2>
+                  <p>Dados para analise de compatibilidade dos grupos</p>
+                </div>
+              </div>
+
+              <form id="viabilityForm" class="viability-form">
+                <label>
+                  <span>Objetivo do Credito</span>
+                  <select id="viabilityObjetivo" class="form-select" required>
+                    <option value="Aquisicao de Imovel">Aquisicao de Imovel</option>
+                    <option value="Quitacao de Financiamento">Quitacao de Financiamento</option>
+                    <option value="Construcao/Reforma">Construcao/Reforma</option>
+                    <option value="Investimento">Investimento</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Prazo Desejado de Contemplacao</span>
+                  <select id="viabilityPrazoDesejado" class="form-select" required>
+                    <option value="3">1 a 3 meses - Agressivo</option>
+                    <option value="6">4 a 6 meses - Moderado</option>
+                    <option value="12">7 a 12 meses - Conservador</option>
+                    <option value="24">13 a 24 meses - Super Conservador</option>
+                    <option value="36">Sem urgencia - Investidor</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Credito Desejado</span>
+                  <input id="viabilityCredito" class="form-control" inputmode="decimal" placeholder="500000" required>
+                </label>
+                <label>
+                  <span>Lance Proprio Disponivel</span>
+                  <input id="viabilityLanceProprio" class="form-control" inputmode="decimal" placeholder="100000" required>
+                </label>
+                <label>
+                  <span>FGTS Titular</span>
+                  <input id="viabilityFgtsTitular" class="form-control" inputmode="decimal" placeholder="0">
+                </label>
+                <label>
+                  <span>FGTS Conjuge</span>
+                  <input id="viabilityFgtsConjuge" class="form-control" inputmode="decimal" placeholder="0">
+                </label>
+                <label>
+                  <span>Total FGTS</span>
+                  <input id="viabilityFgtsTotal" class="form-control" readonly>
+                </label>
+                <label>
+                  <span>Renda Titular</span>
+                  <input id="viabilityRendaTitular" class="form-control" inputmode="decimal" placeholder="12000" required>
+                </label>
+                <label>
+                  <span>Renda Conjuge</span>
+                  <input id="viabilityRendaConjuge" class="form-control" inputmode="decimal" placeholder="0">
+                </label>
+                <label>
+                  <span>Renda Total</span>
+                  <input id="viabilityRendaTotal" class="form-control" readonly>
+                </label>
+                <label>
+                  <span>Parcela Maxima Desejada</span>
+                  <input id="viabilityParcela" class="form-control" inputmode="decimal" placeholder="3500" required>
+                </label>
+                <label>
+                  <span>Data Nascimento Titular</span>
+                  <input id="viabilityNascimento" class="form-control" type="date">
+                </label>
+                <label>
+                  <span>Data Nascimento Conjuge</span>
+                  <input id="viabilityNascimentoConjuge" class="form-control" type="date">
+                </label>
+                <label>
+                  <span>Estado do Bem</span>
+                  <select id="viabilityEstadoBem" class="form-select">
+                    <option value="Pronto">Pronto</option>
+                    <option value="Na planta">Na planta</option>
+                    <option value="Terreno">Terreno</option>
+                    <option value="Construcao">Construcao</option>
+                    <option value="Nao definido">Nao definido</option>
+                  </select>
+                </label>
+                <div class="form-actions">
+                  <button id="clearViabilityBtn" class="btn btn-outline-secondary" type="button">Limpar Cenario</button>
+                  <button id="analyzeViabilityBtn" class="btn btn-primary" type="submit">Analisar Viabilidade</button>
+                </div>
+              </form>
+            </div>
+
+            <aside class="content-card checklist-card">
+              <div class="table-toolbar">
+                <div>
+                  <h2>Checklist</h2>
+                  <p id="viabilityScenario">Aguardando analise</p>
+                </div>
+              </div>
+              <ul id="viabilityChecklist" class="checklist-list">
+                <li data-check="idade_compativel">Idade compativel</li>
+                <li data-check="renda_comporta_parcela">Renda comporta parcela</li>
+                <li data-check="lance_proprio_suficiente">Lance proprio suficiente</li>
+                <li data-check="fgts_disponivel">FGTS disponivel</li>
+                <li data-check="prazo_compativel">Prazo compativel</li>
+                <li data-check="cenario_viavel">Cenario viavel</li>
+              </ul>
+            </aside>
+          </div>
+
+          <div id="viabilityLoading" class="table-state d-none">Analisando grupos...</div>
+          <div id="viabilityError" class="table-state table-state-error d-none">Nao foi possivel analisar a viabilidade.</div>
+          <div id="viabilityEmpty" class="table-state d-none">Nenhum grupo compativel encontrado para este cenario.</div>
+
+          <div id="viabilityResults" class="d-none">
+            <div class="summary-grid viability-summary" aria-label="Resumo da viabilidade">
+              <article class="summary-card">
+                <span class="summary-label">Administradoras Analisadas</span>
+                <strong id="viabilityAdministradoras">0</strong>
+                <small>Com grupos compativeis</small>
+              </article>
+              <article class="summary-card">
+                <span class="summary-label">Grupos Compativeis</span>
+                <strong id="viabilityTotal">0</strong>
+                <small>Depois das regras iniciais</small>
+              </article>
+              <article class="summary-card">
+                <span class="summary-label">Muito Compativeis</span>
+                <strong id="viabilityTop">0</strong>
+                <small>Afinidade acima de 80%</small>
+              </article>
+              <article class="summary-card">
+                <span class="summary-label">Melhor Parcela Estimada</span>
+                <strong id="viabilityBestInstallment">-</strong>
+                <small>No ranking retornado</small>
+              </article>
+              <article class="summary-card">
+                <span class="summary-label">Credito Maximo</span>
+                <strong id="viabilityMaxCredit">-</strong>
+                <small>Credito disponivel</small>
+              </article>
+            </div>
+
+            <div class="content-card">
+              <div class="table-toolbar">
+                <div>
+                  <h2>Ranking de Grupos</h2>
+                  <p id="viabilityRankingSubtitle">Resultado ordenado por afinidade</p>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle viability-table">
+                  <thead>
+                    <tr>
+                      <th>Ranking</th>
+                      <th>Grupo</th>
+                      <th>Administradora</th>
+                      <th>Tipo de Bem</th>
+                      <th>Credito</th>
+                      <th>Parcela Estimada</th>
+                      <th>Lance (%)</th>
+                      <th>Lance (R$)</th>
+                      <th>Prazo</th>
+                      <th>Afinidade</th>
+                      <th>Acoes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="viabilityRankingBody"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </section>
 

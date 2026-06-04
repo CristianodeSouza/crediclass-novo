@@ -32,6 +32,11 @@ class GrupoDetalhe(GrupoResumo):
     categoria: str = ""
     percentual_lance_embutido: float | None = None
     percentual_lance_fixo: float | None = None
+    investidor: float | None = None
+    conservador: float | None = None
+    moderado: float | None = None
+    agressivo: float | None = None
+    super_agressivo: float | None = None
     parcela_reduzida: str = ""
     indice_correcao: str = ""
     vencimento_parcela: str = ""
@@ -53,3 +58,51 @@ class GruposResponse(BaseModel):
 class ErrorResponse(BaseModel):
     success: bool = False
     error: str
+
+
+class ViabilidadeRequest(BaseModel):
+    objetivo: str
+    credito_desejado: float = Field(gt=0)
+    prazo_desejado: int = Field(gt=0)
+    lance_proprio: float = Field(ge=0)
+    fgts: float = Field(ge=0)
+    renda_total: float = Field(gt=0)
+    parcela_desejada: float = Field(gt=0)
+    data_nascimento: str = ""
+    tipo_bem: str = "Imovel"
+
+
+class ViabilidadeGrupo(BaseModel):
+    ranking: int
+    grupo_id: str
+    administradora: str
+    grupo: str = ""
+    tipo_bem: str = ""
+    credito: float
+    parcela_estimada: float
+    lance_sugerido_percentual: float
+    lance_sugerido_valor: float
+    prazo: int
+    afinidade: float
+    selo: str
+    motivos: list[str] = Field(default_factory=list)
+
+
+class ViabilidadeChecklist(BaseModel):
+    idade_compativel: bool
+    renda_comporta_parcela: bool
+    lance_proprio_suficiente: bool
+    fgts_disponivel: bool
+    prazo_compativel: bool
+    cenario_viavel: bool
+
+
+class ViabilidadeResponse(BaseModel):
+    total_grupos_encontrados: int
+    perfil: str
+    fgts_total: float
+    lance_total_disponivel: float
+    renda_total: float
+    cenario: str
+    checklist: ViabilidadeChecklist
+    melhores_grupos: list[ViabilidadeGrupo] = Field(default_factory=list)

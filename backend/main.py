@@ -7,8 +7,9 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
-from .models import GrupoDetalhe, GruposResponse
-from .sheets_client import get_grupo, list_grupos
+from .models import GrupoDetalhe, GruposResponse, ViabilidadeRequest, ViabilidadeResponse
+from .sheets_client import get_grupo, list_grupos, list_grupos_detalhe
+from .viabilidade import analyze_viabilidade
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -96,3 +97,25 @@ def grupo_detalhe(grupo_id: str):
     if not item:
         return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
     return item
+
+
+@app.post("/api/viabilidade/analisar", response_model=ViabilidadeResponse)
+def viabilidade_analisar(payload: ViabilidadeRequest):
+    logger.info(
+        "POST /api/viabilidade/analisar credito=%s prazo=%s",
+        payload.credito_desejado,
+        payload.prazo_desejado,
+    )
+    try:
+        groups = list_grupos_detalhe()
+        result = analyze_viabilidade(payload, groups)
+    except Exception as error:
+        logger.exception("Erro ao analisar viabilidade")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+    logger.info(
+        "POST /api/viabilidade/analisar retornou total=%s perfil=%s",
+        result["total_grupos_encontrados"],
+        result["perfil"],
+    )
+    return result
