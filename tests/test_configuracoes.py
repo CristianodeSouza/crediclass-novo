@@ -69,6 +69,21 @@ class ConfiguracoesTest(unittest.TestCase):
         self.assertFalse(config["notificacoes"]["alertar_historico_atualizado"])
         self.assertFalse(config["notificacoes"]["alertar_falha_integracao"])
 
+    def test_salvar_configuracoes_atualiza_usuarios(self):
+        usuarios = [{
+            "nome": "Ana",
+            "email": "ana@crediclass.local",
+            "perfil": "Referencia Operacional",
+            "status": "Inativo",
+            "ultimo_acesso": "",
+        }]
+
+        result = configuracoes_salvar({"usuarios": usuarios})
+        config = configuracoes_obter()
+
+        self.assertTrue(result["success"])
+        self.assertEqual(config["usuarios"], usuarios)
+
     def test_salvar_configuracoes_persiste_json(self):
         original = configuracoes_module.get_configuracoes()
         try:

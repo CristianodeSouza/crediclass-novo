@@ -110,5 +110,7 @@ def update_configuracoes(payload: dict) -> dict:
     for section in ["empresa", "preferencias", "parametros_financeiros", "notificacoes"]:
         if section in payload and isinstance(payload[section], dict):
             _settings[section].update(payload[section])
+    if "usuarios" in payload and isinstance(payload["usuarios"], list):
+        _settings["usuarios"] = payload["usuarios"]
     save_config()
     return {"success": True}

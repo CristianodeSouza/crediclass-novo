@@ -1390,16 +1390,26 @@ function renderConfiguracoes(data) {
   document.getElementById("integrationBackup").textContent = integracoes.backup_automatico ? "Ativo" : "Inativo";
   document.getElementById("integrationSheetName").textContent = sistema.google_sheet_name || "-";
 
-  document.getElementById("configUsersBody").innerHTML = (data.usuarios || []).map((user) => `
+  document.getElementById("configUsersBody").innerHTML = (data.usuarios || []).map((user, index) => {
+    const inactive = user.status !== "Ativo";
+    const nextStatus = inactive ? "Ativo" : "Inativo";
+    return `
     <tr>
       <td>${escapeHtml(user.nome)}</td>
       <td>${escapeHtml(user.email)}</td>
       <td>${escapeHtml(user.perfil)}</td>
-      <td><span class="status-badge">${escapeHtml(user.status)}</span></td>
+      <td><span class="status-badge ${inactive ? "inactive" : ""}">${escapeHtml(user.status)}</span></td>
       <td>${escapeHtml(user.ultimo_acesso || "-")}</td>
-      <td><button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action>Editar</button></td>
+      <td>
+        <div class="row-actions">
+          <button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="editar" data-config-user-index="${index}">Editar</button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="status" data-config-user-index="${index}" data-next-status="${nextStatus}">${inactive ? "Ativar" : "Inativar"}</button>
+          <button class="btn btn-sm btn-outline-danger" type="button" data-config-user-action="remover" data-config-user-index="${index}">Remover</button>
+        </div>
+      </td>
     </tr>
-  `).join("");
+  `;
+  }).join("");
 
   renderAccessPolicy(data.acesso || {});
   document.getElementById("configSystemGrid").innerHTML = [
@@ -1481,6 +1491,35 @@ async function saveConfiguracoes() {
   showToast("Configuracoes salvas.", "success");
   addOperationalLog("Configuracoes salvas");
   loadConfiguracoes();
+}
+
+async function saveConfigUsers(usuarios, message = "Usuarios atualizados.") {
+  await apiPut("/configuracoes", { usuarios });
+  configState.data.usuarios = usuarios;
+  renderConfiguracoes(configState.data);
+  showToast(message, "success");
+  addOperationalLog(message);
+}
+
+async function editConfigUser(index) {
+  const usuarios = [...(configState.data?.usuarios || [])];
+  const user = usuarios[index];
+  if (!user) return;
+
+  const nome = window.prompt("Nome", user.nome || "");
+  if (nome === null) return;
+  const email = window.prompt("E-mail", user.email || "");
+  if (email === null) return;
+  const perfil = window.prompt("Perfil informativo", user.perfil || "");
+  if (perfil === null) return;
+
+  usuarios[index] = {
+    ...user,
+    nome: nome.trim() || user.nome,
+    email: email.trim() || user.email,
+    perfil: perfil.trim() || user.perfil,
+  };
+  await saveConfigUsers(usuarios, "Referencia de usuario atualizada.");
 }
 
 async function syncGoogleSheets() {
@@ -1706,8 +1745,29 @@ document.getElementById("syncSheetsBtn").addEventListener("click", () => {
 document.getElementById("downloadConfigBackupBtn").addEventListener("click", downloadConfigBackup);
 
 document.getElementById("configUsersBody").addEventListener("click", (event) => {
-  if (event.target.closest("[data-config-user-action]")) {
-    showToast("Usuarios sao apenas referencia operacional; todos visualizam os paineis.", "info");
+  const button = event.target.closest("[data-config-user-action]");
+  if (!button) return;
+
+  const index = Number(button.dataset.configUserIndex);
+  const usuarios = [...(configState.data?.usuarios || [])];
+  const user = usuarios[index];
+  if (!user) return;
+
+  if (button.dataset.configUserAction === "editar") {
+    editConfigUser(index).catch(() => setConfigState("error"));
+    return;
+  }
+
+  if (button.dataset.configUserAction === "status") {
+    usuarios[index] = { ...user, status: button.dataset.nextStatus };
+    saveConfigUsers(usuarios, `Usuario ${button.dataset.nextStatus.toLowerCase()}.`).catch(() => setConfigState("error"));
+    return;
+  }
+
+  if (button.dataset.configUserAction === "remover") {
+    if (!window.confirm("Remover esta referencia operacional?")) return;
+    usuarios.splice(index, 1);
+    saveConfigUsers(usuarios, "Referencia de usuario removida.").catch(() => setConfigState("error"));
   }
 });
 
