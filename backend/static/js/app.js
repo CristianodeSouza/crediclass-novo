@@ -45,6 +45,8 @@ const viabilityState = {
 
 let detailsModal = null;
 let detailsChart = null;
+let studyChart = null;
+let currentStudy = null;
 
 function showToast(message, type = "success") {
   const region = document.getElementById("toastRegion");
@@ -457,6 +459,174 @@ function resetViabilityForm() {
   setViabilityState("idle");
 }
 
+function setStudyState(state) {
+  document.getElementById("studyEmpty").classList.toggle("d-none", state !== "empty");
+  document.getElementById("studyLoading").classList.toggle("d-none", state !== "loading");
+  document.getElementById("studyError").classList.toggle("d-none", state !== "error");
+  document.getElementById("studyContent").classList.toggle("d-none", state !== "ready");
+}
+
+function studyField(label, value) {
+  return detailField(label, value);
+}
+
+function computeStudy(payload, viabilityItem, group) {
+  const creditoDesejado = payload.credito_desejado || viabilityItem.credito || 0;
+  const percentualEmbutido = group.percentual_lance_embutido || 0;
+  const creditoContratado = percentualEmbutido >= 1 ? creditoDesejado : creditoDesejado / (1 - percentualEmbutido);
+  const lanceEmbutido = creditoContratado * percentualEmbutido;
+  const lanceProprio = payload.lance_proprio || 0;
+  const fgts = payload.fgts || 0;
+  const lanceTotal = lanceEmbutido + lanceProprio + fgts;
+  const creditoDisponivel = creditoContratado - lanceEmbutido;
+  const prazo = group.prazo_restante || group.prazo_total || viabilityItem.prazo || 1;
+  const taxaAdm = group.taxa_adm || 0;
+  const fundoReserva = group.fundo_reserva || 0;
+  const parcela = (creditoContratado + creditoContratado * taxaAdm + creditoContratado * fundoReserva) / prazo;
+  return { creditoContratado, percentualEmbutido, lanceEmbutido, lanceProprio, fgts, lanceTotal, creditoDisponivel, prazo, parcela };
+}
+
+function renderStudyClient(payload) {
+  const fields = [
+    ["Objetivo", payload.objetivo],
+    ["Prazo desejado", `${payload.prazo_desejado} meses`],
+    ["Credito desejado", formatMoney(payload.credito_desejado)],
+    ["Lance proprio disponivel", formatMoney(payload.lance_proprio)],
+    ["FGTS utilizado", formatMoney(payload.fgts)],
+    ["Renda total informada", formatMoney(payload.renda_total)],
+    ["Parcela maxima desejada", formatMoney(payload.parcela_desejada)],
+    ["Data nascimento titular", payload.data_nascimento || "-"],
+    ["Estado do bem", document.getElementById("viabilityEstadoBem").value || "Nao definido"],
+  ];
+  document.getElementById("studyClientGrid").innerHTML = fields.map(([label, value]) => studyField(label, value)).join("");
+  document.getElementById("studyScenarioDate").textContent = `Data da analise: ${new Date().toLocaleDateString("pt-BR")}`;
+}
+
+function renderStudyGroup(group) {
+  const fields = [
+    ["Administradora", group.administradora || "-"],
+    ["Grupo", group.grupo || "-"],
+    ["Tipo de bem", group.tipo_bem || "-"],
+    ["Inicio do grupo", group.primeira_assembleia || "-"],
+    ["Termino do grupo", group.data_termino || group.ultima_assembleia || "-"],
+    ["Prazo total", group.prazo_total ? `${group.prazo_total} meses` : "-"],
+    ["Prazo restante", group.prazo_restante ? `${group.prazo_restante} meses` : "-"],
+    ["Taxa de administracao", formatPercent(group.taxa_adm)],
+    ["Fundo de reserva", formatPercent(group.fundo_reserva)],
+    ["Meia parcela", formatBool(group.meia_parcela)],
+    ["Status", group.status || "-"],
+  ];
+  document.getElementById("studyGroupGrid").innerHTML = fields.map(([label, value]) => studyField(label, value)).join("");
+  document.getElementById("studyGroupSubtitle").textContent = `${group.administradora || "Administradora"} - Grupo ${group.grupo || "-"}`;
+}
+
+function renderStudySummary(financial) {
+  document.getElementById("studyCreditoOriginal").textContent = formatMoney(financial.creditoContratado);
+  document.getElementById("studyLanceEmbutido").textContent = `${formatPercent(financial.percentualEmbutido)} / ${formatMoney(financial.lanceEmbutido)}`;
+  document.getElementById("studyCreditoDisponivel").textContent = formatMoney(financial.creditoDisponivel);
+  document.getElementById("studyLanceTotal").textContent = formatMoney(financial.lanceTotal);
+  document.getElementById("studyParcelaInicial").textContent = formatMoney(financial.parcela);
+}
+
+function renderStudyStrategies(group, financial) {
+  const strategies = [
+    ["Lance Fixo", group.percentual_lance_fixo],
+    ["Conservadora", group.conservador],
+    ["Moderada", group.moderado],
+    ["Agressiva", group.agressivo],
+    ["Lance Total", financial.lanceTotal / financial.creditoContratado],
+  ].map(([label, percent]) => [label, percent || 0]);
+
+  document.getElementById("studyStrategiesBody").innerHTML = strategies.map(([label, percent]) => {
+    const lanceTotal = financial.creditoContratado * percent;
+    const lanceProprio = Math.max(0, lanceTotal - financial.lanceEmbutido);
+    const prazoApos = Math.max(1, financial.prazo - Math.round(percent * financial.prazo));
+    const chance = percent >= (group.agressivo || 0.5) ? "Alta" : percent >= (group.moderado || 0.3) ? "Media" : "Acompanhar";
+    return `
+      <tr>
+        <td>${escapeHtml(label)}</td>
+        <td>${formatPercent(percent)}</td>
+        <td>${formatMoney(financial.lanceEmbutido)}</td>
+        <td>${formatMoney(lanceProprio)}</td>
+        <td>${formatMoney(financial.creditoDisponivel)}</td>
+        <td>${formatMoney(financial.parcela)}</td>
+        <td>${prazoApos} meses</td>
+        <td>${chance}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderStudyHistory(group) {
+  const entries = Object.entries(group.historico || {}).slice(-12);
+  const maiores = entries.map(([, item]) => item.maior_lance ? item.maior_lance * 100 : null);
+  const menores = entries.map(([, item]) => item.menor_lance ? item.menor_lance * 100 : null);
+  const qtd = entries.map(([, item]) => item.qtd_contemplacoes || 0);
+  if (studyChart) studyChart.destroy();
+  studyChart = new Chart(document.getElementById("studyHistoryChart"), {
+    type: "bar",
+    data: {
+      labels: entries.map(([month]) => month),
+      datasets: [
+        { label: "Maior Lance (%)", data: maiores, backgroundColor: "#0d6efd" },
+        { label: "Menor Lance (%)", data: menores, backgroundColor: "#16a34a" },
+        { label: "Qtd Contemplacoes", data: qtd, backgroundColor: "#f59e0b" },
+      ],
+    },
+    options: { responsive: true, maintainAspectRatio: false },
+  });
+}
+
+function renderStudyRecommendations(viabilityItem, financial) {
+  const level = viabilityItem.afinidade >= 0.9 ? "Recomendacao forte" : viabilityItem.afinidade >= 0.8 ? "Recomendacao moderada" : "Recomendacao com acompanhamento";
+  document.getElementById("studyRecommendationLevel").textContent = `${level} - afinidade ${formatPercent(viabilityItem.afinidade)}`;
+  const recommendations = [
+    `Grupo com afinidade ${formatPercent(viabilityItem.afinidade)} no ranking da Viabilidade.`,
+    financial.parcela <= (currentStudy.payload.parcela_desejada || 0) ? "Parcela estimada dentro do limite informado." : "Parcela estimada exige validacao com o cliente.",
+    "Acompanhar assembleias e historico mensal antes da oferta.",
+    "A analise nao garante contemplacao.",
+  ];
+  document.getElementById("studyRecommendations").innerHTML = recommendations.map((text) => `<li class="check-ok">${escapeHtml(text)}</li>`).join("");
+}
+
+async function openFinancialStudy(groupId, viabilityItem) {
+  const payload = collectViabilityPayload();
+  currentStudy = { groupId, viabilityItem, payload, group: null };
+  activateScreen("estudo");
+  setStudyState("loading");
+  try {
+    const group = await apiGet(`/grupos/${encodeURIComponent(groupId)}`);
+    currentStudy.group = group;
+    const financial = computeStudy(payload, viabilityItem, group);
+    currentStudy.financial = financial;
+    renderStudyClient(payload);
+    renderStudyGroup(group);
+    renderStudySummary(financial);
+    renderStudyStrategies(group, financial);
+    renderStudyHistory(group);
+    renderStudyRecommendations(viabilityItem, financial);
+    setStudyState("ready");
+  } catch (error) {
+    setStudyState("error");
+  }
+}
+
+async function saveCurrentStudy() {
+  if (!currentStudy) {
+    showToast("Selecione um grupo na Viabilidade antes de salvar.", "warning");
+    return;
+  }
+  const payload = {
+    cliente: {
+      nome: "Cliente em estudo",
+      credito_desejado: currentStudy.payload.credito_desejado,
+    },
+    grupo_id: currentStudy.groupId,
+  };
+  const result = await apiPost("/estudos", payload);
+  showToast(`Estudo salvo: ${result.estudo_id}`, "success");
+}
+
 async function loadHealth() {
   const health = await apiGet("/health");
   document.getElementById("environmentLabel").textContent = health.environment;
@@ -552,7 +722,24 @@ document.getElementById("viabilityRankingBody").addEventListener("click", (event
     openGroupDetails(button.dataset.groupId);
     return;
   }
-  showToast("Selecao para Estudo Financeiro sera implementada na proxima etapa.", "info");
+  const item = viabilityState.lastResult?.melhores_grupos?.find((group) => group.grupo_id === button.dataset.groupId);
+  if (!item) {
+    showToast("Execute a Viabilidade antes de selecionar o estudo.", "warning");
+    return;
+  }
+  openFinancialStudy(button.dataset.groupId, item);
+});
+
+document.getElementById("studyChangeGroupBtn").addEventListener("click", () => activateScreen("viabilidade"));
+document.getElementById("studyNewSimulationBtn").addEventListener("click", () => {
+  resetViabilityForm();
+  activateScreen("viabilidade");
+});
+document.getElementById("studySaveBtn").addEventListener("click", () => {
+  saveCurrentStudy().catch(() => setStudyState("error"));
+});
+["studyPdfBtn", "studyEmailBtn", "studyShareBtn"].forEach((id) => {
+  document.getElementById(id).addEventListener("click", () => showToast("Acao sera finalizada na etapa de Historico e exportacao.", "info"));
 });
 
 loadHealth().catch(() => {

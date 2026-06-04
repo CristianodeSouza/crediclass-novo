@@ -550,6 +550,23 @@ body {
   white-space: nowrap;
 }
 
+.study-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.study-summary {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 0;
+}
+
+.study-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 @media (max-width: 980px) {
   .sidebar {
     position: static;
@@ -570,6 +587,7 @@ body {
   .filter-grid,
   .viability-layout,
   .viability-form,
+  .study-layout,
   .details-grid,
   .history-layout {
     grid-template-columns: 1fr;
@@ -590,5 +608,9 @@ body {
 
   .checklist-card {
     position: static;
+  }
+
+  .study-actions {
+    display: grid;
   }
 }

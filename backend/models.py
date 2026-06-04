@@ -106,3 +106,18 @@ class ViabilidadeResponse(BaseModel):
     cenario: str
     checklist: ViabilidadeChecklist
     melhores_grupos: list[ViabilidadeGrupo] = Field(default_factory=list)
+
+
+class EstudoCliente(BaseModel):
+    nome: str = ""
+    credito_desejado: float = Field(gt=0)
+
+
+class EstudoRequest(BaseModel):
+    cliente: EstudoCliente
+    grupo_id: str
+
+
+class EstudoCreateResponse(BaseModel):
+    estudo_id: str
+    success: bool = True
