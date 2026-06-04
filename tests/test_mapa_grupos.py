@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from backend.main import grupo_detalhe, grupos, reload_data
 from backend.sheets_client import get_grupo as sheets_get_grupo
-from backend.sheets_client import build_historico, row_to_grupo, row_to_grupo_detalhe
+from backend.sheets_client import build_historico, clean_text, parse_credit, row_to_grupo, row_to_grupo_detalhe
 
 
 class MapaGruposTest(unittest.TestCase):
@@ -50,6 +50,11 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(result["credito_minimo"], 200000)
         self.assertEqual(result["credito_maximo"], 800000)
         self.assertEqual(result["taxa_adm"], 0.18)
+
+    def test_text_and_credit_sanitization(self):
+        self.assertEqual(clean_text("ImÃ³vel"), "Imóvel")
+        self.assertIsNone(parse_credit("33.066.216.206.100.000,00"))
+        self.assertEqual(parse_credit("247.868,04"), 247868.04)
 
     def test_row_to_grupo_detalhe_builds_history(self):
         row = {

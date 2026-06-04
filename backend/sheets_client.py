@@ -14,6 +14,7 @@ from .config import get_settings
 logger = logging.getLogger("crediclass.sheets")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 CACHE_TTL_SECONDS = 300
+MAX_CREDIT_VALUE = 100_000_000
 _rows_cache: dict[str, Any] = {"expires_at": 0.0, "rows": None}
 _grupos_cache: dict[str, Any] = {"source_expires_at": 0.0, "items": None}
 _detalhes_cache: dict[str, Any] = {"source_expires_at": 0.0, "items": None}
@@ -24,6 +25,16 @@ def normalize_header(value: str) -> str:
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
     text = re.sub(r"[^a-zA-Z0-9]+", " ", text).strip().lower()
     return re.sub(r"\s+", " ", text)
+
+
+def clean_text(value: Any) -> str:
+    text = str(value or "").strip()
+    if "Ã" in text or "Â" in text:
+        try:
+            return text.encode("latin1").decode("utf-8")
+        except UnicodeError:
+            return text
+    return text
 
 
 FIELD_ALIASES = {
@@ -187,6 +198,13 @@ def parse_number(value: Any) -> float | None:
         return None
 
 
+def parse_credit(value: Any) -> float | None:
+    number = parse_number(value)
+    if number is None or number > MAX_CREDIT_VALUE:
+        return None
+    return number
+
+
 def parse_int(value: Any) -> int | None:
     number = parse_number(value)
     if number is None:
@@ -250,25 +268,25 @@ def build_historico(row: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def build_grupo_id(row: dict[str, Any]) -> str:
-    administradora = str(get_field(row, "administradora")).strip().upper().replace(" ", "-")
-    grupo = str(get_field(row, "grupo")).strip().upper().replace(" ", "-")
-    tipo_bem = str(get_field(row, "tipo_bem")).strip().upper().replace(" ", "-")
+    administradora = clean_text(get_field(row, "administradora")).upper().replace(" ", "-")
+    grupo = clean_text(get_field(row, "grupo")).upper().replace(" ", "-")
+    tipo_bem = clean_text(get_field(row, "tipo_bem")).upper().replace(" ", "-")
     return "-".join(part for part in [administradora, grupo, tipo_bem] if part)
 
 
 def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "grupo_id": build_grupo_id(row),
-        "administradora": str(get_field(row, "administradora")),
-        "grupo": str(get_field(row, "grupo")),
-        "tipo_bem": str(get_field(row, "tipo_bem")),
-        "credito_minimo": parse_number(get_field(row, "credito_minimo")),
-        "credito_maximo": parse_number(get_field(row, "credito_maximo")),
+        "administradora": clean_text(get_field(row, "administradora")),
+        "grupo": clean_text(get_field(row, "grupo")),
+        "tipo_bem": clean_text(get_field(row, "tipo_bem")),
+        "credito_minimo": parse_credit(get_field(row, "credito_minimo")),
+        "credito_maximo": parse_credit(get_field(row, "credito_maximo")),
         "taxa_adm": parse_percent(get_field(row, "taxa_adm")),
         "prazo_total": parse_int(get_field(row, "prazo_total")),
-        "primeira_assembleia": str(get_field(row, "primeira_assembleia")),
-        "ultima_assembleia": str(get_field(row, "ultima_assembleia")),
-        "status": str(get_field(row, "status") or "Ativo"),
+        "primeira_assembleia": clean_text(get_field(row, "primeira_assembleia")),
+        "ultima_assembleia": clean_text(get_field(row, "ultima_assembleia")),
+        "status": clean_text(get_field(row, "status") or "Ativo"),
     }
 
 
