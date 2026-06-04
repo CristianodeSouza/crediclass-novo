@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -52,7 +54,7 @@ class GrupoDetalhe(GrupoResumo):
     cadastrado_por: str = ""
     ultima_atualizacao: str = ""
     historico: dict[str, HistoricoMensal] = Field(default_factory=dict)
-    auditoria: list[dict[str, str]] = Field(default_factory=list)
+    auditoria: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class GruposResponse(BaseModel):

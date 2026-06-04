@@ -426,6 +426,28 @@ function renderDetailsHistory(group) {
   });
 }
 
+function renderDetailsAudit(group) {
+  const items = group.auditoria || [];
+  const state = document.getElementById("detailsAuditState");
+  const list = document.getElementById("detailsAuditList");
+  if (!items.length) {
+    state.textContent = "Nenhum registro de auditoria encontrado para este grupo.";
+    state.classList.remove("d-none");
+    list.classList.add("d-none");
+    list.innerHTML = "";
+    return;
+  }
+  state.classList.add("d-none");
+  list.classList.remove("d-none");
+  list.innerHTML = items.map((item) => `
+    <li>
+      <strong>${escapeHtml(item.acao || "-")}</strong>
+      <span>${escapeHtml(item.detalhe || "-")}</span>
+      <small>${escapeHtml(item.data_hora || "-")} - ${escapeHtml(item.operador || "Sistema")}</small>
+    </li>
+  `).join("");
+}
+
 function inputPercent(value) {
   if (value === null || value === undefined) return "";
   return String(value * 100).replace(".", ",");
@@ -510,6 +532,7 @@ async function openGroupDetails(groupId) {
     renderDetailsGeneral(group);
     renderDetailsParams(group);
     renderDetailsHistory(group);
+    renderDetailsAudit(group);
     setDetailsState("ready");
   } catch (error) {
     setDetailsState("error");

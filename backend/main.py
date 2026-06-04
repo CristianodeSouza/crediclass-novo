@@ -6,6 +6,7 @@ from fastapi import FastAPI, Query
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
+from .auditoria import list_auditoria, record_auditoria
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
@@ -121,6 +122,7 @@ def grupo_detalhe(grupo_id: str):
 
     if not item:
         return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
+    item["auditoria"] = list_auditoria(item["grupo_id"])
     return item
 
 
@@ -129,6 +131,7 @@ def grupo_criar(payload: GrupoCreateRequest):
     logger.info("POST /api/grupos grupo=%s tipo=%s", payload.grupo, payload.tipo_bem)
     try:
         result = create_grupo(payload.model_dump())
+        record_auditoria(result["grupo_id"], "Criacao de grupo", "Grupo criado na Google Sheets", payload.model_dump())
     except Exception as error:
         logger.exception("Erro ao criar grupo")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
@@ -142,7 +145,9 @@ def grupo_atualizar(grupo_id: str, payload: GrupoUpdateRequest):
     if not data:
         return JSONResponse(status_code=400, content={"success": False, "error": "Nenhum campo enviado"})
     try:
-        return update_grupo(grupo_id, data)
+        result = update_grupo(grupo_id, data)
+        record_auditoria(data.get("grupo") or grupo_id, "Atualizacao de grupo", "Grupo atualizado na Google Sheets", data)
+        return result
     except KeyError:
         return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
     except Exception as error:
@@ -154,7 +159,9 @@ def grupo_atualizar(grupo_id: str, payload: GrupoUpdateRequest):
 def grupo_excluir(grupo_id: str):
     logger.info("DELETE /api/grupos/%s", grupo_id)
     try:
-        return delete_grupo(grupo_id)
+        result = delete_grupo(grupo_id)
+        record_auditoria(grupo_id, "Exclusao logica", "Status alterado para Excluido", {"status": "Excluido"})
+        return result
     except KeyError:
         return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
     except Exception as error:
@@ -167,7 +174,9 @@ def grupo_historico_atualizar(grupo_id: str, payload: HistoricoUpdateRequest):
     logger.info("PUT /api/grupos/%s/historico mes=%s", grupo_id, payload.mes)
     data = payload.model_dump(exclude_none=True)
     try:
-        return update_historico_mensal(grupo_id, data)
+        result = update_historico_mensal(grupo_id, data)
+        record_auditoria(grupo_id, "Atualizacao de historico", f"Historico mensal atualizado: {payload.mes}", data)
+        return result
     except KeyError:
         return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
     except Exception as error:

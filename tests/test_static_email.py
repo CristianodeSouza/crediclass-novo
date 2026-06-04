@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-19", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-20", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -58,6 +58,16 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function collectMonthlyHistoryPayload(prefix)", app_js)
         self.assertIn('collectMonthlyHistoryPayload("groupFormHistory")', app_js)
         self.assertIn('/historico`, historyPayload)', app_js)
+
+    def test_detalhe_grupo_renderiza_auditoria(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn('id="detailsAuditList"', index_html)
+        self.assertIn("function renderDetailsAudit(group)", app_js)
+        self.assertIn("renderDetailsAudit(group)", app_js)
+        self.assertIn(".audit-list", style_css)
 
 
 if __name__ == "__main__":
