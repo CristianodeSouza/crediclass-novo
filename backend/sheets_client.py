@@ -15,6 +15,8 @@ logger = logging.getLogger("crediclass.sheets")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 CACHE_TTL_SECONDS = 300
 _rows_cache: dict[str, Any] = {"expires_at": 0.0, "rows": None}
+_grupos_cache: dict[str, Any] = {"source_expires_at": 0.0, "items": None}
+_detalhes_cache: dict[str, Any] = {"source_expires_at": 0.0, "items": None}
 
 
 def normalize_header(value: str) -> str:
@@ -98,6 +100,10 @@ def get_service():
 def clear_rows_cache() -> None:
     _rows_cache["expires_at"] = 0.0
     _rows_cache["rows"] = None
+    _grupos_cache["source_expires_at"] = 0.0
+    _grupos_cache["items"] = None
+    _detalhes_cache["source_expires_at"] = 0.0
+    _detalhes_cache["items"] = None
 
 
 def read_sheet_rows(force_reload: bool = False) -> list[dict[str, Any]]:
@@ -275,17 +281,30 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def list_grupos() -> list[dict[str, Any]]:
-    return [row_to_grupo(row) for row in read_sheet_rows()]
+    if _grupos_cache["items"] is not None and _grupos_cache["source_expires_at"] == _rows_cache["expires_at"]:
+        logger.info("Usando cache de grupos")
+        return list(_grupos_cache["items"])
+
+    items = [row_to_grupo(row) for row in read_sheet_rows()]
+    _grupos_cache["items"] = items
+    _grupos_cache["source_expires_at"] = _rows_cache["expires_at"]
+    return items
 
 
 def list_grupos_detalhe() -> list[dict[str, Any]]:
-    return [row_to_grupo_detalhe(row) for row in read_sheet_rows()]
+    if _detalhes_cache["items"] is not None and _detalhes_cache["source_expires_at"] == _rows_cache["expires_at"]:
+        logger.info("Usando cache de detalhes dos grupos")
+        return list(_detalhes_cache["items"])
+
+    items = [row_to_grupo_detalhe(row) for row in read_sheet_rows()]
+    _detalhes_cache["items"] = items
+    _detalhes_cache["source_expires_at"] = _rows_cache["expires_at"]
+    return items
 
 
 def get_grupo(grupo_id: str) -> dict[str, Any] | None:
     wanted = grupo_id.strip().upper()
-    for row in read_sheet_rows():
-        detalhe = row_to_grupo_detalhe(row)
+    for detalhe in list_grupos_detalhe():
         if detalhe["grupo_id"].upper() == wanted:
             return detalhe
     return None

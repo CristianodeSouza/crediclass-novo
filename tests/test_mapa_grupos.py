@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from backend.main import grupo_detalhe, grupos, reload_data
+from backend.sheets_client import get_grupo as sheets_get_grupo
 from backend.sheets_client import build_historico, row_to_grupo, row_to_grupo_detalhe
 
 
@@ -142,6 +143,20 @@ class MapaGruposTest(unittest.TestCase):
         clear_cache.assert_called_once()
         self.assertEqual(result["success"], True)
         self.assertEqual(result["total"], 2)
+
+    def test_sheets_get_grupo_uses_detail_listing(self):
+        fake_detail = {
+            "grupo_id": "ITAU-128-IMOVEL",
+            "administradora": "Itau",
+            "grupo": "128",
+            "tipo_bem": "Imovel",
+        }
+
+        with patch("backend.sheets_client.list_grupos_detalhe", return_value=[fake_detail]) as list_details:
+            result = sheets_get_grupo("ITAU-128-IMOVEL")
+
+        list_details.assert_called_once()
+        self.assertEqual(result["grupo_id"], "ITAU-128-IMOVEL")
 
 
 if __name__ == "__main__":
