@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-38", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-39", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -72,6 +72,9 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("Nenhuma alteracao de historico para salvar.", app_js)
         self.assertIn("o menor lance nao pode ser maior que o maior lance", app_js)
         self.assertIn("if (detailsModal) detailsModal.hide();", app_js)
+        self.assertIn("function findLoadedGroupSummary(groupId)", app_js)
+        self.assertIn("Carregando historico completo do grupo", app_js)
+        self.assertIn("Nao foi possivel carregar o historico completo", app_js)
         self.assertIn(".group-form-dialog .modal-footer", style_css)
         self.assertIn('collectHistoryBatchPayloads("groupFormHistory")', app_js)
         self.assertIn('/historico`, historyPayload)', app_js)
