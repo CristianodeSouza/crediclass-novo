@@ -7,7 +7,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
-from .models import GrupoDetalhe, GruposResponse, ViabilidadeRequest, ViabilidadeResponse
+from .estudos import create_estudo
+from .models import EstudoCreateResponse, EstudoRequest, GrupoDetalhe, GruposResponse, ViabilidadeRequest, ViabilidadeResponse
 from .sheets_client import clear_rows_cache, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows
 from .viabilidade import analyze_viabilidade
 
@@ -132,4 +133,20 @@ def viabilidade_analisar(payload: ViabilidadeRequest):
         result["total_grupos_encontrados"],
         result["perfil"],
     )
+    return result
+
+
+@app.post("/api/estudos", response_model=EstudoCreateResponse)
+def estudos_criar(payload: EstudoRequest):
+    logger.info("POST /api/estudos grupo_id=%s", payload.grupo_id)
+    try:
+        item = get_grupo(payload.grupo_id)
+        if not item:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
+        result = create_estudo(payload)
+    except Exception as error:
+        logger.exception("Erro ao criar estudo")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+    logger.info("POST /api/estudos criou estudo_id=%s", result["estudo_id"])
     return result

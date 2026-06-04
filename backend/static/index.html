@@ -362,10 +362,103 @@
         </section>
 
         <section id="screen-estudo" class="screen-panel">
-          <div class="placeholder-card">
-            <div class="state-badge">Placeholder</div>
+          <div id="studyEmpty" class="placeholder-card">
+            <div class="state-badge">Aguardando selecao</div>
             <h2>Estudo Financeiro</h2>
-            <p>Esta tela sera implementada em etapa propria, conforme o playbook.</p>
+            <p>Selecione um grupo no ranking da Viabilidade para montar o estudo financeiro.</p>
+          </div>
+
+          <div id="studyLoading" class="table-state d-none">Carregando estudo financeiro...</div>
+          <div id="studyError" class="table-state table-state-error d-none">Nao foi possivel carregar o estudo financeiro.</div>
+
+          <div id="studyContent" class="d-none">
+            <div class="study-layout">
+              <div class="content-card">
+                <div class="table-toolbar">
+                  <div>
+                    <h2>Dados do Cliente / Cenario</h2>
+                    <p id="studyScenarioDate">Data da analise</p>
+                  </div>
+                  <button id="studyNewSimulationBtn" class="btn btn-outline-secondary" type="button">Nova Simulacao</button>
+                </div>
+                <div id="studyClientGrid" class="details-grid"></div>
+              </div>
+
+              <div class="content-card">
+                <div class="table-toolbar">
+                  <div>
+                    <h2>Grupo Selecionado</h2>
+                    <p id="studyGroupSubtitle">Dados completos do grupo</p>
+                  </div>
+                  <button id="studyChangeGroupBtn" class="btn btn-outline-primary" type="button">Alterar Grupo</button>
+                </div>
+                <div id="studyGroupGrid" class="details-grid"></div>
+              </div>
+            </div>
+
+            <div class="summary-grid study-summary">
+              <article class="summary-card"><span class="summary-label">Carta de Credito Original</span><strong id="studyCreditoOriginal">-</strong><small>Credito contratado</small></article>
+              <article class="summary-card"><span class="summary-label">Lance Embutido</span><strong id="studyLanceEmbutido">-</strong><small>Percentual permitido</small></article>
+              <article class="summary-card"><span class="summary-label">Credito Disponivel</span><strong id="studyCreditoDisponivel">-</strong><small>Liquido ao cliente</small></article>
+              <article class="summary-card"><span class="summary-label">Valor Total do Lance</span><strong id="studyLanceTotal">-</strong><small>Embutido + proprio + FGTS</small></article>
+              <article class="summary-card"><span class="summary-label">Parcela Inicial</span><strong id="studyParcelaInicial">-</strong><small>Estimativa mensal</small></article>
+            </div>
+
+            <div class="content-card">
+              <div class="table-toolbar">
+                <div>
+                  <h2>Estrategias de Contemplacao</h2>
+                  <p>Comparativo de lances por perfil</p>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle viability-table">
+                  <thead>
+                    <tr>
+                      <th>Estrategia</th>
+                      <th>% Lance</th>
+                      <th>Lance Embutido</th>
+                      <th>Lance Proprio</th>
+                      <th>Credito Disponivel</th>
+                      <th>Parcela apos Contemplacao</th>
+                      <th>Prazo apos Lance</th>
+                      <th>Chance</th>
+                    </tr>
+                  </thead>
+                  <tbody id="studyStrategiesBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="study-layout">
+              <div class="content-card">
+                <div class="table-toolbar">
+                  <div>
+                    <h2>Historico de Lances</h2>
+                    <p>Ultimos registros mensais do grupo</p>
+                  </div>
+                </div>
+                <div class="chart-card">
+                  <canvas id="studyHistoryChart" height="220"></canvas>
+                </div>
+              </div>
+              <div class="content-card">
+                <div class="table-toolbar">
+                  <div>
+                    <h2>Recomendacoes</h2>
+                    <p id="studyRecommendationLevel">Analise automatica</p>
+                  </div>
+                </div>
+                <ul id="studyRecommendations" class="checklist-list"></ul>
+              </div>
+            </div>
+
+            <div class="content-card study-actions">
+              <button id="studyPdfBtn" class="btn btn-outline-secondary" type="button">Gerar PDF do Estudo</button>
+              <button id="studyEmailBtn" class="btn btn-outline-secondary" type="button">Enviar por E-mail</button>
+              <button id="studyShareBtn" class="btn btn-outline-secondary" type="button">Compartilhar Link</button>
+              <button id="studySaveBtn" class="btn btn-primary" type="button">Salvar Estudo</button>
+            </div>
           </div>
         </section>
 
