@@ -40,6 +40,12 @@ DEFAULT_CONFIG = {
         "email_smtp": False,
         "backup_automatico": False,
     },
+    "notificacoes": {
+        "alertar_sincronizacao": True,
+        "alertar_estudo_salvo": True,
+        "alertar_historico_atualizado": True,
+        "alertar_falha_integracao": True,
+    },
     "usuarios": [
         {
             "nome": "Larissa",
@@ -101,7 +107,7 @@ def get_configuracoes() -> dict:
 
 
 def update_configuracoes(payload: dict) -> dict:
-    for section in ["empresa", "preferencias", "parametros_financeiros"]:
+    for section in ["empresa", "preferencias", "parametros_financeiros", "notificacoes"]:
         if section in payload and isinstance(payload[section], dict):
             _settings[section].update(payload[section])
     save_config()

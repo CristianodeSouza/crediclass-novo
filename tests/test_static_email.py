@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-23", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-24", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -106,6 +106,19 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function getSelectBool(id)", app_js)
         self.assertIn("casas_decimais_valores", app_js)
         self.assertIn("ativar_lance_embutido", app_js)
+
+    def test_notificacoes_configuracoes_disponiveis(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("configNotificacoes", index_html)
+        for field_id in ["notifySync", "notifyStudySaved", "notifyHistoryUpdated", "notifyIntegrationFailure"]:
+            self.assertIn(f'id="{field_id}"', index_html)
+            self.assertIn(field_id, app_js)
+
+        self.assertIn("notificacoes", app_js)
+        self.assertIn("alertar_sincronizacao", app_js)
+        self.assertIn("alertar_falha_integracao", app_js)
 
 
 if __name__ == "__main__":

@@ -22,6 +22,7 @@ class ConfiguracoesTest(unittest.TestCase):
 
         self.assertEqual(result["empresa"]["nome"], "Crediclass")
         self.assertIn("google_sheets", result["integracoes"])
+        self.assertIn("alertar_sincronizacao", result["notificacoes"])
         self.assertEqual(len(result["usuarios"]), 2)
         self.assertTrue(result["acesso"]["paineis_liberados"])
 
@@ -50,6 +51,23 @@ class ConfiguracoesTest(unittest.TestCase):
         self.assertFalse(config["preferencias"]["ativar_meia_parcela"])
         self.assertFalse(config["preferencias"]["ativar_lance_embutido"])
         self.assertFalse(config["preferencias"]["exibir_historico_36_meses"])
+
+    def test_salvar_configuracoes_atualiza_notificacoes(self):
+        result = configuracoes_salvar({
+            "notificacoes": {
+                "alertar_sincronizacao": False,
+                "alertar_estudo_salvo": False,
+                "alertar_historico_atualizado": False,
+                "alertar_falha_integracao": False,
+            }
+        })
+        config = configuracoes_obter()
+
+        self.assertTrue(result["success"])
+        self.assertFalse(config["notificacoes"]["alertar_sincronizacao"])
+        self.assertFalse(config["notificacoes"]["alertar_estudo_salvo"])
+        self.assertFalse(config["notificacoes"]["alertar_historico_atualizado"])
+        self.assertFalse(config["notificacoes"]["alertar_falha_integracao"])
 
     def test_salvar_configuracoes_persiste_json(self):
         original = configuracoes_module.get_configuracoes()
