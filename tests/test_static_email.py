@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-17", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-18", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -31,6 +31,20 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("text/csv;charset=utf-8", app_js)
         self.assertIn("crediclass-grupos-", app_js)
         self.assertIn("crediclass-estudos-", app_js)
+
+    def test_backup_logs_disponivel_em_configuracoes(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("Backup & Logs", index_html)
+        self.assertIn('id="downloadConfigBackupBtn"', index_html)
+        self.assertIn('id="operationalLogsList"', index_html)
+        self.assertIn("function downloadConfigBackup()", app_js)
+        self.assertIn("function addOperationalLog(message)", app_js)
+        self.assertIn("application/json;charset=utf-8", app_js)
+        self.assertIn("crediclass-configuracoes-", app_js)
+        self.assertIn(".log-list", style_css)
 
 
 if __name__ == "__main__":
