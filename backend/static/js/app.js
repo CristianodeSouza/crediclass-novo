@@ -43,6 +43,10 @@ const viabilityState = {
   lastResult: null,
 };
 
+const historyState = {
+  items: [],
+};
+
 let detailsModal = null;
 let detailsChart = null;
 let studyChart = null;
@@ -73,6 +77,10 @@ function activateScreen(screenName) {
   document.getElementById("screenTitle").textContent = meta.title;
   document.getElementById("screenSubtitle").textContent = meta.subtitle;
   document.getElementById("primaryAction").textContent = meta.action;
+
+  if (screenName === "historico") {
+    loadHistoryStudies();
+  }
 }
 
 function formatMoney(value) {
@@ -628,6 +636,82 @@ async function saveCurrentStudy() {
   };
   const result = await apiPost("/estudos", payload);
   showToast(`Estudo salvo: ${result.estudo_id}`, "success");
+  loadHistoryStudies();
+}
+
+function setHistoryState(state) {
+  document.getElementById("historyLoading").classList.toggle("d-none", state !== "loading");
+  document.getElementById("historyError").classList.toggle("d-none", state !== "error");
+  document.getElementById("historyEmpty").classList.toggle("d-none", state !== "empty");
+  document.getElementById("historyTableWrap").classList.toggle("d-none", state !== "ready");
+}
+
+function getHistoryFilters() {
+  return {
+    cliente: document.getElementById("historyCliente").value.trim(),
+    grupo: document.getElementById("historyGrupo").value.trim(),
+    status: document.getElementById("historyStatus").value,
+    operador: document.getElementById("historyOperador").value,
+    estrategia: document.getElementById("historyEstrategia").value,
+  };
+}
+
+function renderHistorySummary(items) {
+  document.getElementById("historyTotal").textContent = items.length;
+  document.getElementById("historyDone").textContent = items.filter((item) => item.status === "Concluido").length;
+  document.getElementById("historyOpen").textContent = items.filter((item) => item.status === "Em andamento").length;
+  document.getElementById("historyCanceled").textContent = items.filter((item) => item.status === "Cancelado").length;
+  document.getElementById("historyUpdated").textContent = new Date().toLocaleTimeString("pt-BR");
+}
+
+function renderHistoryTable(items) {
+  document.getElementById("historyTableBody").innerHTML = items.map((item) => {
+    const cliente = item.cliente || {};
+    const grupo = item.grupo || {};
+    const financeiro = item.financeiro || {};
+    return `
+      <tr>
+        <td>${escapeHtml(item.estudo_id)}</td>
+        <td>${escapeHtml(item.criado_em || "-")}</td>
+        <td>${escapeHtml(cliente.nome || "-")}</td>
+        <td>${escapeHtml(grupo.administradora || "-")}</td>
+        <td>${escapeHtml(grupo.grupo || item.grupo_id || "-")}</td>
+        <td>${formatMoney(cliente.credito_desejado || financeiro.credito || null)}</td>
+        <td>${escapeHtml(item.estrategia || "-")}</td>
+        <td><span class="status-badge">${escapeHtml(item.status || "-")}</span></td>
+        <td>${escapeHtml(item.operador || "-")}</td>
+        <td>
+          <div class="row-actions">
+            <button class="btn btn-sm btn-outline-primary" type="button" data-history-action="visualizar" data-study-id="${escapeHtml(item.estudo_id)}">Ver</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="pdf">PDF</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="email">E-mail</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="duplicar" data-study-id="${escapeHtml(item.estudo_id)}">Duplicar</button>
+            <button class="btn btn-sm btn-outline-danger" type="button" data-history-action="excluir" data-study-id="${escapeHtml(item.estudo_id)}">Excluir</button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function loadHistoryStudies() {
+  setHistoryState("loading");
+  try {
+    const query = new URLSearchParams();
+    Object.entries(getHistoryFilters()).forEach(([key, value]) => {
+      if (value) query.set(key, value);
+    });
+    const data = await apiGet(`/estudos?${query.toString()}`);
+    historyState.items = data.items || [];
+    renderHistorySummary(historyState.items);
+    renderHistoryTable(historyState.items);
+    document.getElementById("historySubtitle").textContent = `${data.total} estudo(s) encontrado(s)`;
+    setHistoryState(historyState.items.length ? "ready" : "empty");
+  } catch (error) {
+    renderHistorySummary([]);
+    document.getElementById("historySubtitle").textContent = "Erro ao carregar estudos";
+    setHistoryState("error");
+  }
 }
 
 async function loadHealth() {
@@ -743,6 +827,38 @@ document.getElementById("studySaveBtn").addEventListener("click", () => {
 });
 ["studyPdfBtn", "studyEmailBtn", "studyShareBtn"].forEach((id) => {
   document.getElementById(id).addEventListener("click", () => showToast("Acao sera finalizada na etapa de Historico e exportacao.", "info"));
+});
+
+document.getElementById("historyFilters").addEventListener("submit", (event) => {
+  event.preventDefault();
+  loadHistoryStudies();
+});
+
+document.getElementById("clearHistoryBtn").addEventListener("click", () => {
+  document.getElementById("historyFilters").reset();
+  loadHistoryStudies();
+});
+
+document.getElementById("historyTableBody").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-history-action]");
+  if (!button) return;
+  const studyId = button.dataset.studyId;
+  if (button.dataset.historyAction === "visualizar") {
+    const item = await apiGet(`/estudos/${encodeURIComponent(studyId)}`);
+    showToast(`Estudo ${item.estudo_id} carregado para consulta.`, "info");
+    return;
+  }
+  if (button.dataset.historyAction === "duplicar") {
+    showToast("Duplicacao sera finalizada com persistencia definitiva dos estudos.", "info");
+    return;
+  }
+  if (button.dataset.historyAction === "excluir") {
+    await apiDelete(`/estudos/${encodeURIComponent(studyId)}`);
+    showToast("Estudo excluido.", "success");
+    loadHistoryStudies();
+    return;
+  }
+  showToast("Exportacao sera finalizada na etapa de PDF e e-mail.", "info");
 });
 
 loadHealth().catch(() => {
