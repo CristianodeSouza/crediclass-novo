@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
-    <link href="/static/css/style.css?v=20260604-3" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260604-4" rel="stylesheet">
   </head>
   <body>
     <div class="app-shell">
@@ -734,8 +734,40 @@
       </div>
     </div>
 
+    <div class="modal fade" id="groupFormModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+          <form id="groupCrudForm">
+            <div class="modal-header">
+              <div>
+                <h2 id="groupFormTitle" class="modal-title h5">Novo Grupo</h2>
+                <p id="groupFormSubtitle" class="modal-subtitle">Campos obrigatorios da planilha</p>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body">
+              <div class="viability-form">
+                <label><span>Administradora</span><input id="groupFormAdministradora" class="form-control" required></label>
+                <label><span>Grupo</span><input id="groupFormGrupo" class="form-control" required></label>
+                <label><span>Tipo de Bem</span><input id="groupFormTipoBem" class="form-control" required></label>
+                <label><span>Credito Minimo</span><input id="groupFormCreditoMinimo" class="form-control" inputmode="decimal" required></label>
+                <label><span>Credito Maximo</span><input id="groupFormCreditoMaximo" class="form-control" inputmode="decimal" required></label>
+                <label><span>Taxa Administracao (%)</span><input id="groupFormTaxaAdm" class="form-control" inputmode="decimal" required></label>
+                <label><span>Prazo Total</span><input id="groupFormPrazoTotal" class="form-control" inputmode="numeric" required></label>
+                <label><span>Status</span><select id="groupFormStatus" class="form-select"><option value="Ativo">Ativo</option><option value="Excluido">Excluido</option></select></label>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              <button id="groupFormSaveBtn" type="submit" class="btn btn-primary">Salvar Grupo</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/api.js?v=20260604-3"></script>
-    <script src="/static/js/app.js?v=20260604-3"></script>
+    <script src="/static/js/api.js?v=20260604-4"></script>
+    <script src="/static/js/app.js?v=20260604-4"></script>
   </body>
 </html>

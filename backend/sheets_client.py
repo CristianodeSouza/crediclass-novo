@@ -39,6 +39,7 @@ def clean_text(value: Any) -> str:
 
 FIELD_ALIASES = {
     "administradora": [
+        "",
         "administradora",
         "administradoras",
         "adm",
@@ -168,6 +169,120 @@ def read_sheet_rows(force_reload: bool = False) -> list[dict[str, Any]]:
     _rows_cache["rows"] = rows
     _rows_cache["expires_at"] = now + CACHE_TTL_SECONDS
     return rows
+
+
+def read_sheet_values() -> list[list[Any]]:
+    settings = get_settings()
+    result = get_service().spreadsheets().values().get(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"'{settings.google_sheet_name}'!A:ZZ",
+    ).execute()
+    return result.get("values", [])
+
+
+def find_header(headers: list[str], field: str) -> str | None:
+    normalized = {normalize_header(header): header for header in headers}
+    for alias in FIELD_ALIASES[field]:
+        value = normalized.get(normalize_header(alias))
+        if value is not None:
+            return value
+    return None
+
+
+def headers_index(headers: list[str]) -> dict[str, int]:
+    return {str(header): index for index, header in enumerate(headers)}
+
+
+def format_sheet_value(field: str, value: Any) -> str:
+    if value is None:
+        return ""
+    if field in {"taxa_adm", "fundo_reserva", "percentual_lance_embutido", "percentual_lance_fixo"}:
+        return str(float(value) * 100).replace(".", ",")
+    if isinstance(value, float):
+        return str(value).replace(".", ",")
+    return str(value)
+
+
+def payload_to_row_values(headers: list[str], payload: dict[str, Any], existing: list[Any] | None = None) -> list[Any]:
+    values = list(existing or [])
+    while len(values) < len(headers):
+        values.append("")
+
+    for field, value in payload.items():
+        if value is None or field not in FIELD_ALIASES:
+            continue
+        header = find_header(headers, field)
+        if header is None:
+            continue
+        values[headers_index(headers)[header]] = format_sheet_value(field, value)
+    return values
+
+
+def validate_required_headers(headers: list[str], fields: list[str]) -> None:
+    missing = [field for field in fields if find_header(headers, field) is None]
+    if missing:
+        raise RuntimeError(f"Cabecalhos obrigatorios ausentes: {', '.join(missing)}")
+
+
+def find_group_row(values: list[list[Any]], grupo_id: str) -> tuple[int, list[Any]] | None:
+    if not values:
+        return None
+    headers = [str(header).strip() for header in values[0]]
+    wanted = grupo_id.strip().upper()
+    for row_number, row in enumerate(values[1:], start=2):
+        row_dict = {header: row[index] if index < len(row) else "" for index, header in enumerate(headers)}
+        if build_grupo_id(row_dict).upper() == wanted:
+            return row_number, row
+    return None
+
+
+def create_grupo(payload: dict[str, Any]) -> dict[str, Any]:
+    values = read_sheet_values()
+    if not values:
+        raise RuntimeError("Planilha sem cabecalhos")
+    headers = [str(header).strip() for header in values[0]]
+    required = ["administradora", "grupo", "tipo_bem", "credito_minimo", "credito_maximo", "taxa_adm", "prazo_total"]
+    validate_required_headers(headers, required)
+
+    row_payload = {**payload, "status": payload.get("status") or "Ativo"}
+    row_values = payload_to_row_values(headers, row_payload)
+    settings = get_settings()
+    get_service().spreadsheets().values().append(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"'{settings.google_sheet_name}'!A:ZZ",
+        valueInputOption="USER_ENTERED",
+        insertDataOption="INSERT_ROWS",
+        body={"values": [row_values]},
+    ).execute()
+    clear_rows_cache()
+    return {"success": True, "grupo_id": build_grupo_id(dict(zip(headers, row_values)))}
+
+
+def update_grupo(grupo_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    values = read_sheet_values()
+    if not values:
+        raise RuntimeError("Planilha sem cabecalhos")
+    headers = [str(header).strip() for header in values[0]]
+    found = find_group_row(values, grupo_id)
+    if not found:
+        raise KeyError("Grupo nao encontrado")
+
+    row_number, current_row = found
+    updated_values = payload_to_row_values(headers, payload, current_row)
+    settings = get_settings()
+    get_service().spreadsheets().values().update(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"'{settings.google_sheet_name}'!A{row_number}:ZZ{row_number}",
+        valueInputOption="USER_ENTERED",
+        body={"values": [updated_values]},
+    ).execute()
+    clear_rows_cache()
+    return {"success": True}
+
+
+def delete_grupo(grupo_id: str) -> dict[str, Any]:
+    update_grupo(grupo_id, {"status": "Excluido"})
+    return {"success": True, "status": "Excluido"}
 
 
 def get_field(row: dict[str, Any], field: str) -> Any:

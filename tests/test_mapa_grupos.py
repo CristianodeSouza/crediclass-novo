@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from backend.main import grupo_detalhe, grupos, reload_data
 from backend.sheets_client import get_grupo as sheets_get_grupo
-from backend.sheets_client import build_historico, clean_text, parse_credit, row_to_grupo, row_to_grupo_detalhe
+from backend.sheets_client import build_historico, clean_text, create_grupo, delete_grupo, parse_credit, payload_to_row_values, row_to_grupo, row_to_grupo_detalhe, update_grupo
 
 
 class MapaGruposTest(unittest.TestCase):
@@ -184,6 +184,73 @@ class MapaGruposTest(unittest.TestCase):
 
         list_details.assert_called_once()
         self.assertEqual(result["grupo_id"], "ITAU-128-IMOVEL")
+
+    def test_payload_to_row_values_uses_headers_not_positions(self):
+        headers = ["", "Tipo de Bem", "Grup0", "Menor\nCredito", "Maior\nCredito", "Taxa\nAdm Original", "Prazo\nGrupo"]
+
+        values = payload_to_row_values(headers, {
+            "administradora": "Crediclass",
+            "grupo": "777",
+            "tipo_bem": "Imovel",
+            "credito_minimo": 100000,
+            "credito_maximo": 500000,
+            "taxa_adm": 0.2,
+            "prazo_total": 180,
+        })
+
+        self.assertEqual(values[0], "Crediclass")
+        self.assertEqual(values[1], "Imovel")
+        self.assertEqual(values[2], "777")
+        self.assertEqual(values[5], "20,0")
+
+    def test_create_update_delete_grupo_call_google_sheets(self):
+        headers = ["", "Grup0", "Tipo de Bem", "Menor\nCredito", "Maior\nCredito", "Taxa\nAdm Original", "Prazo\nGrupo", "Status"]
+        values = [headers, ["Crediclass", "128", "Imovel", "100000", "500000", "20", "180", "Ativo"]]
+
+        class ExecuteMock:
+            def execute(self):
+                return {}
+
+        class ValuesMock:
+            def append(self, **kwargs):
+                self.append_kwargs = kwargs
+                return ExecuteMock()
+
+            def update(self, **kwargs):
+                self.update_kwargs = kwargs
+                return ExecuteMock()
+
+        class SpreadsheetsMock:
+            def __init__(self):
+                self.values_mock = ValuesMock()
+
+            def values(self):
+                return self.values_mock
+
+        class ServiceMock:
+            def __init__(self):
+                self.spreadsheets_mock = SpreadsheetsMock()
+
+            def spreadsheets(self):
+                return self.spreadsheets_mock
+
+        service = ServiceMock()
+        with patch("backend.sheets_client.read_sheet_values", return_value=values), patch("backend.sheets_client.get_service", return_value=service):
+            created = create_grupo({
+                "administradora": "Crediclass",
+                "grupo": "999",
+                "tipo_bem": "Imovel",
+                "credito_minimo": 200000,
+                "credito_maximo": 600000,
+                "taxa_adm": 0.18,
+                "prazo_total": 180,
+            })
+            updated = update_grupo("CREDICLASS-128-IMOVEL", {"taxa_adm": 0.19})
+            deleted = delete_grupo("CREDICLASS-128-IMOVEL")
+
+        self.assertTrue(created["success"])
+        self.assertTrue(updated["success"])
+        self.assertEqual(deleted["status"], "Excluido")
 
 
 if __name__ == "__main__":
