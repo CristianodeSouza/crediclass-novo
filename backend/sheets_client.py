@@ -366,7 +366,7 @@ def update_historico_mensal(grupo_id: str, payload: dict[str, Any]) -> dict[str,
     if not found:
         raise KeyError("Grupo nao encontrado")
 
-    sent_metrics = [metric for metric in ("maior_lance", "menor_lance", "qtd_contemplacoes") if metric in payload and payload[metric] is not None]
+    sent_metrics = [metric for metric in ("maior_lance", "menor_lance", "qtd_contemplacoes") if metric in payload]
     if not sent_metrics:
         raise RuntimeError("Nenhum campo de historico enviado")
     headers, history_headers, headers_changed = ensure_history_headers(headers, month_key, sent_metrics)
