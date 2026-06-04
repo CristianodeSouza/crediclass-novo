@@ -8,6 +8,15 @@ from backend.main import configuracoes_obter, configuracoes_salvar
 
 
 class ConfiguracoesTest(unittest.TestCase):
+    def setUp(self):
+        self.original_config = configuracoes_module.get_configuracoes()
+        configuracoes_module._settings.clear()
+        configuracoes_module._settings.update(configuracoes_module.DEFAULT_CONFIG)
+
+    def tearDown(self):
+        configuracoes_module._settings.clear()
+        configuracoes_module._settings.update(self.original_config)
+
     def test_obter_configuracoes_retorna_empresa_integracoes_e_usuarios(self):
         result = configuracoes_obter()
 

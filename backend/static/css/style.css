@@ -610,6 +610,13 @@ body {
   gap: 8px;
 }
 
+.history-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
 .study-detail-section {
   margin-bottom: 18px;
 }
@@ -639,6 +646,7 @@ body {
   .viability-layout,
   .viability-form,
   .study-layout,
+  .history-charts,
   .details-grid,
   .history-update-form,
   .history-layout {

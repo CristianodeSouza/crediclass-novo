@@ -471,6 +471,17 @@
             <article class="summary-card"><span class="summary-label">Ultima Busca</span><strong id="historyUpdated">--</strong><small>Consulta atual</small></article>
           </div>
 
+          <div class="history-charts">
+            <div class="content-card">
+              <div class="table-toolbar"><div><h2>Estudos por Estrategia</h2><p>Distribuicao do filtro atual</p></div></div>
+              <div class="chart-card"><canvas id="historyStrategyChart" height="220"></canvas></div>
+            </div>
+            <div class="content-card">
+              <div class="table-toolbar"><div><h2>Evolucao 30 Dias</h2><p>Quantidade de estudos criados</p></div></div>
+              <div class="chart-card"><canvas id="historyEvolutionChart" height="220"></canvas></div>
+            </div>
+          </div>
+
           <div class="content-card">
             <form id="historyFilters" class="filter-grid">
               <label>
@@ -848,7 +859,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/api.js?v=20260604-11"></script>
-    <script src="/static/js/app.js?v=20260604-11"></script>
+    <script src="/static/js/api.js?v=20260604-12"></script>
+    <script src="/static/js/app.js?v=20260604-12"></script>
   </body>
 </html>
