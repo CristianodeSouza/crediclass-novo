@@ -220,6 +220,8 @@ def estudos_listar(
     status: str | None = None,
     operador: str | None = None,
     estrategia: str | None = None,
+    data_inicio: str | None = None,
+    data_fim: str | None = None,
 ):
     logger.info("GET /api/estudos cliente=%s grupo=%s status=%s", cliente, grupo, status)
     items = list_estudos()
@@ -236,6 +238,10 @@ def estudos_listar(
         items = [item for item in items if str(item.get("operador", "")).lower() == operador.lower()]
     if estrategia:
         items = [item for item in items if str(item.get("estrategia", "")).lower() == estrategia.lower()]
+    if data_inicio:
+        items = [item for item in items if str(item.get("criado_em", ""))[:10] >= data_inicio]
+    if data_fim:
+        items = [item for item in items if str(item.get("criado_em", ""))[:10] <= data_fim]
 
     return {"total": len(items), "items": items}
 
