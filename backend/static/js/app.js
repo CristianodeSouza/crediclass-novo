@@ -777,7 +777,7 @@ async function openFinancialStudy(groupId, viabilityItem) {
 async function saveCurrentStudy() {
   if (!currentStudy) {
     showToast("Selecione um grupo na Viabilidade antes de salvar.", "warning");
-    return;
+    return null;
   }
   const payload = {
     cliente: {
@@ -795,8 +795,29 @@ async function saveCurrentStudy() {
     grupo_id: currentStudy.groupId,
   };
   const result = await apiPost("/estudos", payload);
+  currentStudy.savedStudyId = result.estudo_id;
   showToast(`Estudo salvo: ${result.estudo_id}`, "success");
   loadHistoryStudies();
+  return result;
+}
+
+async function exportStudyPdf(studyId) {
+  let targetStudyId = studyId;
+  if (!targetStudyId && currentStudy) {
+    if (!currentStudy.savedStudyId) {
+      const result = await saveCurrentStudy();
+      targetStudyId = result?.estudo_id;
+    } else {
+      targetStudyId = currentStudy.savedStudyId;
+    }
+  }
+  if (!targetStudyId) {
+    showToast("Salve ou selecione um estudo antes de gerar o PDF.", "warning");
+    return;
+  }
+  const result = await apiPost(`/estudos/${encodeURIComponent(targetStudyId)}/exportar-pdf`, {});
+  showToast("PDF gerado.", "success");
+  window.open(result.download_url, "_blank", "noopener");
 }
 
 function setHistoryState(state) {
@@ -843,8 +864,8 @@ function renderHistoryTable(items) {
         <td>
           <div class="row-actions">
             <button class="btn btn-sm btn-outline-primary" type="button" data-history-action="visualizar" data-study-id="${escapeHtml(item.estudo_id)}">Ver</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="pdf">PDF</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="email">E-mail</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="pdf" data-study-id="${escapeHtml(item.estudo_id)}">PDF</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="email" data-study-id="${escapeHtml(item.estudo_id)}">E-mail</button>
             <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="duplicar" data-study-id="${escapeHtml(item.estudo_id)}">Duplicar</button>
             <button class="btn btn-sm btn-outline-danger" type="button" data-history-action="excluir" data-study-id="${escapeHtml(item.estudo_id)}">Excluir</button>
           </div>
@@ -1253,8 +1274,11 @@ document.getElementById("studyNewSimulationBtn").addEventListener("click", () =>
 document.getElementById("studySaveBtn").addEventListener("click", () => {
   saveCurrentStudy().catch(() => setStudyState("error"));
 });
-["studyPdfBtn", "studyEmailBtn", "studyShareBtn"].forEach((id) => {
-  document.getElementById(id).addEventListener("click", () => showToast("Acao sera finalizada na etapa de Historico e exportacao.", "info"));
+document.getElementById("studyPdfBtn").addEventListener("click", () => {
+  exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
+});
+["studyEmailBtn", "studyShareBtn"].forEach((id) => {
+  document.getElementById(id).addEventListener("click", () => showToast("Envio e compartilhamento dependem das integracoes externas.", "info"));
 });
 
 document.getElementById("historyFilters").addEventListener("submit", (event) => {
@@ -1285,7 +1309,11 @@ document.getElementById("historyTableBody").addEventListener("click", async (eve
     loadHistoryStudies();
     return;
   }
-  showToast("Exportacao sera finalizada na etapa de PDF e e-mail.", "info");
+  if (button.dataset.historyAction === "pdf") {
+    exportStudyPdf(studyId).catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
+    return;
+  }
+  showToast("Envio por e-mail depende de SMTP configurado.", "info");
 });
 
 document.getElementById("saveConfigBtn").addEventListener("click", () => {

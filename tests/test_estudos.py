@@ -1,8 +1,11 @@
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from backend.main import estudos_criar, estudos_excluir, estudos_listar, estudos_obter
 from backend.models import EstudoCliente, EstudoRequest
+from backend.estudos import export_estudo_pdf
 
 
 class EstudosTest(unittest.TestCase):
@@ -60,6 +63,22 @@ class EstudosTest(unittest.TestCase):
 
         deleted = estudos_excluir(created["estudo_id"])
         self.assertTrue(deleted["success"])
+
+    def test_export_estudo_pdf_gera_arquivo(self):
+        payload = EstudoRequest(
+            cliente=EstudoCliente(nome="Cliente PDF", credito_desejado=250000, lance_proprio=50000),
+            grupo_id="128",
+        )
+
+        with patch("backend.main.get_grupo", return_value={"grupo_id": "128", "grupo": "128", "administradora": "Itau"}):
+            created = estudos_criar(payload)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            filename = export_estudo_pdf(created["estudo_id"], Path(temp_dir))
+            content = (Path(temp_dir) / filename).read_bytes()
+
+        self.assertEqual(filename, f"{created['estudo_id']}.pdf")
+        self.assertTrue(content.startswith(b"%PDF"))
 
 
 if __name__ == "__main__":
