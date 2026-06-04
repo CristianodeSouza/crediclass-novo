@@ -55,6 +55,10 @@ let detailsModal = null;
 let detailsChart = null;
 let studyChart = null;
 let currentStudy = null;
+let groupFormModal = null;
+let groupFormMode = "create";
+let groupFormId = null;
+let currentDetailsGroupId = null;
 
 function showToast(message, type = "success") {
   const region = document.getElementById("toastRegion");
@@ -206,9 +210,9 @@ function renderGroupsTable(items) {
         <td>
           <div class="row-actions">
             <button class="btn btn-sm btn-outline-primary" type="button" data-map-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-map-action="editar">Editar</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-map-action="duplicar">Duplicar</button>
-            <button class="btn btn-sm btn-outline-danger" type="button" data-map-action="excluir">Excluir</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-map-action="editar" data-group-id="${escapeHtml(item.grupo_id)}">Editar</button>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-map-action="duplicar" data-group-id="${escapeHtml(item.grupo_id)}">Duplicar</button>
+            <button class="btn btn-sm btn-outline-danger" type="button" data-map-action="excluir" data-group-id="${escapeHtml(item.grupo_id)}">Excluir</button>
           </div>
         </td>
       </tr>
@@ -306,6 +310,7 @@ function renderDetailsHistory(group) {
 }
 
 async function openGroupDetails(groupId) {
+  currentDetailsGroupId = groupId;
   if (!detailsModal) {
     detailsModal = new bootstrap.Modal(document.getElementById("groupDetailsModal"));
   }
@@ -325,6 +330,87 @@ async function openGroupDetails(groupId) {
   } catch (error) {
     setDetailsState("error");
   }
+}
+
+function ensureGroupFormModal() {
+  if (!groupFormModal) {
+    groupFormModal = new bootstrap.Modal(document.getElementById("groupFormModal"));
+  }
+}
+
+function setGroupFormValues(group = {}) {
+  document.getElementById("groupFormAdministradora").value = group.administradora || "";
+  document.getElementById("groupFormGrupo").value = group.grupo || "";
+  document.getElementById("groupFormTipoBem").value = group.tipo_bem || "";
+  document.getElementById("groupFormCreditoMinimo").value = group.credito_minimo ?? "";
+  document.getElementById("groupFormCreditoMaximo").value = group.credito_maximo ?? "";
+  document.getElementById("groupFormTaxaAdm").value = group.taxa_adm !== null && group.taxa_adm !== undefined ? String(group.taxa_adm * 100).replace(".", ",") : "";
+  document.getElementById("groupFormPrazoTotal").value = group.prazo_total ?? "";
+  document.getElementById("groupFormStatus").value = group.status || "Ativo";
+}
+
+function collectGroupFormPayload() {
+  const taxa = toNumber(document.getElementById("groupFormTaxaAdm").value);
+  return {
+    administradora: document.getElementById("groupFormAdministradora").value.trim(),
+    grupo: document.getElementById("groupFormGrupo").value.trim(),
+    tipo_bem: document.getElementById("groupFormTipoBem").value.trim(),
+    credito_minimo: toNumber(document.getElementById("groupFormCreditoMinimo").value),
+    credito_maximo: toNumber(document.getElementById("groupFormCreditoMaximo").value),
+    taxa_adm: taxa > 1 ? taxa / 100 : taxa,
+    prazo_total: Number(document.getElementById("groupFormPrazoTotal").value || 0),
+    status: document.getElementById("groupFormStatus").value,
+  };
+}
+
+async function openGroupForm(mode, groupId = null) {
+  ensureGroupFormModal();
+  groupFormMode = mode;
+  groupFormId = groupId;
+  document.getElementById("groupCrudForm").reset();
+  document.getElementById("groupFormTitle").textContent = mode === "create" ? "Novo Grupo" : mode === "duplicate" ? "Duplicar Grupo" : "Editar Grupo";
+  document.getElementById("groupFormSubtitle").textContent = mode === "create" ? "Criacao de nova linha na Google Sheets" : groupId;
+
+  if (mode === "create") {
+    setGroupFormValues();
+    groupFormModal.show();
+    return;
+  }
+
+  try {
+    const group = await apiGet(`/grupos/${encodeURIComponent(groupId)}`);
+    setGroupFormValues(group);
+    if (mode === "duplicate") {
+      document.getElementById("groupFormGrupo").value = `${group.grupo}-COPIA`;
+      groupFormId = null;
+    }
+    groupFormModal.show();
+  } catch (error) {
+    showToast("Nao foi possivel carregar o grupo para edicao.", "danger");
+  }
+}
+
+async function saveGroupForm() {
+  const payload = collectGroupFormPayload();
+  if (!payload.administradora || !payload.grupo || !payload.tipo_bem || !payload.credito_minimo || !payload.credito_maximo || !payload.prazo_total) {
+    showToast("Preencha os campos obrigatorios do grupo.", "warning");
+    return;
+  }
+  if (groupFormMode === "edit" && groupFormId) {
+    await apiPut(`/grupos/${encodeURIComponent(groupFormId)}`, payload);
+    showToast("Grupo atualizado na Google Sheets.", "success");
+  } else {
+    const result = await apiPost("/grupos", payload);
+    showToast(`Grupo criado: ${result.grupo_id}`, "success");
+  }
+  groupFormModal.hide();
+  loadMapaGrupos();
+}
+
+async function deleteGroup(groupId) {
+  await apiDelete(`/grupos/${encodeURIComponent(groupId)}`);
+  showToast("Grupo marcado como Excluido na Google Sheets.", "success");
+  loadMapaGrupos();
 }
 
 function renderPagination() {
@@ -885,6 +971,18 @@ document.getElementById("primaryAction").addEventListener("click", () => {
     analyzeViability();
     return;
   }
+  if (document.getElementById("screen-mapa").classList.contains("active")) {
+    openGroupForm("create");
+    return;
+  }
+  if (document.getElementById("screen-configuracoes").classList.contains("active")) {
+    saveConfiguracoes().catch(() => setConfigState("error"));
+    return;
+  }
+  if (document.getElementById("screen-historico").classList.contains("active")) {
+    loadHistoryStudies();
+    return;
+  }
   showToast("Funcionalidade sera implementada na etapa correspondente.", "info");
 });
 
@@ -941,11 +1039,27 @@ document.getElementById("groupsTableBody").addEventListener("click", (event) => 
     openGroupDetails(button.dataset.groupId);
     return;
   }
-  showToast("Acao sera implementada nas proximas etapas.", "info");
+  if (button.dataset.mapAction === "editar") {
+    openGroupForm("edit", button.dataset.groupId);
+    return;
+  }
+  if (button.dataset.mapAction === "duplicar") {
+    openGroupForm("duplicate", button.dataset.groupId);
+    return;
+  }
+  if (button.dataset.mapAction === "excluir") {
+    if (!window.confirm("Marcar este grupo como Excluido na Google Sheets?")) return;
+    deleteGroup(button.dataset.groupId).catch(() => showToast("Nao foi possivel excluir o grupo.", "danger"));
+  }
 });
 
 document.getElementById("detailsEditBtn").addEventListener("click", () => {
-  showToast("Edicao sera implementada na etapa CRUD Google Sheets.", "info");
+  if (currentDetailsGroupId) openGroupForm("edit", currentDetailsGroupId);
+});
+
+document.getElementById("groupCrudForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  saveGroupForm().catch(() => showToast("Nao foi possivel salvar o grupo.", "danger"));
 });
 
 document.getElementById("viabilityForm").addEventListener("submit", (event) => {

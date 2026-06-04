@@ -9,8 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .estudos import create_estudo, delete_estudo, get_estudo, list_estudos
-from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoDetalhe, GruposResponse, ViabilidadeRequest, ViabilidadeResponse
-from .sheets_client import clear_rows_cache, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows
+from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
+from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows, update_grupo
 from .viabilidade import analyze_viabilidade
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -119,6 +119,44 @@ def grupo_detalhe(grupo_id: str):
     if not item:
         return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
     return item
+
+
+@app.post("/api/grupos", response_model=GrupoCreateResponse)
+def grupo_criar(payload: GrupoCreateRequest):
+    logger.info("POST /api/grupos grupo=%s tipo=%s", payload.grupo, payload.tipo_bem)
+    try:
+        result = create_grupo(payload.model_dump())
+    except Exception as error:
+        logger.exception("Erro ao criar grupo")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+    return result
+
+
+@app.put("/api/grupos/{grupo_id}", response_model=SuccessResponse)
+def grupo_atualizar(grupo_id: str, payload: GrupoUpdateRequest):
+    logger.info("PUT /api/grupos/%s", grupo_id)
+    data = payload.model_dump(exclude_none=True)
+    if not data:
+        return JSONResponse(status_code=400, content={"success": False, "error": "Nenhum campo enviado"})
+    try:
+        return update_grupo(grupo_id, data)
+    except KeyError:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
+    except Exception as error:
+        logger.exception("Erro ao atualizar grupo")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+
+@app.delete("/api/grupos/{grupo_id}")
+def grupo_excluir(grupo_id: str):
+    logger.info("DELETE /api/grupos/%s", grupo_id)
+    try:
+        return delete_grupo(grupo_id)
+    except KeyError:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
+    except Exception as error:
+        logger.exception("Erro ao excluir grupo")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
 
 
 @app.post("/api/viabilidade/analisar", response_model=ViabilidadeResponse)

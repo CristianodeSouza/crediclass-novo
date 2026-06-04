@@ -55,6 +55,35 @@ class GruposResponse(BaseModel):
     items: list[GrupoResumo] = Field(default_factory=list)
 
 
+class GrupoCreateRequest(BaseModel):
+    administradora: str
+    grupo: str
+    tipo_bem: str
+    credito_minimo: float = Field(gt=0)
+    credito_maximo: float = Field(gt=0)
+    taxa_adm: float = Field(ge=0)
+    prazo_total: int = Field(gt=0)
+
+
+class GrupoUpdateRequest(BaseModel):
+    administradora: str | None = None
+    grupo: str | None = None
+    tipo_bem: str | None = None
+    credito_minimo: float | None = Field(default=None, gt=0)
+    credito_maximo: float | None = Field(default=None, gt=0)
+    taxa_adm: float | None = Field(default=None, ge=0)
+    prazo_total: int | None = Field(default=None, gt=0)
+    status: str | None = None
+
+
+class SuccessResponse(BaseModel):
+    success: bool = True
+
+
+class GrupoCreateResponse(SuccessResponse):
+    grupo_id: str
+
+
 class ErrorResponse(BaseModel):
     success: bool = False
     error: str
