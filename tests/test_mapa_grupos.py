@@ -29,6 +29,28 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(result["taxa_adm"], 0.2)
         self.assertEqual(result["prazo_total"], 222)
 
+    def test_row_to_grupo_accepts_sheet_header_variations(self):
+        row = {
+            "Consorciadora": "Porto Seguro",
+            "Nº Grupo": "901",
+            "Segmento": "Imovel",
+            "Carta Minima": "200.000,00",
+            "Carta Maxima": "800.000,00",
+            "Tx Adm": "18%",
+            "Prazo do Grupo": "180",
+            "Status": "Ativo",
+        }
+
+        result = row_to_grupo(row)
+
+        self.assertEqual(result["grupo_id"], "PORTO-SEGURO-901-IMOVEL")
+        self.assertEqual(result["administradora"], "Porto Seguro")
+        self.assertEqual(result["grupo"], "901")
+        self.assertEqual(result["tipo_bem"], "Imovel")
+        self.assertEqual(result["credito_minimo"], 200000)
+        self.assertEqual(result["credito_maximo"], 800000)
+        self.assertEqual(result["taxa_adm"], 0.18)
+
     def test_row_to_grupo_detalhe_builds_history(self):
         row = {
             "Administradora": "Itau",
