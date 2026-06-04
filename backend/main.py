@@ -9,8 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .estudos import create_estudo, delete_estudo, get_estudo, list_estudos
-from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
-from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows, update_grupo
+from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
+from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows, update_grupo, update_historico_mensal
 from .viabilidade import analyze_viabilidade
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -156,6 +156,19 @@ def grupo_excluir(grupo_id: str):
         return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
     except Exception as error:
         logger.exception("Erro ao excluir grupo")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+
+@app.put("/api/grupos/{grupo_id}/historico", response_model=SuccessResponse)
+def grupo_historico_atualizar(grupo_id: str, payload: HistoricoUpdateRequest):
+    logger.info("PUT /api/grupos/%s/historico mes=%s", grupo_id, payload.mes)
+    data = payload.model_dump(exclude_none=True)
+    try:
+        return update_historico_mensal(grupo_id, data)
+    except KeyError:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
+    except Exception as error:
+        logger.exception("Erro ao atualizar historico mensal")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
 
 

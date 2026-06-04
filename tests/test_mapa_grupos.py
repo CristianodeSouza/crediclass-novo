@@ -1,9 +1,10 @@
 import unittest
 from unittest.mock import patch
 
-from backend.main import grupo_detalhe, grupos, reload_data
+from backend.main import grupo_detalhe, grupo_historico_atualizar, grupos, reload_data
+from backend.models import HistoricoUpdateRequest
 from backend.sheets_client import get_grupo as sheets_get_grupo
-from backend.sheets_client import build_historico, clean_text, create_grupo, delete_grupo, parse_credit, payload_to_row_values, row_to_grupo, row_to_grupo_detalhe, update_grupo
+from backend.sheets_client import build_historico, clean_text, create_grupo, delete_grupo, parse_credit, payload_to_row_values, row_to_grupo, row_to_grupo_detalhe, update_grupo, update_historico_mensal
 
 
 class MapaGruposTest(unittest.TestCase):
@@ -252,6 +253,59 @@ class MapaGruposTest(unittest.TestCase):
         self.assertTrue(created["success"])
         self.assertTrue(updated["success"])
         self.assertEqual(deleted["status"], "Excluido")
+
+    def test_update_historico_mensal_uses_existing_month_headers(self):
+        headers = ["ADM", "Grupo", "Tipo de Bem", "JAN-26 Maior Lance", "JAN-26 Menor Lance", "JAN-26 Qtd"]
+        values = [headers, ["Itau", "128", "Imovel", "70", "20", "5"]]
+
+        class ExecuteMock:
+            def execute(self):
+                return {}
+
+        class ValuesMock:
+            def __init__(self):
+                self.update_kwargs = None
+
+            def update(self, **kwargs):
+                self.update_kwargs = kwargs
+                return ExecuteMock()
+
+        class SpreadsheetsMock:
+            def __init__(self):
+                self.values_mock = ValuesMock()
+
+            def values(self):
+                return self.values_mock
+
+        class ServiceMock:
+            def __init__(self):
+                self.spreadsheets_mock = SpreadsheetsMock()
+
+            def spreadsheets(self):
+                return self.spreadsheets_mock
+
+        service = ServiceMock()
+        with patch("backend.sheets_client.read_sheet_values", return_value=values), patch("backend.sheets_client.get_service", return_value=service):
+            result = update_historico_mensal("128", {
+                "mes": "2026-01",
+                "maior_lance": 0.72,
+                "menor_lance": 0.24,
+                "qtd_contemplacoes": 12,
+            })
+
+        updated_row = service.spreadsheets_mock.values_mock.update_kwargs["body"]["values"][0]
+        self.assertTrue(result["success"])
+        self.assertEqual(updated_row[3], "72,0")
+        self.assertEqual(updated_row[4], "24,0")
+        self.assertEqual(updated_row[5], "12")
+
+    def test_historico_endpoint_returns_success(self):
+        payload = HistoricoUpdateRequest(mes="2026-01", maior_lance=0.72, menor_lance=0.24, qtd_contemplacoes=12)
+
+        with patch("backend.main.update_historico_mensal", return_value={"success": True}):
+            result = grupo_historico_atualizar("128", payload)
+
+        self.assertTrue(result["success"])
 
 
 if __name__ == "__main__":
