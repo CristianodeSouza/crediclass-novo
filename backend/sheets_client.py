@@ -39,10 +39,9 @@ def clean_text(value: Any) -> str:
 
 FIELD_ALIASES = {
     "administradora": [
-        "",
+        "adm",
         "administradora",
         "administradoras",
-        "adm",
         "admin",
         "consorciadora",
         "operadora",
@@ -383,10 +382,8 @@ def build_historico(row: dict[str, Any]) -> dict[str, dict[str, Any]]:
 
 
 def build_grupo_id(row: dict[str, Any]) -> str:
-    administradora = clean_text(get_field(row, "administradora")).upper().replace(" ", "-")
     grupo = clean_text(get_field(row, "grupo")).upper().replace(" ", "-")
-    tipo_bem = clean_text(get_field(row, "tipo_bem")).upper().replace(" ", "-")
-    return "-".join(part for part in [administradora, grupo, tipo_bem] if part)
+    return grupo
 
 
 def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:

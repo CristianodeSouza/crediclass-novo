@@ -9,7 +9,7 @@ from backend.sheets_client import build_historico, clean_text, create_grupo, del
 class MapaGruposTest(unittest.TestCase):
     def test_row_to_grupo_uses_header_names(self):
         row = {
-            "Administradora": "Itau Consorcios",
+            "ADM": "Itau Consorcios",
             "Grupo": "128",
             "Tipo de Bem": "Imovel",
             "Credito Minimo": "100.000,00",
@@ -23,7 +23,8 @@ class MapaGruposTest(unittest.TestCase):
 
         result = row_to_grupo(row)
 
-        self.assertEqual(result["grupo_id"], "ITAU-CONSORCIOS-128-IMOVEL")
+        self.assertEqual(result["grupo_id"], "128")
+        self.assertEqual(result["administradora"], "Itau Consorcios")
         self.assertEqual(result["credito_minimo"], 100000)
         self.assertEqual(result["credito_maximo"], 1000000)
         self.assertEqual(result["taxa_adm"], 0.2)
@@ -43,7 +44,7 @@ class MapaGruposTest(unittest.TestCase):
 
         result = row_to_grupo(row)
 
-        self.assertEqual(result["grupo_id"], "PORTO-SEGURO-901-IMOVEL")
+        self.assertEqual(result["grupo_id"], "901")
         self.assertEqual(result["administradora"], "Porto Seguro")
         self.assertEqual(result["grupo"], "901")
         self.assertEqual(result["tipo_bem"], "Imovel")
@@ -85,7 +86,7 @@ class MapaGruposTest(unittest.TestCase):
     def test_grupos_endpoint_filters_and_paginates(self):
         fake_items = [
             {
-                "grupo_id": "ITAU-128-IMOVEL",
+                "grupo_id": "128",
                 "administradora": "Itau",
                 "grupo": "128",
                 "tipo_bem": "Imovel",
@@ -98,7 +99,7 @@ class MapaGruposTest(unittest.TestCase):
                 "status": "Ativo",
             },
             {
-                "grupo_id": "CNP-017-IMOVEL",
+                "grupo_id": "017",
                 "administradora": "CNP",
                 "grupo": "017",
                 "tipo_bem": "Imovel",
@@ -116,11 +117,11 @@ class MapaGruposTest(unittest.TestCase):
             result = grupos(administradora="Itau", page=1, page_size=10)
 
         self.assertEqual(result["total"], 1)
-        self.assertEqual(result["items"][0]["grupo_id"], "ITAU-128-IMOVEL")
+        self.assertEqual(result["items"][0]["grupo_id"], "128")
 
     def test_grupo_detalhe_endpoint_returns_item(self):
         fake_item = {
-            "grupo_id": "ITAU-128-IMOVEL",
+            "grupo_id": "128",
             "administradora": "Itau",
             "grupo": "128",
             "tipo_bem": "Imovel",
@@ -153,9 +154,9 @@ class MapaGruposTest(unittest.TestCase):
         }
 
         with patch("backend.main.get_grupo", return_value=fake_item):
-            result = grupo_detalhe("ITAU-128-IMOVEL")
+            result = grupo_detalhe("128")
 
-        self.assertEqual(result["grupo_id"], "ITAU-128-IMOVEL")
+        self.assertEqual(result["grupo_id"], "128")
         self.assertEqual(result["historico"]["2026-01"]["menor_lance"], 0.24)
 
     def test_reload_endpoint_clears_cache_and_returns_total(self):
@@ -173,20 +174,20 @@ class MapaGruposTest(unittest.TestCase):
 
     def test_sheets_get_grupo_uses_detail_listing(self):
         fake_detail = {
-            "grupo_id": "ITAU-128-IMOVEL",
+            "grupo_id": "128",
             "administradora": "Itau",
             "grupo": "128",
             "tipo_bem": "Imovel",
         }
 
         with patch("backend.sheets_client.list_grupos_detalhe", return_value=[fake_detail]) as list_details:
-            result = sheets_get_grupo("ITAU-128-IMOVEL")
+            result = sheets_get_grupo("128")
 
         list_details.assert_called_once()
-        self.assertEqual(result["grupo_id"], "ITAU-128-IMOVEL")
+        self.assertEqual(result["grupo_id"], "128")
 
     def test_payload_to_row_values_uses_headers_not_positions(self):
-        headers = ["", "Tipo de Bem", "Grup0", "Menor\nCredito", "Maior\nCredito", "Taxa\nAdm Original", "Prazo\nGrupo"]
+        headers = ["ADM", "Tipo de Bem", "Grup0", "Menor\nCredito", "Maior\nCredito", "Taxa\nAdm Original", "Prazo\nGrupo"]
 
         values = payload_to_row_values(headers, {
             "administradora": "Crediclass",
@@ -204,7 +205,7 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(values[5], "20,0")
 
     def test_create_update_delete_grupo_call_google_sheets(self):
-        headers = ["", "Grup0", "Tipo de Bem", "Menor\nCredito", "Maior\nCredito", "Taxa\nAdm Original", "Prazo\nGrupo", "Status"]
+        headers = ["ADM", "Grup0", "Tipo de Bem", "Menor\nCredito", "Maior\nCredito", "Taxa\nAdm Original", "Prazo\nGrupo", "Status"]
         values = [headers, ["Crediclass", "128", "Imovel", "100000", "500000", "20", "180", "Ativo"]]
 
         class ExecuteMock:
@@ -245,8 +246,8 @@ class MapaGruposTest(unittest.TestCase):
                 "taxa_adm": 0.18,
                 "prazo_total": 180,
             })
-            updated = update_grupo("CREDICLASS-128-IMOVEL", {"taxa_adm": 0.19})
-            deleted = delete_grupo("CREDICLASS-128-IMOVEL")
+            updated = update_grupo("128", {"taxa_adm": 0.19})
+            deleted = delete_grupo("128")
 
         self.assertTrue(created["success"])
         self.assertTrue(updated["success"])
