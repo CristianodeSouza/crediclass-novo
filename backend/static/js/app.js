@@ -64,6 +64,9 @@ let groupFormMode = "create";
 let groupFormId = null;
 let currentDetailsGroupId = null;
 let studyDetailsModal = null;
+let configUserModal = null;
+let configUserMode = "create";
+let configUserIndex = null;
 
 function showToast(message, type = "success") {
   const region = document.getElementById("toastRegion");
@@ -1501,25 +1504,48 @@ async function saveConfigUsers(usuarios, message = "Usuarios atualizados.") {
   addOperationalLog(message);
 }
 
-async function editConfigUser(index) {
+function ensureConfigUserModal() {
+  if (!configUserModal) {
+    configUserModal = new bootstrap.Modal(document.getElementById("configUserModal"));
+  }
+}
+
+function openConfigUserForm(mode, index = null) {
+  ensureConfigUserModal();
+  configUserMode = mode;
+  configUserIndex = index;
+  const user = mode === "edit" ? (configState.data?.usuarios || [])[index] : null;
+
+  document.getElementById("configUserModalTitle").textContent = mode === "edit" ? "Editar Usuario" : "Novo Usuario";
+  document.getElementById("configUserNome").value = user?.nome || "";
+  document.getElementById("configUserEmail").value = user?.email || "";
+  document.getElementById("configUserPerfil").value = user?.perfil || "";
+  document.getElementById("configUserStatus").value = user?.status || "Ativo";
+  configUserModal.show();
+}
+
+async function submitConfigUserForm() {
   const usuarios = [...(configState.data?.usuarios || [])];
-  const user = usuarios[index];
-  if (!user) return;
-
-  const nome = window.prompt("Nome", user.nome || "");
-  if (nome === null) return;
-  const email = window.prompt("E-mail", user.email || "");
-  if (email === null) return;
-  const perfil = window.prompt("Perfil informativo", user.perfil || "");
-  if (perfil === null) return;
-
-  usuarios[index] = {
-    ...user,
-    nome: nome.trim() || user.nome,
-    email: email.trim() || user.email,
-    perfil: perfil.trim() || user.perfil,
+  const payload = {
+    nome: document.getElementById("configUserNome").value.trim(),
+    email: document.getElementById("configUserEmail").value.trim(),
+    perfil: document.getElementById("configUserPerfil").value.trim(),
+    status: document.getElementById("configUserStatus").value,
+    ultimo_acesso: configUserMode === "edit" ? (usuarios[configUserIndex]?.ultimo_acesso || "") : "",
   };
-  await saveConfigUsers(usuarios, "Referencia de usuario atualizada.");
+
+  if (!payload.nome || !payload.email || !payload.perfil) {
+    showToast("Preencha nome, e-mail e perfil.", "warning");
+    return;
+  }
+
+  if (configUserMode === "edit" && usuarios[configUserIndex]) {
+    usuarios[configUserIndex] = { ...usuarios[configUserIndex], ...payload };
+  } else {
+    usuarios.push(payload);
+  }
+  await saveConfigUsers(usuarios, configUserMode === "edit" ? "Referencia de usuario atualizada." : "Referencia de usuario cadastrada.");
+  configUserModal.hide();
 }
 
 async function syncGoogleSheets() {
@@ -1744,6 +1770,13 @@ document.getElementById("syncSheetsBtn").addEventListener("click", () => {
 
 document.getElementById("downloadConfigBackupBtn").addEventListener("click", downloadConfigBackup);
 
+document.getElementById("newConfigUserBtn").addEventListener("click", () => openConfigUserForm("create"));
+
+document.getElementById("configUserForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  submitConfigUserForm().catch(() => setConfigState("error"));
+});
+
 document.getElementById("configUsersBody").addEventListener("click", (event) => {
   const button = event.target.closest("[data-config-user-action]");
   if (!button) return;
@@ -1754,7 +1787,7 @@ document.getElementById("configUsersBody").addEventListener("click", (event) => 
   if (!user) return;
 
   if (button.dataset.configUserAction === "editar") {
-    editConfigUser(index).catch(() => setConfigState("error"));
+    openConfigUserForm("edit", index);
     return;
   }
 
