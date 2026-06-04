@@ -431,6 +431,26 @@ function inputPercent(value) {
   return String(value * 100).replace(".", ",");
 }
 
+function collectMonthlyHistoryPayload(prefix) {
+  const maiorInput = document.getElementById(`${prefix}Maior`);
+  const menorInput = document.getElementById(`${prefix}Menor`);
+  const qtdInput = document.getElementById(`${prefix}Qtd`);
+  const maior = toNumber(maiorInput.value);
+  const menor = toNumber(menorInput.value);
+  const qtdRaw = qtdInput.value.trim();
+  const payload = {
+    mes: document.getElementById(`${prefix}Mes`).value,
+  };
+  if (maiorInput.value.trim()) payload.maior_lance = maior > 1 ? maior / 100 : maior;
+  if (menorInput.value.trim()) payload.menor_lance = menor > 1 ? menor / 100 : menor;
+  if (qtdRaw) payload.qtd_contemplacoes = Number(qtdRaw);
+  return payload;
+}
+
+function hasMonthlyHistoryMetrics(payload) {
+  return payload.maior_lance !== undefined || payload.menor_lance !== undefined || payload.qtd_contemplacoes !== undefined;
+}
+
 function setHistoryUpdateValues(entries) {
   const latest = entries.length ? entries[entries.length - 1] : [new Date().toISOString().slice(0, 7), {}];
   const [month, item] = latest;
@@ -452,16 +472,7 @@ function setHistoryUpdateState(state, message = "") {
 }
 
 function collectHistoryUpdatePayload() {
-  const maior = toNumber(document.getElementById("historyUpdateMaior").value);
-  const menor = toNumber(document.getElementById("historyUpdateMenor").value);
-  const qtdRaw = document.getElementById("historyUpdateQtd").value.trim();
-  const payload = {
-    mes: document.getElementById("historyUpdateMes").value,
-  };
-  if (document.getElementById("historyUpdateMaior").value.trim()) payload.maior_lance = maior > 1 ? maior / 100 : maior;
-  if (document.getElementById("historyUpdateMenor").value.trim()) payload.menor_lance = menor > 1 ? menor / 100 : menor;
-  if (qtdRaw) payload.qtd_contemplacoes = Number(qtdRaw);
-  return payload;
+  return collectMonthlyHistoryPayload("historyUpdate");
 }
 
 async function saveHistoryUpdate() {
@@ -471,8 +482,7 @@ async function saveHistoryUpdate() {
     setHistoryUpdateState("error", "Informe o mes do historico.");
     return;
   }
-  const hasMetric = payload.maior_lance !== undefined || payload.menor_lance !== undefined || payload.qtd_contemplacoes !== undefined;
-  if (!hasMetric) {
+  if (!hasMonthlyHistoryMetrics(payload)) {
     setHistoryUpdateState("error", "Informe ao menos um valor de historico.");
     return;
   }
@@ -521,6 +531,25 @@ function setGroupFormValues(group = {}) {
   document.getElementById("groupFormTaxaAdm").value = group.taxa_adm !== null && group.taxa_adm !== undefined ? String(group.taxa_adm * 100).replace(".", ",") : "";
   document.getElementById("groupFormPrazoTotal").value = group.prazo_total ?? "";
   document.getElementById("groupFormStatus").value = group.status || "Ativo";
+  setGroupFormHistoryValues(group.historico || {});
+}
+
+function setGroupFormHistoryValues(historico) {
+  const entries = Object.entries(historico || {});
+  const latest = entries.length ? entries[entries.length - 1] : [new Date().toISOString().slice(0, 7), {}];
+  const [month, item] = latest;
+  document.getElementById("groupFormHistoryMes").value = month;
+  document.getElementById("groupFormHistoryMaior").value = inputPercent(item.maior_lance);
+  document.getElementById("groupFormHistoryMenor").value = inputPercent(item.menor_lance);
+  document.getElementById("groupFormHistoryQtd").value = item.qtd_contemplacoes ?? "";
+  setGroupFormHistoryState("");
+}
+
+function setGroupFormHistoryState(state, message = "") {
+  const status = document.getElementById("groupFormHistoryStatus");
+  status.className = `history-update-status ${state === "success" ? "success" : state === "error" ? "error" : ""}`;
+  status.classList.toggle("d-none", !message);
+  status.textContent = message;
 }
 
 function collectGroupFormPayload() {
@@ -566,16 +595,27 @@ async function openGroupForm(mode, groupId = null) {
 
 async function saveGroupForm() {
   const payload = collectGroupFormPayload();
+  const historyPayload = collectMonthlyHistoryPayload("groupFormHistory");
   if (!payload.administradora || !payload.grupo || !payload.tipo_bem || !payload.credito_minimo || !payload.credito_maximo || !payload.prazo_total) {
     showToast("Preencha os campos obrigatorios do grupo.", "warning");
     return;
   }
+  if (hasMonthlyHistoryMetrics(historyPayload) && !historyPayload.mes) {
+    setGroupFormHistoryState("error", "Informe o mes para salvar o historico.");
+    return;
+  }
+  let targetGroupId = payload.grupo;
   if (groupFormMode === "edit" && groupFormId) {
     await apiPut(`/grupos/${encodeURIComponent(groupFormId)}`, payload);
     showToast("Grupo atualizado na Google Sheets.", "success");
   } else {
     const result = await apiPost("/grupos", payload);
+    targetGroupId = result.grupo_id || payload.grupo;
     showToast(`Grupo criado: ${result.grupo_id}`, "success");
+  }
+  if (hasMonthlyHistoryMetrics(historyPayload)) {
+    await apiPut(`/grupos/${encodeURIComponent(targetGroupId)}/historico`, historyPayload);
+    showToast("Historico mensal atualizado na Google Sheets.", "success");
   }
   groupFormModal.hide();
   loadMapaGrupos();
