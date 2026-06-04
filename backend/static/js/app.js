@@ -822,6 +822,28 @@ async function exportStudyPdf(studyId) {
   window.open(result.download_url, "_blank", "noopener");
 }
 
+async function ensureCurrentStudySaved() {
+  if (!currentStudy) {
+    showToast("Selecione um grupo na Viabilidade antes de compartilhar.", "warning");
+    return null;
+  }
+  if (currentStudy.savedStudyId) return currentStudy.savedStudyId;
+  const result = await saveCurrentStudy();
+  return result?.estudo_id || null;
+}
+
+async function shareCurrentStudy() {
+  const estudoId = await ensureCurrentStudySaved();
+  if (!estudoId) return;
+  const url = `${window.location.origin}${window.location.pathname}?estudo_id=${encodeURIComponent(estudoId)}`;
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(url);
+    showToast("Link do estudo copiado.", "success");
+    return;
+  }
+  window.prompt("Link do estudo", url);
+}
+
 function setHistoryState(state) {
   document.getElementById("historyLoading").classList.toggle("d-none", state !== "loading");
   document.getElementById("historyError").classList.toggle("d-none", state !== "error");
@@ -1000,6 +1022,15 @@ async function openStudyDetails(studyId) {
   } catch (error) {
     setStudyDetailsState("error");
   }
+}
+
+async function openSharedStudyFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const estudoId = params.get("estudo_id");
+  if (!estudoId) return;
+  activateScreen("historico");
+  loadHistoryStudies();
+  await openStudyDetails(estudoId);
 }
 
 async function duplicateStudy(studyId) {
@@ -1331,8 +1362,11 @@ document.getElementById("studySaveBtn").addEventListener("click", () => {
 document.getElementById("studyPdfBtn").addEventListener("click", () => {
   exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
 });
-["studyEmailBtn", "studyShareBtn"].forEach((id) => {
-  document.getElementById(id).addEventListener("click", () => showToast("Envio e compartilhamento dependem das integracoes externas.", "info"));
+document.getElementById("studyShareBtn").addEventListener("click", () => {
+  shareCurrentStudy().catch(() => showToast("Nao foi possivel compartilhar o estudo.", "danger"));
+});
+["studyEmailBtn"].forEach((id) => {
+  document.getElementById(id).addEventListener("click", () => showToast("Envio por e-mail depende de SMTP configurado.", "info"));
 });
 
 document.getElementById("historyFilters").addEventListener("submit", (event) => {
@@ -1400,3 +1434,4 @@ loadHealth().catch(() => {
 
 loadMapaGrupos();
 updateViabilityTotals();
+openSharedStudyFromUrl().catch(() => showToast("Nao foi possivel abrir o estudo compartilhado.", "danger"));
