@@ -1320,6 +1320,11 @@ function inputToPercent(id) {
   return value > 1 ? value / 100 : value;
 }
 
+function applyTheme(theme) {
+  const normalized = String(theme || "Claro").toLowerCase();
+  document.body.dataset.theme = normalized.includes("escuro") ? "escuro" : "claro";
+}
+
 function renderConfiguracoes(data) {
   configState.data = data;
   const empresa = data.empresa || {};
@@ -1337,6 +1342,7 @@ function renderConfiguracoes(data) {
   setInputValue("configMoeda", pref.moeda);
   setInputValue("configFormatoData", pref.formato_data);
   setInputValue("configTema", pref.tema);
+  applyTheme(pref.tema);
   setInputValue("configIdioma", pref.idioma);
   setInputValue("configAtualizacaoMinutos", pref.atualizacao_automatica_minutos);
 
@@ -1643,6 +1649,10 @@ document.getElementById("historyTableBody").addEventListener("click", async (eve
 
 document.getElementById("saveConfigBtn").addEventListener("click", () => {
   saveConfiguracoes().catch(() => setConfigState("error"));
+});
+
+document.getElementById("configTema").addEventListener("change", (event) => {
+  applyTheme(event.target.value);
 });
 
 document.getElementById("testIntegrationsBtn").addEventListener("click", () => {
