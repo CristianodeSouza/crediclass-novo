@@ -610,6 +610,14 @@ body {
   gap: 8px;
 }
 
+.study-detail-section {
+  margin-bottom: 18px;
+}
+
+.study-detail-section:last-child {
+  margin-bottom: 0;
+}
+
 @media (max-width: 980px) {
   .sidebar {
     position: static;
