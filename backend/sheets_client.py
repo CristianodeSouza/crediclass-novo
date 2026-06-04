@@ -207,6 +207,15 @@ def headers_index(headers: list[str]) -> dict[str, int]:
     return {str(header): index for index, header in enumerate(headers)}
 
 
+def column_letter(index: int) -> str:
+    number = index + 1
+    letters = ""
+    while number:
+        number, remainder = divmod(number - 1, 26)
+        letters = chr(65 + remainder) + letters
+    return letters
+
+
 def format_sheet_value(field: str, value: Any) -> str:
     if value is None:
         return ""
@@ -371,28 +380,31 @@ def update_historico_mensal(grupo_id: str, payload: dict[str, Any]) -> dict[str,
         raise RuntimeError("Nenhum campo de historico enviado")
     headers, history_headers, headers_changed = ensure_history_headers(headers, month_key, sent_metrics)
 
-    row_number, current_row = found
-    updated_values = list(current_row)
-    while len(updated_values) < len(headers):
-        updated_values.append("")
-
     index_by_header = headers_index(headers)
-    for metric in sent_metrics:
-        updated_values[index_by_header[history_headers[metric]]] = format_history_value(metric, payload[metric])
-
     settings = get_settings()
+    updates = []
+
     if headers_changed:
-        get_service().spreadsheets().values().update(
-            spreadsheetId=settings.google_sheets_id,
-            range=f"'{settings.google_sheet_name}'!A1:ZZ1",
-            valueInputOption="USER_ENTERED",
-            body={"values": [headers]},
-        ).execute()
-    get_service().spreadsheets().values().update(
+        for metric in sent_metrics:
+            header = history_headers[metric]
+            col = column_letter(index_by_header[header])
+            updates.append({
+                "range": f"'{settings.google_sheet_name}'!{col}1",
+                "values": [[header]],
+            })
+
+    row_number, _ = found
+    for metric in sent_metrics:
+        header = history_headers[metric]
+        col = column_letter(index_by_header[header])
+        updates.append({
+            "range": f"'{settings.google_sheet_name}'!{col}{row_number}",
+            "values": [[format_history_value(metric, payload[metric])]],
+        })
+
+    get_service().spreadsheets().values().batchUpdate(
         spreadsheetId=settings.google_sheets_id,
-        range=f"'{settings.google_sheet_name}'!A{row_number}:ZZ{row_number}",
-        valueInputOption="USER_ENTERED",
-        body={"values": [updated_values]},
+        body={"valueInputOption": "USER_ENTERED", "data": updates},
     ).execute()
     clear_rows_cache()
     return {"success": True, "mes": month_key}

@@ -266,10 +266,10 @@ class MapaGruposTest(unittest.TestCase):
 
         class ValuesMock:
             def __init__(self):
-                self.update_kwargs = None
+                self.batch_update_kwargs = None
 
-            def update(self, **kwargs):
-                self.update_kwargs = kwargs
+            def batchUpdate(self, **kwargs):
+                self.batch_update_kwargs = kwargs
                 return ExecuteMock()
 
         class SpreadsheetsMock:
@@ -295,11 +295,11 @@ class MapaGruposTest(unittest.TestCase):
                 "qtd_contemplacoes": 12,
             })
 
-        updated_row = service.spreadsheets_mock.values_mock.update_kwargs["body"]["values"][0]
+        updates = service.spreadsheets_mock.values_mock.batch_update_kwargs["body"]["data"]
         self.assertTrue(result["success"])
-        self.assertEqual(updated_row[3], "72,0")
-        self.assertEqual(updated_row[4], "24,0")
-        self.assertEqual(updated_row[5], "12")
+        self.assertEqual(updates[0], {"range": "'Tabela de Grupos 3.0'!D2", "values": [["72,0"]]})
+        self.assertEqual(updates[1], {"range": "'Tabela de Grupos 3.0'!E2", "values": [["24,0"]]})
+        self.assertEqual(updates[2], {"range": "'Tabela de Grupos 3.0'!F2", "values": [["12"]]})
 
     def test_update_historico_mensal_creates_missing_month_headers(self):
         headers = ["ADM", "Grupo", "Tipo de Bem", "JAN-26 Maior Lance"]
@@ -311,10 +311,10 @@ class MapaGruposTest(unittest.TestCase):
 
         class ValuesMock:
             def __init__(self):
-                self.update_calls = []
+                self.batch_update_kwargs = None
 
-            def update(self, **kwargs):
-                self.update_calls.append(kwargs)
+            def batchUpdate(self, **kwargs):
+                self.batch_update_kwargs = kwargs
                 return ExecuteMock()
 
         class SpreadsheetsMock:
@@ -340,15 +340,14 @@ class MapaGruposTest(unittest.TestCase):
                 "qtd_contemplacoes": 8,
             })
 
-        header_update = service.spreadsheets_mock.values_mock.update_calls[0]["body"]["values"][0]
-        row_update = service.spreadsheets_mock.values_mock.update_calls[1]["body"]["values"][0]
+        updates = service.spreadsheets_mock.values_mock.batch_update_kwargs["body"]["data"]
         self.assertTrue(result["success"])
-        self.assertIn("ABR-26 Maior Lance", header_update)
-        self.assertIn("ABR-26 Menor Lance", header_update)
-        self.assertIn("ABR-26 Qtd Contemplacoes", header_update)
-        self.assertEqual(row_update[4], "71,0")
-        self.assertEqual(row_update[5], "22,0")
-        self.assertEqual(row_update[6], "8")
+        self.assertEqual(updates[0], {"range": "'Tabela de Grupos 3.0'!E1", "values": [["ABR-26 Maior Lance"]]})
+        self.assertEqual(updates[1], {"range": "'Tabela de Grupos 3.0'!F1", "values": [["ABR-26 Menor Lance"]]})
+        self.assertEqual(updates[2], {"range": "'Tabela de Grupos 3.0'!G1", "values": [["ABR-26 Qtd Contemplacoes"]]})
+        self.assertEqual(updates[3], {"range": "'Tabela de Grupos 3.0'!E2", "values": [["71,0"]]})
+        self.assertEqual(updates[4], {"range": "'Tabela de Grupos 3.0'!F2", "values": [["22,0"]]})
+        self.assertEqual(updates[5], {"range": "'Tabela de Grupos 3.0'!G2", "values": [["8"]]})
 
     def test_update_historico_mensal_clears_explicit_null_metric(self):
         headers = ["ADM", "Grupo", "Tipo de Bem", "ABR-26 Maior Lance", "ABR-26 Menor Lance", "ABR-26 Qtd Contemplacoes"]
@@ -360,10 +359,10 @@ class MapaGruposTest(unittest.TestCase):
 
         class ValuesMock:
             def __init__(self):
-                self.update_kwargs = None
+                self.batch_update_kwargs = None
 
-            def update(self, **kwargs):
-                self.update_kwargs = kwargs
+            def batchUpdate(self, **kwargs):
+                self.batch_update_kwargs = kwargs
                 return ExecuteMock()
 
         class SpreadsheetsMock:
@@ -387,11 +386,9 @@ class MapaGruposTest(unittest.TestCase):
                 "menor_lance": None,
             })
 
-        updated_row = service.spreadsheets_mock.values_mock.update_kwargs["body"]["values"][0]
+        updates = service.spreadsheets_mock.values_mock.batch_update_kwargs["body"]["data"]
         self.assertTrue(result["success"])
-        self.assertEqual(updated_row[3], "71")
-        self.assertEqual(updated_row[4], "")
-        self.assertEqual(updated_row[5], "8")
+        self.assertEqual(updates, [{"range": "'Tabela de Grupos 3.0'!E2", "values": [[""]]}])
 
     def test_historico_endpoint_returns_success(self):
         payload = HistoricoUpdateRequest(mes="2026-01", maior_lance=0.72, menor_lance=0.24, qtd_contemplacoes=12)
