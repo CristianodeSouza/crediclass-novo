@@ -844,8 +844,12 @@ function computeStudy(payload, viabilityItem, group) {
   const prazo = group.prazo_restante || group.prazo_total || viabilityItem.prazo || 1;
   const taxaAdm = group.taxa_adm || 0;
   const fundoReserva = group.fundo_reserva || 0;
-  const parcela = (creditoContratado + creditoContratado * taxaAdm + creditoContratado * fundoReserva) / prazo;
-  return { creditoContratado, percentualEmbutido, lanceEmbutido, lanceProprio, fgts, lanceTotal, creditoDisponivel, prazo, parcela };
+  const custoTotal = creditoContratado + creditoContratado * taxaAdm + creditoContratado * fundoReserva;
+  const parcela = custoTotal / prazo;
+  const percentualLanceTotal = creditoContratado ? lanceTotal / creditoContratado : 0;
+  const prazoApos = Math.max(1, prazo - Math.round(percentualLanceTotal * prazo));
+  const parcelaApos = custoTotal / prazoApos;
+  return { creditoContratado, percentualEmbutido, lanceEmbutido, lanceProprio, fgts, lanceTotal, creditoDisponivel, prazo, parcela, custoTotal, percentualLanceTotal, prazoApos, parcelaApos };
 }
 
 function renderStudyClient(payload) {
@@ -882,12 +886,21 @@ function renderStudyGroup(group) {
   document.getElementById("studyGroupSubtitle").textContent = `${group.administradora || "Administradora"} - Grupo ${group.grupo || "-"}`;
 }
 
-function renderStudySummary(financial) {
+function renderStudySummary(financial, group, viabilityItem) {
   document.getElementById("studyCreditoOriginal").textContent = formatMoney(financial.creditoContratado);
   document.getElementById("studyLanceEmbutido").textContent = `${formatPercent(financial.percentualEmbutido)} / ${formatMoney(financial.lanceEmbutido)}`;
   document.getElementById("studyCreditoDisponivel").textContent = formatMoney(financial.creditoDisponivel);
+  document.getElementById("studyRecursoProprio").textContent = formatMoney(financial.lanceProprio + financial.fgts);
+  document.getElementById("studyPercentualLanceTotal").textContent = formatPercent(financial.percentualLanceTotal);
   document.getElementById("studyLanceTotal").textContent = formatMoney(financial.lanceTotal);
   document.getElementById("studyParcelaInicial").textContent = formatMoney(financial.parcela);
+  document.getElementById("studyParcelaApos").textContent = formatMoney(financial.parcelaApos);
+  document.getElementById("studyPrazoApos").textContent = `${financial.prazoApos} meses`;
+  document.getElementById("studyCustoTotal").textContent = formatMoney(financial.custoTotal);
+  document.getElementById("studySeguroGarantia").textContent = formatBool(group.seguro_garantia);
+  document.getElementById("studyProximaAssembleia").textContent = group.proxima_assembleia || group.ultima_assembleia || "-";
+  document.getElementById("studyChanceContemplacao").textContent = financial.percentualLanceTotal >= (group.agressivo || 0.5) ? "Alta" : financial.percentualLanceTotal >= (group.moderado || 0.3) ? "Media" : "Acompanhar";
+  document.getElementById("studyRankingPosition").textContent = viabilityItem.ranking ? `${viabilityItem.ranking}o lugar` : "-";
 }
 
 function renderStudyStrategies(group, financial) {
@@ -973,7 +986,7 @@ async function openFinancialStudy(groupId, viabilityItem) {
     currentStudy.financial = financial;
     renderStudyClient(payload);
     renderStudyGroup(group);
-    renderStudySummary(financial);
+    renderStudySummary(financial, group, viabilityItem);
     renderStudyStrategies(group, financial);
     renderStudyHistory(group);
     renderStudyRecommendations(viabilityItem, financial);
