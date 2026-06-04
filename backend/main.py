@@ -7,8 +7,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
-from .estudos import create_estudo
-from .models import EstudoCreateResponse, EstudoRequest, GrupoDetalhe, GruposResponse, ViabilidadeRequest, ViabilidadeResponse
+from .estudos import create_estudo, delete_estudo, get_estudo, list_estudos
+from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoDetalhe, GruposResponse, ViabilidadeRequest, ViabilidadeResponse
 from .sheets_client import clear_rows_cache, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows
 from .viabilidade import analyze_viabilidade
 
@@ -149,10 +149,54 @@ def estudos_criar(payload: EstudoRequest):
         item = get_grupo(payload.grupo_id)
         if not item:
             return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
-        result = create_estudo(payload)
+        result = create_estudo(payload, item)
     except Exception as error:
         logger.exception("Erro ao criar estudo")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
 
     logger.info("POST /api/estudos criou estudo_id=%s", result["estudo_id"])
     return result
+
+
+@app.get("/api/estudos", response_model=EstudosResponse)
+def estudos_listar(
+    cliente: str | None = None,
+    grupo: str | None = None,
+    status: str | None = None,
+    operador: str | None = None,
+    estrategia: str | None = None,
+):
+    logger.info("GET /api/estudos cliente=%s grupo=%s status=%s", cliente, grupo, status)
+    items = list_estudos()
+
+    if cliente:
+        needle = cliente.lower()
+        items = [item for item in items if needle in str(item.get("cliente", {}).get("nome", "")).lower()]
+    if grupo:
+        needle = grupo.lower()
+        items = [item for item in items if needle in str(item.get("grupo_id", "")).lower()]
+    if status:
+        items = [item for item in items if str(item.get("status", "")).lower() == status.lower()]
+    if operador:
+        items = [item for item in items if str(item.get("operador", "")).lower() == operador.lower()]
+    if estrategia:
+        items = [item for item in items if str(item.get("estrategia", "")).lower() == estrategia.lower()]
+
+    return {"total": len(items), "items": items}
+
+
+@app.get("/api/estudos/{estudo_id}")
+def estudos_obter(estudo_id: str):
+    logger.info("GET /api/estudos/%s", estudo_id)
+    item = get_estudo(estudo_id)
+    if not item:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
+    return item
+
+
+@app.delete("/api/estudos/{estudo_id}")
+def estudos_excluir(estudo_id: str):
+    logger.info("DELETE /api/estudos/%s", estudo_id)
+    if not delete_estudo(estudo_id):
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
+    return {"success": True}

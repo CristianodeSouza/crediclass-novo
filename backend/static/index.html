@@ -463,10 +463,93 @@
         </section>
 
         <section id="screen-historico" class="screen-panel">
-          <div class="placeholder-card">
-            <div class="state-badge">Placeholder</div>
-            <h2>Historico de Estudos</h2>
-            <p>A lista de estudos sera criada somente apos a etapa de Estudo Financeiro.</p>
+          <div class="summary-grid">
+            <article class="summary-card"><span class="summary-label">Total de Estudos</span><strong id="historyTotal">0</strong><small>Com filtro atual</small></article>
+            <article class="summary-card"><span class="summary-label">Concluidos</span><strong id="historyDone">0</strong><small>Prontos para consulta</small></article>
+            <article class="summary-card"><span class="summary-label">Em Andamento</span><strong id="historyOpen">0</strong><small>Estudos salvos</small></article>
+            <article class="summary-card"><span class="summary-label">Cancelados</span><strong id="historyCanceled">0</strong><small>Excluidos logicamente</small></article>
+            <article class="summary-card"><span class="summary-label">Ultima Busca</span><strong id="historyUpdated">--</strong><small>Consulta atual</small></article>
+          </div>
+
+          <div class="content-card">
+            <form id="historyFilters" class="filter-grid">
+              <label>
+                <span>Periodo inicial</span>
+                <input id="historyStartDate" class="form-control" type="date">
+              </label>
+              <label>
+                <span>Periodo final</span>
+                <input id="historyEndDate" class="form-control" type="date">
+              </label>
+              <label>
+                <span>Cliente</span>
+                <input id="historyCliente" class="form-control" placeholder="Nome do cliente">
+              </label>
+              <label>
+                <span>Grupo</span>
+                <input id="historyGrupo" class="form-control" placeholder="ID ou numero">
+              </label>
+              <label>
+                <span>Status</span>
+                <select id="historyStatus" class="form-select">
+                  <option value="">Todos</option>
+                  <option value="Em andamento">Em andamento</option>
+                  <option value="Concluido">Concluido</option>
+                  <option value="Cancelado">Cancelado</option>
+                </select>
+              </label>
+              <label>
+                <span>Operador</span>
+                <select id="historyOperador" class="form-select">
+                  <option value="">Todos</option>
+                  <option value="Joyce">Joyce</option>
+                  <option value="Larissa">Larissa</option>
+                </select>
+              </label>
+              <label>
+                <span>Estrategia</span>
+                <select id="historyEstrategia" class="form-select">
+                  <option value="">Todas</option>
+                  <option value="Lance Fixo">Lance Fixo</option>
+                  <option value="Lance Total">Lance Total</option>
+                </select>
+              </label>
+              <div class="filter-actions">
+                <button id="clearHistoryBtn" class="btn btn-outline-secondary" type="button">Limpar</button>
+                <button class="btn btn-primary" type="submit">Buscar Estudos</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="content-card">
+            <div class="table-toolbar">
+              <div>
+                <h2>Lista de Estudos</h2>
+                <p id="historySubtitle">Carregando estudos...</p>
+              </div>
+            </div>
+            <div id="historyLoading" class="table-state">Carregando estudos...</div>
+            <div id="historyError" class="table-state table-state-error d-none">Nao foi possivel carregar os estudos.</div>
+            <div id="historyEmpty" class="table-state d-none">Nenhum estudo encontrado.</div>
+            <div id="historyTableWrap" class="table-responsive d-none">
+              <table class="table table-hover align-middle viability-table">
+                <thead>
+                  <tr>
+                    <th>ID Estudo</th>
+                    <th>Data/Hora</th>
+                    <th>Cliente</th>
+                    <th>Administradora</th>
+                    <th>Grupo</th>
+                    <th>Credito</th>
+                    <th>Estrategia</th>
+                    <th>Status</th>
+                    <th>Operador</th>
+                    <th>Acoes</th>
+                  </tr>
+                </thead>
+                <tbody id="historyTableBody"></tbody>
+              </table>
+            </div>
           </div>
         </section>
 

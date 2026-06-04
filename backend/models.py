@@ -121,3 +121,19 @@ class EstudoRequest(BaseModel):
 class EstudoCreateResponse(BaseModel):
     estudo_id: str
     success: bool = True
+
+
+class EstudoResumo(BaseModel):
+    estudo_id: str
+    criado_em: str
+    cliente: dict = Field(default_factory=dict)
+    grupo: dict = Field(default_factory=dict)
+    financeiro: dict = Field(default_factory=dict)
+    estrategia: str = "Lance Total"
+    status: str = "Em andamento"
+    operador: str = "Joyce"
+
+
+class EstudosResponse(BaseModel):
+    total: int
+    items: list[EstudoResumo] = Field(default_factory=list)
