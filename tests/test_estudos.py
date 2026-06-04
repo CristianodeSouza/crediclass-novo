@@ -63,6 +63,8 @@ class EstudosTest(unittest.TestCase):
 
         deleted = estudos_excluir(created["estudo_id"])
         self.assertTrue(deleted["success"])
+        canceled = estudos_obter(created["estudo_id"])
+        self.assertEqual(canceled["status"], "Cancelado")
 
     def test_listar_estudos_filtra_por_periodo(self):
         items = [
