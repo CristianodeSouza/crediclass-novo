@@ -123,6 +123,76 @@ function escapeHtml(value) {
   }[char]));
 }
 
+function csvValue(value) {
+  const text = String(value ?? "").replace(/\r?\n/g, " ").trim();
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function downloadCsv(filename, rows) {
+  const content = rows.map((row) => row.map(csvValue).join(";")).join("\n");
+  const blob = new Blob([`\uFEFF${content}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportGroupsCsv() {
+  if (!mapState.items.length) {
+    showToast("Carregue grupos antes de exportar.", "warning");
+    return;
+  }
+  const rows = [
+    ["ID Grupo", "Administradora", "Tipo de Bem", "Credito Minimo", "Credito Maximo", "Taxa ADM", "Prazo", "1a Assembleia", "Ultima Assembleia", "Status"],
+    ...mapState.items.map((item) => [
+      item.grupo_id,
+      item.administradora,
+      item.tipo_bem,
+      item.credito_minimo,
+      item.credito_maximo,
+      item.taxa_adm,
+      item.prazo_total,
+      item.primeira_assembleia,
+      item.ultima_assembleia,
+      item.status,
+    ]),
+  ];
+  downloadCsv(`crediclass-grupos-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  showToast("CSV de grupos gerado.", "success");
+}
+
+function exportStudiesCsv() {
+  if (!historyState.items.length) {
+    showToast("Busque estudos antes de exportar.", "warning");
+    return;
+  }
+  const rows = [
+    ["ID Estudo", "Data/Hora", "Cliente", "Administradora", "Grupo", "Credito", "Estrategia", "Status", "Operador"],
+    ...historyState.items.map((item) => {
+      const cliente = item.cliente || {};
+      const grupo = item.grupo || {};
+      const financeiro = item.financeiro || {};
+      return [
+        item.estudo_id,
+        item.criado_em,
+        cliente.nome,
+        grupo.administradora,
+        grupo.grupo || item.grupo_id,
+        cliente.credito_desejado || financeiro.credito,
+        item.estrategia,
+        item.status,
+        item.operador,
+      ];
+    }),
+  ];
+  downloadCsv(`crediclass-estudos-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  showToast("CSV de estudos gerado.", "success");
+}
+
 function parseNumberInput(value) {
   const text = String(value || "").trim();
   if (!text) return "";
@@ -1317,6 +1387,8 @@ document.getElementById("pageSizeSelect").addEventListener("change", (event) => 
   loadMapaGrupos();
 });
 
+document.getElementById("exportGroupsCsvBtn").addEventListener("click", exportGroupsCsv);
+
 document.getElementById("prevPageBtn").addEventListener("click", () => {
   if (mapState.page > 1) {
     mapState.page -= 1;
@@ -1420,6 +1492,8 @@ document.getElementById("clearHistoryBtn").addEventListener("click", () => {
   document.getElementById("historyFilters").reset();
   loadHistoryStudies();
 });
+
+document.getElementById("exportStudiesCsvBtn").addEventListener("click", exportStudiesCsv);
 
 document.getElementById("historyTableBody").addEventListener("click", async (event) => {
   const button = event.target.closest("[data-history-action]");
