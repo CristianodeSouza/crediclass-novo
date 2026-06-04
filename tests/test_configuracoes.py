@@ -1,5 +1,9 @@
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
+from backend import configuracoes as configuracoes_module
 from backend.main import configuracoes_obter, configuracoes_salvar
 
 
@@ -18,6 +22,20 @@ class ConfiguracoesTest(unittest.TestCase):
 
         self.assertTrue(result["success"])
         self.assertEqual(config["empresa"]["nome"], "Crediclass Teste")
+
+    def test_salvar_configuracoes_persiste_json(self):
+        original = configuracoes_module.get_configuracoes()
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                runtime_dir = Path(temp_dir)
+                with patch.object(configuracoes_module, "RUNTIME_DIR", runtime_dir), patch.object(configuracoes_module, "CONFIG_FILE", runtime_dir / "configuracoes.json"):
+                    configuracoes_module.update_configuracoes({"empresa": {"nome": "Persistida"}})
+                    loaded = configuracoes_module.load_config()
+        finally:
+            configuracoes_module._settings.clear()
+            configuracoes_module._settings.update(original)
+
+        self.assertEqual(loaded["empresa"]["nome"], "Persistida")
 
 
 if __name__ == "__main__":

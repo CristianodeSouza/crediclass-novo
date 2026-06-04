@@ -1,4 +1,6 @@
 from copy import deepcopy
+import json
+from pathlib import Path
 
 
 DEFAULT_CONFIG = {
@@ -88,7 +90,36 @@ DEFAULT_CONFIG = {
     },
 }
 
-_settings = deepcopy(DEFAULT_CONFIG)
+RUNTIME_DIR = Path(__file__).resolve().parent / "runtime_data"
+CONFIG_FILE = RUNTIME_DIR / "configuracoes.json"
+
+
+def merge_config(base: dict, override: dict) -> dict:
+    result = deepcopy(base)
+    for key, value in (override or {}).items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key].update(value)
+        else:
+            result[key] = value
+    return result
+
+
+def load_config() -> dict:
+    if not CONFIG_FILE.exists():
+        return deepcopy(DEFAULT_CONFIG)
+    try:
+        saved = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return deepcopy(DEFAULT_CONFIG)
+    return merge_config(DEFAULT_CONFIG, saved if isinstance(saved, dict) else {})
+
+
+def save_config() -> None:
+    RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+    CONFIG_FILE.write_text(json.dumps(_settings, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+_settings = load_config()
 
 
 def get_configuracoes() -> dict:
@@ -99,4 +130,5 @@ def update_configuracoes(payload: dict) -> dict:
     for section in ["empresa", "preferencias", "parametros_financeiros"]:
         if section in payload and isinstance(payload[section], dict):
             _settings[section].update(payload[section])
+    save_config()
     return {"success": True}
