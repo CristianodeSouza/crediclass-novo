@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-34", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-35", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -161,12 +161,23 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260604-20", index_html)
+        self.assertIn("/static/css/style.css?v=20260604-21", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)
         self.assertIn('document.getElementById("configTema").addEventListener("change"', app_js)
         self.assertIn('body[data-theme="escuro"]', style_css)
+
+    def test_estudo_financeiro_exibe_logo_da_administradora(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn('id="studyAdminLogo"', index_html)
+        self.assertIn('id="studyAdminName"', index_html)
+        self.assertIn("function initialsFromName(value)", app_js)
+        self.assertIn('document.getElementById("studyAdminLogo").textContent', app_js)
+        self.assertIn(".admin-logo", style_css)
 
     def test_preferencias_configuracoes_expoem_campos_obrigatorios(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")

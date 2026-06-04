@@ -433,6 +433,31 @@ body[data-theme="escuro"] .btn-outline-secondary {
   gap: 12px;
 }
 
+.admin-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.admin-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: #0d6efd;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.admin-identity span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
 .detail-field {
   min-height: 72px;
   padding: 12px;
