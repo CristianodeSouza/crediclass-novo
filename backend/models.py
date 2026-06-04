@@ -1,59 +1,55 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, Field
 
-# Histórico mensal
-class HistoricoMes(BaseModel):
-    mes: str
-    maior_lance: Optional[float] = None
-    menor_lance: Optional[float] = None
-    qtd_contemplacoes: Optional[int] = None
 
-# Dados gerais do grupo
-class GrupoBase(BaseModel):
-    administradora: str
-    grupo: str
-    tipo_bem: Optional[str] = None
-    primeira_assembleia: Optional[str] = None
-    data_termino: Optional[str] = None
-    prazo_grupo: Optional[int] = None
-    prazo_restante: Optional[int] = None
-    menor_credito: Optional[float] = None
-    maior_credito: Optional[float] = None
-    taxa_administracao: Optional[float] = None
-    fundo_reserva: Optional[float] = None
-    prestacao_integral: Optional[float] = None
-    categoria: Optional[str] = None
-    status: Optional[str] = "Ativo"
-
-# Grupo com histórico
-class GrupoComHistorico(GrupoBase):
+class GrupoResumo(BaseModel):
     grupo_id: str
-    historico: Dict[str, List[HistoricoMes]] = {
-        "2024": [],
-        "2025": [],
-        "2026": []
-    }
+    administradora: str = ""
+    grupo: str = ""
+    tipo_bem: str = ""
+    credito_minimo: float | None = None
+    credito_maximo: float | None = None
+    taxa_adm: float | None = None
+    prazo_total: int | None = None
+    primeira_assembleia: str = ""
+    ultima_assembleia: str = ""
+    status: str = "Ativo"
 
-# Grupo para resposta da API (reduzido)
-class GrupoResumido(BaseModel):
-    grupo_id: str
-    administradora: str
-    grupo: str
-    tipo_bem: Optional[str] = None
-    menor_credito: Optional[float] = None
-    maior_credito: Optional[float] = None
-    prazo_grupo: Optional[int] = None
-    prestacao_integral: Optional[float] = None
-    taxa_administracao: Optional[float] = None
-    status: Optional[str] = None
 
-# Request para criar/atualizar grupo
-class GrupoUpdate(BaseModel):
-    dados_gerais: Optional[Dict[str, Any]] = None
-    historico: Optional[Dict[str, List[Dict[str, Any]]]] = None
+class HistoricoMensal(BaseModel):
+    maior_lance: float | None = None
+    menor_lance: float | None = None
+    qtd_contemplacoes: int | None = None
 
-# Response padrão
-class ResponseMessage(BaseModel):
-    status: str
-    message: str
-    data: Optional[Dict[str, Any]] = None
+
+class GrupoDetalhe(GrupoResumo):
+    fundo_reserva: float | None = None
+    prazo_restante: int | None = None
+    data_termino: str = ""
+    seguro_garantia: bool | None = None
+    meia_parcela: bool | None = None
+    lance_embutido: bool | None = None
+    fgts: bool | None = None
+    categoria: str = ""
+    percentual_lance_embutido: float | None = None
+    percentual_lance_fixo: float | None = None
+    parcela_reduzida: str = ""
+    indice_correcao: str = ""
+    vencimento_parcela: str = ""
+    vencimento_lance: str = ""
+    regras_especiais: str = ""
+    cadastrado_por: str = ""
+    ultima_atualizacao: str = ""
+    historico: dict[str, HistoricoMensal] = Field(default_factory=dict)
+    auditoria: list[dict[str, str]] = Field(default_factory=list)
+
+
+class GruposResponse(BaseModel):
+    total: int
+    page: int
+    page_size: int
+    items: list[GrupoResumo] = Field(default_factory=list)
+
+
+class ErrorResponse(BaseModel):
+    success: bool = False
+    error: str

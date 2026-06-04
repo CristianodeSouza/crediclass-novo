@@ -1,255 +1,304 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crediclass Dashboard Grupos V2</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/style.css">
-</head>
-<body>
-    <div class="container-fluid">
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-            <div class="container-fluid">
-                <span class="navbar-brand mb-0 h1">Crediclass Dashboard</span>
-                <span class="navbar-text text-light">Gerenciamento de Grupos</span>
-            </div>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Crediclass Dashboard V3</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+    <link href="/static/css/style.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">C</div>
+          <div class="brand-name">CREDICLASS</div>
+        </div>
+
+        <nav class="nav-menu" aria-label="Navegacao principal">
+          <button class="nav-item active" type="button" data-screen="mapa">
+            <span class="nav-icon">MG</span>
+            <span>Mapa de Grupos</span>
+          </button>
+          <button class="nav-item" type="button" data-screen="viabilidade">
+            <span class="nav-icon">VI</span>
+            <span>Viabilidade</span>
+          </button>
+          <button class="nav-item" type="button" data-screen="estudo">
+            <span class="nav-icon">EF</span>
+            <span>Estudo Financeiro</span>
+          </button>
+          <button class="nav-item" type="button" data-screen="historico">
+            <span class="nav-icon">HE</span>
+            <span>Historico de Estudos</span>
+          </button>
+          <button class="nav-item" type="button" data-screen="configuracoes">
+            <span class="nav-icon">CO</span>
+            <span>Configuracoes</span>
+          </button>
         </nav>
 
-        <div class="container">
-            <div class="row mb-4">
-                <div class="col-md-8">
-                    <h1>Sistema de Gerenciamento de Grupos</h1>
-                    <p class="text-muted">Versão 2 - Desenvolvido do zero com FastAPI + Bootstrap</p>
-                </div>
-                <div class="col-md-4 d-flex gap-2 align-items-start pt-3">
-                    <button class="btn btn-primary" id="btnNovoGrupo">
-                        <i class="bi bi-plus-circle"></i> Novo Grupo
-                    </button>
-                    <button class="btn btn-outline-secondary" id="btnAtualizarDados">
-                        <i class="bi bi-arrow-clockwise"></i> Atualizar Dados
-                    </button>
-                </div>
-            </div>
-
-            <!-- Seção de Filtros -->
-            <div class="row mb-4">
-                <div class="col-md-4">
-                    <label for="filtroAdministradora" class="form-label">Filtrar por Administradora</label>
-                    <select class="form-select" id="filtroAdministradora">
-                        <option value="">Todas as Administradoras</option>
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label for="buscaGrupo" class="form-label">Buscar Grupo</label>
-                    <input type="text" class="form-control" id="buscaGrupo" placeholder="Digite número ou identificador">
-                </div>
-            </div>
-
-            <!-- Tabela de Grupos -->
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-header bg-light">
-                            <h5 class="mb-0">Grupos Cadastrados</h5>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-hover mb-0">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Administradora</th>
-                                            <th>Grupo</th>
-                                            <th>Tipo de Bem</th>
-                                            <th>Menor Crédito</th>
-                                            <th>Maior Crédito</th>
-                                            <th>Prazo</th>
-                                            <th>Prestação Integral</th>
-                                            <th>Taxa Admin</th>
-                                            <th>Status</th>
-                                            <th>Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tabelaGrupos">
-                                        <tr>
-                                            <td colspan="10" class="text-center text-muted py-4">
-                                                Carregando grupos...
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="user-card">
+          <div class="user-avatar">L</div>
+          <div>
+            <div class="user-name">Larissa</div>
+            <div class="user-role">Administradora</div>
+          </div>
+          <span class="user-arrow">v</span>
         </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="page-header">
+          <div>
+            <p id="screenLetter" class="screen-letter">A) MAPA DE GRUPOS</p>
+            <h1 id="screenTitle">Mapa de Grupos</h1>
+            <p id="screenSubtitle">Lista e manutencao da base de grupos</p>
+          </div>
+          <div class="header-actions">
+            <button id="primaryAction" class="btn btn-primary" type="button">Novo Grupo</button>
+          </div>
+        </header>
+
+        <section id="toastRegion" class="toast-region" aria-live="polite"></section>
+
+        <section id="screen-mapa" class="screen-panel active">
+          <div class="summary-grid" aria-label="Resumo dos grupos">
+            <article class="summary-card">
+              <span class="summary-label">Total de Grupos</span>
+              <strong id="summaryTotal">0</strong>
+              <small>Ativos e filtrados</small>
+            </article>
+            <article class="summary-card">
+              <span class="summary-label">Total de Administradoras</span>
+              <strong id="summaryAdministradoras">0</strong>
+              <small>Na listagem atual</small>
+            </article>
+            <article class="summary-card">
+              <span class="summary-label">Credito Total Disponivel</span>
+              <strong id="summaryCredito">R$ 0,00</strong>
+              <small>Soma do credito maximo</small>
+            </article>
+            <article class="summary-card">
+              <span class="summary-label">Taxa ADM Media</span>
+              <strong id="summaryTaxa">0%</strong>
+              <small>Media dos grupos</small>
+            </article>
+            <article class="summary-card">
+              <span class="summary-label">Ultima Atualizacao</span>
+              <strong id="summaryUpdated">--</strong>
+              <small>Dados carregados</small>
+            </article>
+          </div>
+
+          <div class="content-card">
+            <form id="groupFilters" class="filter-grid">
+              <label>
+                <span>Administradora</span>
+                <select id="filterAdministradora" class="form-select">
+                  <option value="">Todas</option>
+                </select>
+              </label>
+              <label>
+                <span>Tipo de Bem</span>
+                <select id="filterTipoBem" class="form-select">
+                  <option value="">Todos</option>
+                </select>
+              </label>
+              <label>
+                <span>Credito minimo</span>
+                <input id="filterCreditoMinimo" class="form-control" inputmode="decimal" placeholder="Minimo">
+              </label>
+              <label>
+                <span>Credito maximo</span>
+                <input id="filterCreditoMaximo" class="form-control" inputmode="decimal" placeholder="Maximo">
+              </label>
+              <label>
+                <span>Prazo minimo</span>
+                <input id="filterPrazoMinimo" class="form-control" inputmode="numeric" placeholder="Min">
+              </label>
+              <label>
+                <span>Prazo maximo</span>
+                <input id="filterPrazoMaximo" class="form-control" inputmode="numeric" placeholder="Max">
+              </label>
+              <label>
+                <span>Status</span>
+                <select id="filterStatus" class="form-select">
+                  <option value="">Todos</option>
+                  <option value="Ativo">Ativo</option>
+                  <option value="Excluido">Excluido</option>
+                </select>
+              </label>
+              <label class="filter-search">
+                <span>Busca por grupo ou ID</span>
+                <input id="filterBusca" class="form-control" type="search" placeholder="Buscar grupo, ID...">
+              </label>
+              <div class="filter-actions">
+                <button id="clearFiltersBtn" class="btn btn-outline-secondary" type="button">Limpar filtros</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="content-card">
+            <div class="table-toolbar">
+              <div>
+                <h2>Lista de Grupos</h2>
+                <p id="tableSubtitle">Carregando grupos...</p>
+              </div>
+              <select id="pageSizeSelect" class="form-select page-size-select" aria-label="Itens por pagina">
+                <option value="10">10 por pagina</option>
+                <option value="25" selected>25 por pagina</option>
+                <option value="50">50 por pagina</option>
+              </select>
+            </div>
+
+            <div id="groupsLoading" class="table-state">Carregando grupos...</div>
+            <div id="groupsError" class="table-state table-state-error d-none">Nao foi possivel carregar os grupos.</div>
+            <div id="groupsEmpty" class="table-state d-none">Nenhum grupo encontrado com os filtros atuais.</div>
+
+            <div id="groupsTableWrap" class="table-responsive d-none">
+              <table class="table table-hover align-middle group-table">
+                <thead>
+                  <tr>
+                    <th>ID Grupo</th>
+                    <th>Administradora</th>
+                    <th>Tipo de Bem</th>
+                    <th>Credito minimo</th>
+                    <th>Credito maximo</th>
+                    <th>Taxa ADM</th>
+                    <th>Prazo</th>
+                    <th>1a Assembleia</th>
+                    <th>Ultima Assembleia</th>
+                    <th>Status</th>
+                    <th>Acoes</th>
+                  </tr>
+                </thead>
+                <tbody id="groupsTableBody"></tbody>
+              </table>
+            </div>
+
+            <div class="pagination-row">
+              <span id="paginationInfo">Pagina 1</span>
+              <div class="pagination-actions">
+                <button id="prevPageBtn" class="btn btn-outline-secondary btn-sm" type="button">Anterior</button>
+                <button id="nextPageBtn" class="btn btn-outline-secondary btn-sm" type="button">Proxima</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="screen-viabilidade" class="screen-panel">
+          <div class="placeholder-card">
+            <div class="state-badge">Placeholder</div>
+            <h2>Viabilidade</h2>
+            <p>Esta tela sera implementada somente apos conclusao do Mapa de Grupos e Detalhes do Grupo.</p>
+          </div>
+        </section>
+
+        <section id="screen-estudo" class="screen-panel">
+          <div class="placeholder-card">
+            <div class="state-badge">Placeholder</div>
+            <h2>Estudo Financeiro</h2>
+            <p>Esta tela sera implementada em etapa propria, conforme o playbook.</p>
+          </div>
+        </section>
+
+        <section id="screen-historico" class="screen-panel">
+          <div class="placeholder-card">
+            <div class="state-badge">Placeholder</div>
+            <h2>Historico de Estudos</h2>
+            <p>A lista de estudos sera criada somente apos a etapa de Estudo Financeiro.</p>
+          </div>
+        </section>
+
+        <section id="screen-configuracoes" class="screen-panel">
+          <div class="placeholder-card">
+            <div class="state-badge">Placeholder</div>
+            <h2>Configuracoes</h2>
+            <p>Configuracoes e integracoes serao implementadas na etapa definida na documentacao.</p>
+          </div>
+        </section>
+
+        <footer class="app-footer">
+          <span>Versao do Sistema: 3.0.0</span>
+          <span>Ambiente: <strong id="environmentLabel">Carregando</strong></span>
+        </footer>
+      </main>
     </div>
 
-    <!-- Modal de Edição/Criação com Abas -->
-    <div class="modal fade" id="modalGrupo" tabindex="-1">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Novo Grupo</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <!-- Abas -->
-                    <ul class="nav nav-tabs mb-3" id="modalTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="tab-dados-gerais" data-bs-toggle="tab" data-bs-target="#painel-dados-gerais" type="button" role="tab">
-                                Dados Gerais
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab-historico-2024" data-bs-toggle="tab" data-bs-target="#painel-historico-2024" type="button" role="tab">
-                                Histórico 2024
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab-historico-2025" data-bs-toggle="tab" data-bs-target="#painel-historico-2025" type="button" role="tab">
-                                Histórico 2025
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="tab-historico-2026" data-bs-toggle="tab" data-bs-target="#painel-historico-2026" type="button" role="tab">
-                                Histórico 2026
-                            </button>
-                        </li>
-                    </ul>
-
-                    <!-- Conteúdo das Abas -->
-                    <div class="tab-content" id="modalTabsContent">
-                        <!-- Aba 1: Dados Gerais -->
-                        <div class="tab-pane fade show active" id="painel-dados-gerais" role="tabpanel">
-                            <form id="formDadosGerais">
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <label for="inputAdministradora" class="form-label">Administradora *</label>
-                                        <input type="text" class="form-control" id="inputAdministradora" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="inputGrupo" class="form-label">Grupo *</label>
-                                        <input type="text" class="form-control" id="inputGrupo" required>
-                                    </div>
-                                </div>
-
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <label for="inputTipoBem" class="form-label">Tipo de Bem</label>
-                                        <input type="text" class="form-control" id="inputTipoBem">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="inputCategoria" class="form-label">Categoria</label>
-                                        <input type="text" class="form-control" id="inputCategoria">
-                                    </div>
-                                </div>
-
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <label for="inputMenorCredito" class="form-label">Menor Crédito</label>
-                                        <input type="number" class="form-control" id="inputMenorCredito" step="0.01">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="inputMaiorCredito" class="form-label">Maior Crédito</label>
-                                        <input type="number" class="form-control" id="inputMaiorCredito" step="0.01">
-                                    </div>
-                                </div>
-
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <label for="inputPrazoGrupo" class="form-label">Prazo do Grupo (meses)</label>
-                                        <input type="number" class="form-control" id="inputPrazoGrupo">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="inputPrazoRestante" class="form-label">Prazo Restante (meses)</label>
-                                        <input type="number" class="form-control" id="inputPrazoRestante">
-                                    </div>
-                                </div>
-
-                                <div class="row mb-3">
-                                    <div class="col-md-4">
-                                        <label for="inputTaxaAdmin" class="form-label">Taxa Administração (%)</label>
-                                        <input type="number" class="form-control" id="inputTaxaAdmin" step="0.01">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label for="inputPrestacao" class="form-label">Prestação Integral</label>
-                                        <input type="number" class="form-control" id="inputPrestacao" step="0.01">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label for="inputFundoReserva" class="form-label">Fundo Reserva</label>
-                                        <input type="number" class="form-control" id="inputFundoReserva" step="0.01">
-                                    </div>
-                                </div>
-
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <label for="inputPrimeiraAssembleia" class="form-label">Primeira Assembleia</label>
-                                        <input type="date" class="form-control" id="inputPrimeiraAssembleia">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="inputDataTermino" class="form-label">Data Término</label>
-                                        <input type="date" class="form-control" id="inputDataTermino">
-                                    </div>
-                                </div>
-
-                                <div class="row mb-3">
-                                    <div class="col-md-6">
-                                        <label for="inputStatus" class="form-label">Status</label>
-                                        <select class="form-select" id="inputStatus">
-                                            <option value="Ativo">Ativo</option>
-                                            <option value="Inativo">Inativo</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-
-                        <!-- Aba 2: Histórico 2024 -->
-                        <div class="tab-pane fade" id="painel-historico-2024" role="tabpanel">
-                            <form id="formHistorico2024">
-                                <p class="text-muted mb-3">Adicione dados mensais do histórico de 2024</p>
-                                <div id="historico2024-container"></div>
-                                <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="adicionarMesHistorico(2024)">
-                                    + Adicionar Mês
-                                </button>
-                            </form>
-                        </div>
-
-                        <!-- Aba 3: Histórico 2025 -->
-                        <div class="tab-pane fade" id="painel-historico-2025" role="tabpanel">
-                            <form id="formHistorico2025">
-                                <p class="text-muted mb-3">Adicione dados mensais do histórico de 2025</p>
-                                <div id="historico2025-container"></div>
-                                <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="adicionarMesHistorico(2025)">
-                                    + Adicionar Mês
-                                </button>
-                            </form>
-                        </div>
-
-                        <!-- Aba 4: Histórico 2026 -->
-                        <div class="tab-pane fade" id="painel-historico-2026" role="tabpanel">
-                            <form id="formHistorico2026">
-                                <p class="text-muted mb-3">Adicione dados mensais do histórico de 2026</p>
-                                <div id="historico2026-container"></div>
-                                <button type="button" class="btn btn-sm btn-outline-primary mt-3" onclick="adicionarMesHistorico(2026)">
-                                    + Adicionar Mês
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnSalvarGrupo" onclick="salvarGrupo()">Salvar</button>
-                </div>
+    <div class="modal fade" id="groupDetailsModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div>
+              <h2 id="detailsTitle" class="modal-title h5">Detalhes do Grupo</h2>
+              <p id="detailsSubtitle" class="modal-subtitle">Carregando dados completos</p>
             </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <div id="detailsLoading" class="table-state">Carregando detalhes do grupo...</div>
+            <div id="detailsError" class="table-state table-state-error d-none">Nao foi possivel carregar os detalhes.</div>
+            <div id="detailsContent" class="d-none">
+              <ul class="nav nav-tabs details-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#detailsGeneral" type="button" role="tab">Informacoes Gerais</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#detailsHistory" type="button" role="tab">Historico de Lances</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#detailsParams" type="button" role="tab">Parametros</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                  <button class="nav-link" data-bs-toggle="tab" data-bs-target="#detailsAudit" type="button" role="tab">Auditoria</button>
+                </li>
+              </ul>
+
+              <div class="tab-content details-tab-content">
+                <section id="detailsGeneral" class="tab-pane fade show active" role="tabpanel">
+                  <div id="detailsGeneralGrid" class="details-grid"></div>
+                </section>
+                <section id="detailsHistory" class="tab-pane fade" role="tabpanel">
+                  <div class="history-layout">
+                    <div class="table-responsive">
+                      <table class="table table-sm history-table">
+                        <thead>
+                          <tr>
+                            <th>Mes</th>
+                            <th>Maior Lance</th>
+                            <th>Menor Lance</th>
+                            <th>Qtd Contemplacoes</th>
+                          </tr>
+                        </thead>
+                        <tbody id="detailsHistoryBody"></tbody>
+                      </table>
+                    </div>
+                    <div class="chart-card">
+                      <canvas id="detailsHistoryChart" height="220"></canvas>
+                    </div>
+                  </div>
+                </section>
+                <section id="detailsParams" class="tab-pane fade" role="tabpanel">
+                  <div id="detailsParamsGrid" class="details-grid"></div>
+                </section>
+                <section id="detailsAudit" class="tab-pane fade" role="tabpanel">
+                  <div id="detailsAuditState" class="table-state">Nenhum registro de auditoria disponivel nesta etapa.</div>
+                </section>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="detailsEditBtn" class="btn btn-outline-primary" type="button">Editar Grupo</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          </div>
         </div>
+      </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/static/js/api.js"></script>
     <script src="/static/js/app.js"></script>
-</body>
+  </body>
 </html>

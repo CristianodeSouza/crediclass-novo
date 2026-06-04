@@ -1,29 +1,28 @@
 import os
+from functools import lru_cache
+
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 load_dotenv()
 
-class Settings:
-    """Configurações da aplicação"""
 
-    # Google Sheets
-    GOOGLE_SHEETS_ID = os.getenv("GOOGLE_SHEETS_ID", "")
-    GOOGLE_SERVICE_ACCOUNT_JSON = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", "")
-    GOOGLE_SHEET_NAME = os.getenv("GOOGLE_SHEET_NAME", "")
+class Settings(BaseModel):
+    app_name: str = "Crediclass Dashboard V3"
+    version: str = "3.0.0"
+    environment: str = "development"
+    debug: bool = False
+    google_sheets_id: str = ""
+    google_service_account_json: str = ""
+    google_sheet_name: str = "Tabela de Grupos 3.0"
 
-    # Environment
-    ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
-    DEBUG = os.getenv("DEBUG", "false").lower() == "true"
 
-    # Validação
-    @classmethod
-    def validate(cls):
-        """Validar configurações críticas"""
-        if not cls.GOOGLE_SHEETS_ID:
-            print("⚠️  GOOGLE_SHEETS_ID não configurado em .env")
-        if not cls.GOOGLE_SERVICE_ACCOUNT_JSON:
-            print("⚠️  GOOGLE_SERVICE_ACCOUNT_JSON não configurado em .env")
-        if not cls.GOOGLE_SHEET_NAME:
-            print("⚠️  GOOGLE_SHEET_NAME não configurado em .env")
-
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    return Settings(
+        environment=os.getenv("ENVIRONMENT", "development"),
+        debug=os.getenv("DEBUG", "false").lower() == "true",
+        google_sheets_id=os.getenv("GOOGLE_SHEETS_ID", ""),
+        google_service_account_json=os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", ""),
+        google_sheet_name=os.getenv("GOOGLE_SHEET_NAME", "Tabela de Grupos 3.0"),
+    )
