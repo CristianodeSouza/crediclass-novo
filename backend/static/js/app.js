@@ -52,6 +52,7 @@ const configState = {
 };
 
 const operationalLogs = [];
+const HISTORY_START_MONTH = "2024-01";
 
 let detailsModal = null;
 let detailsChart = null;
@@ -273,6 +274,51 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function monthKeyToDate(monthKey) {
+  const [year, month] = String(monthKey || "").split("-").map(Number);
+  if (!year || !month) return null;
+  return new Date(year, month - 1, 1);
+}
+
+function addMonths(monthKey, amount) {
+  const date = monthKeyToDate(monthKey);
+  if (!date) return monthKey;
+  date.setMonth(date.getMonth() + amount);
+  return date.toISOString().slice(0, 7);
+}
+
+function currentMonthKey() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function compareMonthKeys(a, b) {
+  return String(a).localeCompare(String(b));
+}
+
+function historyMonthLabel(monthKey) {
+  const date = monthKeyToDate(monthKey);
+  if (!date) return monthKey;
+  return new Intl.DateTimeFormat("pt-BR", { month: "short", year: "numeric" }).format(date).replace(".", "");
+}
+
+function buildHistoryRows(historico = {}, extraMonths = []) {
+  const months = new Set(Object.keys(historico || {}).filter(Boolean));
+  extraMonths.filter(Boolean).forEach((month) => months.add(month));
+  let cursor = HISTORY_START_MONTH;
+  const endMonth = [...months, currentMonthKey()].sort(compareMonthKeys).at(-1) || currentMonthKey();
+  while (compareMonthKeys(cursor, endMonth) <= 0) {
+    months.add(cursor);
+    cursor = addMonths(cursor, 1);
+  }
+  return [...months].sort(compareMonthKeys).map((month) => [month, historico?.[month] || {}]);
+}
+
+function formatChartMonth(monthKey) {
+  const date = monthKeyToDate(monthKey);
+  if (!date) return monthKey;
+  return new Intl.DateTimeFormat("pt-BR", { month: "short", year: "2-digit" }).format(date).replace(".", "");
+}
+
 function getMapFilters() {
   return {
     administradora: document.getElementById("filterAdministradora").value,
@@ -418,36 +464,57 @@ function renderDetailsParams(group) {
 }
 
 function renderDetailsHistory(group) {
-  const entries = Object.entries(group.historico || {});
-  setHistoryUpdateValues(entries);
+  const entries = buildHistoryRows(group.historico || {});
+  renderHistoryEditor("historyUpdate", group.historico || {});
   document.getElementById("detailsHistoryBody").innerHTML = entries.map(([month, item]) => `
     <tr>
-      <td>${escapeHtml(month)}</td>
+      <td><strong>${escapeHtml(historyMonthLabel(month))}</strong><small>${escapeHtml(month)}</small></td>
       <td>${formatPercent(item.maior_lance)}</td>
       <td>${formatPercent(item.menor_lance)}</td>
       <td>${item.qtd_contemplacoes ?? "-"}</td>
     </tr>
   `).join("") || `<tr><td colspan="4" class="text-center text-secondary">Historico nao encontrado.</td></tr>`;
 
-  const labels = entries.map(([month]) => month);
-  const maiores = entries.map(([, item]) => item.maior_lance ? item.maior_lance * 100 : null);
-  const menores = entries.map(([, item]) => item.menor_lance ? item.menor_lance * 100 : null);
+  const chartEntries = entries.filter(([, item]) => item.maior_lance !== null || item.menor_lance !== null || item.qtd_contemplacoes !== null);
+  const labels = chartEntries.map(([month]) => formatChartMonth(month));
+  const maiores = chartEntries.map(([, item]) => item.maior_lance !== null && item.maior_lance !== undefined ? item.maior_lance * 100 : null);
+  const menores = chartEntries.map(([, item]) => item.menor_lance !== null && item.menor_lance !== undefined ? item.menor_lance * 100 : null);
+  const qtd = chartEntries.map(([, item]) => item.qtd_contemplacoes ?? null);
+  const percentValues = [...maiores, ...menores].filter((value) => value !== null);
+  const maxPercent = percentValues.length ? Math.min(100, Math.ceil(Math.max(...percentValues) / 10) * 10) : 100;
 
   if (detailsChart) detailsChart.destroy();
   const canvas = document.getElementById("detailsHistoryChart");
   detailsChart = new Chart(canvas, {
-    type: "line",
+    type: "bar",
     data: {
       labels,
       datasets: [
-        { label: "Maior Lance (%)", data: maiores, borderColor: "#0d6efd", tension: 0.25 },
-        { label: "Menor Lance (%)", data: menores, borderColor: "#16a34a", tension: 0.25 },
+        { type: "line", label: "Maior Lance", data: maiores, borderColor: "#0d6efd", backgroundColor: "rgba(13, 110, 253, 0.12)", borderWidth: 2.5, tension: 0.32, pointRadius: 3, yAxisID: "y" },
+        { type: "line", label: "Menor Lance", data: menores, borderColor: "#16a34a", backgroundColor: "rgba(22, 163, 74, 0.12)", borderWidth: 2.5, tension: 0.32, pointRadius: 3, yAxisID: "y" },
+        { label: "Contemplacoes", data: qtd, backgroundColor: "rgba(245, 158, 11, 0.28)", borderColor: "#f59e0b", borderWidth: 1, borderRadius: 6, yAxisID: "y1" },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      scales: { y: { beginAtZero: true } },
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { position: "top", labels: { boxWidth: 12, usePointStyle: true } },
+        tooltip: {
+          callbacks: {
+            label(context) {
+              if (context.dataset.yAxisID === "y") return `${context.dataset.label}: ${context.parsed.y}%`;
+              return `${context.dataset.label}: ${context.parsed.y}`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 18 } },
+        y: { beginAtZero: true, suggestedMax: maxPercent, ticks: { callback: (value) => `${value}%` }, title: { display: true, text: "Lance" } },
+        y1: { beginAtZero: true, position: "right", grid: { drawOnChartArea: false }, ticks: { precision: 0 }, title: { display: true, text: "Contemplacoes" } },
+      },
     },
   });
 }
@@ -479,15 +546,61 @@ function inputPercent(value) {
   return String(value * 100).replace(".", ",");
 }
 
-function collectMonthlyHistoryPayload(prefix) {
-  const maiorInput = document.getElementById(`${prefix}Maior`);
-  const menorInput = document.getElementById(`${prefix}Menor`);
-  const qtdInput = document.getElementById(`${prefix}Qtd`);
+function historyEditorRow(prefix, month, item = {}) {
+  return `
+    <div class="history-edit-row" data-history-month="${escapeHtml(month)}">
+      <div class="history-edit-month"><strong>${escapeHtml(historyMonthLabel(month))}</strong><span>${escapeHtml(month)}</span></div>
+      <label><span>Maior Lance (%)</span><input class="form-control" data-history-field="maior_lance" inputmode="decimal" value="${escapeHtml(inputPercent(item.maior_lance))}"></label>
+      <label><span>Menor Lance (%)</span><input class="form-control" data-history-field="menor_lance" inputmode="decimal" value="${escapeHtml(inputPercent(item.menor_lance))}"></label>
+      <label><span>Qtd</span><input class="form-control" data-history-field="qtd_contemplacoes" inputmode="numeric" value="${escapeHtml(item.qtd_contemplacoes ?? "")}"></label>
+    </div>
+  `;
+}
+
+function renderHistoryEditor(prefix, historico = {}, extraMonths = []) {
+  const grid = document.getElementById(`${prefix}Grid`);
+  if (!grid) return;
+  const rows = buildHistoryRows(historico, extraMonths);
+  grid.innerHTML = `
+    <div class="history-edit-head">
+      <span>Mes</span>
+      <span>Maior Lance</span>
+      <span>Menor Lance</span>
+      <span>Qtd Contemplacoes</span>
+    </div>
+    ${rows.map(([month, item]) => historyEditorRow(prefix, month, item)).join("")}
+  `;
+  setHistoryUpdateStateForPrefix(prefix, "");
+}
+
+function addHistoryEditorMonth(prefix) {
+  const input = document.getElementById(`${prefix}ExtraMes`);
+  const grid = document.getElementById(`${prefix}Grid`);
+  const month = input?.value;
+  if (!month || !grid) return;
+  if (grid.querySelector(`[data-history-month="${month}"]`)) {
+    setHistoryUpdateStateForPrefix(prefix, "error", "Este mes ja esta na grade.");
+    return;
+  }
+  const head = grid.querySelector(".history-edit-head");
+  const row = document.createElement("div");
+  row.innerHTML = historyEditorRow(prefix, month, {}).trim();
+  grid.insertBefore(row.firstElementChild, head?.nextElementSibling || null);
+  const rows = [...grid.querySelectorAll(".history-edit-row")].sort((a, b) => compareMonthKeys(a.dataset.historyMonth, b.dataset.historyMonth));
+  rows.forEach((item) => grid.appendChild(item));
+  input.value = "";
+  setHistoryUpdateStateForPrefix(prefix, "success", "Mes adicionado para preenchimento.");
+}
+
+function collectHistoryRowPayload(row) {
+  const maiorInput = row.querySelector('[data-history-field="maior_lance"]');
+  const menorInput = row.querySelector('[data-history-field="menor_lance"]');
+  const qtdInput = row.querySelector('[data-history-field="qtd_contemplacoes"]');
   const maior = toNumber(maiorInput.value);
   const menor = toNumber(menorInput.value);
   const qtdRaw = qtdInput.value.trim();
   const payload = {
-    mes: document.getElementById(`${prefix}Mes`).value,
+    mes: row.dataset.historyMonth,
   };
   if (maiorInput.value.trim()) payload.maior_lance = maior > 1 ? maior / 100 : maior;
   if (menorInput.value.trim()) payload.menor_lance = menor > 1 ? menor / 100 : menor;
@@ -495,47 +608,46 @@ function collectMonthlyHistoryPayload(prefix) {
   return payload;
 }
 
+function collectHistoryBatchPayloads(prefix) {
+  const grid = document.getElementById(`${prefix}Grid`);
+  if (!grid) return [];
+  return [...grid.querySelectorAll(".history-edit-row")]
+    .map(collectHistoryRowPayload)
+    .filter(hasMonthlyHistoryMetrics);
+}
+
 function hasMonthlyHistoryMetrics(payload) {
   return payload.maior_lance !== undefined || payload.menor_lance !== undefined || payload.qtd_contemplacoes !== undefined;
 }
 
-function setHistoryUpdateValues(entries) {
-  const latest = entries.length ? entries[entries.length - 1] : [new Date().toISOString().slice(0, 7), {}];
-  const [month, item] = latest;
-  document.getElementById("historyUpdateMes").value = month;
-  document.getElementById("historyUpdateMaior").value = inputPercent(item.maior_lance);
-  document.getElementById("historyUpdateMenor").value = inputPercent(item.menor_lance);
-  document.getElementById("historyUpdateQtd").value = item.qtd_contemplacoes ?? "";
-  setHistoryUpdateState("");
-}
-
-function setHistoryUpdateState(state, message = "") {
-  const status = document.getElementById("historyUpdateStatus");
-  const button = document.getElementById("historyUpdateSaveBtn");
-  button.disabled = state === "loading";
-  button.textContent = state === "loading" ? "Salvando..." : "Salvar Historico";
+function setHistoryUpdateStateForPrefix(prefix, state, message = "") {
+  const status = document.getElementById(`${prefix}Status`);
+  const button = document.getElementById(`${prefix}SaveBtn`);
+  if (button) {
+    button.disabled = state === "loading";
+    button.textContent = state === "loading" ? "Salvando..." : "Salvar Historico";
+  }
+  if (!status) return;
   status.className = `history-update-status ${state === "success" ? "success" : state === "error" ? "error" : ""}`;
   status.classList.toggle("d-none", !message);
   status.textContent = message;
 }
 
-function collectHistoryUpdatePayload() {
-  return collectMonthlyHistoryPayload("historyUpdate");
+function setHistoryUpdateState(state, message = "") {
+  setHistoryUpdateStateForPrefix("historyUpdate", state, message);
 }
 
 async function saveHistoryUpdate() {
   if (!currentDetailsGroupId) return;
-  const payload = collectHistoryUpdatePayload();
-  if (!payload.mes) {
-    setHistoryUpdateState("error", "Informe o mes do historico.");
-    return;
-  }
-  if (!hasMonthlyHistoryMetrics(payload)) {
+  const payloads = collectHistoryBatchPayloads("historyUpdate");
+  if (!payloads.length) {
     setHistoryUpdateState("error", "Informe ao menos um valor de historico.");
     return;
   }
-  setHistoryUpdateState("loading", "Salvando historico na Google Sheets...");
-  await apiPut(`/grupos/${encodeURIComponent(currentDetailsGroupId)}/historico`, payload);
+  setHistoryUpdateState("loading", `Salvando ${payloads.length} mes(es) na Google Sheets...`);
+  for (const payload of payloads) {
+    await apiPut(`/grupos/${encodeURIComponent(currentDetailsGroupId)}/historico`, payload);
+  }
   await openGroupDetails(currentDetailsGroupId);
   setHistoryUpdateState("success", "Historico atualizado na Google Sheets.");
   notifyWhen("alertar_historico_atualizado", "Historico mensal atualizado na Google Sheets.", "success");
@@ -585,13 +697,7 @@ function setGroupFormValues(group = {}) {
 }
 
 function setGroupFormHistoryValues(historico) {
-  const entries = Object.entries(historico || {});
-  const latest = entries.length ? entries[entries.length - 1] : [new Date().toISOString().slice(0, 7), {}];
-  const [month, item] = latest;
-  document.getElementById("groupFormHistoryMes").value = month;
-  document.getElementById("groupFormHistoryMaior").value = inputPercent(item.maior_lance);
-  document.getElementById("groupFormHistoryMenor").value = inputPercent(item.menor_lance);
-  document.getElementById("groupFormHistoryQtd").value = item.qtd_contemplacoes ?? "";
+  renderHistoryEditor("groupFormHistory", historico || {});
   setGroupFormHistoryState("");
 }
 
@@ -645,13 +751,9 @@ async function openGroupForm(mode, groupId = null) {
 
 async function saveGroupForm() {
   const payload = collectGroupFormPayload();
-  const historyPayload = collectMonthlyHistoryPayload("groupFormHistory");
+  const historyPayloads = collectHistoryBatchPayloads("groupFormHistory");
   if (!payload.administradora || !payload.grupo || !payload.tipo_bem || !payload.credito_minimo || !payload.credito_maximo || !payload.prazo_total) {
     showToast("Preencha os campos obrigatorios do grupo.", "warning");
-    return;
-  }
-  if (hasMonthlyHistoryMetrics(historyPayload) && !historyPayload.mes) {
-    setGroupFormHistoryState("error", "Informe o mes para salvar o historico.");
     return;
   }
   let targetGroupId = payload.grupo;
@@ -663,8 +765,11 @@ async function saveGroupForm() {
     targetGroupId = result.grupo_id || payload.grupo;
     showToast(`Grupo criado: ${result.grupo_id}`, "success");
   }
-  if (hasMonthlyHistoryMetrics(historyPayload)) {
-    await apiPut(`/grupos/${encodeURIComponent(targetGroupId)}/historico`, historyPayload);
+  if (historyPayloads.length) {
+    setGroupFormHistoryState("success", `Salvando ${historyPayloads.length} mes(es) de historico...`);
+    for (const historyPayload of historyPayloads) {
+      await apiPut(`/grupos/${encodeURIComponent(targetGroupId)}/historico`, historyPayload);
+    }
     notifyWhen("alertar_historico_atualizado", "Historico mensal atualizado na Google Sheets.", "success");
   }
   groupFormModal.hide();
@@ -1788,6 +1893,9 @@ document.getElementById("historyUpdateForm").addEventListener("submit", (event) 
   event.preventDefault();
   saveHistoryUpdate().catch((error) => setHistoryUpdateState("error", error.message || "Nao foi possivel atualizar o historico."));
 });
+
+document.getElementById("historyUpdateAddMonthBtn").addEventListener("click", () => addHistoryEditorMonth("historyUpdate"));
+document.getElementById("groupFormHistoryAddMonthBtn").addEventListener("click", () => addHistoryEditorMonth("groupFormHistory"));
 
 document.getElementById("viabilityForm").addEventListener("submit", (event) => {
   event.preventDefault();

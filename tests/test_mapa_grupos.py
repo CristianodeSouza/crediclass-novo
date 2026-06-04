@@ -302,6 +302,55 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(updated_row[4], "24,0")
         self.assertEqual(updated_row[5], "12")
 
+    def test_update_historico_mensal_creates_missing_month_headers(self):
+        headers = ["ADM", "Grupo", "Tipo de Bem", "JAN-26 Maior Lance"]
+        values = [headers, ["Itau", "128", "Imovel", "70"]]
+
+        class ExecuteMock:
+            def execute(self):
+                return {}
+
+        class ValuesMock:
+            def __init__(self):
+                self.update_calls = []
+
+            def update(self, **kwargs):
+                self.update_calls.append(kwargs)
+                return ExecuteMock()
+
+        class SpreadsheetsMock:
+            def __init__(self):
+                self.values_mock = ValuesMock()
+
+            def values(self):
+                return self.values_mock
+
+        class ServiceMock:
+            def __init__(self):
+                self.spreadsheets_mock = SpreadsheetsMock()
+
+            def spreadsheets(self):
+                return self.spreadsheets_mock
+
+        service = ServiceMock()
+        with patch("backend.sheets_client.read_sheet_values", return_value=values), patch("backend.sheets_client.get_service", return_value=service):
+            result = update_historico_mensal("128", {
+                "mes": "2026-04",
+                "maior_lance": 0.71,
+                "menor_lance": 0.22,
+                "qtd_contemplacoes": 8,
+            })
+
+        header_update = service.spreadsheets_mock.values_mock.update_calls[0]["body"]["values"][0]
+        row_update = service.spreadsheets_mock.values_mock.update_calls[1]["body"]["values"][0]
+        self.assertTrue(result["success"])
+        self.assertIn("ABR-26 Maior Lance", header_update)
+        self.assertIn("ABR-26 Menor Lance", header_update)
+        self.assertIn("ABR-26 Qtd Contemplacoes", header_update)
+        self.assertEqual(row_update[4], "71,0")
+        self.assertEqual(row_update[5], "22,0")
+        self.assertEqual(row_update[6], "8")
+
     def test_historico_endpoint_returns_success(self):
         payload = HistoricoUpdateRequest(mes="2026-01", maior_lance=0.72, menor_lance=0.24, qtd_contemplacoes=12)
 

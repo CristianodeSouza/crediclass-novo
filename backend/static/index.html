@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
-    <link href="/static/css/style.css?v=20260604-21" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260604-22" rel="stylesheet">
   </head>
   <body>
     <div class="app-shell">
@@ -793,13 +793,20 @@
                   <div id="detailsGeneralGrid" class="details-grid"></div>
                 </section>
                 <section id="detailsHistory" class="tab-pane fade" role="tabpanel">
-                  <form id="historyUpdateForm" class="history-update-form">
-                    <label><span>Mes</span><input id="historyUpdateMes" class="form-control" type="month" required></label>
-                    <label><span>Maior Lance (%)</span><input id="historyUpdateMaior" class="form-control" inputmode="decimal"></label>
-                    <label><span>Menor Lance (%)</span><input id="historyUpdateMenor" class="form-control" inputmode="decimal"></label>
-                    <label><span>Qtd Contemplacoes</span><input id="historyUpdateQtd" class="form-control" inputmode="numeric"></label>
-                    <div class="history-update-actions">
-                      <button id="historyUpdateSaveBtn" class="btn btn-primary" type="submit">Salvar Historico</button>
+                  <form id="historyUpdateForm" class="history-batch-form">
+                    <div class="history-batch-toolbar">
+                      <div>
+                        <h3>Historico mensal do grupo</h3>
+                        <p>Atualizacao de lances e contemplacoes desde jan/2024</p>
+                      </div>
+                      <div class="history-update-actions">
+                        <button id="historyUpdateSaveBtn" class="btn btn-primary" type="submit">Salvar Historico</button>
+                      </div>
+                    </div>
+                    <div id="historyUpdateGrid" class="history-edit-grid"></div>
+                    <div class="history-add-month">
+                      <label><span>Adicionar mes</span><input id="historyUpdateExtraMes" class="form-control" type="month"></label>
+                      <button id="historyUpdateAddMonthBtn" class="btn btn-outline-primary" type="button">Adicionar</button>
                     </div>
                     <div id="historyUpdateStatus" class="history-update-status d-none"></div>
                   </form>
@@ -865,15 +872,14 @@
               <div class="history-update-form group-history-form">
                 <div class="table-toolbar">
                   <div>
-                    <h2>Atualizacao Mensal</h2>
-                    <p>Maior lance, menor lance e contemplacoes do mes</p>
+                    <h2>Historico Mensal</h2>
+                    <p>Maior lance, menor lance e contemplacoes desde jan/2024</p>
                   </div>
                 </div>
-                <div class="viability-form">
-                  <label><span>Mes</span><input id="groupFormHistoryMes" class="form-control" type="month"></label>
-                  <label><span>Maior Lance (%)</span><input id="groupFormHistoryMaior" class="form-control" inputmode="decimal"></label>
-                  <label><span>Menor Lance (%)</span><input id="groupFormHistoryMenor" class="form-control" inputmode="decimal"></label>
-                  <label><span>Qtd Contemplacoes</span><input id="groupFormHistoryQtd" class="form-control" inputmode="numeric"></label>
+                <div id="groupFormHistoryGrid" class="history-edit-grid history-edit-grid-compact"></div>
+                <div class="history-add-month">
+                  <label><span>Adicionar mes</span><input id="groupFormHistoryExtraMes" class="form-control" type="month"></label>
+                  <button id="groupFormHistoryAddMonthBtn" class="btn btn-outline-primary" type="button">Adicionar</button>
                 </div>
                 <div id="groupFormHistoryStatus" class="history-update-status d-none"></div>
               </div>
@@ -972,6 +978,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260604-35"></script>
+    <script src="/static/js/app.js?v=20260604-36"></script>
   </body>
 </html>

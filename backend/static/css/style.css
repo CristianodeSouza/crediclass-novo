@@ -427,6 +427,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
   min-height: 360px;
 }
 
+.modal-xl {
+  --bs-modal-width: min(1180px, calc(100vw - 48px));
+}
+
 .details-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -481,8 +485,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .history-layout {
   display: grid;
-  grid-template-columns: minmax(340px, 0.95fr) minmax(420px, 1.05fr);
+  grid-template-columns: minmax(360px, 0.9fr) minmax(460px, 1.1fr);
   gap: 16px;
+  align-items: stretch;
 }
 
 .history-update-form {
@@ -507,6 +512,112 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .group-history-form {
   display: block;
   margin: 18px 0 0;
+}
+
+.history-batch-form {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.history-batch-toolbar,
+.history-add-month {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.history-batch-toolbar h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.history-batch-toolbar p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.history-add-month {
+  justify-content: flex-start;
+}
+
+.history-add-month label {
+  display: grid;
+  width: 180px;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.history-edit-grid {
+  display: grid;
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.history-edit-grid-compact {
+  max-height: 360px;
+}
+
+.history-edit-head,
+.history-edit-row {
+  display: grid;
+  grid-template-columns: minmax(132px, 0.8fr) repeat(3, minmax(132px, 1fr));
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+}
+
+.history-edit-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--table-head);
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.history-edit-row {
+  border-top: 1px solid var(--border);
+}
+
+.history-edit-row label {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.history-edit-row .form-control {
+  min-height: 34px;
+  padding: 6px 8px;
+}
+
+.history-edit-month {
+  display: grid;
+  gap: 2px;
+}
+
+.history-edit-month strong {
+  font-size: 0.88rem;
+}
+
+.history-edit-month span {
+  color: var(--muted);
+  font-size: 0.76rem;
 }
 
 .history-update-actions {
@@ -537,17 +648,30 @@ body[data-theme="escuro"] .btn-outline-secondary {
   margin-bottom: 0;
 }
 
+.history-table td:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.history-table td:first-child small {
+  color: var(--muted);
+}
+
 .history-table th {
   background: var(--table-head);
   font-size: 0.78rem;
 }
 
 .chart-card {
-  min-height: 300px;
+  min-height: 360px;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
+}
+
+.chart-card canvas {
+  min-height: 330px;
 }
 
 .viability-layout {
@@ -788,6 +912,22 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
   .history-update-actions .btn {
     width: 100%;
+  }
+
+  .history-batch-toolbar,
+  .history-add-month {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .history-add-month label {
+    width: 100%;
+  }
+
+  .history-edit-head,
+  .history-edit-row {
+    grid-template-columns: minmax(112px, 0.8fr) repeat(3, minmax(124px, 1fr));
+    min-width: 620px;
   }
 
   .checklist-card {
