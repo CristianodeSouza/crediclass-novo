@@ -158,6 +158,13 @@ def read_sheet_rows(force_reload: bool = False) -> list[dict[str, Any]]:
     return rows
 
 
+def read_sheet_headers() -> list[str]:
+    rows = read_sheet_rows()
+    if not rows:
+        return []
+    return list(rows[0].keys())
+
+
 def get_field(row: dict[str, Any], field: str) -> Any:
     normalized = {normalize_header(key): value for key, value in row.items()}
     for alias in FIELD_ALIASES[field]:
