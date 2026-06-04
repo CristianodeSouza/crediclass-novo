@@ -23,7 +23,7 @@ class ConfiguracoesTest(unittest.TestCase):
         self.assertEqual(result["empresa"]["nome"], "Crediclass")
         self.assertIn("google_sheets", result["integracoes"])
         self.assertEqual(len(result["usuarios"]), 2)
-        self.assertIn("Operadora", result["permissoes"])
+        self.assertTrue(result["acesso"]["paineis_liberados"])
 
     def test_salvar_configuracoes_atualiza_empresa(self):
         result = configuracoes_salvar({"empresa": {"nome": "Crediclass Teste"}})
@@ -45,6 +45,18 @@ class ConfiguracoesTest(unittest.TestCase):
             configuracoes_module._settings.update(original)
 
         self.assertEqual(loaded["empresa"]["nome"], "Persistida")
+
+    def test_carregar_configuracoes_ignora_permissoes_antigas(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime_dir = Path(temp_dir)
+            config_file = runtime_dir / "configuracoes.json"
+            runtime_dir.mkdir(parents=True, exist_ok=True)
+            config_file.write_text('{"permissoes": {"Operadora": {"visualizar_grupos": true}}}', encoding="utf-8")
+            with patch.object(configuracoes_module, "RUNTIME_DIR", runtime_dir), patch.object(configuracoes_module, "CONFIG_FILE", config_file):
+                loaded = configuracoes_module.load_config()
+
+        self.assertNotIn("permissoes", loaded)
+        self.assertTrue(loaded["acesso"]["paineis_liberados"])
 
 
 if __name__ == "__main__":
