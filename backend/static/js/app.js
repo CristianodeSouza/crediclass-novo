@@ -135,6 +135,12 @@ function averageNumber(values) {
   return valid.reduce((sum, value) => sum + value, 0) / valid.length;
 }
 
+function initialsFromName(value) {
+  const words = String(value || "").trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return "--";
+  return words.slice(0, 2).map((word) => word[0]).join("").toUpperCase();
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -873,8 +879,9 @@ function renderStudyClient(payload) {
 }
 
 function renderStudyGroup(group) {
+  const administradora = group.administradora || "Administradora";
   const fields = [
-    ["Administradora", group.administradora || "-"],
+    ["Administradora", administradora],
     ["Grupo", group.grupo || "-"],
     ["Tipo de bem", group.tipo_bem || "-"],
     ["Inicio do grupo", group.primeira_assembleia || "-"],
@@ -886,8 +893,10 @@ function renderStudyGroup(group) {
     ["Meia parcela", formatBool(group.meia_parcela)],
     ["Status", group.status || "-"],
   ];
+  document.getElementById("studyAdminLogo").textContent = initialsFromName(administradora);
+  document.getElementById("studyAdminName").textContent = administradora;
   document.getElementById("studyGroupGrid").innerHTML = fields.map(([label, value]) => studyField(label, value)).join("");
-  document.getElementById("studyGroupSubtitle").textContent = `${group.administradora || "Administradora"} - Grupo ${group.grupo || "-"}`;
+  document.getElementById("studyGroupSubtitle").textContent = `${administradora} - Grupo ${group.grupo || "-"}`;
 }
 
 function renderStudySummary(financial, group, viabilityItem) {
