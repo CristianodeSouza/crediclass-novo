@@ -64,6 +64,8 @@ let groupFormMode = "create";
 let groupFormId = null;
 let currentDetailsGroupId = null;
 let studyDetailsModal = null;
+let currentStudyStrategies = [];
+let currentStudyStrategyTab = "";
 let configUserModal = null;
 let configUserMode = "create";
 let configUserIndex = null;
@@ -906,29 +908,51 @@ function renderStudySummary(financial, group, viabilityItem) {
 }
 
 function renderStudyStrategies(group, financial) {
-  const strategies = [
+  currentStudyStrategies = [
     ["Lance Fixo", group.percentual_lance_fixo],
-    ["Conservadora", group.conservador],
-    ["Moderada", group.moderado],
-    ["Agressiva", group.agressivo],
+    ["Lance Conservador", group.conservador],
+    ["Lance Moderado", group.moderado],
+    ["Lance Agressivo", group.agressivo],
     ["Lance Total", financial.lanceTotal / financial.creditoContratado],
-  ].map(([label, percent]) => [label, percent || 0]);
+  ].map(([label, percent]) => {
+    const percentual = percent || 0;
+    const lanceTotal = financial.creditoContratado * percentual;
+    return {
+      label,
+      percent: percentual,
+      lanceProprio: Math.max(0, lanceTotal - financial.lanceEmbutido),
+      prazoApos: Math.max(1, financial.prazo - Math.round(percentual * financial.prazo)),
+      chance: percentual >= (group.agressivo || 0.5) ? "Alta" : percentual >= (group.moderado || 0.3) ? "Media" : "Acompanhar",
+    };
+  });
+  currentStudyStrategyTab = currentStudyStrategies.some((item) => item.label === currentStudyStrategyTab) ? currentStudyStrategyTab : "Lance Fixo";
+  renderStudyStrategyTabs();
+  renderStudyStrategyTable();
+}
 
-  document.getElementById("studyStrategiesBody").innerHTML = strategies.map(([label, percent]) => {
-    const lanceTotal = financial.creditoContratado * percent;
-    const lanceProprio = Math.max(0, lanceTotal - financial.lanceEmbutido);
-    const prazoApos = Math.max(1, financial.prazo - Math.round(percent * financial.prazo));
-    const chance = percent >= (group.agressivo || 0.5) ? "Alta" : percent >= (group.moderado || 0.3) ? "Media" : "Acompanhar";
+function renderStudyStrategyTabs() {
+  document.getElementById("studyStrategyTabs").innerHTML = currentStudyStrategies.map((strategy) => `
+    <li class="nav-item" role="presentation">
+      <button class="nav-link ${strategy.label === currentStudyStrategyTab ? "active" : ""}" type="button" data-study-strategy="${escapeHtml(strategy.label)}">${escapeHtml(strategy.label)}</button>
+    </li>
+  `).join("");
+}
+
+function renderStudyStrategyTable() {
+  const financial = currentStudy?.financial;
+  if (!financial) return;
+  const strategies = currentStudyStrategies.filter((strategy) => strategy.label === currentStudyStrategyTab);
+  document.getElementById("studyStrategiesBody").innerHTML = strategies.map((strategy) => {
     return `
       <tr>
-        <td>${escapeHtml(label)}</td>
-        <td>${formatPercent(percent)}</td>
+        <td>${escapeHtml(strategy.label)}</td>
+        <td>${formatPercent(strategy.percent)}</td>
         <td>${formatMoney(financial.lanceEmbutido)}</td>
-        <td>${formatMoney(lanceProprio)}</td>
+        <td>${formatMoney(strategy.lanceProprio)}</td>
         <td>${formatMoney(financial.creditoDisponivel)}</td>
         <td>${formatMoney(financial.parcela)}</td>
-        <td>${prazoApos} meses</td>
-        <td>${chance}</td>
+        <td>${strategy.prazoApos} meses</td>
+        <td>${strategy.chance}</td>
       </tr>
     `;
   }).join("");
@@ -1780,6 +1804,13 @@ document.getElementById("studyChangeGroupBtn").addEventListener("click", () => a
 document.getElementById("studyNewSimulationBtn").addEventListener("click", () => {
   resetViabilityForm();
   activateScreen("viabilidade");
+});
+document.getElementById("studyStrategyTabs").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-study-strategy]");
+  if (!button) return;
+  currentStudyStrategyTab = button.dataset.studyStrategy;
+  renderStudyStrategyTabs();
+  renderStudyStrategyTable();
 });
 document.getElementById("studySaveBtn").addEventListener("click", () => {
   saveCurrentStudy().catch(() => setStudyState("error"));
