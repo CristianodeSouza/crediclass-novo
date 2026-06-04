@@ -475,24 +475,25 @@ function renderDetailsHistory(group) {
     </tr>
   `).join("") || `<tr><td colspan="4" class="text-center text-secondary">Historico nao encontrado.</td></tr>`;
 
-  const chartEntries = entries.filter(([, item]) => item.maior_lance !== null || item.menor_lance !== null || item.qtd_contemplacoes !== null);
+  const chartEntries = entries
+    .filter(([, item]) => item.maior_lance !== null || item.menor_lance !== null)
+    .slice(-18);
   const labels = chartEntries.map(([month]) => formatChartMonth(month));
   const maiores = chartEntries.map(([, item]) => item.maior_lance !== null && item.maior_lance !== undefined ? item.maior_lance * 100 : null);
   const menores = chartEntries.map(([, item]) => item.menor_lance !== null && item.menor_lance !== undefined ? item.menor_lance * 100 : null);
-  const qtd = chartEntries.map(([, item]) => item.qtd_contemplacoes ?? null);
   const percentValues = [...maiores, ...menores].filter((value) => value !== null);
-  const maxPercent = percentValues.length ? Math.min(100, Math.ceil(Math.max(...percentValues) / 10) * 10) : 100;
+  const minPercent = percentValues.length ? Math.max(0, Math.floor((Math.min(...percentValues) - 5) / 5) * 5) : 0;
+  const maxPercent = percentValues.length ? Math.min(100, Math.ceil((Math.max(...percentValues) + 5) / 5) * 5) : 100;
 
   if (detailsChart) detailsChart.destroy();
   const canvas = document.getElementById("detailsHistoryChart");
   detailsChart = new Chart(canvas, {
-    type: "bar",
+    type: "line",
     data: {
       labels,
       datasets: [
-        { type: "line", label: "Maior Lance", data: maiores, borderColor: "#0d6efd", backgroundColor: "rgba(13, 110, 253, 0.12)", borderWidth: 2.5, tension: 0.32, pointRadius: 3, yAxisID: "y" },
-        { type: "line", label: "Menor Lance", data: menores, borderColor: "#16a34a", backgroundColor: "rgba(22, 163, 74, 0.12)", borderWidth: 2.5, tension: 0.32, pointRadius: 3, yAxisID: "y" },
-        { label: "Contemplacoes", data: qtd, backgroundColor: "rgba(245, 158, 11, 0.28)", borderColor: "#f59e0b", borderWidth: 1, borderRadius: 6, yAxisID: "y1" },
+        { label: "Maior Lance", data: maiores, borderColor: "#0d6efd", backgroundColor: "rgba(13, 110, 253, 0.08)", borderWidth: 2.5, tension: 0.28, pointRadius: 3, pointHoverRadius: 5, spanGaps: true },
+        { label: "Menor Lance", data: menores, borderColor: "#16a34a", backgroundColor: "rgba(22, 163, 74, 0.08)", borderWidth: 2.5, tension: 0.28, pointRadius: 3, pointHoverRadius: 5, spanGaps: true },
       ],
     },
     options: {
@@ -504,16 +505,14 @@ function renderDetailsHistory(group) {
         tooltip: {
           callbacks: {
             label(context) {
-              if (context.dataset.yAxisID === "y") return `${context.dataset.label}: ${context.parsed.y}%`;
-              return `${context.dataset.label}: ${context.parsed.y}`;
+              return `${context.dataset.label}: ${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(context.parsed.y)}%`;
             },
           },
         },
       },
       scales: {
         x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 18 } },
-        y: { beginAtZero: true, suggestedMax: maxPercent, ticks: { callback: (value) => `${value}%` }, title: { display: true, text: "Lance" } },
-        y1: { beginAtZero: true, position: "right", grid: { drawOnChartArea: false }, ticks: { precision: 0 }, title: { display: true, text: "Contemplacoes" } },
+        y: { min: minPercent, max: maxPercent, ticks: { callback: (value) => `${value}%` }, title: { display: true, text: "Percentual do lance" } },
       },
     },
   });
@@ -754,6 +753,7 @@ function collectGroupFormPayload() {
 
 async function openGroupForm(mode, groupId = null) {
   ensureGroupFormModal();
+  if (detailsModal) detailsModal.hide();
   groupFormMode = mode;
   groupFormId = groupId;
   document.getElementById("groupCrudForm").reset();
@@ -809,7 +809,10 @@ async function saveGroupForm() {
     notifyWhen("alertar_historico_atualizado", "Historico mensal atualizado na Google Sheets.", "success");
   }
   groupFormModal.hide();
-  loadMapaGrupos();
+  await loadMapaGrupos();
+  if (historyPayloads.length) {
+    showToast(`${historyPayloads.length} mes(es) de historico salvos na Google Sheets.`, "success");
+  }
 }
 
 async function deleteGroup(groupId) {
@@ -1922,7 +1925,10 @@ document.getElementById("detailsEditBtn").addEventListener("click", () => {
 
 document.getElementById("groupCrudForm").addEventListener("submit", (event) => {
   event.preventDefault();
-  saveGroupForm().catch(() => showToast("Nao foi possivel salvar o grupo.", "danger"));
+  saveGroupForm().catch((error) => {
+    setGroupFormHistoryState("error", error.message || "Nao foi possivel salvar o grupo.");
+    showToast("Nao foi possivel salvar o grupo.", "danger");
+  });
 });
 
 document.getElementById("historyUpdateForm").addEventListener("submit", (event) => {

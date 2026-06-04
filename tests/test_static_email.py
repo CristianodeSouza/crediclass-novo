@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-37", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-38", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -59,8 +59,10 @@ class StaticEmailTest(unittest.TestCase):
     def test_crud_grupos_salva_historico_mensal(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
         self.assertIn("Historico Mensal", index_html)
+        self.assertIn("group-form-dialog", index_html)
         self.assertIn('id="groupFormHistoryGrid"', index_html)
         self.assertIn('id="groupFormHistoryAddMonthBtn"', index_html)
         self.assertIn("const HISTORY_START_MONTH = \"2024-01\"", app_js)
@@ -69,8 +71,18 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("data-original-value", app_js)
         self.assertIn("Nenhuma alteracao de historico para salvar.", app_js)
         self.assertIn("o menor lance nao pode ser maior que o maior lance", app_js)
+        self.assertIn("if (detailsModal) detailsModal.hide();", app_js)
+        self.assertIn(".group-form-dialog .modal-footer", style_css)
         self.assertIn('collectHistoryBatchPayloads("groupFormHistory")', app_js)
         self.assertIn('/historico`, historyPayload)', app_js)
+
+    def test_grafico_historico_grupo_exibe_lances_sem_barras(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('type: "line"', app_js)
+        self.assertIn("Percentual do lance", app_js)
+        self.assertNotIn('label: "Contemplacoes"', app_js)
+        self.assertNotIn('yAxisID: "y1"', app_js)
 
     def test_detalhe_grupo_renderiza_auditoria(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -164,7 +176,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260604-22", index_html)
+        self.assertIn("/static/css/style.css?v=20260604-23", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

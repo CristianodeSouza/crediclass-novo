@@ -431,6 +431,41 @@ body[data-theme="escuro"] .btn-outline-secondary {
   --bs-modal-width: min(1180px, calc(100vw - 48px));
 }
 
+.group-form-dialog {
+  --bs-modal-width: min(980px, calc(100vw - 40px));
+  height: calc(100vh - 32px);
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.group-form-dialog .modal-content,
+.group-form-dialog form {
+  max-height: 100%;
+}
+
+.group-form-dialog .modal-content {
+  display: flex;
+}
+
+.group-form-dialog form {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.group-form-dialog .modal-body {
+  min-height: 0;
+  overflow: auto;
+}
+
+.group-form-dialog .modal-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: var(--surface);
+}
+
 .details-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -565,7 +600,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .history-edit-grid-compact {
-  max-height: 360px;
+  max-height: 280px;
 }
 
 .history-edit-head,
@@ -663,7 +698,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .chart-card {
-  min-height: 360px;
+  min-height: 320px;
   padding: 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -671,7 +706,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .chart-card canvas {
-  min-height: 330px;
+  min-height: 290px;
 }
 
 .viability-layout {
