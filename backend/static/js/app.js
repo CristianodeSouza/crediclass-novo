@@ -54,6 +54,8 @@ const configState = {
 let detailsModal = null;
 let detailsChart = null;
 let studyChart = null;
+let historyStrategyChart = null;
+let historyEvolutionChart = null;
 let currentStudy = null;
 let groupFormModal = null;
 let groupFormMode = "create";
@@ -849,6 +851,52 @@ function renderHistorySummary(items) {
   document.getElementById("historyOpen").textContent = items.filter((item) => item.status === "Em andamento").length;
   document.getElementById("historyCanceled").textContent = items.filter((item) => item.status === "Cancelado").length;
   document.getElementById("historyUpdated").textContent = new Date().toLocaleTimeString("pt-BR");
+  renderHistoryCharts(items);
+}
+
+function last30DateLabels() {
+  return Array.from({ length: 30 }, (_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() - (29 - index));
+    return date.toISOString().slice(0, 10);
+  });
+}
+
+function renderHistoryCharts(items) {
+  const strategyCounts = items.reduce((acc, item) => {
+    const key = item.estrategia || "Sem estrategia";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+  const strategyLabels = Object.keys(strategyCounts);
+  const strategyData = strategyLabels.map((label) => strategyCounts[label]);
+
+  if (historyStrategyChart) historyStrategyChart.destroy();
+  historyStrategyChart = new Chart(document.getElementById("historyStrategyChart"), {
+    type: "doughnut",
+    data: {
+      labels: strategyLabels.length ? strategyLabels : ["Sem estudos"],
+      datasets: [{ data: strategyData.length ? strategyData : [1], backgroundColor: ["#0d6efd", "#16a34a", "#f59e0b", "#64748b", "#dc2626"] }],
+    },
+    options: { responsive: true, maintainAspectRatio: false },
+  });
+
+  const labels = last30DateLabels();
+  const countsByDate = items.reduce((acc, item) => {
+    const key = String(item.criado_em || "").slice(0, 10);
+    if (key) acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  if (historyEvolutionChart) historyEvolutionChart.destroy();
+  historyEvolutionChart = new Chart(document.getElementById("historyEvolutionChart"), {
+    type: "line",
+    data: {
+      labels: labels.map((date) => date.slice(5)),
+      datasets: [{ label: "Estudos", data: labels.map((date) => countsByDate[date] || 0), borderColor: "#0d6efd", backgroundColor: "rgba(13, 110, 253, 0.12)", tension: 0.25, fill: true }],
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } },
+  });
 }
 
 function renderHistoryTable(items) {
