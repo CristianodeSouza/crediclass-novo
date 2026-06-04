@@ -17,7 +17,20 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-16", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-17", index_html)
+
+    def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('id="exportGroupsCsvBtn"', index_html)
+        self.assertIn('id="exportStudiesCsvBtn"', index_html)
+        self.assertIn("function downloadCsv(filename, rows)", app_js)
+        self.assertIn("function exportGroupsCsv()", app_js)
+        self.assertIn("function exportStudiesCsv()", app_js)
+        self.assertIn("text/csv;charset=utf-8", app_js)
+        self.assertIn("crediclass-grupos-", app_js)
+        self.assertIn("crediclass-estudos-", app_js)
 
 
 if __name__ == "__main__":
