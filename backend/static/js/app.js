@@ -76,7 +76,7 @@ function activateScreen(screenName) {
 }
 
 function formatMoney(value) {
-  if (value === null || value === undefined) return "-";
+  if (value === null || value === undefined || !Number.isFinite(Number(value)) || Number(value) > 100000000) return "-";
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
@@ -158,7 +158,10 @@ function updateFilterOptions(items) {
 
 function renderSummary(items, total) {
   const administradoras = new Set(items.map((item) => item.administradora).filter(Boolean));
-  const credito = items.reduce((sum, item) => sum + (item.credito_maximo || 0), 0);
+  const credito = items.reduce((sum, item) => {
+    const value = Number(item.credito_maximo || 0);
+    return Number.isFinite(value) && value <= 100000000 ? sum + value : sum;
+  }, 0);
   const taxas = items.map((item) => item.taxa_adm).filter((value) => value !== null && value !== undefined);
   const taxaMedia = taxas.length ? taxas.reduce((sum, value) => sum + value, 0) / taxas.length : null;
 
