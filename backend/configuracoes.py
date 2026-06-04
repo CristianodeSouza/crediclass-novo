@@ -56,37 +56,9 @@ DEFAULT_CONFIG = {
             "ultimo_acesso": "",
         },
     ],
-    "permissoes": {
-        "Administradora": {
-            "visualizar_grupos": True,
-            "criar_grupos": True,
-            "editar_grupos": True,
-            "excluir_grupos": True,
-            "gerar_estudos": True,
-            "exportar_dados": True,
-            "configuracoes": True,
-            "usuarios_permissoes": True,
-        },
-        "Operadora": {
-            "visualizar_grupos": True,
-            "criar_grupos": False,
-            "editar_grupos": False,
-            "excluir_grupos": False,
-            "gerar_estudos": True,
-            "exportar_dados": True,
-            "configuracoes": False,
-            "usuarios_permissoes": False,
-        },
-        "Visualizador": {
-            "visualizar_grupos": True,
-            "criar_grupos": False,
-            "editar_grupos": False,
-            "excluir_grupos": False,
-            "gerar_estudos": False,
-            "exportar_dados": False,
-            "configuracoes": False,
-            "usuarios_permissoes": False,
-        },
+    "acesso": {
+        "paineis_liberados": True,
+        "descricao": "Todos os usuarios podem visualizar todos os dados dos paineis.",
     },
 }
 
@@ -97,6 +69,8 @@ CONFIG_FILE = RUNTIME_DIR / "configuracoes.json"
 def merge_config(base: dict, override: dict) -> dict:
     result = deepcopy(base)
     for key, value in (override or {}).items():
+        if key not in result:
+            continue
         if isinstance(value, dict) and isinstance(result.get(key), dict):
             result[key].update(value)
         else:

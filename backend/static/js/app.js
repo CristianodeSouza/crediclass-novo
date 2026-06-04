@@ -1131,7 +1131,7 @@ function renderConfiguracoes(data) {
     </tr>
   `).join("");
 
-  renderPermissions(data.permissoes || {});
+  renderAccessPolicy(data.acesso || {});
   document.getElementById("configSystemGrid").innerHTML = [
     ["Aplicacao", sistema.app],
     ["Versao", sistema.version],
@@ -1142,25 +1142,12 @@ function renderConfiguracoes(data) {
   ].map(([label, value]) => detailField(label, value)).join("");
 }
 
-function renderPermissions(permissoes) {
-  const profiles = Object.keys(permissoes);
-  const labels = {
-    visualizar_grupos: "Visualizar Grupos",
-    criar_grupos: "Criar Grupos",
-    editar_grupos: "Editar Grupos",
-    excluir_grupos: "Excluir Grupos",
-    gerar_estudos: "Gerar Estudos",
-    exportar_dados: "Exportar Dados",
-    configuracoes: "Configuracoes",
-    usuarios_permissoes: "Usuarios e Permissoes",
-  };
-  document.getElementById("configPermissionsHead").innerHTML = `<tr><th>Permissao</th>${profiles.map((profile) => `<th>${escapeHtml(profile)}</th>`).join("")}</tr>`;
-  document.getElementById("configPermissionsBody").innerHTML = Object.entries(labels).map(([key, label]) => `
-    <tr>
-      <td>${escapeHtml(label)}</td>
-      ${profiles.map((profile) => `<td>${permissoes[profile]?.[key] ? "Sim" : "Nao"}</td>`).join("")}
-    </tr>
-  `).join("");
+function renderAccessPolicy(acesso) {
+  document.getElementById("configAccessGrid").innerHTML = [
+    ["Paineis", acesso.paineis_liberados ? "Liberados para todos" : "Restritos"],
+    ["Dados", "Todos podem visualizar os dados dos paineis"],
+    ["Observacao", acesso.descricao || "-"],
+  ].map(([label, value]) => detailField(label, value)).join("");
 }
 
 function collectConfiguracoesPayload() {
@@ -1418,7 +1405,7 @@ document.getElementById("syncSheetsBtn").addEventListener("click", () => {
 
 document.getElementById("configUsersBody").addEventListener("click", (event) => {
   if (event.target.closest("[data-config-user-action]")) {
-    showToast("Edicao de usuarios sera concluida em uma etapa futura.", "info");
+    showToast("Usuarios sao apenas referencia operacional; todos visualizam os paineis.", "info");
   }
 });
 
