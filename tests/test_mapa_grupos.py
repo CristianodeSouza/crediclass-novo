@@ -351,6 +351,49 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(row_update[5], "22,0")
         self.assertEqual(row_update[6], "8")
 
+    def test_update_historico_mensal_clears_explicit_null_metric(self):
+        headers = ["ADM", "Grupo", "Tipo de Bem", "ABR-26 Maior Lance", "ABR-26 Menor Lance", "ABR-26 Qtd Contemplacoes"]
+        values = [headers, ["Itau", "128", "Imovel", "71", "22", "8"]]
+
+        class ExecuteMock:
+            def execute(self):
+                return {}
+
+        class ValuesMock:
+            def __init__(self):
+                self.update_kwargs = None
+
+            def update(self, **kwargs):
+                self.update_kwargs = kwargs
+                return ExecuteMock()
+
+        class SpreadsheetsMock:
+            def __init__(self):
+                self.values_mock = ValuesMock()
+
+            def values(self):
+                return self.values_mock
+
+        class ServiceMock:
+            def __init__(self):
+                self.spreadsheets_mock = SpreadsheetsMock()
+
+            def spreadsheets(self):
+                return self.spreadsheets_mock
+
+        service = ServiceMock()
+        with patch("backend.sheets_client.read_sheet_values", return_value=values), patch("backend.sheets_client.get_service", return_value=service):
+            result = update_historico_mensal("128", {
+                "mes": "2026-04",
+                "menor_lance": None,
+            })
+
+        updated_row = service.spreadsheets_mock.values_mock.update_kwargs["body"]["values"][0]
+        self.assertTrue(result["success"])
+        self.assertEqual(updated_row[3], "71")
+        self.assertEqual(updated_row[4], "")
+        self.assertEqual(updated_row[5], "8")
+
     def test_historico_endpoint_returns_success(self):
         payload = HistoricoUpdateRequest(mes="2026-01", maior_lance=0.72, menor_lance=0.24, qtd_contemplacoes=12)
 

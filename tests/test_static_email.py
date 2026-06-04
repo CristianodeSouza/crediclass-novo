@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-36", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-37", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -65,6 +65,10 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('id="groupFormHistoryAddMonthBtn"', index_html)
         self.assertIn("const HISTORY_START_MONTH = \"2024-01\"", app_js)
         self.assertIn("function collectHistoryBatchPayloads(prefix)", app_js)
+        self.assertIn("function normalizeHistoryField(field, rawValue)", app_js)
+        self.assertIn("data-original-value", app_js)
+        self.assertIn("Nenhuma alteracao de historico para salvar.", app_js)
+        self.assertIn("o menor lance nao pode ser maior que o maior lance", app_js)
         self.assertIn('collectHistoryBatchPayloads("groupFormHistory")', app_js)
         self.assertIn('/historico`, historyPayload)', app_js)
 

@@ -141,7 +141,7 @@ def grupo_criar(payload: GrupoCreateRequest):
 @app.put("/api/grupos/{grupo_id}", response_model=SuccessResponse)
 def grupo_atualizar(grupo_id: str, payload: GrupoUpdateRequest):
     logger.info("PUT /api/grupos/%s", grupo_id)
-    data = payload.model_dump(exclude_none=True)
+    data = payload.model_dump(exclude_unset=True)
     if not data:
         return JSONResponse(status_code=400, content={"success": False, "error": "Nenhum campo enviado"})
     try:

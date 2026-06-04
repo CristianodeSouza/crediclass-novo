@@ -546,13 +546,33 @@ function inputPercent(value) {
   return String(value * 100).replace(".", ",");
 }
 
+function normalizeHistoryField(field, rawValue) {
+  const text = String(rawValue || "").trim();
+  if (!text) return { value: null, comparable: "" };
+  const number = Number(parseNumberInput(text));
+  if (!Number.isFinite(number) || number < 0) {
+    throw new Error("Informe apenas numeros positivos no historico mensal.");
+  }
+  if (field === "qtd_contemplacoes") {
+    if (!Number.isInteger(number)) throw new Error("Quantidade de contemplacoes deve ser um numero inteiro.");
+    return { value: number, comparable: String(number) };
+  }
+  const percent = number > 1 ? number / 100 : number;
+  return { value: percent, comparable: String(Number(percent.toFixed(8))) };
+}
+
+function originalHistoryComparable(field, value) {
+  if (value === null || value === undefined || value === "") return "";
+  return normalizeHistoryField(field, field === "qtd_contemplacoes" ? value : value * 100).comparable;
+}
+
 function historyEditorRow(prefix, month, item = {}) {
   return `
     <div class="history-edit-row" data-history-month="${escapeHtml(month)}">
       <div class="history-edit-month"><strong>${escapeHtml(historyMonthLabel(month))}</strong><span>${escapeHtml(month)}</span></div>
-      <label><span>Maior Lance (%)</span><input class="form-control" data-history-field="maior_lance" inputmode="decimal" value="${escapeHtml(inputPercent(item.maior_lance))}"></label>
-      <label><span>Menor Lance (%)</span><input class="form-control" data-history-field="menor_lance" inputmode="decimal" value="${escapeHtml(inputPercent(item.menor_lance))}"></label>
-      <label><span>Qtd</span><input class="form-control" data-history-field="qtd_contemplacoes" inputmode="numeric" value="${escapeHtml(item.qtd_contemplacoes ?? "")}"></label>
+      <label><span>Maior Lance (%)</span><input class="form-control" data-history-field="maior_lance" data-original-value="${escapeHtml(originalHistoryComparable("maior_lance", item.maior_lance))}" inputmode="decimal" value="${escapeHtml(inputPercent(item.maior_lance))}"></label>
+      <label><span>Menor Lance (%)</span><input class="form-control" data-history-field="menor_lance" data-original-value="${escapeHtml(originalHistoryComparable("menor_lance", item.menor_lance))}" inputmode="decimal" value="${escapeHtml(inputPercent(item.menor_lance))}"></label>
+      <label><span>Qtd</span><input class="form-control" data-history-field="qtd_contemplacoes" data-original-value="${escapeHtml(originalHistoryComparable("qtd_contemplacoes", item.qtd_contemplacoes))}" inputmode="numeric" value="${escapeHtml(item.qtd_contemplacoes ?? "")}"></label>
     </div>
   `;
 }
@@ -593,18 +613,22 @@ function addHistoryEditorMonth(prefix) {
 }
 
 function collectHistoryRowPayload(row) {
-  const maiorInput = row.querySelector('[data-history-field="maior_lance"]');
-  const menorInput = row.querySelector('[data-history-field="menor_lance"]');
-  const qtdInput = row.querySelector('[data-history-field="qtd_contemplacoes"]');
-  const maior = toNumber(maiorInput.value);
-  const menor = toNumber(menorInput.value);
-  const qtdRaw = qtdInput.value.trim();
   const payload = {
     mes: row.dataset.historyMonth,
   };
-  if (maiorInput.value.trim()) payload.maior_lance = maior > 1 ? maior / 100 : maior;
-  if (menorInput.value.trim()) payload.menor_lance = menor > 1 ? menor / 100 : menor;
-  if (qtdRaw) payload.qtd_contemplacoes = Number(qtdRaw);
+  const normalized = {};
+  row.querySelectorAll("[data-history-field]").forEach((input) => {
+    const field = input.dataset.historyField;
+    normalized[field] = normalizeHistoryField(field, input.value);
+    if (normalized[field].comparable !== input.dataset.originalValue) {
+      payload[field] = normalized[field].value;
+    }
+  });
+  const maior = normalized.maior_lance?.value;
+  const menor = normalized.menor_lance?.value;
+  if (maior !== null && maior !== undefined && menor !== null && menor !== undefined && menor > maior) {
+    throw new Error(`No mes ${historyMonthLabel(payload.mes)}, o menor lance nao pode ser maior que o maior lance.`);
+  }
   return payload;
 }
 
@@ -639,9 +663,15 @@ function setHistoryUpdateState(state, message = "") {
 
 async function saveHistoryUpdate() {
   if (!currentDetailsGroupId) return;
-  const payloads = collectHistoryBatchPayloads("historyUpdate");
+  let payloads = [];
+  try {
+    payloads = collectHistoryBatchPayloads("historyUpdate");
+  } catch (error) {
+    setHistoryUpdateState("error", error.message || "Revise os valores do historico.");
+    return;
+  }
   if (!payloads.length) {
-    setHistoryUpdateState("error", "Informe ao menos um valor de historico.");
+    setHistoryUpdateState("error", "Nenhuma alteracao de historico para salvar.");
     return;
   }
   setHistoryUpdateState("loading", `Salvando ${payloads.length} mes(es) na Google Sheets...`);
@@ -751,7 +781,13 @@ async function openGroupForm(mode, groupId = null) {
 
 async function saveGroupForm() {
   const payload = collectGroupFormPayload();
-  const historyPayloads = collectHistoryBatchPayloads("groupFormHistory");
+  let historyPayloads = [];
+  try {
+    historyPayloads = collectHistoryBatchPayloads("groupFormHistory");
+  } catch (error) {
+    setGroupFormHistoryState("error", error.message || "Revise os valores do historico.");
+    return;
+  }
   if (!payload.administradora || !payload.grupo || !payload.tipo_bem || !payload.credito_minimo || !payload.credito_maximo || !payload.prazo_total) {
     showToast("Preencha os campos obrigatorios do grupo.", "warning");
     return;
