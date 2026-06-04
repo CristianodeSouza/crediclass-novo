@@ -47,6 +47,10 @@ const historyState = {
   items: [],
 };
 
+const configState = {
+  data: null,
+};
+
 let detailsModal = null;
 let detailsChart = null;
 let studyChart = null;
@@ -80,6 +84,9 @@ function activateScreen(screenName) {
 
   if (screenName === "historico") {
     loadHistoryStudies();
+  }
+  if (screenName === "configuracoes") {
+    loadConfiguracoes();
   }
 }
 
@@ -714,6 +721,156 @@ async function loadHistoryStudies() {
   }
 }
 
+function setConfigState(state) {
+  document.getElementById("configLoading").classList.toggle("d-none", state !== "loading");
+  document.getElementById("configError").classList.toggle("d-none", state !== "error");
+  document.getElementById("configContent").classList.toggle("d-none", state !== "ready");
+}
+
+function setInputValue(id, value) {
+  const input = document.getElementById(id);
+  if (input) input.value = value ?? "";
+}
+
+function percentToInput(value) {
+  return value === null || value === undefined ? "" : String(value * 100).replace(".", ",");
+}
+
+function inputToPercent(id) {
+  const value = toNumber(document.getElementById(id).value);
+  return value > 1 ? value / 100 : value;
+}
+
+function renderConfiguracoes(data) {
+  configState.data = data;
+  const empresa = data.empresa || {};
+  const pref = data.preferencias || {};
+  const params = data.parametros_financeiros || {};
+  const integracoes = data.integracoes || {};
+  const sistema = data.sistema || {};
+
+  setInputValue("configEmpresaNome", empresa.nome);
+  setInputValue("configEmpresaCnpj", empresa.cnpj);
+  setInputValue("configEmpresaEmail", empresa.email);
+  setInputValue("configEmpresaTelefone", empresa.telefone);
+  setInputValue("configEmpresaEndereco", empresa.endereco);
+  setInputValue("configEmpresaLogo", empresa.logo);
+  setInputValue("configMoeda", pref.moeda);
+  setInputValue("configFormatoData", pref.formato_data);
+  setInputValue("configTema", pref.tema);
+  setInputValue("configIdioma", pref.idioma);
+  setInputValue("configAtualizacaoMinutos", pref.atualizacao_automatica_minutos);
+
+  setInputValue("configTaxaAdm", percentToInput(params.taxa_administracao_padrao));
+  setInputValue("configFundoReserva", percentToInput(params.fundo_reserva_padrao));
+  setInputValue("configLanceFixo", percentToInput(params.percentual_lance_fixo_padrao));
+  setInputValue("configLanceModerado", percentToInput(params.percentual_lance_moderado_padrao));
+  setInputValue("configLanceAgressivo", percentToInput(params.percentual_lance_agressivo_padrao));
+  setInputValue("configPrazoMaximo", params.prazo_maximo);
+  setInputValue("configPrazoMinimo", params.prazo_minimo);
+  setInputValue("configIndiceCorrecao", params.indice_correcao_anual);
+
+  document.getElementById("integrationSheets").textContent = sistema.google_sheets_configurado && integracoes.google_sheets ? "Ativo" : "Pendente";
+  document.getElementById("integrationPiperun").textContent = integracoes.piperun_crm ? "Ativo" : "Inativo";
+  document.getElementById("integrationEmail").textContent = integracoes.email_smtp ? "Ativo" : "Inativo";
+  document.getElementById("integrationBackup").textContent = integracoes.backup_automatico ? "Ativo" : "Inativo";
+  document.getElementById("integrationSheetName").textContent = sistema.google_sheet_name || "-";
+
+  document.getElementById("configUsersBody").innerHTML = (data.usuarios || []).map((user) => `
+    <tr>
+      <td>${escapeHtml(user.nome)}</td>
+      <td>${escapeHtml(user.email)}</td>
+      <td>${escapeHtml(user.perfil)}</td>
+      <td><span class="status-badge">${escapeHtml(user.status)}</span></td>
+      <td>${escapeHtml(user.ultimo_acesso || "-")}</td>
+      <td><button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action>Editar</button></td>
+    </tr>
+  `).join("");
+
+  renderPermissions(data.permissoes || {});
+  document.getElementById("configSystemGrid").innerHTML = [
+    ["Aplicacao", sistema.app],
+    ["Versao", sistema.version],
+    ["Ambiente", sistema.environment],
+    ["Debug", sistema.debug ? "Sim" : "Nao"],
+    ["Google Sheets configurado", sistema.google_sheets_configurado ? "Sim" : "Nao"],
+    ["Aba da planilha", sistema.google_sheet_name || "-"],
+  ].map(([label, value]) => detailField(label, value)).join("");
+}
+
+function renderPermissions(permissoes) {
+  const profiles = Object.keys(permissoes);
+  const labels = {
+    visualizar_grupos: "Visualizar Grupos",
+    criar_grupos: "Criar Grupos",
+    editar_grupos: "Editar Grupos",
+    excluir_grupos: "Excluir Grupos",
+    gerar_estudos: "Gerar Estudos",
+    exportar_dados: "Exportar Dados",
+    configuracoes: "Configuracoes",
+    usuarios_permissoes: "Usuarios e Permissoes",
+  };
+  document.getElementById("configPermissionsHead").innerHTML = `<tr><th>Permissao</th>${profiles.map((profile) => `<th>${escapeHtml(profile)}</th>`).join("")}</tr>`;
+  document.getElementById("configPermissionsBody").innerHTML = Object.entries(labels).map(([key, label]) => `
+    <tr>
+      <td>${escapeHtml(label)}</td>
+      ${profiles.map((profile) => `<td>${permissoes[profile]?.[key] ? "Sim" : "Nao"}</td>`).join("")}
+    </tr>
+  `).join("");
+}
+
+function collectConfiguracoesPayload() {
+  return {
+    empresa: {
+      nome: document.getElementById("configEmpresaNome").value.trim(),
+      cnpj: document.getElementById("configEmpresaCnpj").value.trim(),
+      email: document.getElementById("configEmpresaEmail").value.trim(),
+      telefone: document.getElementById("configEmpresaTelefone").value.trim(),
+      endereco: document.getElementById("configEmpresaEndereco").value.trim(),
+      logo: document.getElementById("configEmpresaLogo").value.trim(),
+    },
+    preferencias: {
+      moeda: document.getElementById("configMoeda").value.trim(),
+      formato_data: document.getElementById("configFormatoData").value.trim(),
+      tema: document.getElementById("configTema").value,
+      idioma: document.getElementById("configIdioma").value.trim(),
+      atualizacao_automatica_minutos: Number(document.getElementById("configAtualizacaoMinutos").value || 0),
+    },
+    parametros_financeiros: {
+      taxa_administracao_padrao: inputToPercent("configTaxaAdm"),
+      fundo_reserva_padrao: inputToPercent("configFundoReserva"),
+      percentual_lance_fixo_padrao: inputToPercent("configLanceFixo"),
+      percentual_lance_moderado_padrao: inputToPercent("configLanceModerado"),
+      percentual_lance_agressivo_padrao: inputToPercent("configLanceAgressivo"),
+      prazo_maximo: Number(document.getElementById("configPrazoMaximo").value || 0),
+      prazo_minimo: Number(document.getElementById("configPrazoMinimo").value || 0),
+      indice_correcao_anual: document.getElementById("configIndiceCorrecao").value.trim(),
+    },
+  };
+}
+
+async function loadConfiguracoes() {
+  setConfigState("loading");
+  try {
+    const data = await apiGet("/configuracoes");
+    renderConfiguracoes(data);
+    setConfigState("ready");
+  } catch (error) {
+    setConfigState("error");
+  }
+}
+
+async function saveConfiguracoes() {
+  await apiPut("/configuracoes", collectConfiguracoesPayload());
+  showToast("Configuracoes salvas.", "success");
+  loadConfiguracoes();
+}
+
+async function syncGoogleSheets() {
+  const result = await apiPost("/reload", {});
+  showToast(`Google Sheets sincronizado: ${result.total} linhas.`, "success");
+}
+
 async function loadHealth() {
   const health = await apiGet("/health");
   document.getElementById("environmentLabel").textContent = health.environment;
@@ -859,6 +1016,30 @@ document.getElementById("historyTableBody").addEventListener("click", async (eve
     return;
   }
   showToast("Exportacao sera finalizada na etapa de PDF e e-mail.", "info");
+});
+
+document.getElementById("saveConfigBtn").addEventListener("click", () => {
+  saveConfiguracoes().catch(() => setConfigState("error"));
+});
+
+document.getElementById("testIntegrationsBtn").addEventListener("click", () => {
+  syncGoogleSheets().catch(() => showToast("Nao foi possivel testar integracoes.", "danger"));
+});
+
+document.getElementById("syncSheetsBtn").addEventListener("click", () => {
+  syncGoogleSheets().catch(() => showToast("Nao foi possivel sincronizar Google Sheets.", "danger"));
+});
+
+document.getElementById("configUsersBody").addEventListener("click", (event) => {
+  if (event.target.closest("[data-config-user-action]")) {
+    showToast("Joyce nao pode alterar usuarios ou permissoes criticas.", "warning");
+  }
+});
+
+["clearSystemCacheBtn", "reindexSystemBtn", "validateSystemBtn", "restartSyncBtn"].forEach((id) => {
+  document.getElementById(id).addEventListener("click", () => {
+    syncGoogleSheets().catch(() => showToast("Nao foi possivel executar acao do sistema.", "danger"));
+  });
 });
 
 loadHealth().catch(() => {

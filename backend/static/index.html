@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
-    <link href="/static/css/style.css?v=20260604-2" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260604-3" rel="stylesheet">
   </head>
   <body>
     <div class="app-shell">
@@ -554,10 +554,106 @@
         </section>
 
         <section id="screen-configuracoes" class="screen-panel">
-          <div class="placeholder-card">
-            <div class="state-badge">Placeholder</div>
-            <h2>Configuracoes</h2>
-            <p>Configuracoes e integracoes serao implementadas na etapa definida na documentacao.</p>
+          <div id="configLoading" class="table-state">Carregando configuracoes...</div>
+          <div id="configError" class="table-state table-state-error d-none">Nao foi possivel carregar as configuracoes.</div>
+
+          <div id="configContent" class="d-none">
+            <ul class="nav nav-tabs details-tabs" role="tablist">
+              <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#configGeral" type="button" role="tab">Geral</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configFinanceiro" type="button" role="tab">Parametros Financeiros</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configIntegracoes" type="button" role="tab">Integracoes</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configUsuarios" type="button" role="tab">Usuarios</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configPermissoes" type="button" role="tab">Permissoes</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configSistema" type="button" role="tab">Sistema</button></li>
+            </ul>
+
+            <div class="tab-content details-tab-content">
+              <section id="configGeral" class="tab-pane fade show active" role="tabpanel">
+                <div class="content-card">
+                  <div class="table-toolbar">
+                    <div><h2>Informacoes da Empresa</h2><p>Dados gerais do sistema</p></div>
+                    <button id="saveConfigBtn" class="btn btn-primary" type="button">Salvar Configuracoes</button>
+                  </div>
+                  <form id="configGeneralForm" class="viability-form">
+                    <label><span>Nome da empresa</span><input id="configEmpresaNome" class="form-control"></label>
+                    <label><span>CNPJ</span><input id="configEmpresaCnpj" class="form-control"></label>
+                    <label><span>E-mail</span><input id="configEmpresaEmail" class="form-control" type="email"></label>
+                    <label><span>Telefone</span><input id="configEmpresaTelefone" class="form-control"></label>
+                    <label><span>Endereco</span><input id="configEmpresaEndereco" class="form-control"></label>
+                    <label><span>Logo da empresa</span><input id="configEmpresaLogo" class="form-control"></label>
+                    <label><span>Moeda padrao</span><input id="configMoeda" class="form-control"></label>
+                    <label><span>Formato de data</span><input id="configFormatoData" class="form-control"></label>
+                    <label><span>Tema</span><select id="configTema" class="form-select"><option>Claro</option><option>Escuro</option></select></label>
+                    <label><span>Idioma</span><input id="configIdioma" class="form-control"></label>
+                    <label><span>Atualizacao automatica em minutos</span><input id="configAtualizacaoMinutos" class="form-control" inputmode="numeric"></label>
+                  </form>
+                </div>
+              </section>
+
+              <section id="configFinanceiro" class="tab-pane fade" role="tabpanel">
+                <div class="content-card">
+                  <div class="table-toolbar"><div><h2>Parametros Financeiros</h2><p>Padroes usados nas simulacoes</p></div></div>
+                  <form id="configFinanceForm" class="viability-form">
+                    <label><span>Taxa administracao padrao</span><input id="configTaxaAdm" class="form-control" inputmode="decimal"></label>
+                    <label><span>Fundo reserva padrao</span><input id="configFundoReserva" class="form-control" inputmode="decimal"></label>
+                    <label><span>Lance fixo padrao</span><input id="configLanceFixo" class="form-control" inputmode="decimal"></label>
+                    <label><span>Lance moderado padrao</span><input id="configLanceModerado" class="form-control" inputmode="decimal"></label>
+                    <label><span>Lance agressivo padrao</span><input id="configLanceAgressivo" class="form-control" inputmode="decimal"></label>
+                    <label><span>Prazo maximo</span><input id="configPrazoMaximo" class="form-control" inputmode="numeric"></label>
+                    <label><span>Prazo minimo</span><input id="configPrazoMinimo" class="form-control" inputmode="numeric"></label>
+                    <label><span>Indice correcao anual</span><input id="configIndiceCorrecao" class="form-control"></label>
+                  </form>
+                </div>
+              </section>
+
+              <section id="configIntegracoes" class="tab-pane fade" role="tabpanel">
+                <div class="summary-grid">
+                  <article class="summary-card"><span class="summary-label">Google Sheets</span><strong id="integrationSheets">-</strong><small>Fonte oficial</small></article>
+                  <article class="summary-card"><span class="summary-label">PipeRun CRM</span><strong id="integrationPiperun">-</strong><small>Integracao futura</small></article>
+                  <article class="summary-card"><span class="summary-label">E-mail SMTP</span><strong id="integrationEmail">-</strong><small>Envio futuro</small></article>
+                  <article class="summary-card"><span class="summary-label">Backup Automatico</span><strong id="integrationBackup">-</strong><small>Rotina futura</small></article>
+                  <article class="summary-card"><span class="summary-label">Planilha</span><strong id="integrationSheetName">-</strong><small>Google Sheets</small></article>
+                </div>
+                <div class="content-card study-actions">
+                  <button id="testIntegrationsBtn" class="btn btn-outline-primary" type="button">Testar todas as integracoes</button>
+                  <button id="syncSheetsBtn" class="btn btn-primary" type="button">Sincronizar com Google Sheets</button>
+                </div>
+              </section>
+
+              <section id="configUsuarios" class="tab-pane fade" role="tabpanel">
+                <div class="content-card">
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle viability-table">
+                      <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Ultimo acesso</th><th>Acoes</th></tr></thead>
+                      <tbody id="configUsersBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+
+              <section id="configPermissoes" class="tab-pane fade" role="tabpanel">
+                <div class="content-card">
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle viability-table">
+                      <thead id="configPermissionsHead"></thead>
+                      <tbody id="configPermissionsBody"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+
+              <section id="configSistema" class="tab-pane fade" role="tabpanel">
+                <div class="content-card">
+                  <div id="configSystemGrid" class="details-grid"></div>
+                </div>
+                <div class="content-card study-actions">
+                  <button id="clearSystemCacheBtn" class="btn btn-outline-secondary" type="button">Limpar Cache do Sistema</button>
+                  <button id="reindexSystemBtn" class="btn btn-outline-secondary" type="button">Reindexar Dados</button>
+                  <button id="validateSystemBtn" class="btn btn-outline-primary" type="button">Validar Integridade dos Dados</button>
+                  <button id="restartSyncBtn" class="btn btn-primary" type="button">Reiniciar Sincronizacao</button>
+                </div>
+              </section>
+            </div>
           </div>
         </section>
 
@@ -639,7 +735,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/api.js?v=20260604-2"></script>
-    <script src="/static/js/app.js?v=20260604-2"></script>
+    <script src="/static/js/api.js?v=20260604-3"></script>
+    <script src="/static/js/app.js?v=20260604-3"></script>
   </body>
 </html>
