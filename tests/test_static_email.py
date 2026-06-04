@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-35", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-36", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -60,13 +60,12 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn("Atualizacao Mensal", index_html)
-        self.assertIn('id="groupFormHistoryMes"', index_html)
-        self.assertIn('id="groupFormHistoryMaior"', index_html)
-        self.assertIn('id="groupFormHistoryMenor"', index_html)
-        self.assertIn('id="groupFormHistoryQtd"', index_html)
-        self.assertIn("function collectMonthlyHistoryPayload(prefix)", app_js)
-        self.assertIn('collectMonthlyHistoryPayload("groupFormHistory")', app_js)
+        self.assertIn("Historico Mensal", index_html)
+        self.assertIn('id="groupFormHistoryGrid"', index_html)
+        self.assertIn('id="groupFormHistoryAddMonthBtn"', index_html)
+        self.assertIn("const HISTORY_START_MONTH = \"2024-01\"", app_js)
+        self.assertIn("function collectHistoryBatchPayloads(prefix)", app_js)
+        self.assertIn('collectHistoryBatchPayloads("groupFormHistory")', app_js)
         self.assertIn('/historico`, historyPayload)', app_js)
 
     def test_detalhe_grupo_renderiza_auditoria(self):
@@ -161,7 +160,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260604-21", index_html)
+        self.assertIn("/static/css/style.css?v=20260604-22", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

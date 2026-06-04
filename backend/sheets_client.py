@@ -316,6 +316,38 @@ def find_history_headers(headers: list[str], month_key: str) -> dict[str, str]:
     return {metric: header for metric, header in wanted.items() if header}
 
 
+def history_label_from_key(month_key: str) -> str:
+    if len(month_key) == 7 and "-" in month_key:
+        year, month = month_key.split("-")
+        return f"{MONTH_ABBR_BY_NUMBER.get(month, month)}-{year[-2:]}"
+    return month_key
+
+
+def history_header_name(month_key: str, metric: str) -> str:
+    metric_label = {
+        "maior_lance": "Maior Lance",
+        "menor_lance": "Menor Lance",
+        "qtd_contemplacoes": "Qtd Contemplacoes",
+    }[metric]
+    return f"{history_label_from_key(month_key)} {metric_label}"
+
+
+def ensure_history_headers(headers: list[str], month_key: str, metrics: list[str]) -> tuple[list[str], dict[str, str], bool]:
+    history_headers = find_history_headers(headers, month_key)
+    updated_headers = list(headers)
+    changed = False
+
+    for metric in metrics:
+        if metric in history_headers:
+            continue
+        new_header = history_header_name(month_key, metric)
+        updated_headers.append(new_header)
+        history_headers[metric] = new_header
+        changed = True
+
+    return updated_headers, history_headers, changed
+
+
 def format_history_value(metric: str, value: Any) -> str:
     if value is None:
         return ""
@@ -334,17 +366,10 @@ def update_historico_mensal(grupo_id: str, payload: dict[str, Any]) -> dict[str,
     if not found:
         raise KeyError("Grupo nao encontrado")
 
-    history_headers = find_history_headers(headers, month_key)
     sent_metrics = [metric for metric in ("maior_lance", "menor_lance", "qtd_contemplacoes") if metric in payload and payload[metric] is not None]
-    missing = [metric for metric in sent_metrics if metric not in history_headers]
-    if missing:
-        month_label = month_key
-        if len(month_key) == 7:
-            year, month = month_key.split("-")
-            month_label = f"{MONTH_ABBR_BY_NUMBER.get(month, month)}-{year[-2:]}"
-        raise RuntimeError(f"Colunas de historico ausentes para {month_label}: {', '.join(missing)}")
     if not sent_metrics:
         raise RuntimeError("Nenhum campo de historico enviado")
+    headers, history_headers, headers_changed = ensure_history_headers(headers, month_key, sent_metrics)
 
     row_number, current_row = found
     updated_values = list(current_row)
@@ -356,6 +381,13 @@ def update_historico_mensal(grupo_id: str, payload: dict[str, Any]) -> dict[str,
         updated_values[index_by_header[history_headers[metric]]] = format_history_value(metric, payload[metric])
 
     settings = get_settings()
+    if headers_changed:
+        get_service().spreadsheets().values().update(
+            spreadsheetId=settings.google_sheets_id,
+            range=f"'{settings.google_sheet_name}'!A1:ZZ1",
+            valueInputOption="USER_ENTERED",
+            body={"values": [headers]},
+        ).execute()
     get_service().spreadsheets().values().update(
         spreadsheetId=settings.google_sheets_id,
         range=f"'{settings.google_sheet_name}'!A{row_number}:ZZ{row_number}",
@@ -428,7 +460,7 @@ def parse_bool(value: Any) -> bool | None:
 
 def history_key_from_header(header: str) -> tuple[str, str] | None:
     normalized = normalize_header(header).upper()
-    match = re.search(r"\b([A-Z]{3})\s*(?:-|/|\s)?\s*(24|25|26)\b", normalized)
+    match = re.search(r"\b([A-Z]{3})\s*(?:-|/|\s)?\s*(\d{2})\b", normalized)
     if not match:
         return None
 
