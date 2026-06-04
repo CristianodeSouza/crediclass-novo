@@ -72,6 +72,7 @@ class GrupoCreateRequest(BaseModel):
     credito_maximo: float = Field(gt=0)
     taxa_adm: float = Field(ge=0)
     prazo_total: int = Field(gt=0)
+    status: str = "Ativo"
 
 
 class GrupoUpdateRequest(BaseModel):

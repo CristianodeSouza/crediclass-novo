@@ -246,11 +246,14 @@ class MapaGruposTest(unittest.TestCase):
                 "credito_maximo": 600000,
                 "taxa_adm": 0.18,
                 "prazo_total": 180,
+                "status": "Excluido",
             })
             updated = update_grupo("128", {"taxa_adm": 0.19})
             deleted = delete_grupo("128")
 
+        appended_row = service.spreadsheets_mock.values_mock.append_kwargs["body"]["values"][0]
         self.assertTrue(created["success"])
+        self.assertEqual(appended_row[7], "Excluido")
         self.assertTrue(updated["success"])
         self.assertEqual(deleted["status"], "Excluido")
 
