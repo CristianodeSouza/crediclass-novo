@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-27", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-28", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -129,6 +129,20 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('notifyWhen("alertar_estudo_salvo"', app_js)
         self.assertIn('notifyWhen("alertar_historico_atualizado"', app_js)
         self.assertIn('notifyWhen("alertar_falha_integracao"', app_js)
+
+    def test_integracoes_configuracoes_podem_ser_alteradas(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('id="configureIntegrationsBtn"', index_html)
+        self.assertIn('id="configIntegrationsForm"', index_html)
+        for field_id in ["integrationGoogleSheetsToggle", "integrationPiperunToggle", "integrationEmailToggle", "integrationBackupToggle"]:
+            self.assertIn(f'id="{field_id}"', index_html)
+            self.assertIn(field_id, app_js)
+
+        self.assertIn("integracoes", app_js)
+        self.assertIn("google_sheets: getSelectBool", app_js)
+        self.assertIn("piperun_crm: getSelectBool", app_js)
 
     def test_usuarios_operacionais_possuem_acoes_reais(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")

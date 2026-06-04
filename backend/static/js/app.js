@@ -1377,6 +1377,10 @@ function renderConfiguracoes(data) {
   setSelectBool("notifyStudySaved", notificacoes.alertar_estudo_salvo);
   setSelectBool("notifyHistoryUpdated", notificacoes.alertar_historico_atualizado);
   setSelectBool("notifyIntegrationFailure", notificacoes.alertar_falha_integracao);
+  setSelectBool("integrationGoogleSheetsToggle", integracoes.google_sheets);
+  setSelectBool("integrationPiperunToggle", integracoes.piperun_crm);
+  setSelectBool("integrationEmailToggle", integracoes.email_smtp);
+  setSelectBool("integrationBackupToggle", integracoes.backup_automatico);
 
   setInputValue("configTaxaAdm", percentToInput(params.taxa_administracao_padrao));
   setInputValue("configFundoReserva", percentToInput(params.fundo_reserva_padrao));
@@ -1466,6 +1470,12 @@ function collectConfiguracoesPayload() {
       prazo_maximo: Number(document.getElementById("configPrazoMaximo").value || 0),
       prazo_minimo: Number(document.getElementById("configPrazoMinimo").value || 0),
       indice_correcao_anual: document.getElementById("configIndiceCorrecao").value.trim(),
+    },
+    integracoes: {
+      google_sheets: getSelectBool("integrationGoogleSheetsToggle"),
+      piperun_crm: getSelectBool("integrationPiperunToggle"),
+      email_smtp: getSelectBool("integrationEmailToggle"),
+      backup_automatico: getSelectBool("integrationBackupToggle"),
     },
     notificacoes: {
       alertar_sincronizacao: getSelectBool("notifySync"),
@@ -1758,6 +1768,11 @@ document.getElementById("saveConfigBtn").addEventListener("click", () => {
 
 document.getElementById("configTema").addEventListener("change", (event) => {
   applyTheme(event.target.value);
+});
+
+document.getElementById("configureIntegrationsBtn").addEventListener("click", () => {
+  document.getElementById("configIntegrationsForm").scrollIntoView({ behavior: "smooth", block: "center" });
+  document.getElementById("integrationGoogleSheetsToggle").focus();
 });
 
 document.getElementById("testIntegrationsBtn").addEventListener("click", () => {
