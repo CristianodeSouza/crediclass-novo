@@ -927,6 +927,18 @@ async function openStudyDetails(studyId) {
   }
 }
 
+async function duplicateStudy(studyId) {
+  const original = await apiGet(`/estudos/${encodeURIComponent(studyId)}`);
+  const cliente = { ...(original.cliente || {}) };
+  cliente.nome = cliente.nome ? `${cliente.nome} - copia` : "Cliente em estudo - copia";
+  const result = await apiPost("/estudos", {
+    cliente,
+    grupo_id: original.grupo_id,
+  });
+  showToast(`Estudo duplicado: ${result.estudo_id}`, "success");
+  loadHistoryStudies();
+}
+
 async function loadHistoryStudies() {
   setHistoryState("loading");
   try {
@@ -1264,7 +1276,7 @@ document.getElementById("historyTableBody").addEventListener("click", async (eve
     return;
   }
   if (button.dataset.historyAction === "duplicar") {
-    showToast("Duplicacao sera finalizada com persistencia definitiva dos estudos.", "info");
+    duplicateStudy(studyId).catch(() => showToast("Nao foi possivel duplicar o estudo.", "danger"));
     return;
   }
   if (button.dataset.historyAction === "excluir") {
