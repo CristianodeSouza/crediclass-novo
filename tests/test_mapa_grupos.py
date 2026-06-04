@@ -173,19 +173,18 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(result["success"], True)
         self.assertEqual(result["total"], 2)
 
-    def test_sheets_get_grupo_uses_detail_listing(self):
-        fake_detail = {
-            "grupo_id": "128",
-            "administradora": "Itau",
-            "grupo": "128",
-            "tipo_bem": "Imovel",
-        }
+    def test_sheets_get_grupo_builds_only_matching_row_detail(self):
+        values = [
+            ["ADM", "Grupo", "Tipo de Bem", "JAN-26 Maior Lance", "JAN-26 Menor Lance", "JAN-26 Qtd"],
+            ["Itau", "127", "Imovel", "70", "20", "5"],
+            ["Itau", "128", "Imovel", "72", "24", "12"],
+        ]
 
-        with patch("backend.sheets_client.list_grupos_detalhe", return_value=[fake_detail]) as list_details:
+        with patch("backend.sheets_client.read_sheet_values", return_value=values):
             result = sheets_get_grupo("128")
 
-        list_details.assert_called_once()
         self.assertEqual(result["grupo_id"], "128")
+        self.assertEqual(result["historico"]["2026-01"]["qtd_contemplacoes"], 12)
 
     def test_payload_to_row_values_uses_headers_not_positions(self):
         headers = ["ADM", "Tipo de Bem", "Grup0", "Menor\nCredito", "Maior\nCredito", "Taxa\nAdm Original", "Prazo\nGrupo"]
