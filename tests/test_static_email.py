@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-33", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-34", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -144,6 +144,17 @@ class StaticEmailTest(unittest.TestCase):
         for label in ["Lance Fixo", "Lance Moderado", "Lance Agressivo", "Lance Total"]:
             self.assertIn(label, app_js)
         self.assertIn('data-study-strategy', app_js)
+
+    def test_estudo_financeiro_exibe_recomendacoes_automaticas_completas(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function renderStudyRecommendations(viabilityItem, financial, group)", app_js)
+        self.assertIn("totalContemplacoes", app_js)
+        self.assertIn("Grupo com bom historico", app_js)
+        self.assertIn("Estrategia recomendada", app_js)
+        self.assertIn("Prazo adequado", app_js)
+        self.assertIn("Necessidade de acompanhamento semanal", app_js)
+        self.assertIn("A analise nao garante contemplacao", app_js)
 
     def test_tema_configurado_aplica_aparencia(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
