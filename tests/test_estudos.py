@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from backend.main import estudos_criar, estudos_excluir, estudos_listar, estudos_obter
 from backend.models import EstudoCliente, EstudoRequest
+from backend import estudos as estudos_module
 from backend.estudos import export_estudo_pdf
 
 
@@ -117,6 +118,22 @@ class EstudosTest(unittest.TestCase):
 
         self.assertEqual(filename, f"{created['estudo_id']}.pdf")
         self.assertTrue(content.startswith(b"%PDF"))
+
+    def test_persistencia_estudos_json(self):
+        original_studies = dict(estudos_module._studies)
+        try:
+            with tempfile.TemporaryDirectory() as temp_dir:
+                runtime_dir = Path(temp_dir)
+                with patch.object(estudos_module, "RUNTIME_DIR", runtime_dir), patch.object(estudos_module, "STUDIES_FILE", runtime_dir / "studies.json"):
+                    estudos_module._studies.clear()
+                    estudos_module._studies["EST-2026-00009"] = {"estudo_id": "EST-2026-00009", "status": "Concluido"}
+                    estudos_module.save_studies_to_disk()
+                    loaded = estudos_module.load_studies_from_disk()
+        finally:
+            estudos_module._studies.clear()
+            estudos_module._studies.update(original_studies)
+
+        self.assertEqual(loaded["EST-2026-00009"]["status"], "Concluido")
 
 
 if __name__ == "__main__":

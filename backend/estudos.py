@@ -1,11 +1,41 @@
 from datetime import datetime
+import json
 from pathlib import Path
 import unicodedata
 
 from .models import EstudoRequest
 
-_counter = 0
-_studies: dict[str, dict] = {}
+RUNTIME_DIR = Path(__file__).resolve().parent / "runtime_data"
+STUDIES_FILE = RUNTIME_DIR / "studies.json"
+
+
+def load_studies_from_disk() -> dict[str, dict]:
+    if not STUDIES_FILE.exists():
+        return {}
+    try:
+        data = json.loads(STUDIES_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def initial_counter(studies: dict[str, dict]) -> int:
+    counters = []
+    for estudo_id in studies:
+        try:
+            counters.append(int(str(estudo_id).rsplit("-", 1)[-1]))
+        except ValueError:
+            continue
+    return max(counters, default=0)
+
+
+def save_studies_to_disk() -> None:
+    RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+    STUDIES_FILE.write_text(json.dumps(_studies, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+_studies: dict[str, dict] = load_studies_from_disk()
+_counter = initial_counter(_studies)
 
 
 def as_number(value, default: float = 0.0) -> float:
@@ -142,6 +172,7 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None) -> dict:
         "operador": "Joyce",
         "criado_em": datetime.now().isoformat(timespec="seconds"),
     }
+    save_studies_to_disk()
     return {"estudo_id": estudo_id, "success": True}
 
 
@@ -159,6 +190,7 @@ def delete_estudo(estudo_id: str) -> bool:
         return False
     estudo["status"] = "Cancelado"
     estudo["cancelado_em"] = datetime.now().isoformat(timespec="seconds")
+    save_studies_to_disk()
     return True
 
 

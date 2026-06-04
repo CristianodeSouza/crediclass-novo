@@ -16,5 +16,6 @@ env/
 build/
 dist/
 *.log
+backend/runtime_data/
 .DS_Store
 Thumbs.db
