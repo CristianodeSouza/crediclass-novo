@@ -32,6 +32,25 @@ class ConfiguracoesTest(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertEqual(config["empresa"]["nome"], "Crediclass Teste")
 
+    def test_salvar_configuracoes_atualiza_preferencias(self):
+        result = configuracoes_salvar({
+            "preferencias": {
+                "casas_decimais_valores": 3,
+                "casas_decimais_percentuais": 4,
+                "ativar_meia_parcela": False,
+                "ativar_lance_embutido": False,
+                "exibir_historico_36_meses": False,
+            }
+        })
+        config = configuracoes_obter()
+
+        self.assertTrue(result["success"])
+        self.assertEqual(config["preferencias"]["casas_decimais_valores"], 3)
+        self.assertEqual(config["preferencias"]["casas_decimais_percentuais"], 4)
+        self.assertFalse(config["preferencias"]["ativar_meia_parcela"])
+        self.assertFalse(config["preferencias"]["ativar_lance_embutido"])
+        self.assertFalse(config["preferencias"]["exibir_historico_36_meses"])
+
     def test_salvar_configuracoes_persiste_json(self):
         original = configuracoes_module.get_configuracoes()
         try:

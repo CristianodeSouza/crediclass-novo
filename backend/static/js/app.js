@@ -1320,6 +1320,15 @@ function inputToPercent(id) {
   return value > 1 ? value / 100 : value;
 }
 
+function setSelectBool(id, value) {
+  const select = document.getElementById(id);
+  if (select) select.value = value === false ? "false" : "true";
+}
+
+function getSelectBool(id) {
+  return document.getElementById(id).value === "true";
+}
+
 function applyTheme(theme) {
   const normalized = String(theme || "Claro").toLowerCase();
   document.body.dataset.theme = normalized.includes("escuro") ? "escuro" : "claro";
@@ -1344,7 +1353,12 @@ function renderConfiguracoes(data) {
   setInputValue("configTema", pref.tema);
   applyTheme(pref.tema);
   setInputValue("configIdioma", pref.idioma);
+  setInputValue("configCasasValores", pref.casas_decimais_valores);
+  setInputValue("configCasasPercentuais", pref.casas_decimais_percentuais);
   setInputValue("configAtualizacaoMinutos", pref.atualizacao_automatica_minutos);
+  setSelectBool("configMeiaParcela", pref.ativar_meia_parcela);
+  setSelectBool("configLanceEmbutido", pref.ativar_lance_embutido);
+  setSelectBool("configHistorico36", pref.exibir_historico_36_meses);
 
   setInputValue("configTaxaAdm", percentToInput(params.taxa_administracao_padrao));
   setInputValue("configFundoReserva", percentToInput(params.fundo_reserva_padrao));
@@ -1408,7 +1422,12 @@ function collectConfiguracoesPayload() {
       formato_data: document.getElementById("configFormatoData").value.trim(),
       tema: document.getElementById("configTema").value,
       idioma: document.getElementById("configIdioma").value.trim(),
+      casas_decimais_valores: Number(document.getElementById("configCasasValores").value || 0),
+      casas_decimais_percentuais: Number(document.getElementById("configCasasPercentuais").value || 0),
       atualizacao_automatica_minutos: Number(document.getElementById("configAtualizacaoMinutos").value || 0),
+      ativar_meia_parcela: getSelectBool("configMeiaParcela"),
+      ativar_lance_embutido: getSelectBool("configLanceEmbutido"),
+      exibir_historico_36_meses: getSelectBool("configHistorico36"),
     },
     parametros_financeiros: {
       taxa_administracao_padrao: inputToPercent("configTaxaAdm"),
