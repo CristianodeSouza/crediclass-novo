@@ -420,6 +420,49 @@ body {
   gap: 16px;
 }
 
+.history-update-form {
+  display: grid;
+  grid-template-columns: 150px repeat(3, minmax(140px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.history-update-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.history-update-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.history-update-status {
+  grid-column: 1 / -1;
+  min-height: 34px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.history-update-status.success {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.history-update-status.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
 .history-table {
   margin-bottom: 0;
 }
@@ -589,6 +632,7 @@ body {
   .viability-form,
   .study-layout,
   .details-grid,
+  .history-update-form,
   .history-layout {
     grid-template-columns: 1fr;
   }
@@ -603,6 +647,10 @@ body {
   }
 
   .form-actions .btn {
+    width: 100%;
+  }
+
+  .history-update-actions .btn {
     width: 100%;
   }
 

@@ -277,6 +277,7 @@ function renderDetailsParams(group) {
 
 function renderDetailsHistory(group) {
   const entries = Object.entries(group.historico || {});
+  setHistoryUpdateValues(entries);
   document.getElementById("detailsHistoryBody").innerHTML = entries.map(([month, item]) => `
     <tr>
       <td>${escapeHtml(month)}</td>
@@ -307,6 +308,63 @@ function renderDetailsHistory(group) {
       scales: { y: { beginAtZero: true } },
     },
   });
+}
+
+function inputPercent(value) {
+  if (value === null || value === undefined) return "";
+  return String(value * 100).replace(".", ",");
+}
+
+function setHistoryUpdateValues(entries) {
+  const latest = entries.length ? entries[entries.length - 1] : [new Date().toISOString().slice(0, 7), {}];
+  const [month, item] = latest;
+  document.getElementById("historyUpdateMes").value = month;
+  document.getElementById("historyUpdateMaior").value = inputPercent(item.maior_lance);
+  document.getElementById("historyUpdateMenor").value = inputPercent(item.menor_lance);
+  document.getElementById("historyUpdateQtd").value = item.qtd_contemplacoes ?? "";
+  setHistoryUpdateState("");
+}
+
+function setHistoryUpdateState(state, message = "") {
+  const status = document.getElementById("historyUpdateStatus");
+  const button = document.getElementById("historyUpdateSaveBtn");
+  button.disabled = state === "loading";
+  button.textContent = state === "loading" ? "Salvando..." : "Salvar Historico";
+  status.className = `history-update-status ${state === "success" ? "success" : state === "error" ? "error" : ""}`;
+  status.classList.toggle("d-none", !message);
+  status.textContent = message;
+}
+
+function collectHistoryUpdatePayload() {
+  const maior = toNumber(document.getElementById("historyUpdateMaior").value);
+  const menor = toNumber(document.getElementById("historyUpdateMenor").value);
+  const qtdRaw = document.getElementById("historyUpdateQtd").value.trim();
+  const payload = {
+    mes: document.getElementById("historyUpdateMes").value,
+  };
+  if (document.getElementById("historyUpdateMaior").value.trim()) payload.maior_lance = maior > 1 ? maior / 100 : maior;
+  if (document.getElementById("historyUpdateMenor").value.trim()) payload.menor_lance = menor > 1 ? menor / 100 : menor;
+  if (qtdRaw) payload.qtd_contemplacoes = Number(qtdRaw);
+  return payload;
+}
+
+async function saveHistoryUpdate() {
+  if (!currentDetailsGroupId) return;
+  const payload = collectHistoryUpdatePayload();
+  if (!payload.mes) {
+    setHistoryUpdateState("error", "Informe o mes do historico.");
+    return;
+  }
+  const hasMetric = payload.maior_lance !== undefined || payload.menor_lance !== undefined || payload.qtd_contemplacoes !== undefined;
+  if (!hasMetric) {
+    setHistoryUpdateState("error", "Informe ao menos um valor de historico.");
+    return;
+  }
+  setHistoryUpdateState("loading", "Salvando historico na Google Sheets...");
+  await apiPut(`/grupos/${encodeURIComponent(currentDetailsGroupId)}/historico`, payload);
+  await openGroupDetails(currentDetailsGroupId);
+  setHistoryUpdateState("success", "Historico atualizado na Google Sheets.");
+  await loadMapaGrupos();
 }
 
 async function openGroupDetails(groupId) {
@@ -1060,6 +1118,11 @@ document.getElementById("detailsEditBtn").addEventListener("click", () => {
 document.getElementById("groupCrudForm").addEventListener("submit", (event) => {
   event.preventDefault();
   saveGroupForm().catch(() => showToast("Nao foi possivel salvar o grupo.", "danger"));
+});
+
+document.getElementById("historyUpdateForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  saveHistoryUpdate().catch((error) => setHistoryUpdateState("error", error.message || "Nao foi possivel atualizar o historico."));
 });
 
 document.getElementById("viabilityForm").addEventListener("submit", (event) => {

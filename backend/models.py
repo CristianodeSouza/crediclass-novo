@@ -21,6 +21,13 @@ class HistoricoMensal(BaseModel):
     qtd_contemplacoes: int | None = None
 
 
+class HistoricoUpdateRequest(BaseModel):
+    mes: str = Field(pattern=r"^\d{4}-\d{2}$")
+    maior_lance: float | None = Field(default=None, ge=0)
+    menor_lance: float | None = Field(default=None, ge=0)
+    qtd_contemplacoes: int | None = Field(default=None, ge=0)
+
+
 class GrupoDetalhe(GrupoResumo):
     fundo_reserva: float | None = None
     prazo_restante: int | None = None

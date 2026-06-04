@@ -698,6 +698,16 @@
                   <div id="detailsGeneralGrid" class="details-grid"></div>
                 </section>
                 <section id="detailsHistory" class="tab-pane fade" role="tabpanel">
+                  <form id="historyUpdateForm" class="history-update-form">
+                    <label><span>Mes</span><input id="historyUpdateMes" class="form-control" type="month" required></label>
+                    <label><span>Maior Lance (%)</span><input id="historyUpdateMaior" class="form-control" inputmode="decimal"></label>
+                    <label><span>Menor Lance (%)</span><input id="historyUpdateMenor" class="form-control" inputmode="decimal"></label>
+                    <label><span>Qtd Contemplacoes</span><input id="historyUpdateQtd" class="form-control" inputmode="numeric"></label>
+                    <div class="history-update-actions">
+                      <button id="historyUpdateSaveBtn" class="btn btn-primary" type="submit">Salvar Historico</button>
+                    </div>
+                    <div id="historyUpdateStatus" class="history-update-status d-none"></div>
+                  </form>
                   <div class="history-layout">
                     <div class="table-responsive">
                       <table class="table table-sm history-table">
@@ -767,7 +777,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/static/js/api.js?v=20260604-4"></script>
-    <script src="/static/js/app.js?v=20260604-4"></script>
+    <script src="/static/js/api.js?v=20260604-5"></script>
+    <script src="/static/js/app.js?v=20260604-5"></script>
   </body>
 </html>

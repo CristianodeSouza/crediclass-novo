@@ -117,6 +117,21 @@ MONTH_MAP = {
     "DEC": "12",
 }
 
+MONTH_ABBR_BY_NUMBER = {
+    "01": "JAN",
+    "02": "FEV",
+    "03": "MAR",
+    "04": "ABR",
+    "05": "MAI",
+    "06": "JUN",
+    "07": "JUL",
+    "08": "AGO",
+    "09": "SET",
+    "10": "OUT",
+    "11": "NOV",
+    "12": "DEZ",
+}
+
 
 @lru_cache
 def get_service():
@@ -282,6 +297,73 @@ def update_grupo(grupo_id: str, payload: dict[str, Any]) -> dict[str, Any]:
 def delete_grupo(grupo_id: str) -> dict[str, Any]:
     update_grupo(grupo_id, {"status": "Excluido"})
     return {"success": True, "status": "Excluido"}
+
+
+def find_history_headers(headers: list[str], month_key: str) -> dict[str, str]:
+    wanted = {
+        "maior_lance": None,
+        "menor_lance": None,
+        "qtd_contemplacoes": None,
+    }
+    for header in headers:
+        parsed = history_key_from_header(header)
+        if not parsed:
+            continue
+        parsed_month, metric = parsed
+        if parsed_month == month_key and metric in wanted:
+            wanted[metric] = header
+
+    return {metric: header for metric, header in wanted.items() if header}
+
+
+def format_history_value(metric: str, value: Any) -> str:
+    if value is None:
+        return ""
+    if metric in {"maior_lance", "menor_lance"}:
+        return str(float(value) * 100).replace(".", ",")
+    return str(int(value))
+
+
+def update_historico_mensal(grupo_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    month_key = str(payload.get("mes") or "")
+    values = read_sheet_values()
+    if not values:
+        raise RuntimeError("Planilha sem cabecalhos")
+    headers = [str(header).strip() for header in values[0]]
+    found = find_group_row(values, grupo_id)
+    if not found:
+        raise KeyError("Grupo nao encontrado")
+
+    history_headers = find_history_headers(headers, month_key)
+    sent_metrics = [metric for metric in ("maior_lance", "menor_lance", "qtd_contemplacoes") if metric in payload and payload[metric] is not None]
+    missing = [metric for metric in sent_metrics if metric not in history_headers]
+    if missing:
+        month_label = month_key
+        if len(month_key) == 7:
+            year, month = month_key.split("-")
+            month_label = f"{MONTH_ABBR_BY_NUMBER.get(month, month)}-{year[-2:]}"
+        raise RuntimeError(f"Colunas de historico ausentes para {month_label}: {', '.join(missing)}")
+    if not sent_metrics:
+        raise RuntimeError("Nenhum campo de historico enviado")
+
+    row_number, current_row = found
+    updated_values = list(current_row)
+    while len(updated_values) < len(headers):
+        updated_values.append("")
+
+    index_by_header = headers_index(headers)
+    for metric in sent_metrics:
+        updated_values[index_by_header[history_headers[metric]]] = format_history_value(metric, payload[metric])
+
+    settings = get_settings()
+    get_service().spreadsheets().values().update(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"'{settings.google_sheet_name}'!A{row_number}:ZZ{row_number}",
+        valueInputOption="USER_ENTERED",
+        body={"values": [updated_values]},
+    ).execute()
+    clear_rows_cache()
+    return {"success": True, "mes": month_key}
 
 
 def get_field(row: dict[str, Any], field: str) -> Any:
