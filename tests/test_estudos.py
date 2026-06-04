@@ -19,6 +19,7 @@ class EstudosTest(unittest.TestCase):
                 lance_proprio=80000,
                 fgts=20000,
                 parcela_desejada=3500,
+                data_nascimento_conjuge="1988-02-03",
             ),
             grupo_id="128",
         )
@@ -45,6 +46,7 @@ class EstudosTest(unittest.TestCase):
         self.assertGreater(detail["financeiro"]["credito_original"], 500000)
         self.assertEqual(len(detail["financeiro"]["estrategias"]), 5)
         self.assertEqual(detail["financeiro"]["historico_12_meses"]["total_contemplacoes"], 12)
+        self.assertEqual(detail["cliente"]["data_nascimento_conjuge"], "1988-02-03")
         self.assertEqual(detail["status"], "Concluido")
 
     def test_listar_obter_e_excluir_estudo(self):

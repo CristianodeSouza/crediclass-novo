@@ -724,6 +724,7 @@ function collectViabilityPayload() {
     renda_total: totals.renda,
     parcela_desejada: toNumber(document.getElementById("viabilityParcela").value),
     data_nascimento: document.getElementById("viabilityNascimento").value,
+    data_nascimento_conjuge: document.getElementById("viabilityNascimentoConjuge").value,
     tipo_bem: "Imovel",
   };
 }
@@ -862,6 +863,7 @@ function renderStudyClient(payload) {
     ["Renda total informada", formatMoney(payload.renda_total)],
     ["Parcela maxima desejada", formatMoney(payload.parcela_desejada)],
     ["Data nascimento titular", payload.data_nascimento || "-"],
+    ["Data nascimento conjuge", payload.data_nascimento_conjuge || "-"],
     ["Estado do bem", document.getElementById("viabilityEstadoBem").value || "Nao definido"],
   ];
   document.getElementById("studyClientGrid").innerHTML = fields.map(([label, value]) => studyField(label, value)).join("");
@@ -1012,6 +1014,7 @@ async function saveCurrentStudy() {
       renda_total: currentStudy.payload.renda_total,
       parcela_desejada: currentStudy.payload.parcela_desejada,
       data_nascimento: currentStudy.payload.data_nascimento,
+      data_nascimento_conjuge: currentStudy.payload.data_nascimento_conjuge,
       estado_bem: document.getElementById("viabilityEstadoBem").value || "",
     },
     grupo_id: currentStudy.groupId,
@@ -1249,6 +1252,9 @@ function renderStudyDetails(item) {
     ["FGTS utilizado", formatMoney(cliente.fgts)],
     ["Renda total", formatMoney(cliente.renda_total)],
     ["Parcela desejada", formatMoney(cliente.parcela_desejada)],
+    ["Data nascimento titular", cliente.data_nascimento || "-"],
+    ["Data nascimento conjuge", cliente.data_nascimento_conjuge || "-"],
+    ["Estado do bem", cliente.estado_bem || "-"],
   ].map(([label, value]) => detailField(label, value)).join("");
   document.getElementById("studyDetailsGroupGrid").innerHTML = [
     ["Administradora", grupo.administradora || "-"],
