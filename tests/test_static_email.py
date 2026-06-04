@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-22", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-23", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -87,6 +87,25 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("document.body.dataset.theme", app_js)
         self.assertIn('document.getElementById("configTema").addEventListener("change"', app_js)
         self.assertIn('body[data-theme="escuro"]', style_css)
+
+    def test_preferencias_configuracoes_expoem_campos_obrigatorios(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        for field_id in [
+            "configCasasValores",
+            "configCasasPercentuais",
+            "configMeiaParcela",
+            "configLanceEmbutido",
+            "configHistorico36",
+        ]:
+            self.assertIn(f'id="{field_id}"', index_html)
+            self.assertIn(field_id, app_js)
+
+        self.assertIn("function setSelectBool(id, value)", app_js)
+        self.assertIn("function getSelectBool(id)", app_js)
+        self.assertIn("casas_decimais_valores", app_js)
+        self.assertIn("ativar_lance_embutido", app_js)
 
 
 if __name__ == "__main__":
