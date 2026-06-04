@@ -76,6 +76,30 @@ class EstudosTest(unittest.TestCase):
         self.assertEqual(result["total"], 1)
         self.assertEqual(result["items"][0]["estudo_id"], "EST-2")
 
+    def test_listar_estudos_filtra_por_grupo_e_credito(self):
+        items = [
+            {
+                "estudo_id": "EST-1",
+                "cliente": {"credito_desejado": 250000},
+                "grupo_id": "128",
+                "grupo": {"administradora": "Itau", "tipo_bem": "Imovel"},
+                "financeiro": {},
+            },
+            {
+                "estudo_id": "EST-2",
+                "cliente": {"credito_desejado": 900000},
+                "grupo_id": "999",
+                "grupo": {"administradora": "CNP", "tipo_bem": "Auto"},
+                "financeiro": {},
+            },
+        ]
+
+        with patch("backend.main.list_estudos", return_value=items):
+            result = estudos_listar(administradora="itau", tipo_bem="imovel", credito_minimo=200000, credito_maximo=300000)
+
+        self.assertEqual(result["total"], 1)
+        self.assertEqual(result["items"][0]["estudo_id"], "EST-1")
+
     def test_export_estudo_pdf_gera_arquivo(self):
         payload = EstudoRequest(
             cliente=EstudoCliente(nome="Cliente PDF", credito_desejado=250000, lance_proprio=50000),

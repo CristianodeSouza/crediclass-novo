@@ -833,9 +833,13 @@ function getHistoryFilters() {
     data_fim: document.getElementById("historyEndDate").value,
     cliente: document.getElementById("historyCliente").value.trim(),
     grupo: document.getElementById("historyGrupo").value.trim(),
+    administradora: document.getElementById("historyAdministradora").value.trim(),
+    tipo_bem: document.getElementById("historyTipoBem").value.trim(),
     status: document.getElementById("historyStatus").value,
     operador: document.getElementById("historyOperador").value,
     estrategia: document.getElementById("historyEstrategia").value,
+    credito_minimo: document.getElementById("historyCreditoMinimo").value ? toNumber(document.getElementById("historyCreditoMinimo").value) : "",
+    credito_maximo: document.getElementById("historyCreditoMaximo").value ? toNumber(document.getElementById("historyCreditoMaximo").value) : "",
   };
 }
 

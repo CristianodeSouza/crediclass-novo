@@ -217,11 +217,15 @@ def estudos_criar(payload: EstudoRequest):
 def estudos_listar(
     cliente: str | None = None,
     grupo: str | None = None,
+    administradora: str | None = None,
+    tipo_bem: str | None = None,
     status: str | None = None,
     operador: str | None = None,
     estrategia: str | None = None,
     data_inicio: str | None = None,
     data_fim: str | None = None,
+    credito_minimo: float | None = None,
+    credito_maximo: float | None = None,
 ):
     logger.info("GET /api/estudos cliente=%s grupo=%s status=%s", cliente, grupo, status)
     items = list_estudos()
@@ -232,6 +236,12 @@ def estudos_listar(
     if grupo:
         needle = grupo.lower()
         items = [item for item in items if needle in str(item.get("grupo_id", "")).lower()]
+    if administradora:
+        needle = administradora.lower()
+        items = [item for item in items if needle in str(item.get("grupo", {}).get("administradora", "")).lower()]
+    if tipo_bem:
+        needle = tipo_bem.lower()
+        items = [item for item in items if needle in str(item.get("grupo", {}).get("tipo_bem", "")).lower()]
     if status:
         items = [item for item in items if str(item.get("status", "")).lower() == status.lower()]
     if operador:
@@ -242,6 +252,16 @@ def estudos_listar(
         items = [item for item in items if str(item.get("criado_em", ""))[:10] >= data_inicio]
     if data_fim:
         items = [item for item in items if str(item.get("criado_em", ""))[:10] <= data_fim]
+    if credito_minimo is not None:
+        items = [
+            item for item in items
+            if float(item.get("cliente", {}).get("credito_desejado") or item.get("financeiro", {}).get("credito") or 0) >= credito_minimo
+        ]
+    if credito_maximo is not None:
+        items = [
+            item for item in items
+            if float(item.get("cliente", {}).get("credito_desejado") or item.get("financeiro", {}).get("credito") or 0) <= credito_maximo
+        ]
 
     return {"total": len(items), "items": items}
 
