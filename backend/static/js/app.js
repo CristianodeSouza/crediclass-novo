@@ -988,13 +988,19 @@ function renderStudyHistory(group) {
   });
 }
 
-function renderStudyRecommendations(viabilityItem, financial) {
+function renderStudyRecommendations(viabilityItem, financial, group) {
   const level = viabilityItem.afinidade >= 0.9 ? "Recomendacao forte" : viabilityItem.afinidade >= 0.8 ? "Recomendacao moderada" : "Recomendacao com acompanhamento";
   document.getElementById("studyRecommendationLevel").textContent = `${level} - afinidade ${formatPercent(viabilityItem.afinidade)}`;
+  const historyEntries = Object.values(group.historico || {}).slice(-12);
+  const totalContemplacoes = historyEntries.reduce((sum, item) => sum + (item.qtd_contemplacoes || 0), 0);
+  const prazoAdequado = financial.prazoApos <= (currentStudy.payload.prazo_desejado || financial.prazo);
+  const estrategiaRecomendada = currentStudyStrategies.find((strategy) => strategy.label === "Lance Total") || currentStudyStrategies[0];
   const recommendations = [
-    `Grupo com afinidade ${formatPercent(viabilityItem.afinidade)} no ranking da Viabilidade.`,
+    totalContemplacoes > 0 ? `Grupo com bom historico: ${totalContemplacoes} contemplacao(oes) nos ultimos 12 meses.` : "Grupo sem contemplacoes registradas nos ultimos 12 meses; acompanhar historico antes da oferta.",
+    `Estrategia recomendada: ${estrategiaRecomendada.label} com ${formatPercent(estrategiaRecomendada.percent)} de lance.`,
+    prazoAdequado ? "Prazo adequado ao cenario informado pelo cliente." : "Prazo apos lance acima do desejado; revisar expectativa do cliente.",
     financial.parcela <= (currentStudy.payload.parcela_desejada || 0) ? "Parcela estimada dentro do limite informado." : "Parcela estimada exige validacao com o cliente.",
-    "Acompanhar assembleias e historico mensal antes da oferta.",
+    "Necessidade de acompanhamento semanal das assembleias e do historico mensal.",
     "A analise nao garante contemplacao.",
   ];
   document.getElementById("studyRecommendations").innerHTML = recommendations.map((text) => `<li class="check-ok">${escapeHtml(text)}</li>`).join("");
@@ -1015,7 +1021,7 @@ async function openFinancialStudy(groupId, viabilityItem) {
     renderStudySummary(financial, group, viabilityItem);
     renderStudyStrategies(group, financial);
     renderStudyHistory(group);
-    renderStudyRecommendations(viabilityItem, financial);
+    renderStudyRecommendations(viabilityItem, financial, group);
     setStudyState("ready");
   } catch (error) {
     setStudyState("error");
