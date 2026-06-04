@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from backend.main import grupo_detalhe, grupos
+from backend.main import grupo_detalhe, grupos, reload_data
 from backend.sheets_client import build_historico, row_to_grupo, row_to_grupo_detalhe
 
 
@@ -129,6 +129,19 @@ class MapaGruposTest(unittest.TestCase):
 
         self.assertEqual(result["grupo_id"], "ITAU-128-IMOVEL")
         self.assertEqual(result["historico"]["2026-01"]["menor_lance"], 0.24)
+
+    def test_reload_endpoint_clears_cache_and_returns_total(self):
+        fake_rows = [
+            {"Administradora": "Itau", "Grupo": "128"},
+            {"Administradora": "CNP", "Grupo": "017"},
+        ]
+
+        with patch("backend.main.clear_rows_cache") as clear_cache, patch("backend.main.read_sheet_rows", return_value=fake_rows):
+            result = reload_data()
+
+        clear_cache.assert_called_once()
+        self.assertEqual(result["success"], True)
+        self.assertEqual(result["total"], 2)
 
 
 if __name__ == "__main__":

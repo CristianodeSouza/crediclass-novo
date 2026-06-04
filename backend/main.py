@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
 from .models import GrupoDetalhe, GruposResponse, ViabilidadeRequest, ViabilidadeResponse
-from .sheets_client import get_grupo, list_grupos, list_grupos_detalhe
+from .sheets_client import clear_rows_cache, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows
 from .viabilidade import analyze_viabilidade
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -33,6 +33,20 @@ def health():
         "version": settings.version,
         "environment": settings.environment,
     }
+
+
+@app.post("/api/reload")
+def reload_data():
+    logger.info("POST /api/reload")
+    try:
+        clear_rows_cache()
+        total = len(read_sheet_rows(force_reload=True))
+    except Exception as error:
+        logger.exception("Erro ao recarregar dados da planilha")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+    logger.info("POST /api/reload recarregou total=%s", total)
+    return {"success": True, "total": total}
 
 
 @app.get("/api/grupos", response_model=GruposResponse)

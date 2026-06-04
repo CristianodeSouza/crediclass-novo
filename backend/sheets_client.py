@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import time
 import unicodedata
 from functools import lru_cache
 from typing import Any
@@ -12,6 +13,8 @@ from .config import get_settings
 
 logger = logging.getLogger("crediclass.sheets")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+CACHE_TTL_SECONDS = 300
+_rows_cache: dict[str, Any] = {"expires_at": 0.0, "rows": None}
 
 
 def normalize_header(value: str) -> str:
@@ -92,7 +95,17 @@ def get_service():
     return build("sheets", "v4", credentials=credentials, cache_discovery=False)
 
 
-def read_sheet_rows() -> list[dict[str, Any]]:
+def clear_rows_cache() -> None:
+    _rows_cache["expires_at"] = 0.0
+    _rows_cache["rows"] = None
+
+
+def read_sheet_rows(force_reload: bool = False) -> list[dict[str, Any]]:
+    now = time.time()
+    if not force_reload and _rows_cache["rows"] is not None and now < _rows_cache["expires_at"]:
+        logger.info("Usando cache da Google Sheets")
+        return list(_rows_cache["rows"])
+
     settings = get_settings()
     logger.info("Lendo Google Sheets: %s", settings.google_sheet_name)
     result = get_service().spreadsheets().values().get(
@@ -111,6 +124,9 @@ def read_sheet_rows() -> list[dict[str, Any]]:
             row_dict[str(header).strip()] = row[index] if index < len(row) else ""
         if any(str(value).strip() for value in row_dict.values()):
             rows.append(row_dict)
+
+    _rows_cache["rows"] = rows
+    _rows_cache["expires_at"] = now + CACHE_TTL_SECONDS
     return rows
 
 
