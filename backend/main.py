@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
+from .configuracoes import get_configuracoes, update_configuracoes
 from .estudos import create_estudo, delete_estudo, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoDetalhe, GruposResponse, ViabilidadeRequest, ViabilidadeResponse
 from .sheets_client import clear_rows_cache, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows
@@ -200,3 +201,29 @@ def estudos_excluir(estudo_id: str):
     if not delete_estudo(estudo_id):
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
     return {"success": True}
+
+
+@app.get("/api/configuracoes")
+def configuracoes_obter():
+    logger.info("GET /api/configuracoes")
+    settings = get_settings()
+    data = get_configuracoes()
+    data["sistema"] = {
+        "app": settings.app_name,
+        "version": settings.version,
+        "environment": settings.environment,
+        "debug": settings.debug,
+        "google_sheet_name": settings.google_sheet_name,
+        "google_sheets_configurado": bool(settings.google_sheets_id and settings.google_service_account_json),
+    }
+    return data
+
+
+@app.put("/api/configuracoes")
+def configuracoes_salvar(payload: dict):
+    logger.info("PUT /api/configuracoes")
+    try:
+        return update_configuracoes(payload)
+    except Exception as error:
+        logger.exception("Erro ao salvar configuracoes")
+        return JSONResponse(status_code=400, content={"success": False, "error": str(error)})
