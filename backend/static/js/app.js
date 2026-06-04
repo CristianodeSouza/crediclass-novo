@@ -835,13 +835,68 @@ async function ensureCurrentStudySaved() {
 async function shareCurrentStudy() {
   const estudoId = await ensureCurrentStudySaved();
   if (!estudoId) return;
-  const url = `${window.location.origin}${window.location.pathname}?estudo_id=${encodeURIComponent(estudoId)}`;
+  const url = buildStudyShareUrl(estudoId);
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(url);
     showToast("Link do estudo copiado.", "success");
     return;
   }
   window.prompt("Link do estudo", url);
+}
+
+function buildStudyShareUrl(studyId) {
+  return `${window.location.origin}${window.location.pathname}?estudo_id=${encodeURIComponent(studyId)}`;
+}
+
+function buildStudyEmailSubject(study) {
+  const cliente = study?.cliente?.nome || "cliente";
+  const grupo = study?.grupo?.grupo || study?.grupo_id || "";
+  return `Estudo financeiro Crediclass - ${cliente}${grupo ? ` - Grupo ${grupo}` : ""}`;
+}
+
+function buildStudyEmailBody(study, shareUrl) {
+  const cliente = study?.cliente || {};
+  const grupo = study?.grupo || {};
+  const financeiro = study?.financeiro || {};
+  const lines = [
+    "Ola,",
+    "",
+    "Segue o estudo financeiro Crediclass para consulta.",
+    "",
+    `Cliente: ${cliente.nome || "-"}`,
+    `Administradora: ${grupo.administradora || "-"}`,
+    `Grupo: ${grupo.grupo || study?.grupo_id || "-"}`,
+    `Tipo de bem: ${grupo.tipo_bem || "-"}`,
+    `Credito desejado: ${formatMoney(cliente.credito_desejado || financeiro.credito || null)}`,
+    `Estrategia: ${study?.estrategia || "-"}`,
+    `Status: ${study?.status || "-"}`,
+    "",
+    `Link do estudo: ${shareUrl}`,
+    "",
+    "Atenciosamente,",
+    "Crediclass",
+  ];
+  return lines.join("\n");
+}
+
+function openEmailDraft(study) {
+  const shareUrl = buildStudyShareUrl(study.estudo_id);
+  const subject = encodeURIComponent(buildStudyEmailSubject(study));
+  const body = encodeURIComponent(buildStudyEmailBody(study, shareUrl));
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  showToast("E-mail preparado no cliente de e-mail.", "success");
+}
+
+async function emailCurrentStudy() {
+  const estudoId = await ensureCurrentStudySaved();
+  if (!estudoId) return;
+  const study = await apiGet(`/estudos/${encodeURIComponent(estudoId)}`);
+  openEmailDraft(study);
+}
+
+async function emailHistoryStudy(studyId) {
+  const study = await apiGet(`/estudos/${encodeURIComponent(studyId)}`);
+  openEmailDraft(study);
 }
 
 function setHistoryState(state) {
@@ -1352,8 +1407,8 @@ document.getElementById("studyPdfBtn").addEventListener("click", () => {
 document.getElementById("studyShareBtn").addEventListener("click", () => {
   shareCurrentStudy().catch(() => showToast("Nao foi possivel compartilhar o estudo.", "danger"));
 });
-["studyEmailBtn"].forEach((id) => {
-  document.getElementById(id).addEventListener("click", () => showToast("Envio por e-mail depende de SMTP configurado.", "info"));
+document.getElementById("studyEmailBtn").addEventListener("click", () => {
+  emailCurrentStudy().catch(() => showToast("Nao foi possivel preparar o e-mail.", "danger"));
 });
 
 document.getElementById("historyFilters").addEventListener("submit", (event) => {
@@ -1388,7 +1443,9 @@ document.getElementById("historyTableBody").addEventListener("click", async (eve
     exportStudyPdf(studyId).catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
     return;
   }
-  showToast("Envio por e-mail depende de SMTP configurado.", "info");
+  if (button.dataset.historyAction === "email") {
+    emailHistoryStudy(studyId).catch(() => showToast("Nao foi possivel preparar o e-mail.", "danger"));
+  }
 });
 
 document.getElementById("saveConfigBtn").addEventListener("click", () => {
