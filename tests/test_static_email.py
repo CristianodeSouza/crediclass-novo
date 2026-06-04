@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-20", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-21", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -68,6 +68,13 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function renderDetailsAudit(group)", app_js)
         self.assertIn("renderDetailsAudit(group)", app_js)
         self.assertIn(".audit-list", style_css)
+
+    def test_acao_principal_salva_estudo_financeiro(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('document.getElementById("screen-estudo").classList.contains("active")', app_js)
+        self.assertIn("saveCurrentStudy().catch(() => setStudyState(\"error\"))", app_js)
+        self.assertNotIn("Funcionalidade sera implementada na etapa correspondente.", app_js)
 
 
 if __name__ == "__main__":
