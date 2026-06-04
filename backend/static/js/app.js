@@ -59,6 +59,7 @@ let groupFormModal = null;
 let groupFormMode = "create";
 let groupFormId = null;
 let currentDetailsGroupId = null;
+let studyDetailsModal = null;
 
 function showToast(message, type = "success") {
   const region = document.getElementById("toastRegion");
@@ -853,6 +854,79 @@ function renderHistoryTable(items) {
   }).join("");
 }
 
+function setStudyDetailsState(state) {
+  document.getElementById("studyDetailsLoading").classList.toggle("d-none", state !== "loading");
+  document.getElementById("studyDetailsError").classList.toggle("d-none", state !== "error");
+  document.getElementById("studyDetailsContent").classList.toggle("d-none", state !== "ready");
+}
+
+function renderStudyDetails(item) {
+  const cliente = item.cliente || {};
+  const grupo = item.grupo || {};
+  const financeiro = item.financeiro || {};
+  const historico = financeiro.historico_12_meses || {};
+  document.getElementById("studyDetailsTitle").textContent = `Detalhes do Estudo ${item.estudo_id}`;
+  document.getElementById("studyDetailsSubtitle").textContent = `${cliente.nome || "Cliente"} - ${grupo.administradora || "Administradora"} ${grupo.grupo || item.grupo_id || ""}`;
+  document.getElementById("studyDetailsMeta").textContent = `${item.operador || "Joyce"} - ${item.criado_em || "-"}`;
+  document.getElementById("studyDetailsClientGrid").innerHTML = [
+    ["Nome", cliente.nome || "-"],
+    ["Objetivo", cliente.objetivo || "-"],
+    ["Credito desejado", formatMoney(cliente.credito_desejado)],
+    ["Prazo desejado", cliente.prazo_desejado ? `${cliente.prazo_desejado} meses` : "-"],
+    ["Lance proprio", formatMoney(cliente.lance_proprio)],
+    ["FGTS utilizado", formatMoney(cliente.fgts)],
+    ["Renda total", formatMoney(cliente.renda_total)],
+    ["Parcela desejada", formatMoney(cliente.parcela_desejada)],
+  ].map(([label, value]) => detailField(label, value)).join("");
+  document.getElementById("studyDetailsGroupGrid").innerHTML = [
+    ["Administradora", grupo.administradora || "-"],
+    ["Grupo", grupo.grupo || item.grupo_id || "-"],
+    ["Tipo de bem", grupo.tipo_bem || "-"],
+    ["Credito disponivel", formatMoney(financeiro.credito_disponivel)],
+    ["Prazo total", grupo.prazo_total ? `${grupo.prazo_total} meses` : "-"],
+    ["Prazo restante", grupo.prazo_restante ? `${grupo.prazo_restante} meses` : "-"],
+    ["Status do grupo", grupo.status || "-"],
+    ["Status do estudo", item.status || "-"],
+  ].map(([label, value]) => detailField(label, value)).join("");
+  document.getElementById("studyDetailsFinancialGrid").innerHTML = [
+    ["Carta de credito", formatMoney(financeiro.credito_original || financeiro.credito)],
+    ["Lance embutido", formatMoney(financeiro.lance_embutido)],
+    ["Recurso proprio", formatMoney(financeiro.recurso_proprio)],
+    ["Valor total do lance", formatMoney(financeiro.valor_total_lance)],
+    ["Parcela estimada", formatMoney(financeiro.parcela_inicial)],
+    ["Parcela apos contemplacao", formatMoney(financeiro.parcela_apos_contemplacao)],
+    ["Chance", financeiro.chance_contemplacao || "-"],
+    ["Total contemplacoes 12m", historico.total_contemplacoes ?? "-"],
+  ].map(([label, value]) => detailField(label, value)).join("");
+  document.getElementById("studyDetailsStrategiesBody").innerHTML = (financeiro.estrategias || []).map((strategy) => `
+    <tr>
+      <td>${escapeHtml(strategy.estrategia || "-")}</td>
+      <td>${formatPercent(strategy.percentual_lance)}</td>
+      <td>${formatMoney(strategy.lance_embutido)}</td>
+      <td>${formatMoney(strategy.lance_proprio)}</td>
+      <td>${formatMoney(strategy.credito_disponivel)}</td>
+      <td>${formatMoney(strategy.parcela_apos_contemplacao)}</td>
+      <td>${strategy.prazo_apos_lance ? `${strategy.prazo_apos_lance} meses` : "-"}</td>
+      <td>${escapeHtml(strategy.chance_contemplacao || "-")}</td>
+    </tr>
+  `).join("") || `<tr><td colspan="8" class="text-center text-secondary">Estrategias nao encontradas.</td></tr>`;
+}
+
+async function openStudyDetails(studyId) {
+  if (!studyDetailsModal) {
+    studyDetailsModal = new bootstrap.Modal(document.getElementById("studyDetailsModal"));
+  }
+  studyDetailsModal.show();
+  setStudyDetailsState("loading");
+  try {
+    const item = await apiGet(`/estudos/${encodeURIComponent(studyId)}`);
+    renderStudyDetails(item);
+    setStudyDetailsState("ready");
+  } catch (error) {
+    setStudyDetailsState("error");
+  }
+}
+
 async function loadHistoryStudies() {
   setHistoryState("loading");
   try {
@@ -1186,8 +1260,7 @@ document.getElementById("historyTableBody").addEventListener("click", async (eve
   if (!button) return;
   const studyId = button.dataset.studyId;
   if (button.dataset.historyAction === "visualizar") {
-    const item = await apiGet(`/estudos/${encodeURIComponent(studyId)}`);
-    showToast(`Estudo ${item.estudo_id} carregado para consulta.`, "info");
+    openStudyDetails(studyId);
     return;
   }
   if (button.dataset.historyAction === "duplicar") {
