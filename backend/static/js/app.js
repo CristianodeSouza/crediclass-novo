@@ -74,6 +74,15 @@ function showToast(message, type = "success") {
   setTimeout(() => toast.remove(), 3600);
 }
 
+function isNotificationEnabled(key) {
+  const settings = configState.data?.notificacoes || {};
+  return settings[key] !== false;
+}
+
+function notifyWhen(key, message, type = "success") {
+  if (isNotificationEnabled(key)) showToast(message, type);
+}
+
 function activateScreen(screenName) {
   const meta = screens[screenName];
   if (!meta) return;
@@ -512,6 +521,7 @@ async function saveHistoryUpdate() {
   await apiPut(`/grupos/${encodeURIComponent(currentDetailsGroupId)}/historico`, payload);
   await openGroupDetails(currentDetailsGroupId);
   setHistoryUpdateState("success", "Historico atualizado na Google Sheets.");
+  notifyWhen("alertar_historico_atualizado", "Historico mensal atualizado na Google Sheets.", "success");
   await loadMapaGrupos();
 }
 
@@ -638,7 +648,7 @@ async function saveGroupForm() {
   }
   if (hasMonthlyHistoryMetrics(historyPayload)) {
     await apiPut(`/grupos/${encodeURIComponent(targetGroupId)}/historico`, historyPayload);
-    showToast("Historico mensal atualizado na Google Sheets.", "success");
+    notifyWhen("alertar_historico_atualizado", "Historico mensal atualizado na Google Sheets.", "success");
   }
   groupFormModal.hide();
   loadMapaGrupos();
@@ -976,7 +986,7 @@ async function saveCurrentStudy() {
   };
   const result = await apiPost("/estudos", payload);
   currentStudy.savedStudyId = result.estudo_id;
-  showToast(`Estudo salvo: ${result.estudo_id}`, "success");
+  notifyWhen("alertar_estudo_salvo", `Estudo salvo: ${result.estudo_id}`, "success");
   loadHistoryStudies();
   return result;
 }
@@ -1475,7 +1485,7 @@ async function saveConfiguracoes() {
 
 async function syncGoogleSheets() {
   const result = await apiPost("/reload", {});
-  showToast(`Google Sheets sincronizado: ${result.total} linhas.`, "success");
+  notifyWhen("alertar_sincronizacao", `Google Sheets sincronizado: ${result.total} linhas.`, "success");
   addOperationalLog(`Google Sheets sincronizado: ${result.total} linha(s)`);
 }
 
@@ -1686,11 +1696,11 @@ document.getElementById("configTema").addEventListener("change", (event) => {
 });
 
 document.getElementById("testIntegrationsBtn").addEventListener("click", () => {
-  syncGoogleSheets().catch(() => showToast("Nao foi possivel testar integracoes.", "danger"));
+  syncGoogleSheets().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel testar integracoes.", "danger"));
 });
 
 document.getElementById("syncSheetsBtn").addEventListener("click", () => {
-  syncGoogleSheets().catch(() => showToast("Nao foi possivel sincronizar Google Sheets.", "danger"));
+  syncGoogleSheets().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel sincronizar Google Sheets.", "danger"));
 });
 
 document.getElementById("downloadConfigBackupBtn").addEventListener("click", downloadConfigBackup);
@@ -1703,7 +1713,7 @@ document.getElementById("configUsersBody").addEventListener("click", (event) => 
 
 ["clearSystemCacheBtn", "reindexSystemBtn", "validateSystemBtn", "restartSyncBtn"].forEach((id) => {
   document.getElementById(id).addEventListener("click", () => {
-    syncGoogleSheets().catch(() => showToast("Nao foi possivel executar acao do sistema.", "danger"));
+    syncGoogleSheets().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel executar acao do sistema.", "danger"));
   });
 });
 

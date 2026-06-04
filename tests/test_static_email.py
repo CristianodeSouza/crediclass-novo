@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-24", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-25", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -119,6 +119,16 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("notificacoes", app_js)
         self.assertIn("alertar_sincronizacao", app_js)
         self.assertIn("alertar_falha_integracao", app_js)
+
+    def test_notificacoes_controlam_alertas_operacionais(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function isNotificationEnabled(key)", app_js)
+        self.assertIn("function notifyWhen(key, message, type = \"success\")", app_js)
+        self.assertIn('notifyWhen("alertar_sincronizacao"', app_js)
+        self.assertIn('notifyWhen("alertar_estudo_salvo"', app_js)
+        self.assertIn('notifyWhen("alertar_historico_atualizado"', app_js)
+        self.assertIn('notifyWhen("alertar_falha_integracao"', app_js)
 
 
 if __name__ == "__main__":
