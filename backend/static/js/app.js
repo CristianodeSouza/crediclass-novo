@@ -782,6 +782,14 @@ async function saveCurrentStudy() {
     cliente: {
       nome: "Cliente em estudo",
       credito_desejado: currentStudy.payload.credito_desejado,
+      objetivo: currentStudy.payload.objetivo,
+      prazo_desejado: currentStudy.payload.prazo_desejado,
+      lance_proprio: currentStudy.payload.lance_proprio,
+      fgts: currentStudy.payload.fgts,
+      renda_total: currentStudy.payload.renda_total,
+      parcela_desejada: currentStudy.payload.parcela_desejada,
+      data_nascimento: currentStudy.payload.data_nascimento,
+      estado_bem: document.getElementById("viabilityEstadoBem").value || "",
     },
     grupo_id: currentStudy.groupId,
   };

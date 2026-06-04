@@ -147,6 +147,14 @@ class ViabilidadeResponse(BaseModel):
 class EstudoCliente(BaseModel):
     nome: str = ""
     credito_desejado: float = Field(gt=0)
+    objetivo: str = ""
+    prazo_desejado: int | None = Field(default=None, gt=0)
+    lance_proprio: float | None = Field(default=None, ge=0)
+    fgts: float | None = Field(default=None, ge=0)
+    renda_total: float | None = Field(default=None, ge=0)
+    parcela_desejada: float | None = Field(default=None, ge=0)
+    data_nascimento: str = ""
+    estado_bem: str = ""
 
 
 class EstudoRequest(BaseModel):
