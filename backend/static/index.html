@@ -652,8 +652,18 @@
                   <article class="summary-card"><span class="summary-label">Planilha</span><strong id="integrationSheetName">-</strong><small>Google Sheets</small></article>
                 </div>
                 <div class="content-card study-actions">
+                  <button id="configureIntegrationsBtn" class="btn btn-outline-primary" type="button">Configurar</button>
                   <button id="testIntegrationsBtn" class="btn btn-outline-primary" type="button">Testar todas as integracoes</button>
                   <button id="syncSheetsBtn" class="btn btn-primary" type="button">Sincronizar com Google Sheets</button>
+                </div>
+                <div class="content-card">
+                  <div class="table-toolbar"><div><h2>Configuracao das Integracoes</h2><p>Controle operacional dos servicos conectados</p></div></div>
+                  <form id="configIntegrationsForm" class="viability-form">
+                    <label><span>Google Sheets</span><select id="integrationGoogleSheetsToggle" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
+                    <label><span>PipeRun CRM</span><select id="integrationPiperunToggle" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
+                    <label><span>E-mail SMTP</span><select id="integrationEmailToggle" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
+                    <label><span>Backup Automatico</span><select id="integrationBackupToggle" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
+                  </form>
                 </div>
               </section>
 
@@ -942,6 +952,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260604-27"></script>
+    <script src="/static/js/app.js?v=20260604-28"></script>
   </body>
 </html>

@@ -69,6 +69,23 @@ class ConfiguracoesTest(unittest.TestCase):
         self.assertFalse(config["notificacoes"]["alertar_historico_atualizado"])
         self.assertFalse(config["notificacoes"]["alertar_falha_integracao"])
 
+    def test_salvar_configuracoes_atualiza_integracoes(self):
+        result = configuracoes_salvar({
+            "integracoes": {
+                "google_sheets": False,
+                "piperun_crm": True,
+                "email_smtp": True,
+                "backup_automatico": True,
+            }
+        })
+        config = configuracoes_obter()
+
+        self.assertTrue(result["success"])
+        self.assertFalse(config["integracoes"]["google_sheets"])
+        self.assertTrue(config["integracoes"]["piperun_crm"])
+        self.assertTrue(config["integracoes"]["email_smtp"])
+        self.assertTrue(config["integracoes"]["backup_automatico"])
+
     def test_salvar_configuracoes_atualiza_usuarios(self):
         usuarios = [{
             "nome": "Ana",
