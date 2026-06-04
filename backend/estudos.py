@@ -154,7 +154,12 @@ def get_estudo(estudo_id: str) -> dict | None:
 
 
 def delete_estudo(estudo_id: str) -> bool:
-    return _studies.pop(estudo_id, None) is not None
+    estudo = _studies.get(estudo_id)
+    if not estudo:
+        return False
+    estudo["status"] = "Cancelado"
+    estudo["cancelado_em"] = datetime.now().isoformat(timespec="seconds")
+    return True
 
 
 def ascii_text(value) -> str:
