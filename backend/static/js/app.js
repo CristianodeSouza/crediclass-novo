@@ -737,6 +737,10 @@ function setGroupFormHistoryState(state, message = "") {
   status.textContent = message;
 }
 
+function findLoadedGroupSummary(groupId) {
+  return mapState.items.find((item) => String(item.grupo_id).toUpperCase() === String(groupId).toUpperCase()) || null;
+}
+
 function collectGroupFormPayload() {
   const taxa = toNumber(document.getElementById("groupFormTaxaAdm").value);
   return {
@@ -766,6 +770,19 @@ async function openGroupForm(mode, groupId = null) {
     return;
   }
 
+  const summary = findLoadedGroupSummary(groupId);
+  let openedWithSummary = false;
+  if (summary) {
+    setGroupFormValues(summary);
+    if (mode === "duplicate") {
+      document.getElementById("groupFormGrupo").value = `${summary.grupo}-COPIA`;
+      groupFormId = null;
+    }
+    setGroupFormHistoryState("success", "Carregando historico completo do grupo...");
+    groupFormModal.show();
+    openedWithSummary = true;
+  }
+
   try {
     const group = await apiGet(`/grupos/${encodeURIComponent(groupId)}`);
     setGroupFormValues(group);
@@ -775,7 +792,11 @@ async function openGroupForm(mode, groupId = null) {
     }
     groupFormModal.show();
   } catch (error) {
-    showToast("Nao foi possivel carregar o grupo para edicao.", "danger");
+    if (openedWithSummary) {
+      setGroupFormHistoryState("error", "Nao foi possivel carregar o historico completo. Os dados principais podem ser editados; tente novamente para atualizar historico.");
+      return;
+    }
+    showToast(error.message || "Nao foi possivel carregar o grupo para edicao.", "danger");
   }
 }
 
