@@ -8,17 +8,20 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
-from .estudos import create_estudo, delete_estudo, get_estudo, list_estudos
+from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows, update_grupo, update_historico_mensal
 from .viabilidade import analyze_viabilidade
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
+FILES_DIR = BASE_DIR / "generated_files"
+FILES_DIR.mkdir(exist_ok=True)
 logger = logging.getLogger("crediclass.api")
 
 app = FastAPI(title="Crediclass Dashboard V3")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/files", StaticFiles(directory=FILES_DIR), name="files")
 
 
 @app.get("/")
@@ -252,6 +255,15 @@ def estudos_excluir(estudo_id: str):
     if not delete_estudo(estudo_id):
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
     return {"success": True}
+
+
+@app.post("/api/estudos/{estudo_id}/exportar-pdf")
+def estudos_exportar_pdf(estudo_id: str):
+    logger.info("POST /api/estudos/%s/exportar-pdf", estudo_id)
+    filename = export_estudo_pdf(estudo_id, FILES_DIR)
+    if not filename:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
+    return {"success": True, "download_url": f"/files/{filename}"}
 
 
 @app.get("/api/configuracoes")
