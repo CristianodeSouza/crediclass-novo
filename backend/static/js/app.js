@@ -1564,6 +1564,42 @@ async function syncGoogleSheets() {
   addOperationalLog(`Google Sheets sincronizado: ${result.total} linha(s)`);
 }
 
+function clearSystemCache() {
+  operationalLogs.length = 0;
+  renderOperationalLogs();
+  renderConfiguracoes(configState.data);
+  showToast("Cache visual e logs da sessao limpos.", "success");
+}
+
+async function reindexSystemData() {
+  mapState.page = 1;
+  await loadMapaGrupos();
+  showToast(`Dados reindexados: ${mapState.total} grupo(s).`, "success");
+  addOperationalLog(`Dados reindexados: ${mapState.total} grupo(s)`);
+}
+
+async function validateSystemIntegrity() {
+  if (!mapState.items.length) {
+    await loadMapaGrupos();
+  }
+  const invalidGroups = mapState.items.filter((item) => !item.grupo_id || !item.grupo || !item.administradora);
+  if (invalidGroups.length) {
+    showToast(`Integridade com alerta: ${invalidGroups.length} grupo(s) incompleto(s) na pagina atual.`, "warning");
+    addOperationalLog(`Validacao encontrou ${invalidGroups.length} grupo(s) incompleto(s)`);
+    return;
+  }
+  showToast("Integridade validada na pagina atual de grupos.", "success");
+  addOperationalLog("Integridade de dados validada");
+}
+
+async function restartSystemSync() {
+  await syncGoogleSheets();
+  await loadMapaGrupos();
+  await loadConfiguracoes();
+  showToast("Sincronizacao reiniciada.", "success");
+  addOperationalLog("Sincronizacao reiniciada");
+}
+
 async function loadHealth() {
   const health = await apiGet("/health");
   document.getElementById("environmentLabel").textContent = health.environment;
@@ -1819,10 +1855,18 @@ document.getElementById("configUsersBody").addEventListener("click", (event) => 
   }
 });
 
-["clearSystemCacheBtn", "reindexSystemBtn", "validateSystemBtn", "restartSyncBtn"].forEach((id) => {
-  document.getElementById(id).addEventListener("click", () => {
-    syncGoogleSheets().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel executar acao do sistema.", "danger"));
-  });
+document.getElementById("clearSystemCacheBtn").addEventListener("click", clearSystemCache);
+
+document.getElementById("reindexSystemBtn").addEventListener("click", () => {
+  reindexSystemData().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel reindexar os dados.", "danger"));
+});
+
+document.getElementById("validateSystemBtn").addEventListener("click", () => {
+  validateSystemIntegrity().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel validar a integridade.", "danger"));
+});
+
+document.getElementById("restartSyncBtn").addEventListener("click", () => {
+  restartSystemSync().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel reiniciar a sincronizacao.", "danger"));
 });
 
 loadHealth().catch(() => {
