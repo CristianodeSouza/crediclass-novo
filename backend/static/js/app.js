@@ -127,6 +127,12 @@ function formatBool(value) {
   return "-";
 }
 
+function averageNumber(values) {
+  const valid = values.filter((value) => Number.isFinite(value));
+  if (!valid.length) return null;
+  return valid.reduce((sum, value) => sum + value, 0) / valid.length;
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
     "&": "&amp;",
@@ -918,6 +924,16 @@ function renderStudyHistory(group) {
   const maiores = entries.map(([, item]) => item.maior_lance ? item.maior_lance * 100 : null);
   const menores = entries.map(([, item]) => item.menor_lance ? item.menor_lance * 100 : null);
   const qtd = entries.map(([, item]) => item.qtd_contemplacoes || 0);
+  const mediaMaior = averageNumber(maiores);
+  const mediaMenor = averageNumber(menores);
+  const mediaQtd = averageNumber(qtd);
+  const totalQtd = qtd.reduce((sum, value) => sum + value, 0);
+
+  document.getElementById("studyAvgMaiorLance").textContent = mediaMaior === null ? "-" : `${mediaMaior.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
+  document.getElementById("studyAvgMenorLance").textContent = mediaMenor === null ? "-" : `${mediaMenor.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%`;
+  document.getElementById("studyAvgContemplacoes").textContent = mediaQtd === null ? "-" : mediaQtd.toLocaleString("pt-BR", { maximumFractionDigits: 1 });
+  document.getElementById("studyTotalContemplacoes").textContent = totalQtd.toLocaleString("pt-BR");
+
   if (studyChart) studyChart.destroy();
   studyChart = new Chart(document.getElementById("studyHistoryChart"), {
     type: "bar",

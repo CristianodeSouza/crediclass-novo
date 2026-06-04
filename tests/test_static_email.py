@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-29", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-30", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -85,6 +85,22 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('document.getElementById("screen-estudo").classList.contains("active")', app_js)
         self.assertIn("saveCurrentStudy().catch(() => setStudyState(\"error\"))", app_js)
         self.assertNotIn("Funcionalidade sera implementada na etapa correspondente.", app_js)
+
+    def test_estudo_financeiro_exibe_metricas_historico_12_meses(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        for field_id in [
+            "studyAvgMaiorLance",
+            "studyAvgMenorLance",
+            "studyAvgContemplacoes",
+            "studyTotalContemplacoes",
+        ]:
+            self.assertIn(f'id="{field_id}"', index_html)
+            self.assertIn(field_id, app_js)
+
+        self.assertIn("function averageNumber(values)", app_js)
+        self.assertIn("const entries = Object.entries(group.historico || {}).slice(-12)", app_js)
 
     def test_tema_configurado_aplica_aparencia(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
