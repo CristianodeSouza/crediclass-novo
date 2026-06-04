@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-30", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-31", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -101,6 +101,28 @@ class StaticEmailTest(unittest.TestCase):
 
         self.assertIn("function averageNumber(values)", app_js)
         self.assertIn("const entries = Object.entries(group.historico || {}).slice(-12)", app_js)
+
+    def test_estudo_financeiro_exibe_resumo_financeiro_completo(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        for field_id in [
+            "studyRecursoProprio",
+            "studyPercentualLanceTotal",
+            "studyParcelaApos",
+            "studyPrazoApos",
+            "studyCustoTotal",
+            "studySeguroGarantia",
+            "studyProximaAssembleia",
+            "studyChanceContemplacao",
+            "studyRankingPosition",
+        ]:
+            self.assertIn(f'id="{field_id}"', index_html)
+            self.assertIn(field_id, app_js)
+
+        self.assertIn("function renderStudySummary(financial, group, viabilityItem)", app_js)
+        self.assertIn("percentualLanceTotal", app_js)
+        self.assertIn("renderStudySummary(financial, group, viabilityItem)", app_js)
 
     def test_tema_configurado_aplica_aparencia(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
