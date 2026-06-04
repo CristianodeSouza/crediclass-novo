@@ -51,6 +51,8 @@ const configState = {
   data: null,
 };
 
+const operationalLogs = [];
+
 let detailsModal = null;
 let detailsChart = null;
 let studyChart = null;
@@ -139,6 +141,47 @@ function downloadCsv(filename, rows) {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function downloadJson(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function renderOperationalLogs() {
+  const list = document.getElementById("operationalLogsList");
+  if (!list) return;
+  const items = operationalLogs.length ? operationalLogs : [{ message: "Nenhum evento registrado nesta sessao.", time: "--" }];
+  list.innerHTML = items.map((item) => `
+    <li><strong>${escapeHtml(item.message)}</strong><span>${escapeHtml(item.time)}</span></li>
+  `).join("");
+}
+
+function addOperationalLog(message) {
+  operationalLogs.unshift({ message, time: new Date().toLocaleString("pt-BR") });
+  operationalLogs.splice(8);
+  renderOperationalLogs();
+}
+
+function downloadConfigBackup() {
+  if (!configState.data) {
+    showToast("Carregue as configuracoes antes de baixar backup.", "warning");
+    return;
+  }
+  const backup = {
+    gerado_em: new Date().toISOString(),
+    configuracoes: configState.data,
+  };
+  downloadJson(`crediclass-configuracoes-${new Date().toISOString().slice(0, 10)}.json`, backup);
+  addOperationalLog("Backup JSON das configuracoes gerado");
+  showToast("Backup JSON gerado.", "success");
 }
 
 function exportGroupsCsv() {
@@ -564,10 +607,12 @@ async function loadMapaGrupos() {
     renderPagination();
     document.getElementById("tableSubtitle").textContent = `${data.total} grupo(s) encontrado(s)`;
     setMapState(data.items.length ? "ready" : "empty");
+    addOperationalLog(`Mapa de Grupos carregado: ${data.total} grupo(s)`);
   } catch (error) {
     renderSummary([], 0);
     document.getElementById("tableSubtitle").textContent = "Erro ao carregar grupos";
     setMapState("error");
+    addOperationalLog("Falha ao carregar Mapa de Grupos");
   }
 }
 
@@ -1183,10 +1228,12 @@ async function loadHistoryStudies() {
     renderHistoryTable(historyState.items);
     document.getElementById("historySubtitle").textContent = `${data.total} estudo(s) encontrado(s)`;
     setHistoryState(historyState.items.length ? "ready" : "empty");
+    addOperationalLog(`Historico de Estudos carregado: ${data.total} estudo(s)`);
   } catch (error) {
     renderHistorySummary([]);
     document.getElementById("historySubtitle").textContent = "Erro ao carregar estudos";
     setHistoryState("error");
+    addOperationalLog("Falha ao carregar Historico de Estudos");
   }
 }
 
@@ -1264,7 +1311,9 @@ function renderConfiguracoes(data) {
     ["Debug", sistema.debug ? "Sim" : "Nao"],
     ["Google Sheets configurado", sistema.google_sheets_configurado ? "Sim" : "Nao"],
     ["Aba da planilha", sistema.google_sheet_name || "-"],
+    ["Logs nesta sessao", operationalLogs.length],
   ].map(([label, value]) => detailField(label, value)).join("");
+  renderOperationalLogs();
 }
 
 function renderAccessPolicy(acesso) {
@@ -1311,20 +1360,24 @@ async function loadConfiguracoes() {
     const data = await apiGet("/configuracoes");
     renderConfiguracoes(data);
     setConfigState("ready");
+    addOperationalLog("Configuracoes carregadas");
   } catch (error) {
     setConfigState("error");
+    addOperationalLog("Falha ao carregar configuracoes");
   }
 }
 
 async function saveConfiguracoes() {
   await apiPut("/configuracoes", collectConfiguracoesPayload());
   showToast("Configuracoes salvas.", "success");
+  addOperationalLog("Configuracoes salvas");
   loadConfiguracoes();
 }
 
 async function syncGoogleSheets() {
   const result = await apiPost("/reload", {});
   showToast(`Google Sheets sincronizado: ${result.total} linhas.`, "success");
+  addOperationalLog(`Google Sheets sincronizado: ${result.total} linha(s)`);
 }
 
 async function loadHealth() {
@@ -1533,6 +1586,8 @@ document.getElementById("testIntegrationsBtn").addEventListener("click", () => {
 document.getElementById("syncSheetsBtn").addEventListener("click", () => {
   syncGoogleSheets().catch(() => showToast("Nao foi possivel sincronizar Google Sheets.", "danger"));
 });
+
+document.getElementById("downloadConfigBackupBtn").addEventListener("click", downloadConfigBackup);
 
 document.getElementById("configUsersBody").addEventListener("click", (event) => {
   if (event.target.closest("[data-config-user-action]")) {
