@@ -570,8 +570,13 @@ def list_grupos_detalhe() -> list[dict[str, Any]]:
 
 
 def get_grupo(grupo_id: str) -> dict[str, Any] | None:
-    wanted = grupo_id.strip().upper()
-    for detalhe in list_grupos_detalhe():
-        if detalhe["grupo_id"].upper() == wanted:
-            return detalhe
-    return None
+    values = read_sheet_values()
+    if not values:
+        return None
+    headers = [str(header).strip() for header in values[0]]
+    found = find_group_row(values, grupo_id)
+    if not found:
+        return None
+    _, row = found
+    row_dict = {header: row[index] if index < len(row) else "" for index, header in enumerate(headers)}
+    return row_to_grupo_detalhe(row_dict)
