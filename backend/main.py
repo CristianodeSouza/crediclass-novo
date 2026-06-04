@@ -64,6 +64,7 @@ def diagnostico_cabecalhos():
     return {
         "total": len(headers),
         "headers": [{"original": header, "normalizado": normalize_header(header)} for header in headers],
+        "primeira_linha": read_sheet_rows()[:1],
     }
 
 
