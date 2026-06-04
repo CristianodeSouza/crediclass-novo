@@ -1465,11 +1465,14 @@ document.getElementById("primaryAction").addEventListener("click", () => {
     saveConfiguracoes().catch(() => setConfigState("error"));
     return;
   }
+  if (document.getElementById("screen-estudo").classList.contains("active")) {
+    saveCurrentStudy().catch(() => setStudyState("error"));
+    return;
+  }
   if (document.getElementById("screen-historico").classList.contains("active")) {
     loadHistoryStudies();
     return;
   }
-  showToast("Funcionalidade sera implementada na etapa correspondente.", "info");
 });
 
 document.getElementById("groupFilters").addEventListener("submit", (event) => {
