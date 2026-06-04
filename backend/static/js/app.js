@@ -829,6 +829,8 @@ function setHistoryState(state) {
 
 function getHistoryFilters() {
   return {
+    data_inicio: document.getElementById("historyStartDate").value,
+    data_fim: document.getElementById("historyEndDate").value,
     cliente: document.getElementById("historyCliente").value.trim(),
     grupo: document.getElementById("historyGrupo").value.trim(),
     status: document.getElementById("historyStatus").value,

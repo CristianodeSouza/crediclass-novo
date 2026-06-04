@@ -64,6 +64,18 @@ class EstudosTest(unittest.TestCase):
         deleted = estudos_excluir(created["estudo_id"])
         self.assertTrue(deleted["success"])
 
+    def test_listar_estudos_filtra_por_periodo(self):
+        items = [
+            {"estudo_id": "EST-1", "criado_em": "2026-06-01T10:00:00", "cliente": {}, "grupo": {}, "financeiro": {}},
+            {"estudo_id": "EST-2", "criado_em": "2026-06-04T10:00:00", "cliente": {}, "grupo": {}, "financeiro": {}},
+        ]
+
+        with patch("backend.main.list_estudos", return_value=items):
+            result = estudos_listar(data_inicio="2026-06-02", data_fim="2026-06-04")
+
+        self.assertEqual(result["total"], 1)
+        self.assertEqual(result["items"][0]["estudo_id"], "EST-2")
+
     def test_export_estudo_pdf_gera_arquivo(self):
         payload = EstudoRequest(
             cliente=EstudoCliente(nome="Cliente PDF", credito_desejado=250000, lance_proprio=50000),
