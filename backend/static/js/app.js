@@ -1418,7 +1418,7 @@ document.getElementById("syncSheetsBtn").addEventListener("click", () => {
 
 document.getElementById("configUsersBody").addEventListener("click", (event) => {
   if (event.target.closest("[data-config-user-action]")) {
-    showToast("Joyce nao pode alterar usuarios ou permissoes criticas.", "warning");
+    showToast("Edicao de usuarios sera concluida em uma etapa futura.", "info");
   }
 });
 
