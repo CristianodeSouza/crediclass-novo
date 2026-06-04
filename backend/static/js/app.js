@@ -1340,6 +1340,7 @@ function renderConfiguracoes(data) {
   const pref = data.preferencias || {};
   const params = data.parametros_financeiros || {};
   const integracoes = data.integracoes || {};
+  const notificacoes = data.notificacoes || {};
   const sistema = data.sistema || {};
 
   setInputValue("configEmpresaNome", empresa.nome);
@@ -1359,6 +1360,10 @@ function renderConfiguracoes(data) {
   setSelectBool("configMeiaParcela", pref.ativar_meia_parcela);
   setSelectBool("configLanceEmbutido", pref.ativar_lance_embutido);
   setSelectBool("configHistorico36", pref.exibir_historico_36_meses);
+  setSelectBool("notifySync", notificacoes.alertar_sincronizacao);
+  setSelectBool("notifyStudySaved", notificacoes.alertar_estudo_salvo);
+  setSelectBool("notifyHistoryUpdated", notificacoes.alertar_historico_atualizado);
+  setSelectBool("notifyIntegrationFailure", notificacoes.alertar_falha_integracao);
 
   setInputValue("configTaxaAdm", percentToInput(params.taxa_administracao_padrao));
   setInputValue("configFundoReserva", percentToInput(params.fundo_reserva_padrao));
@@ -1438,6 +1443,12 @@ function collectConfiguracoesPayload() {
       prazo_maximo: Number(document.getElementById("configPrazoMaximo").value || 0),
       prazo_minimo: Number(document.getElementById("configPrazoMinimo").value || 0),
       indice_correcao_anual: document.getElementById("configIndiceCorrecao").value.trim(),
+    },
+    notificacoes: {
+      alertar_sincronizacao: getSelectBool("notifySync"),
+      alertar_estudo_salvo: getSelectBool("notifyStudySaved"),
+      alertar_historico_atualizado: getSelectBool("notifyHistoryUpdated"),
+      alertar_falha_integracao: getSelectBool("notifyIntegrationFailure"),
     },
   };
 }

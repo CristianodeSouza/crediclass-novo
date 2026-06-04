@@ -595,6 +595,7 @@
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configIntegracoes" type="button" role="tab">Integracoes</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configUsuarios" type="button" role="tab">Usuarios</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configAcesso" type="button" role="tab">Acesso</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configNotificacoes" type="button" role="tab">Notificacoes</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configSistema" type="button" role="tab">Backup & Logs</button></li>
             </ul>
 
@@ -671,6 +672,18 @@
                 <div class="content-card">
                   <div class="table-toolbar"><div><h2>Acesso aos Paineis</h2><p>Visualizacao liberada para todos os usuarios</p></div></div>
                   <div id="configAccessGrid" class="details-grid"></div>
+                </div>
+              </section>
+
+              <section id="configNotificacoes" class="tab-pane fade" role="tabpanel">
+                <div class="content-card">
+                  <div class="table-toolbar"><div><h2>Notificacoes</h2><p>Alertas visuais das rotinas operacionais</p></div></div>
+                  <form id="configNotificationsForm" class="viability-form">
+                    <label><span>Sincronizacao Google Sheets</span><select id="notifySync" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
+                    <label><span>Estudo salvo</span><select id="notifyStudySaved" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
+                    <label><span>Historico mensal atualizado</span><select id="notifyHistoryUpdated" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
+                    <label><span>Falhas de integracao</span><select id="notifyIntegrationFailure" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
+                  </form>
                 </div>
               </section>
 
@@ -897,6 +910,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260604-23"></script>
+    <script src="/static/js/app.js?v=20260604-24"></script>
   </body>
 </html>
