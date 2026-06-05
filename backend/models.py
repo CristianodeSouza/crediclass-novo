@@ -129,6 +129,7 @@ class ViabilidadeHistorico(BaseModel):
 
 class ViabilidadeGrupo(BaseModel):
     ranking: int
+    grupo_aprovado: bool
     grupo_id: str
     administradora: str
     grupo: str = ""
@@ -142,6 +143,8 @@ class ViabilidadeGrupo(BaseModel):
     lance_proprio_utilizado: float
     lance_total: float
     percentual_lance: float
+    taxa_administrativa_valor: float
+    fundo_reserva_valor: float
     parcela_estimada: float
     lance_sugerido_percentual: float
     lance_sugerido_valor: float

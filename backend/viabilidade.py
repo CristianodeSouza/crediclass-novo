@@ -118,7 +118,7 @@ def group_age_validation(group: dict[str, Any], titular_age: int | None, spouse_
     maximum_age = group.get("idade_maxima")
     informed_ages = [age for age in (titular_age, spouse_age) if age is not None]
     if not informed_ages:
-        return False, "idade_nao_informada"
+        return False, "idade_nao_validada"
     if maximum_age is None:
         return True, "idade_nao_validada"
     if any(age > int(maximum_age) for age in informed_ages):
@@ -167,7 +167,13 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         taxa_adm = group.get("taxa_adm") or 0
         fundo_reserva = group.get("fundo_reserva") or 0
         prazo_total = group.get("prazo_total") or prazo_restante
-        parcela_estimada = (credito_contratado + credito_contratado * taxa_adm + credito_contratado * fundo_reserva) / prazo_total
+        taxa_administrativa_valor = credito_contratado * taxa_adm
+        fundo_reserva_valor = credito_contratado * fundo_reserva
+        parcela_estimada = (
+            credito_contratado
+            + taxa_administrativa_valor
+            + fundo_reserva_valor
+        ) / prazo_total
 
         historico_12m = history_last_12_months(group.get("historico") or {})
         lance_referencia = (
@@ -233,6 +239,7 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
 
         results.append({
             "ranking": 0,
+            "grupo_aprovado": aprovado,
             "grupo_id": group["grupo_id"],
             "administradora": group.get("administradora") or "",
             "grupo": group.get("grupo") or "",
@@ -246,6 +253,8 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             "lance_proprio_utilizado": round(payload.lance_proprio, 2),
             "lance_total": round(lance_total, 2),
             "percentual_lance": round(percentual_lance, 4),
+            "taxa_administrativa_valor": round(taxa_administrativa_valor, 2),
+            "fundo_reserva_valor": round(fundo_reserva_valor, 2),
             "parcela_estimada": round(parcela_estimada, 2),
             "lance_sugerido_percentual": round(percentual_lance, 4),
             "lance_sugerido_valor": round(lance_total, 2),
@@ -317,7 +326,7 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         "idade_titular": titular_age,
         "idade_conjuge": spouse_age,
         "idade_validada": age_informed,
-        "idade_alerta": "" if age_informed else "idade_nao_informada",
+        "idade_alerta": "" if age_informed else "idade_nao_validada",
         "cenario": "Viavel" if cenario_viavel else "Inviavel",
         "motivos_reprovacao": motivos_reprovacao,
         "checklist": checklist,
