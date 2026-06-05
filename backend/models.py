@@ -65,6 +65,9 @@ class GruposResponse(BaseModel):
     total: int
     page: int
     page_size: int
+    total_administradoras: int = 0
+    administradoras: list[str] = Field(default_factory=list)
+    tipos_bem: list[str] = Field(default_factory=list)
     items: list[GrupoResumo] = Field(default_factory=list)
 
 

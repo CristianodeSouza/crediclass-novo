@@ -105,6 +105,7 @@ function activateScreen(screenName) {
   document.getElementById("screenTitle").textContent = meta.title;
   document.getElementById("screenSubtitle").textContent = meta.subtitle;
   document.getElementById("primaryAction").textContent = meta.action;
+  document.getElementById("reloadMapDataBtn").classList.toggle("d-none", screenName !== "mapa");
 
   if (screenName === "historico") {
     loadHistoryStudies();
@@ -363,14 +364,12 @@ function updateSelectOptions(id, values, defaultLabel) {
   if (values.includes(selected)) select.value = selected;
 }
 
-function updateFilterOptions(items) {
-  const administradoras = [...new Set(items.map((item) => item.administradora).filter(Boolean))].sort();
-  const tipos = [...new Set(items.map((item) => item.tipo_bem).filter(Boolean))].sort();
+function updateFilterOptions(administradoras = [], tipos = []) {
   updateSelectOptions("filterAdministradora", administradoras, "Todas");
   updateSelectOptions("filterTipoBem", tipos, "Todos");
 }
 
-function renderSummary(items, total) {
+function renderSummary(items, total, totalAdministradoras = null) {
   const administradoras = new Set(items.map((item) => item.administradora).filter(Boolean));
   const credito = items.reduce((sum, item) => {
     const value = Number(item.credito_maximo || 0);
@@ -380,7 +379,7 @@ function renderSummary(items, total) {
   const taxaMedia = taxas.length ? taxas.reduce((sum, value) => sum + value, 0) / taxas.length : null;
 
   document.getElementById("summaryTotal").textContent = total;
-  document.getElementById("summaryAdministradoras").textContent = administradoras.size;
+  document.getElementById("summaryAdministradoras").textContent = totalAdministradoras ?? administradoras.size;
   document.getElementById("summaryCredito").textContent = formatMoney(credito);
   document.getElementById("summaryTaxa").textContent = formatPercent(taxaMedia);
   document.getElementById("summaryUpdated").textContent = mapState.lastLoadAt || "--";
@@ -863,8 +862,8 @@ async function loadMapaGrupos() {
     mapState.total = data.total;
     mapState.items = data.items;
     mapState.lastLoadAt = new Date().toLocaleString("pt-BR");
-    updateFilterOptions(data.items);
-    renderSummary(data.items, data.total);
+    updateFilterOptions(data.administradoras || [], data.tipos_bem || []);
+    renderSummary(data.items, data.total, data.total_administradoras);
     renderGroupsTable(data.items);
     renderPagination();
     document.getElementById("tableSubtitle").textContent = `${data.total} grupo(s) encontrado(s)`;
@@ -875,6 +874,24 @@ async function loadMapaGrupos() {
     document.getElementById("tableSubtitle").textContent = "Erro ao carregar grupos";
     setMapState("error");
     addOperationalLog("Falha ao carregar Mapa de Grupos");
+  }
+}
+
+async function reloadMapData() {
+  const button = document.getElementById("reloadMapDataBtn");
+  button.disabled = true;
+  button.textContent = "Recarregando...";
+  try {
+    const result = await apiPost("/reload", {});
+    mapState.page = 1;
+    await loadMapaGrupos();
+    showToast(`Dados recarregados da planilha: ${result.total} grupo(s).`, "success");
+    addOperationalLog(`Recarregamento manual da planilha: ${result.total} grupo(s)`);
+  } catch (error) {
+    showToast(error.message || "Nao foi possivel recarregar os dados.", "danger");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Recarregar dados";
   }
 }
 
@@ -1877,6 +1894,7 @@ document.getElementById("primaryAction").addEventListener("click", () => {
     return;
   }
 });
+document.getElementById("reloadMapDataBtn").addEventListener("click", reloadMapData);
 
 document.getElementById("groupFilters").addEventListener("submit", (event) => {
   event.preventDefault();
