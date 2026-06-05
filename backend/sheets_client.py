@@ -91,6 +91,14 @@ FIELD_ALIASES = {
     "primeira_assembleia": ["primeira assembleia", "1 assembleia", "1a assembleia"],
     "ultima_assembleia": ["ultima assembleia"],
     "data_termino": ["data termino", "data de termino", "termino"],
+    "proxima_assembleia": ["proxima assembleia", "data proxima assembleia"],
+    "limite_adesao": ["limite adesao", "limite de adesao", "data limite adesao"],
+    "vencimento_primeira_parcela": [
+        "vencimento primeira parcela",
+        "vencimento da primeira parcela",
+        "1 vencimento parcela",
+        "1a parcela",
+    ],
     "seguro_garantia": ["seguro garantia"],
     "meia_parcela": ["meia parcela", "meia reduzida"],
     "lance_embutido": ["lance embutido"],
@@ -104,6 +112,13 @@ FIELD_ALIASES = {
     "agressivo": ["agressivo"],
     "super_agressivo": ["super agressivo", "superagressivo"],
     "parcela_reduzida": ["parcela reduzida"],
+    "percentual_parcela_reduzida": [
+        "percentual parcela reduzida",
+        "parcela reduzida percentual",
+        "percentual de reducao da parcela",
+    ],
+    "idade_maxima": ["idade maxima", "limite idade", "idade limite"],
+    "observacoes": ["observacoes", "observacao", "obs"],
     "indice_correcao": ["indice correcao", "indice de correcao"],
     "vencimento_parcela": ["vencimento parcela", "vencimento da parcela", "venc"],
     "vencimento_lance": ["vencimento lance", "vencimento do lance"],
@@ -298,7 +313,13 @@ def column_letter(index: int) -> str:
 def format_sheet_value(field: str, value: Any) -> str:
     if value is None:
         return ""
-    if field in {"taxa_adm", "fundo_reserva", "percentual_lance_embutido", "percentual_lance_fixo"}:
+    if field in {
+        "taxa_adm",
+        "fundo_reserva",
+        "percentual_lance_embutido",
+        "percentual_lance_fixo",
+        "percentual_parcela_reduzida",
+    }:
         return format_decimal_value(float(value) * 100, minimum_decimals=1)
     if isinstance(value, float):
         return str(value).replace(".", ",")
@@ -629,9 +650,17 @@ def build_grupo_id(row: dict[str, Any]) -> str:
     return grupo
 
 
+def build_administradora_id(row: dict[str, Any]) -> str:
+    name = clean_text(get_field(row, "administradora"))
+    normalized = unicodedata.normalize("NFKD", name)
+    ascii_name = "".join(ch for ch in normalized if not unicodedata.combining(ch))
+    return re.sub(r"[^A-Za-z0-9]+", "-", ascii_name).strip("-").upper()
+
+
 def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "grupo_id": build_grupo_id(row),
+        "administradora_id": build_administradora_id(row),
         "administradora": clean_text(get_field(row, "administradora")),
         "grupo": clean_text(get_field(row, "grupo")),
         "tipo_bem": clean_text(get_field(row, "tipo_bem")),
@@ -651,6 +680,9 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
         "fundo_reserva": parse_percent(get_optional_field(row, "fundo_reserva")),
         "prazo_restante": parse_int(get_optional_field(row, "prazo_restante")),
         "data_termino": str(get_optional_field(row, "data_termino")),
+        "proxima_assembleia": clean_text(get_optional_field(row, "proxima_assembleia")),
+        "limite_adesao": clean_text(get_optional_field(row, "limite_adesao")),
+        "vencimento_primeira_parcela": clean_text(get_optional_field(row, "vencimento_primeira_parcela")),
         "seguro_garantia": parse_bool(get_optional_field(row, "seguro_garantia")),
         "meia_parcela": parse_bool(get_optional_field(row, "meia_parcela")),
         "lance_embutido": parse_bool(get_optional_field(row, "lance_embutido")),
@@ -664,6 +696,9 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
         "agressivo": parse_percent(get_optional_field(row, "agressivo")),
         "super_agressivo": parse_percent(get_optional_field(row, "super_agressivo")),
         "parcela_reduzida": str(get_optional_field(row, "parcela_reduzida")),
+        "percentual_parcela_reduzida": parse_percent(get_optional_field(row, "percentual_parcela_reduzida")),
+        "idade_maxima": parse_int(get_optional_field(row, "idade_maxima")),
+        "observacoes": clean_text(get_optional_field(row, "observacoes")),
         "indice_correcao": str(get_optional_field(row, "indice_correcao")),
         "vencimento_parcela": str(get_optional_field(row, "vencimento_parcela")),
         "vencimento_lance": str(get_optional_field(row, "vencimento_lance")),

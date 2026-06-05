@@ -1,10 +1,11 @@
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 
 class GrupoResumo(BaseModel):
     grupo_id: str
+    administradora_id: str = ""
     administradora: str = ""
     grupo: str = ""
     tipo_bem: str = ""
@@ -38,6 +39,9 @@ class GrupoDetalhe(GrupoResumo):
     fundo_reserva: float | None = None
     prazo_restante: int | None = None
     data_termino: str = ""
+    proxima_assembleia: str = ""
+    limite_adesao: str = ""
+    vencimento_primeira_parcela: str = ""
     seguro_garantia: bool | None = None
     meia_parcela: bool | None = None
     lance_embutido: bool | None = None
@@ -51,6 +55,9 @@ class GrupoDetalhe(GrupoResumo):
     agressivo: float | None = None
     super_agressivo: float | None = None
     parcela_reduzida: str = ""
+    percentual_parcela_reduzida: float | None = None
+    idade_maxima: int | None = None
+    observacoes: str = ""
     indice_correcao: str = ""
     vencimento_parcela: str = ""
     vencimento_lance: str = ""
@@ -104,6 +111,152 @@ class GrupoCreateResponse(SuccessResponse):
 class ErrorResponse(BaseModel):
     success: bool = False
     error: str
+
+
+class AdministradoraV4(BaseModel):
+    administradora_id: str
+    nome: str
+    status: str = "Ativo"
+    possui_template: bool = False
+    template_padrao_id: str = ""
+    observacoes: str = ""
+
+
+class ClienteV4(BaseModel):
+    cliente_id: str
+    nome: str = ""
+    nome_conjuge: str = ""
+    data_nascimento_titular: str = ""
+    data_nascimento_conjuge: str = ""
+    renda_titular: float = Field(default=0, ge=0)
+    renda_conjuge: float = Field(default=0, ge=0)
+    renda_total: float = Field(default=0, ge=0)
+    fgts_titular: float = Field(default=0, ge=0)
+    fgts_conjuge: float = Field(default=0, ge=0)
+    fgts_total: float = Field(default=0, ge=0)
+    observacoes: str = ""
+
+
+class CenarioViabilidadeV4(BaseModel):
+    cenario_id: str
+    cliente_id: str
+    objetivo: str = ""
+    tipo_bem: str = ""
+    estado_bem: str = ""
+    credito_desejado: float = Field(gt=0)
+    prazo_desejado: int = Field(gt=0)
+    lance_proprio: float = Field(default=0, ge=0)
+    fgts_total: float = Field(default=0, ge=0)
+    recurso_total_disponivel: float = Field(default=0, ge=0)
+    renda_total: float = Field(default=0, ge=0)
+    parcela_maxima_desejada: float = Field(default=0, ge=0)
+    perfil: str = ""
+    cenario_viavel: bool = False
+    created_at: str = ""
+
+
+class EstrategiaV4(BaseModel):
+    estrategia_id: str
+    cenario_id: str
+    grupo_id: str
+    nome: str
+    tipo: str
+    percentual_lance: float = Field(default=0, ge=0)
+    valor_lance: float = Field(default=0, ge=0)
+    credito_contratado: float = Field(default=0, ge=0)
+    lance_embutido: float = Field(default=0, ge=0)
+    fgts_utilizado: float = Field(default=0, ge=0)
+    recurso_proprio: float = Field(default=0, ge=0)
+    credito_disponivel: float = Field(default=0, ge=0)
+    parcela_estimada: float = Field(default=0, ge=0)
+    prazo_estimado: int = Field(default=0, ge=0)
+    chance_contemplacao: str = ""
+    score: float = Field(default=0, ge=0, le=100)
+    selo: str = ""
+    recomendada: bool = False
+    alternativa: bool = False
+    aprovada: bool = False
+    justificativa: list[str] = Field(default_factory=list)
+    alertas: list[str] = Field(default_factory=list)
+    motivos_reprovacao: list[str] = Field(default_factory=list)
+
+
+class CampoTemplateV4(BaseModel):
+    campo_id: str
+    label: str
+    tipo: str = "text"
+    origem: str = ""
+    classificacao: Literal["AUTO", "OPERADOR", "HIBRIDO"]
+    editavel: bool = False
+    obrigatorio: bool = False
+
+
+class TemplateEstudoV4(BaseModel):
+    template_id: str
+    administradora_id: str
+    nome: str
+    versao: str
+    status: str = "Ativo"
+    campos: list[CampoTemplateV4] = Field(default_factory=list)
+
+
+class TextoAdministradoraV4(BaseModel):
+    texto_id: str
+    administradora_id: str
+    tipo: Literal[
+        "Institucional",
+        "Beneficio",
+        "CriterioSelecao",
+        "ObservacaoPadrao",
+        "Alerta",
+        "Rodape",
+    ]
+    titulo: str = ""
+    conteudo: str
+    status: str = "Ativo"
+
+
+class EstudoFinanceiroV4(BaseModel):
+    estudo_id: str
+    cliente_id: str
+    cenario_id: str
+    grupo_id: str
+    estrategia_id: str
+    template_id: str
+    administradora_id: str
+    status: Literal[
+        "Rascunho",
+        "Pronto para Revisao",
+        "Aprovado para Envio",
+        "Enviado ao Cliente",
+        "Cancelado",
+    ] = "Rascunho"
+    completeness: float = Field(default=0, ge=0, le=1)
+    criado_por: str = ""
+    created_at: str = ""
+    updated_at: str = ""
+
+
+class VersaoEstudoV4(BaseModel):
+    versao_id: str
+    estudo_id: str
+    numero: int = Field(ge=1)
+    dados: dict[str, Any] = Field(default_factory=dict)
+    criado_por: str = ""
+    created_at: str = ""
+
+
+class AuditoriaV4(BaseModel):
+    auditoria_id: str
+    usuario_id: str
+    entidade: str
+    entidade_id: str
+    acao: str
+    campo: str = ""
+    valor_anterior: Any = None
+    valor_novo: Any = None
+    origem: Literal["AUTO", "OPERADOR", "HIBRIDO"] | None = None
+    created_at: str = ""
 
 
 class ViabilidadeRequest(BaseModel):
