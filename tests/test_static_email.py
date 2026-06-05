@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-01", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-02", index_html)
 
     def test_formulario_grupo_nao_exige_campos_obrigatorios(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -92,12 +92,15 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('/historico/lote`, { items: historyPayloads })', app_js)
 
     def test_grafico_historico_grupo_exibe_lances_sem_barras(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
         self.assertIn('type: "line"', app_js)
         self.assertIn("Percentual do lance", app_js)
         self.assertNotIn('label: "Contemplacoes"', app_js)
         self.assertNotIn('yAxisID: "y1"', app_js)
+        self.assertNotIn("Resumo do historico", index_html)
+        self.assertNotIn('id="detailsHistoryBody"', index_html)
 
     def test_detalhe_grupo_renderiza_auditoria(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -191,7 +194,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260604-25", index_html)
+        self.assertIn("/static/css/style.css?v=20260605-02", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

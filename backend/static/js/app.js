@@ -477,15 +477,6 @@ function renderDetailsHistory(group) {
   const filledEntries = entries
     .filter(([, item]) => item.maior_lance !== null || item.menor_lance !== null)
     .sort(([a], [b]) => compareMonthKeys(a, b));
-  const recentEntries = filledEntries.slice(-6).reverse();
-  document.getElementById("detailsHistoryBody").innerHTML = recentEntries.map(([month, item]) => `
-    <div class="history-summary-item">
-      <strong>${escapeHtml(historyMonthLabel(month))}</strong>
-      <b>${formatPercent(item.maior_lance)}</b>
-      <span>${escapeHtml(month)} - menor ${formatPercent(item.menor_lance)}</span>
-      <span>${item.qtd_contemplacoes ?? "-"} contemplacao(oes)</span>
-    </div>
-  `).join("") || `<div class="history-summary-empty">Ainda nao ha meses preenchidos para este grupo.</div>`;
 
   const chartEntries = filledEntries.slice(-24);
   const labels = chartEntries.map(([month]) => formatChartMonth(month));
