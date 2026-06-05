@@ -349,6 +349,16 @@ function getMapFilters() {
   };
 }
 
+function validateMapCreditFilters(filters) {
+  const minimum = filters.credito_minimo === "" ? null : Number(filters.credito_minimo);
+  const maximum = filters.credito_maximo === "" ? null : Number(filters.credito_maximo);
+  if (minimum !== null && maximum !== null && minimum > maximum) {
+    showToast("O credito minimo nao pode ser maior que o credito maximo.", "warning");
+    return false;
+  }
+  return true;
+}
+
 function buildQuery(params) {
   const query = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
@@ -864,9 +874,11 @@ function renderPagination() {
 }
 
 async function loadMapaGrupos() {
+  const filters = getMapFilters();
+  if (!validateMapCreditFilters(filters)) return;
   setMapState("loading");
   try {
-    const data = await apiGet(`/grupos?${buildQuery(getMapFilters())}`);
+    const data = await apiGet(`/grupos?${buildQuery(filters)}`);
     mapState.total = data.total;
     mapState.items = data.items;
     mapState.lastLoadAt = new Date().toLocaleString("pt-BR");

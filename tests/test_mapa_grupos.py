@@ -138,6 +138,42 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(result["tipos_bem"], ["Imovel"])
         self.assertEqual(result["items"][0]["grupo_id"], "128")
 
+    def test_grupos_endpoint_filtra_colunas_de_credito_literalmente(self):
+        fake_items = [
+            {
+                "grupo_id": "fora",
+                "administradora": "CAIXA",
+                "grupo": "1019",
+                "tipo_bem": "Imovel",
+                "credito_minimo": 489851.41,
+                "credito_maximo": 857239.98,
+                "taxa_adm": 0.16,
+                "prazo_total": 200,
+                "primeira_assembleia": "",
+                "ultima_assembleia": "",
+                "status": "Ativo",
+            },
+            {
+                "grupo_id": "dentro",
+                "administradora": "CAIXA",
+                "grupo": "teste",
+                "tipo_bem": "Imovel",
+                "credito_minimo": 320000,
+                "credito_maximo": 480000,
+                "taxa_adm": 0.2,
+                "prazo_total": 200,
+                "primeira_assembleia": "",
+                "ultima_assembleia": "",
+                "status": "Ativo",
+            },
+        ]
+
+        with patch("backend.main.list_grupos", return_value=fake_items):
+            result = grupos(credito_minimo=300000, credito_maximo=500000, page=1, page_size=25)
+
+        self.assertEqual(result["total"], 1)
+        self.assertEqual(result["items"][0]["grupo_id"], "dentro")
+
     def test_grupo_detalhe_endpoint_returns_item(self):
         fake_item = {
             "grupo_id": "128",

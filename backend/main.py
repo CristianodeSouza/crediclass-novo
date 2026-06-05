@@ -99,9 +99,9 @@ def grupos(
             or needle in item["administradora"].lower()
         ]
     if credito_minimo is not None:
-        items = [item for item in items if item["credito_maximo"] is not None and item["credito_maximo"] >= credito_minimo]
+        items = [item for item in items if item["credito_minimo"] is not None and item["credito_minimo"] >= credito_minimo]
     if credito_maximo is not None:
-        items = [item for item in items if item["credito_minimo"] is not None and item["credito_minimo"] <= credito_maximo]
+        items = [item for item in items if item["credito_maximo"] is not None and item["credito_maximo"] <= credito_maximo]
     if prazo_minimo is not None:
         items = [item for item in items if item["prazo_total"] is not None and item["prazo_total"] >= prazo_minimo]
     if prazo_maximo is not None:
