@@ -18,10 +18,10 @@ const screens = {
     action: "Analisar Viabilidade",
   },
   administradoras: {
-    letter: "C) VIABILIDADE ADMINISTRADORAS",
-    title: "Viabilidade Administradoras",
-    subtitle: "Analise anterior obrigatoria por administradora",
-    action: "Recalcular Viabilidade",
+    letter: "C) ADMINISTRADORAS",
+    title: "Administradoras",
+    subtitle: "Planos por administradora para imoveis e automoveis",
+    action: "Salvar Administradoras",
   },
   estudo: {
     letter: "E) ESTUDO FINANCEIRO",
@@ -70,6 +70,20 @@ const configState = {
 const operationalLogs = [];
 const HISTORY_START_MONTH = "2024-01";
 const CLIENT_PROFILE_STORAGE_KEY = "crediclass.clientProfile.v1";
+const administratorPlanDefaultNames = ["CNP", "ITAU", "CAOA", "PORTO", "EMBRACON", "RODOBENS", "CANOPUS"];
+const administratorPlanRows = [
+  { key: "data_cadastro_produto", label: "Data de cadastro do produto", type: "date" },
+  { key: "responsavel_cadastro_produto", label: "Responsavel pelo cadastro do produto", type: "text" },
+  { key: "seguro_obrigatorio_texto", label: "Tem seguro obrigatorio?", type: "text" },
+  { key: "idade_maxima", label: "Qual e a idade maxima?", type: "text" },
+  { key: "limite_sem_comprovacao_renda", label: "Limite adesao sem comprovacao de renda", type: "money" },
+  { key: "percentual_lance_embutido", label: "% de lance embutido", type: "percent" },
+  { key: "tipo_lance_embutido", label: "Calculo do lance embutido", type: "text" },
+  { key: "aceita_saida_fiscal_texto", label: "Aceita adesao com saida fiscal?", type: "text" },
+  { key: "taxa_adm", label: "Taxa ADM", type: "percent" },
+  { key: "possui_negociacao_taxa", label: "Tem negociacao de taxa?", type: "text" },
+  { key: "fundo_reserva", label: "Fundo de reserva", type: "percent" },
+];
 const studyOperatorFields = [
   ["observacoes_comerciais", "Observacoes comerciais", "studyFieldObservacoes"],
   ["comentario_cliente", "Comentario para o cliente", "studyFieldComentario"],
@@ -133,6 +147,9 @@ function activateScreen(screenName) {
 
   if (screenName === "historico") {
     loadHistoryStudies();
+  }
+  if (screenName === "administradoras") {
+    loadConfiguracoes();
   }
   if (screenName === "configuracoes") {
     loadConfiguracoes();
@@ -2112,6 +2129,11 @@ function inputToPercent(id) {
   return value > 1 ? value / 100 : value;
 }
 
+function inputToPercentFromValue(rawValue) {
+  const value = toNumber(rawValue);
+  return value > 1 ? value / 100 : value;
+}
+
 function setSelectBool(id, value) {
   const select = document.getElementById(id);
   if (select) select.value = value === false ? "false" : "true";
@@ -2199,6 +2221,7 @@ function renderConfiguracoes(data) {
 
   renderAccessPolicy(data.acesso || {});
   renderAdministratorRules(data.administradoras_regras || []);
+  renderAdministratorPlans();
   document.getElementById("configSystemGrid").innerHTML = [
     ["Aplicacao", sistema.app],
     ["Versao", sistema.version],
@@ -2245,6 +2268,116 @@ function renderAdministratorRules(rules) {
       </td>
     </tr>
   `).join("");
+}
+
+function activeAdministratorPlanKind() {
+  return document.querySelector("[data-admin-plan-kind].active")?.dataset.adminPlanKind || "Imovel";
+}
+
+function administratorPlanRulesForKind(kind) {
+  const rules = configState.data?.administradoras_regras || [];
+  const byKind = rules.filter((rule) => (rule.tipo_bem || "Imovel") === kind);
+  if (byKind.length) return byKind;
+  return administratorPlanDefaultNames.map((administradora) => ({
+    administradora,
+    tipo_bem: kind,
+    seguro_obrigatorio: false,
+    seguro_obrigatorio_texto: "",
+    aceita_saida_fiscal: false,
+    aceita_saida_fiscal_texto: "",
+    aceita_fgts: true,
+  }));
+}
+
+function administratorPlanCellValue(rule, row) {
+  const value = rule[row.key];
+  if (row.type === "percent") return percentToInput(value);
+  if (row.type === "money") return value ?? "";
+  if (row.key === "seguro_obrigatorio_texto" && value === undefined) return rule.seguro_obrigatorio ? "Sim" : "";
+  if (row.key === "aceita_saida_fiscal_texto" && value === undefined) return rule.aceita_saida_fiscal ? "Sim" : "";
+  return value ?? "";
+}
+
+function renderAdministratorPlans() {
+  const kind = activeAdministratorPlanKind();
+  const rules = administratorPlanRulesForKind(kind);
+  document.getElementById("administratorPlansHead").innerHTML = `
+    <tr>
+      <th>2 - Planos Administradoras</th>
+      ${rules.map((rule, index) => `
+        <th>
+          <input class="admin-plan-admin-input" data-admin-plan-admin="${index}" value="${escapeHtml(rule.administradora || "")}" aria-label="Administradora ${index + 1}">
+        </th>
+      `).join("")}
+    </tr>
+  `;
+  document.getElementById("administratorPlansBody").innerHTML = administratorPlanRows.map((row) => `
+    <tr>
+      <th>${escapeHtml(row.label)}</th>
+      ${rules.map((rule, index) => `
+        <td>
+          <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" value="${escapeHtml(administratorPlanCellValue(rule, row))}">
+        </td>
+      `).join("")}
+    </tr>
+  `).join("");
+}
+
+function addAdministratorPlanColumn() {
+  const kind = activeAdministratorPlanKind();
+  const rules = [...(configState.data?.administradoras_regras || [])];
+  rules.push({
+    administradora: "Nova",
+    tipo_bem: kind,
+    seguro_obrigatorio: false,
+    seguro_obrigatorio_texto: "",
+    aceita_saida_fiscal: false,
+    aceita_saida_fiscal_texto: "",
+    aceita_fgts: true,
+  });
+  configState.data = { ...(configState.data || {}), administradoras_regras: rules };
+  renderAdministratorPlans();
+}
+
+function collectAdministratorPlans() {
+  const kind = activeAdministratorPlanKind();
+  const existing = configState.data?.administradoras_regras || [];
+  const otherKinds = existing.filter((rule) => (rule.tipo_bem || "Imovel") !== kind);
+  const currentRules = administratorPlanRulesForKind(kind);
+  const collected = currentRules.map((rule, index) => ({
+    ...rule,
+    tipo_bem: kind,
+    administradora: document.querySelector(`[data-admin-plan-admin="${index}"]`)?.value.trim() || rule.administradora || "",
+  }));
+  document.querySelectorAll("[data-admin-plan-field]").forEach((input) => {
+    const index = Number(input.dataset.adminPlanIndex);
+    const field = input.dataset.adminPlanField;
+    const type = input.dataset.adminPlanType;
+    if (!collected[index]) return;
+    if (type === "percent") {
+      collected[index][field] = inputToPercentFromValue(input.value);
+    } else if (type === "money") {
+      collected[index][field] = optionalNumber(input.value);
+    } else {
+      collected[index][field] = input.value.trim();
+    }
+  });
+  collected.forEach((rule) => {
+    rule.seguro_obrigatorio = normalizeText(rule.seguro_obrigatorio_texto || "").startsWith("sim");
+    rule.aceita_saida_fiscal = normalizeText(rule.aceita_saida_fiscal_texto || "").startsWith("sim");
+    rule.aceita_fgts = rule.aceita_fgts !== false;
+  });
+  return [...otherKinds, ...collected.filter((rule) => rule.administradora)];
+}
+
+async function saveAdministratorPlans() {
+  const rules = collectAdministratorPlans();
+  await apiPut("/configuracoes", { administradoras_regras: rules });
+  configState.data = { ...(configState.data || {}), administradoras_regras: rules };
+  renderAdministratorRules(rules);
+  renderAdministratorPlans();
+  showToast("Administradoras salvas.", "success");
+  addOperationalLog("Planos de administradoras salvos");
 }
 
 function clearAdministratorRuleForm() {
@@ -2497,7 +2630,7 @@ document.getElementById("primaryAction").addEventListener("click", () => {
     return;
   }
   if (document.getElementById("screen-administradoras").classList.contains("active")) {
-    analyzeAdministrators();
+    saveAdministratorPlans().catch(() => setConfigState("error"));
     return;
   }
   if (document.getElementById("screen-viabilidade").classList.contains("active")) {
@@ -2654,6 +2787,16 @@ document.getElementById("administratorInterviewForm").addEventListener("submit",
 });
 
 document.getElementById("clearAdministratorBtn").addEventListener("click", resetAdministratorForm);
+document.querySelectorAll("[data-admin-plan-kind]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll("[data-admin-plan-kind]").forEach((item) => item.classList.toggle("active", item === button));
+    renderAdministratorPlans();
+  });
+});
+document.getElementById("addAdministratorPlanBtn").addEventListener("click", addAdministratorPlanColumn);
+document.getElementById("saveAdministratorPlansBtn").addEventListener("click", () => {
+  saveAdministratorPlans().catch(() => setConfigState("error"));
+});
 document.getElementById("administratorFilterSubmitBtn").addEventListener("click", analyzeAdministrators);
 document.getElementById("exportAdministratorsCsvBtn").addEventListener("click", exportAdministratorsCsv);
 document.getElementById("advanceToGroupsBtn").addEventListener("click", syncAdministratorInterviewToGroups);

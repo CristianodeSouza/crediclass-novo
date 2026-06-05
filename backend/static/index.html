@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="/static/favicon.svg?v=1" rel="icon" type="image/svg+xml">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260605-11" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260605-12" rel="stylesheet">
   </head>
   <body>
     <div class="app-shell">
@@ -26,8 +26,8 @@
             <span>Perfil do Cliente</span>
           </button>
           <button class="nav-item" type="button" data-screen="administradoras">
-            <span class="nav-icon">VA</span>
-            <span>Viabilidade Administradoras</span>
+            <span class="nav-icon">AD</span>
+            <span>Administradoras</span>
           </button>
           <button class="nav-item" type="button" data-screen="viabilidade">
             <span class="nav-icon">VG</span>
@@ -294,6 +294,36 @@
         </section>
 
         <section id="screen-administradoras" class="screen-panel">
+          <div class="content-card administrator-plans-card">
+            <div class="table-toolbar">
+              <div>
+                <h2>2 - Planos Administradoras</h2>
+                <p>Parametros por administradora separados por tipo de bem</p>
+              </div>
+              <div class="toolbar-actions">
+                <button id="addAdministratorPlanBtn" class="btn btn-outline-secondary" type="button">Adicionar Administradora</button>
+                <button id="saveAdministratorPlansBtn" class="btn btn-primary" type="button">Salvar Administradoras</button>
+              </div>
+            </div>
+
+            <div class="administrator-plan-tabs" role="tablist" aria-label="Tipo de bem dos planos">
+              <button class="active" type="button" data-admin-plan-kind="Imovel">Imoveis</button>
+              <button type="button" data-admin-plan-kind="Automovel">Automoveis</button>
+            </div>
+
+            <div class="administrator-plan-help">
+              Linhas representam os parametros da planilha. Colunas representam administradoras. Campos textuais como verificar, sob consulta e promocao devem ser preservados para revisao humana.
+            </div>
+
+            <div class="table-responsive administrator-plan-wrap">
+              <table id="administratorPlansTable" class="administrator-plan-table">
+                <thead id="administratorPlansHead"></thead>
+                <tbody id="administratorPlansBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="legacy-admin-viability">
           <div class="flow-stepper" aria-label="Etapas da viabilidade">
             <span class="flow-step flow-step-done"><strong>1</strong>Entrevista do Cliente</span>
             <span class="flow-step flow-step-active"><strong>2</strong>Viabilidade Administradoras</span>
@@ -465,6 +495,7 @@
                 <button id="advanceToGroupsBtn" class="btn btn-primary" type="button">Avancar para Grupos</button>
               </div>
             </div>
+          </div>
           </div>
         </section>
 
@@ -1423,6 +1454,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260605-16"></script>
+    <script src="/static/js/app.js?v=20260605-17"></script>
   </body>
 </html>

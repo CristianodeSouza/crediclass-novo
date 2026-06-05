@@ -1176,6 +1176,118 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 700;
 }
 
+.legacy-admin-viability {
+  display: none;
+}
+
+.administrator-plans-card {
+  min-height: 520px;
+}
+
+.administrator-plan-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.administrator-plan-tabs button {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.administrator-plan-tabs button.active {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
+}
+
+.administrator-plan-help {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 0.86rem;
+}
+
+.administrator-plan-wrap {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.administrator-plan-table {
+  width: 100%;
+  min-width: 1080px;
+  border-collapse: collapse;
+}
+
+.administrator-plan-table th,
+.administrator-plan-table td {
+  border: 1px solid #b6c2d2;
+  padding: 0;
+  vertical-align: middle;
+}
+
+.administrator-plan-table thead th {
+  height: 42px;
+  background: #0b2346;
+  color: #fff;
+  font-size: 0.78rem;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.administrator-plan-table tbody th {
+  width: 270px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.administrator-plan-table tbody tr:nth-child(3),
+.administrator-plan-table tbody tr:nth-child(4),
+.administrator-plan-table tbody tr:nth-child(5),
+.administrator-plan-table tbody tr:nth-child(6),
+.administrator-plan-table tbody tr:nth-child(7) {
+  background: #fff7a3;
+}
+
+.admin-plan-admin-input,
+.admin-plan-cell {
+  width: 100%;
+  min-width: 118px;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.administrator-plan-table thead .admin-plan-admin-input {
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.admin-plan-admin-input:focus,
+.admin-plan-cell:focus {
+  outline: 2px solid var(--primary);
+  outline-offset: -2px;
+  background: #fff;
+  color: var(--text);
+}
+
 .viability-table {
   min-width: 980px;
   margin-bottom: 0;
