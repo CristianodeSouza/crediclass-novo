@@ -1071,9 +1071,9 @@ function computeStudy(payload, viabilityItem, group) {
   const custoTotal = creditoContratado + creditoContratado * taxaAdm + creditoContratado * fundoReserva;
   const parcela = custoTotal / prazo;
   const percentualLanceTotal = creditoContratado ? lanceTotal / creditoContratado : 0;
-  const prazoApos = Math.max(1, prazo - Math.round(percentualLanceTotal * prazo));
-  const parcelaApos = custoTotal / prazoApos;
-  return { creditoContratado, percentualEmbutido, lanceEmbutido, lanceProprio, fgts, lanceTotal, creditoDisponivel, prazo, parcela, custoTotal, percentualLanceTotal, prazoApos, parcelaApos };
+  const prazoOperacional = viabilityItem.perfil_prazo_operacional || "-";
+  const lanceReferencia = viabilityItem.lance_referencia_percentual;
+  return { creditoContratado, percentualEmbutido, lanceEmbutido, lanceProprio, fgts, lanceTotal, creditoDisponivel, prazo, parcela, custoTotal, percentualLanceTotal, prazoOperacional, lanceReferencia };
 }
 
 function renderStudyClient(payload) {
@@ -1122,34 +1122,34 @@ function renderStudySummary(financial, group, viabilityItem) {
   document.getElementById("studyPercentualLanceTotal").textContent = formatPercent(financial.percentualLanceTotal);
   document.getElementById("studyLanceTotal").textContent = formatMoney(financial.lanceTotal);
   document.getElementById("studyParcelaInicial").textContent = formatMoney(financial.parcela);
-  document.getElementById("studyParcelaApos").textContent = formatMoney(financial.parcelaApos);
-  document.getElementById("studyPrazoApos").textContent = `${financial.prazoApos} meses`;
+  document.getElementById("studyParcelaApos").textContent = financial.lanceReferencia === null || financial.lanceReferencia === undefined ? "-" : formatPercent(financial.lanceReferencia);
+  document.getElementById("studyPrazoApos").textContent = financial.prazoOperacional;
   document.getElementById("studyCustoTotal").textContent = formatMoney(financial.custoTotal);
   document.getElementById("studySeguroGarantia").textContent = formatBool(group.seguro_garantia);
   document.getElementById("studyProximaAssembleia").textContent = group.proxima_assembleia || group.ultima_assembleia || "-";
-  document.getElementById("studyChanceContemplacao").textContent = financial.percentualLanceTotal >= (group.agressivo || 0.5) ? "Alta" : financial.percentualLanceTotal >= (group.moderado || 0.3) ? "Media" : "Acompanhar";
+  document.getElementById("studyChanceContemplacao").textContent = "Referencia operacional";
   document.getElementById("studyRankingPosition").textContent = viabilityItem.ranking ? `${viabilityItem.ranking}o lugar` : "-";
 }
 
 function renderStudyStrategies(group, financial) {
   currentStudyStrategies = [
-    ["Lance Fixo", group.percentual_lance_fixo],
-    ["Lance Conservador", group.conservador],
-    ["Lance Moderado", group.moderado],
-    ["Lance Agressivo", group.agressivo],
-    ["Lance Total", financial.lanceTotal / financial.creditoContratado],
-  ].map(([label, percent]) => {
-    const percentual = percent || 0;
-    const lanceTotal = financial.creditoContratado * percentual;
+    ["Investidor", group.lance_investidor, "Sem urgencia"],
+    ["Super Conservador", group.lance_super_conservador, "13 a 24 meses"],
+    ["Conservador", group.lance_conservador, "7 a 12 meses"],
+    ["Moderado", group.lance_moderado, "4 a 6 meses"],
+    ["Agressivo", group.lance_agressivo, "1 a 3 meses"],
+  ].map(([label, percent, prazoOperacional]) => {
+    const percentual = percent ?? null;
+    const lanceTotal = financial.creditoContratado * (percentual || 0);
     return {
       label,
       percent: percentual,
       lanceProprio: Math.max(0, lanceTotal - financial.lanceEmbutido),
-      prazoApos: Math.max(1, financial.prazo - Math.round(percentual * financial.prazo)),
-      chance: percentual >= (group.agressivo || 0.5) ? "Alta" : percentual >= (group.moderado || 0.3) ? "Media" : "Acompanhar",
+      prazoOperacional,
+      classificacao: percentual === null ? "Historico insuficiente" : "Referencia operacional",
     };
   });
-  currentStudyStrategyTab = currentStudyStrategies.some((item) => item.label === currentStudyStrategyTab) ? currentStudyStrategyTab : "Lance Fixo";
+  currentStudyStrategyTab = currentStudyStrategies.some((item) => item.label === currentStudyStrategyTab) ? currentStudyStrategyTab : "Investidor";
   renderStudyStrategyTabs();
   renderStudyStrategyTable();
 }
@@ -1170,13 +1170,13 @@ function renderStudyStrategyTable() {
     return `
       <tr>
         <td>${escapeHtml(strategy.label)}</td>
-        <td>${formatPercent(strategy.percent)}</td>
+        <td>${strategy.percent === null ? "-" : formatPercent(strategy.percent)}</td>
         <td>${formatMoney(financial.lanceEmbutido)}</td>
         <td>${formatMoney(strategy.lanceProprio)}</td>
         <td>${formatMoney(financial.creditoDisponivel)}</td>
         <td>${formatMoney(financial.parcela)}</td>
-        <td>${strategy.prazoApos} meses</td>
-        <td>${strategy.chance}</td>
+        <td>${escapeHtml(strategy.prazoOperacional)}</td>
+        <td>${escapeHtml(strategy.classificacao)}</td>
       </tr>
     `;
   }).join("");
@@ -1217,12 +1217,11 @@ function renderStudyRecommendations(viabilityItem, financial, group) {
   document.getElementById("studyRecommendationLevel").textContent = `${level} - afinidade ${formatPercent(viabilityItem.afinidade)}`;
   const historyEntries = Object.values(group.historico || {}).slice(-12);
   const totalContemplacoes = historyEntries.reduce((sum, item) => sum + (item.qtd_contemplacoes || 0), 0);
-  const prazoAdequado = financial.prazoApos <= (currentStudy.payload.prazo_desejado || financial.prazo);
-  const estrategiaRecomendada = currentStudyStrategies.find((strategy) => strategy.label === "Lance Total") || currentStudyStrategies[0];
+  const estrategiaRecomendada = currentStudyStrategies.find((strategy) => strategy.percent === financial.lanceReferencia) || currentStudyStrategies[0];
   const recommendations = [
     totalContemplacoes > 0 ? `Grupo com bom historico: ${totalContemplacoes} contemplacao(oes) nos ultimos 12 meses.` : "Grupo sem contemplacoes registradas nos ultimos 12 meses; acompanhar historico antes da oferta.",
     `Estrategia recomendada: ${estrategiaRecomendada.label} com ${formatPercent(estrategiaRecomendada.percent)} de lance.`,
-    prazoAdequado ? "Prazo adequado ao cenario informado pelo cliente." : "Prazo apos lance acima do desejado; revisar expectativa do cliente.",
+    `Prazo operacional do perfil: ${financial.prazoOperacional}.`,
     financial.parcela <= (currentStudy.payload.parcela_desejada || 0) ? "Parcela estimada dentro do limite informado." : "Parcela estimada exige validacao com o cliente.",
     "Necessidade de acompanhamento semanal das assembleias e do historico mensal.",
     "A analise nao garante contemplacao.",
@@ -1526,8 +1525,8 @@ function renderStudyDetails(item) {
     ["Recurso proprio", formatMoney(financeiro.recurso_proprio)],
     ["Valor total do lance", formatMoney(financeiro.valor_total_lance)],
     ["Parcela estimada", formatMoney(financeiro.parcela_inicial)],
-    ["Parcela apos contemplacao", formatMoney(financeiro.parcela_apos_contemplacao)],
-    ["Chance", financeiro.chance_contemplacao || "-"],
+    ["Prazo operacional", financeiro.prazo_operacional || "-"],
+    ["Classificacao", financeiro.chance_contemplacao || "-"],
     ["Total contemplacoes 12m", historico.total_contemplacoes ?? "-"],
   ].map(([label, value]) => detailField(label, value)).join("");
   document.getElementById("studyDetailsStrategiesBody").innerHTML = (financeiro.estrategias || []).map((strategy) => `
@@ -1537,8 +1536,8 @@ function renderStudyDetails(item) {
       <td>${formatMoney(strategy.lance_embutido)}</td>
       <td>${formatMoney(strategy.lance_proprio)}</td>
       <td>${formatMoney(strategy.credito_disponivel)}</td>
-      <td>${formatMoney(strategy.parcela_apos_contemplacao)}</td>
-      <td>${strategy.prazo_apos_lance ? `${strategy.prazo_apos_lance} meses` : "-"}</td>
+      <td>${formatMoney(financeiro.parcela_inicial)}</td>
+      <td>${escapeHtml(strategy.prazo_operacional || "-")}</td>
       <td>${escapeHtml(strategy.chance_contemplacao || "-")}</td>
     </tr>
   `).join("") || `<tr><td colspan="8" class="text-center text-secondary">Estrategias nao encontradas.</td></tr>`;

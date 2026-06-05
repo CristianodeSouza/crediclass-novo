@@ -7,10 +7,10 @@ Este documento descreve as regras executadas pelo endpoint
 
 | Prazo desejado | Perfil |
 |---|---|
-| 1 a 3 meses | Super Agressivo |
-| 4 a 6 meses | Agressivo |
-| 7 a 12 meses | Moderado |
-| 13 a 24 meses | Conservador |
+| 1 a 3 meses | Agressivo |
+| 4 a 6 meses | Moderado |
+| 7 a 12 meses | Conservador |
+| 13 a 24 meses | Super Conservador |
 | Acima de 24 meses | Investidor |
 
 ## Filtros iniciais

@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import unicodedata
 
+from .lance_reference import calculate_lance_references
 from .models import EstudoRequest
 
 RUNTIME_DIR = Path(__file__).resolve().parent / "runtime_data"
@@ -70,35 +71,33 @@ def summarize_history(historico: dict) -> dict:
     }
 
 
-def chance_from_percent(percentual: float, group: dict) -> str:
-    agressivo = as_number(group.get("agressivo"), 0.5)
-    moderado = as_number(group.get("moderado"), 0.3)
-    conservador = as_number(group.get("conservador"), 0.2)
-    if percentual >= agressivo:
-        return "Alta"
-    if percentual >= moderado:
-        return "Media"
-    if percentual >= conservador:
-        return "Acompanhar"
-    return "Baixa"
-
-
-def build_strategy(label: str, percentual: float, base: dict, group: dict) -> dict:
+def build_strategy(label: str, percentual: float | None, base: dict, operational_range: str) -> dict:
+    if percentual is None:
+        return {
+            "estrategia": label,
+            "percentual_lance": None,
+            "lance_embutido": 0,
+            "lance_proprio": 0,
+            "credito_disponivel": base["credito_disponivel"],
+            "parcela_apos_contemplacao": None,
+            "prazo_apos_lance": None,
+            "prazo_operacional": operational_range,
+            "chance_contemplacao": "Historico insuficiente",
+        }
     percentual = max(0.0, percentual)
     valor_total_lance = base["credito_original"] * percentual
     lance_embutido = min(base["lance_embutido"], valor_total_lance)
     lance_proprio = max(0.0, valor_total_lance - lance_embutido)
-    prazo_apos = max(1, base["prazo"] - round(percentual * base["prazo"]))
-    parcela_apos = base["custo_total"] / prazo_apos
     return {
         "estrategia": label,
         "percentual_lance": percentual,
         "lance_embutido": lance_embutido,
         "lance_proprio": lance_proprio,
         "credito_disponivel": base["credito_disponivel"],
-        "parcela_apos_contemplacao": parcela_apos,
-        "prazo_apos_lance": prazo_apos,
-        "chance_contemplacao": chance_from_percent(percentual, group),
+        "parcela_apos_contemplacao": None,
+        "prazo_apos_lance": None,
+        "prazo_operacional": operational_range,
+        "chance_contemplacao": "Referencia operacional",
     }
 
 
@@ -117,9 +116,11 @@ def build_financeiro(payload: EstudoRequest, grupo: dict) -> dict:
     fundo_reserva = as_number(grupo.get("fundo_reserva"))
     custo_total = credito_original * (1 + taxa_adm + fundo_reserva)
     parcela_inicial = custo_total / prazo
-    prazo_apos_total = max(1, prazo - round(percentual_lance_total * prazo))
-    parcela_apos = custo_total / prazo_apos_total
     historico = summarize_history(grupo.get("historico") or {})
+    references = calculate_lance_references(
+        grupo.get("historico") or {},
+        grupo.get("percentual_lance_fixo"),
+    )
     base = {
         "credito_original": credito_original,
         "lance_embutido": lance_embutido,
@@ -128,11 +129,11 @@ def build_financeiro(payload: EstudoRequest, grupo: dict) -> dict:
         "custo_total": custo_total,
     }
     estrategias = [
-        build_strategy("Lance Fixo", as_number(grupo.get("percentual_lance_fixo")), base, grupo),
-        build_strategy("Conservadora", as_number(grupo.get("conservador")), base, grupo),
-        build_strategy("Moderada", as_number(grupo.get("moderado")), base, grupo),
-        build_strategy("Agressiva", as_number(grupo.get("agressivo")), base, grupo),
-        build_strategy("Lance Total", percentual_lance_total, base, grupo),
+        build_strategy("Investidor", references["lance_investidor"], base, "Sem urgencia"),
+        build_strategy("Super Conservador", references["lance_super_conservador"], base, "13 a 24 meses"),
+        build_strategy("Conservador", references["lance_conservador"], base, "7 a 12 meses"),
+        build_strategy("Moderado", references["lance_moderado"], base, "4 a 6 meses"),
+        build_strategy("Agressivo", references["lance_agressivo"], base, "1 a 3 meses"),
     ]
     return {
         "credito": credito_desejado,
@@ -144,12 +145,13 @@ def build_financeiro(payload: EstudoRequest, grupo: dict) -> dict:
         "percentual_lance_total": percentual_lance_total,
         "valor_total_lance": valor_total_lance,
         "parcela_inicial": parcela_inicial,
-        "parcela_apos_contemplacao": parcela_apos,
-        "prazo_apos_contemplacao": prazo_apos_total,
+        "parcela_apos_contemplacao": None,
+        "prazo_apos_contemplacao": None,
+        "prazo_operacional": "Definido pelo perfil de lance",
         "custo_efetivo_total": custo_total,
         "seguro_garantia": grupo.get("seguro_garantia"),
-        "chance_contemplacao": chance_from_percent(percentual_lance_total, grupo),
-        "estrategia_recomendada": "Lance Total",
+        "chance_contemplacao": "Referencia operacional; nao garante contemplacao",
+        "estrategia_recomendada": "Perfil definido na Viabilidade",
         "estrategias": estrategias,
         "historico_12_meses": historico,
     }

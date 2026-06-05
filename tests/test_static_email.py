@@ -156,10 +156,10 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
         for label in [
-            "1 a 3 meses - Super Agressivo",
-            "4 a 6 meses - Agressivo",
-            "7 a 12 meses - Moderado",
-            "13 a 24 meses - Conservador",
+            "1 a 3 meses - Agressivo",
+            "4 a 6 meses - Moderado",
+            "7 a 12 meses - Conservador",
+            "13 a 24 meses - Super Conservador",
         ]:
             self.assertIn(label, index_html)
         self.assertIn('id="viabilityTipoBem"', index_html)
@@ -215,7 +215,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("let currentStudyStrategyTab", app_js)
         self.assertIn("function renderStudyStrategyTabs()", app_js)
         self.assertIn("function renderStudyStrategyTable()", app_js)
-        for label in ["Lance Fixo", "Lance Moderado", "Lance Agressivo", "Lance Total"]:
+        for label in ["Investidor", "Super Conservador", "Conservador", "Moderado", "Agressivo"]:
             self.assertIn(label, app_js)
         self.assertIn('data-study-strategy', app_js)
 
@@ -226,7 +226,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("totalContemplacoes", app_js)
         self.assertIn("Grupo com bom historico", app_js)
         self.assertIn("Estrategia recomendada", app_js)
-        self.assertIn("Prazo adequado", app_js)
+        self.assertIn("Prazo operacional do perfil", app_js)
         self.assertIn("Necessidade de acompanhamento semanal", app_js)
         self.assertIn("A analise nao garante contemplacao", app_js)
 

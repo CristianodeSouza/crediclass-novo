@@ -54,6 +54,11 @@ class GrupoDetalhe(GrupoResumo):
     moderado: float | None = None
     agressivo: float | None = None
     super_agressivo: float | None = None
+    lance_investidor: float | None = None
+    lance_super_conservador: float | None = None
+    lance_conservador: float | None = None
+    lance_moderado: float | None = None
+    lance_agressivo: float | None = None
     parcela_reduzida: str = ""
     percentual_parcela_reduzida: float | None = None
     idade_maxima: int | None = None
@@ -299,8 +304,10 @@ class ViabilidadeGrupo(BaseModel):
     taxa_administrativa_valor: float
     fundo_reserva_valor: float
     parcela_estimada: float
-    lance_sugerido_percentual: float
-    lance_sugerido_valor: float
+    lance_sugerido_percentual: float | None = None
+    lance_sugerido_valor: float | None = None
+    lance_referencia_percentual: float | None = None
+    perfil_prazo_operacional: str = ""
     prazo: int
     afinidade: float
     selo: str
@@ -327,6 +334,7 @@ class ViabilidadeResponse(BaseModel):
     total_grupos_analisados: int
     total_grupos_compativeis: int
     perfil: str
+    perfil_prazo_operacional: str = ""
     fgts_total: float
     lance_total_disponivel: float
     renda_total: float

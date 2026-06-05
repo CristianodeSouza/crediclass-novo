@@ -45,14 +45,18 @@ def make_group(**overrides):
         "lance_embutido": True,
         "percentual_lance_embutido": 0.3,
         "fgts": True,
-        "moderado": 0.25,
         "status": "Ativo",
         "historico": {
             "2026-01": {
                 "maior_lance": 0.32,
                 "menor_lance": 0.24,
                 "qtd_contemplacoes": 5,
-            }
+            },
+            "2026-02": {
+                "maior_lance": 0.34,
+                "menor_lance": 0.25,
+                "qtd_contemplacoes": 4,
+            },
         },
     }
     values.update(overrides)
@@ -62,14 +66,14 @@ def make_group(**overrides):
 class ViabilidadeTest(unittest.TestCase):
     def test_classify_profile_all_intervals(self):
         expected = {
-            1: "Super Agressivo",
-            3: "Super Agressivo",
-            4: "Agressivo",
-            6: "Agressivo",
-            7: "Moderado",
-            12: "Moderado",
-            13: "Conservador",
-            24: "Conservador",
+            1: "Agressivo",
+            3: "Agressivo",
+            4: "Moderado",
+            6: "Moderado",
+            7: "Conservador",
+            12: "Conservador",
+            13: "Super Conservador",
+            24: "Super Conservador",
             25: "Investidor",
         }
         for months, profile in expected.items():
@@ -126,6 +130,13 @@ class ViabilidadeTest(unittest.TestCase):
 
         self.assertTrue(result["cenario_viavel"])
         self.assertEqual(result["total_grupos_compativeis"], 1)
+        item = result["melhores_grupos"][0]
+        self.assertEqual(item["lance_sugerido_percentual"], 0.2525)
+        self.assertAlmostEqual(
+            item["lance_sugerido_valor"],
+            item["credito_contratado"] * 0.2525,
+            places=2,
+        )
 
     def test_fgts_is_used_only_when_group_allows_it(self):
         allowed = analyze_viabilidade(make_payload(), [make_group(fgts=True)])
@@ -158,7 +169,7 @@ class ViabilidadeTest(unittest.TestCase):
     def test_no_artificial_fifty_percent_is_added_to_available_bid(self):
         result = analyze_viabilidade(
             make_payload(lance_proprio=10000, fgts=0),
-            [make_group(lance_embutido=False, percentual_lance_embutido=0, moderado=0.2)],
+            [make_group(lance_embutido=False, percentual_lance_embutido=0)],
         )
 
         self.assertEqual(result["lance_total_disponivel"], 10000)
@@ -169,7 +180,6 @@ class ViabilidadeTest(unittest.TestCase):
             make_payload(),
             [
                 make_group(
-                    moderado=None,
                     percentual_lance_fixo=None,
                     historico={},
                     lance_embutido=False,

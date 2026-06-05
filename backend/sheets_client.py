@@ -675,7 +675,10 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
+    from .lance_reference import calculate_lance_references
+
     detalhe = row_to_grupo(row)
+    historico = build_historico(row)
     detalhe.update({
         "fundo_reserva": parse_percent(get_optional_field(row, "fundo_reserva")),
         "prazo_restante": parse_int(get_optional_field(row, "prazo_restante")),
@@ -705,9 +708,13 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
         "regras_especiais": str(get_optional_field(row, "regras_especiais")),
         "cadastrado_por": str(get_optional_field(row, "cadastrado_por")),
         "ultima_atualizacao": str(get_optional_field(row, "ultima_atualizacao")),
-        "historico": build_historico(row),
+        "historico": historico,
         "auditoria": [],
     })
+    detalhe.update(calculate_lance_references(
+        historico,
+        detalhe.get("percentual_lance_fixo"),
+    ))
     return detalhe
 
 
