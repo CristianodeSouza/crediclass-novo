@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-23", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-24", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -44,6 +44,34 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function renderAdministratorPlans()", app_js)
         self.assertIn("function saveAdministratorPlans()", app_js)
         self.assertIn("mapState.administradoras", app_js)
+        for campo in [
+            "Data de cadastro do produto",
+            "Responsável pelo cadastro do produto",
+            "Tem Seguro obrigatório?",
+            "Qual é a idade máxima (seguro obrigatório)",
+            "Limite adesão sem comprovação de renda",
+            "% de lance embutido",
+            "Calculo do lance embutido",
+            "Tem furo no grupo",
+            "Aceita adesão de clientes com saída fiscal?",
+            "Taxa Administração",
+            "Tem negociação de Taxa?",
+            "Fundo de reserva",
+            "Idade máxima ok?",
+            "Crédito a ser contratado:",
+            "Lance máximo:",
+            "Prazo mínimo:",
+        ]:
+            self.assertIn(campo, app_js)
+        self.assertIn("function administratorPlanCreditoContratado(rule)", app_js)
+        self.assertIn("return creditoDesejado / (1 - percentualLanceEmbutido);", app_js)
+        self.assertIn("function administratorPlanLanceMaximo(rule)", app_js)
+        self.assertIn("((creditoContratado * percentualLanceEmbutido) + lanceProprio) / creditoContratado", app_js)
+        self.assertIn("function administratorPlanPrazoMinimo(rule)", app_js)
+        self.assertIn("creditoContratado * taxaAdm", app_js)
+        self.assertIn("creditoContratado * fundoReserva", app_js)
+        self.assertIn("- ((creditoContratado * percentualLanceEmbutido) + lanceProprio)", app_js)
+        self.assertIn("[\"credito_a_ser_contratado\", \"lance_maximo\", \"prazo_minimo\"].includes", app_js)
         for administradora in ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"]:
             self.assertIn(administradora, app_js)
         self.assertNotIn("administratorTotalDisponivel", index_html)
@@ -364,7 +392,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260605-15", index_html)
+        self.assertIn("/static/css/style.css?v=20260605-16", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

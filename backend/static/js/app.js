@@ -70,16 +70,21 @@ const CLIENT_PROFILE_STORAGE_KEY = "crediclass.clientProfile.v1";
 const administratorPlanDefaultNames = ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"];
 const administratorPlanRows = [
   { key: "data_cadastro_produto", label: "Data de cadastro do produto", type: "date" },
-  { key: "responsavel_cadastro_produto", label: "Responsavel pelo cadastro do produto", type: "text" },
-  { key: "seguro_obrigatorio_texto", label: "Tem seguro obrigatorio?", type: "text" },
-  { key: "idade_maxima", label: "Qual e a idade maxima?", type: "text" },
-  { key: "limite_sem_comprovacao_renda", label: "Limite adesao sem comprovacao de renda", type: "money" },
+  { key: "responsavel_cadastro_produto", label: "Responsável pelo cadastro do produto", type: "text" },
+  { key: "seguro_obrigatorio_texto", label: "Tem Seguro obrigatório?", type: "text" },
+  { key: "idade_maxima", label: "Qual é a idade máxima (seguro obrigatório)", type: "text" },
+  { key: "limite_sem_comprovacao_renda", label: "Limite adesão sem comprovação de renda", type: "money" },
   { key: "percentual_lance_embutido", label: "% de lance embutido", type: "percent" },
   { key: "tipo_lance_embutido", label: "Calculo do lance embutido", type: "text" },
-  { key: "aceita_saida_fiscal_texto", label: "Aceita adesao com saida fiscal?", type: "text" },
-  { key: "taxa_adm", label: "Taxa ADM", type: "percent" },
-  { key: "possui_negociacao_taxa", label: "Tem negociacao de taxa?", type: "text" },
+  { key: "tem_furo_no_grupo", label: "Tem furo no grupo", type: "percent" },
+  { key: "aceita_saida_fiscal_texto", label: "Aceita adesão de clientes com saída fiscal?", type: "text" },
+  { key: "taxa_adm", label: "Taxa Administração", type: "percent" },
+  { key: "possui_negociacao_taxa", label: "Tem negociação de Taxa?", type: "text" },
   { key: "fundo_reserva", label: "Fundo de reserva", type: "percent" },
+  { key: "idade_maxima_ok", label: "Idade máxima ok?", type: "text" },
+  { key: "credito_a_ser_contratado", label: "Crédito a ser contratado:", type: "money" },
+  { key: "lance_maximo", label: "Lance máximo:", type: "percent" },
+  { key: "prazo_minimo", label: "Prazo mínimo:", type: "number" },
 ];
 const studyOperatorFields = [
   ["observacoes_comerciais", "Observacoes comerciais", "studyFieldObservacoes"],
@@ -2098,11 +2103,96 @@ function administratorPlanRulesForKind(kind) {
 
 function administratorPlanCellValue(rule, row) {
   const value = rule[row.key];
+  if (row.key === "credito_a_ser_contratado") {
+    return formatAdministratorPlanNumber(administratorPlanCreditoContratado(rule), 2);
+  }
+  if (row.key === "lance_maximo") {
+    const lanceMaximo = administratorPlanLanceMaximo(rule);
+    return lanceMaximo === null ? "" : formatAdministratorPlanNumber(lanceMaximo * 100, 4);
+  }
+  if (row.key === "prazo_minimo") {
+    return formatAdministratorPlanNumber(administratorPlanPrazoMinimo(rule), 0);
+  }
   if (row.type === "percent") return percentToInput(value);
   if (row.type === "money") return value ?? "";
   if (row.key === "seguro_obrigatorio_texto" && value === undefined) return rule.seguro_obrigatorio ? "Sim" : "";
   if (row.key === "aceita_saida_fiscal_texto" && value === undefined) return rule.aceita_saida_fiscal ? "Sim" : "";
   return value ?? "";
+}
+
+function currentClientProfileNumber(inputId, profileKey) {
+  const activeInput = document.getElementById(inputId);
+  const activeValue = activeInput ? toNumber(activeInput.value) : 0;
+  if (activeValue) return activeValue;
+  try {
+    const savedProfile = JSON.parse(window.localStorage.getItem(CLIENT_PROFILE_STORAGE_KEY) || "null");
+    return Number(savedProfile?.[profileKey] || 0);
+  } catch {
+    return 0;
+  }
+}
+
+function currentClientProfileCredit() {
+  return currentClientProfileNumber("clientProfileCredito", "credito_desejado");
+}
+
+function currentClientProfileLanceProprio() {
+  return currentClientProfileNumber("clientProfileLanceProprio", "lance_proprio");
+}
+
+function currentClientProfileParcelaLimite() {
+  return currentClientProfileNumber("clientProfileParcelaLimite", "parcela_limite")
+    || currentClientProfileNumber("clientProfileParcelaIdeal", "parcela_ideal");
+}
+
+function administratorPlanCreditoContratado(rule) {
+  const creditoDesejado = currentClientProfileCredit();
+  const percentualLanceEmbutido = Number(rule.percentual_lance_embutido || 0);
+  if (!creditoDesejado || percentualLanceEmbutido < 0 || percentualLanceEmbutido >= 1) return null;
+  return creditoDesejado / (1 - percentualLanceEmbutido);
+}
+
+function administratorPlanLanceMaximo(rule) {
+  const creditoContratado = administratorPlanCreditoContratado(rule);
+  if (!creditoContratado) return null;
+  const percentualLanceEmbutido = Number(rule.percentual_lance_embutido || 0);
+  const lanceProprio = currentClientProfileLanceProprio();
+  return ((creditoContratado * percentualLanceEmbutido) + lanceProprio) / creditoContratado;
+}
+
+function administratorPlanPrazoMinimo(rule) {
+  const creditoContratado = administratorPlanCreditoContratado(rule);
+  const lanceMaximo = administratorPlanLanceMaximo(rule);
+  const parcelaMaxima = currentClientProfileParcelaLimite();
+  if (!creditoContratado || lanceMaximo === null || !parcelaMaxima) return null;
+  const taxaAdm = Number(rule.taxa_adm || 0);
+  const fundoReserva = Number(rule.fundo_reserva || 0);
+  const percentualLanceEmbutido = Number(rule.percentual_lance_embutido || 0);
+  const lanceProprio = currentClientProfileLanceProprio();
+  return (
+    creditoContratado
+    + (creditoContratado * taxaAdm)
+    + (creditoContratado * fundoReserva)
+    - ((creditoContratado * percentualLanceEmbutido) + lanceProprio)
+  ) / parcelaMaxima;
+}
+
+function formatAdministratorPlanNumber(value, maximumFractionDigits) {
+  if (value === null || value === undefined || !Number.isFinite(Number(value))) return "";
+  return Number(value).toLocaleString("pt-BR", {
+    minimumFractionDigits: maximumFractionDigits,
+    maximumFractionDigits,
+  });
+}
+
+function recalculateAdministratorPlanComputedCells() {
+  const currentRules = collectAdministratorPlans();
+  document.querySelectorAll('[data-admin-plan-field="credito_a_ser_contratado"], [data-admin-plan-field="lance_maximo"], [data-admin-plan-field="prazo_minimo"]').forEach((input) => {
+    const index = Number(input.dataset.adminPlanIndex);
+    const row = administratorPlanRows.find((item) => item.key === input.dataset.adminPlanField);
+    if (!row || !currentRules[index]) return;
+    input.value = administratorPlanCellValue(currentRules[index], row);
+  });
 }
 
 function renderAdministratorPlans() {
@@ -2123,7 +2213,7 @@ function renderAdministratorPlans() {
       <th>${escapeHtml(row.label)}</th>
       ${rules.map((rule, index) => `
         <td>
-          <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" value="${escapeHtml(administratorPlanCellValue(rule, row))}">
+          <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" value="${escapeHtml(administratorPlanCellValue(rule, row))}" ${["credito_a_ser_contratado", "lance_maximo", "prazo_minimo"].includes(row.key) ? "readonly" : ""}>
         </td>
       `).join("")}
     </tr>
@@ -2161,9 +2251,12 @@ function collectAdministratorPlans() {
     const field = input.dataset.adminPlanField;
     const type = input.dataset.adminPlanType;
     if (!collected[index]) return;
+    if (["credito_a_ser_contratado", "lance_maximo", "prazo_minimo"].includes(field)) return;
     if (type === "percent") {
       collected[index][field] = inputToPercentFromValue(input.value);
     } else if (type === "money") {
+      collected[index][field] = optionalNumber(input.value);
+    } else if (type === "number") {
       collected[index][field] = optionalNumber(input.value);
     } else {
       collected[index][field] = input.value.trim();
@@ -2512,6 +2605,9 @@ document.getElementById("exportGroupsCsvBtn").addEventListener("click", exportGr
 ].forEach((id) => {
   document.getElementById(id).addEventListener("input", updateClientProfileTotals);
 });
+["clientProfileCredito", "clientProfileLanceProprio", "clientProfileParcelaIdeal", "clientProfileParcelaLimite"].forEach((id) => {
+  document.getElementById(id).addEventListener("input", recalculateAdministratorPlanComputedCells);
+});
 
 ["clientProfilePrazo", "clientProfileObjetivo", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
   document.getElementById(id).addEventListener("change", updateClientProfileTotals);
@@ -2587,6 +2683,11 @@ document.querySelectorAll("[data-admin-plan-kind]").forEach((button) => {
 document.getElementById("addAdministratorPlanBtn").addEventListener("click", addAdministratorPlanColumn);
 document.getElementById("saveAdministratorPlansBtn").addEventListener("click", () => {
   saveAdministratorPlans().catch(() => setConfigState("error"));
+});
+document.getElementById("administratorPlansTable").addEventListener("input", (event) => {
+  if (["percentual_lance_embutido", "taxa_adm", "fundo_reserva"].includes(event.target?.dataset?.adminPlanField)) {
+    recalculateAdministratorPlanComputedCells();
+  }
 });
 
 document.getElementById("analyzeViabilityBtn").addEventListener("click", analyzeViability);

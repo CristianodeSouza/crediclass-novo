@@ -1254,7 +1254,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .administrator-plan-table tbody tr:nth-child(4),
 .administrator-plan-table tbody tr:nth-child(5),
 .administrator-plan-table tbody tr:nth-child(6),
-.administrator-plan-table tbody tr:nth-child(7) {
+.administrator-plan-table tbody tr:nth-child(7),
+.administrator-plan-table tbody tr:nth-child(13) {
   background: #fff7a3;
 }
 
@@ -1269,6 +1270,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.82rem;
   font-weight: 700;
   text-align: center;
+}
+
+.admin-plan-cell[readonly] {
+  background: #f8fafc;
+  color: var(--primary);
 }
 
 .administrator-plan-table thead .admin-plan-admin-input {
