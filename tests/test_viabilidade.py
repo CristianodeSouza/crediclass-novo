@@ -417,6 +417,19 @@ class ViabilidadeTest(unittest.TestCase):
         self.assertEqual(result["total_grupos_analisados"], 1)
         self.assertEqual(result["melhores_grupos"][0]["administradora"], "Itau")
 
+    def test_endpoint_nao_bloqueia_grupos_quando_regras_administradoras_estao_vazias(self):
+        with (
+            patch("backend.main.list_grupos", return_value=[make_group()]),
+            patch("backend.main.get_configuracoes", return_value={"administradoras_regras": []}),
+            patch("backend.main.list_grupos_detalhe_by_ids", return_value=[make_group()]) as list_details,
+        ):
+            result = viabilidade_analisar(make_payload())
+
+        list_details.assert_called_once_with(["128"])
+        self.assertEqual(result["total_administradoras_analisadas"], 0)
+        self.assertEqual(result["total_grupos_analisados"], 1)
+        self.assertEqual(result["melhores_grupos"][0]["administradora"], "Itau")
+
 
 if __name__ == "__main__":
     unittest.main()

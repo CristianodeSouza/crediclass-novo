@@ -227,11 +227,17 @@ def viabilidade_analisar(payload: ViabilidadeRequest):
         administrator_rules = config.get("administradoras_regras") or []
         administradoras = sorted({item["administradora"] for item in summary_groups if item.get("administradora")})
         administradoras_viabilidade = analyze_administradoras(payload, administradoras, administrator_rules)
-        administradoras_elegiveis = {
-            normalize_admin_name(item["administradora"])
-            for item in administradoras_viabilidade
-            if item["elegivel"]
-        }
+        if administradoras_viabilidade:
+            administradoras_elegiveis = {
+                normalize_admin_name(item["administradora"])
+                for item in administradoras_viabilidade
+                if item["elegivel"]
+            }
+        else:
+            administradoras_elegiveis = {
+                normalize_admin_name(administradora)
+                for administradora in administradoras
+            }
         candidate_ids = [
             item["grupo_id"]
             for item in summary_groups
