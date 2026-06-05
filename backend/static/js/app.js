@@ -48,14 +48,11 @@ const mapState = {
   pageSize: 25,
   total: 0,
   items: [],
+  administradoras: [],
   lastLoadAt: null,
 };
 
 const viabilityState = {
-  lastResult: null,
-};
-
-const administratorState = {
   lastResult: null,
 };
 
@@ -70,7 +67,7 @@ const configState = {
 const operationalLogs = [];
 const HISTORY_START_MONTH = "2024-01";
 const CLIENT_PROFILE_STORAGE_KEY = "crediclass.clientProfile.v1";
-const administratorPlanDefaultNames = ["CNP", "ITAU", "CAOA", "PORTO", "EMBRACON", "RODOBENS", "CANOPUS"];
+const administratorPlanDefaultNames = ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"];
 const administratorPlanRows = [
   { key: "data_cadastro_produto", label: "Data de cadastro do produto", type: "date" },
   { key: "responsavel_cadastro_produto", label: "Responsavel pelo cadastro do produto", type: "text" },
@@ -150,6 +147,9 @@ function activateScreen(screenName) {
   }
   if (screenName === "administradoras") {
     loadConfiguracoes();
+  }
+  if (screenName === "viabilidade") {
+    renderViabilityProfileSummary();
   }
   if (screenName === "configuracoes") {
     loadConfiguracoes();
@@ -314,36 +314,6 @@ function exportStudiesCsv() {
   showToast("CSV de estudos gerado.", "success");
 }
 
-function exportAdministratorsCsv() {
-  const items = administratorState.lastResult?.items || [];
-  if (!items.length) {
-    showToast("Execute a viabilidade de administradoras antes de exportar.", "warning");
-    return;
-  }
-  const rows = [
-    ["Administradora", "Seguro Obrigatorio", "Idade Maxima", "Lance Embutido (%)", "Credito a Contratar", "Lance Embutido", "Lance Proprio", "FGTS", "Lance Total", "Lance Maximo (%)", "Taxa ADM (%)", "Fundo Reserva (%)", "Prazo Minimo", "Elegivel", "Alertas"],
-    ...items.map((item) => [
-      item.administradora,
-      item.seguro_obrigatorio ? "Sim" : "Nao",
-      item.idade_maxima || "",
-      formatPercent(item.percentual_lance_embutido),
-      formatMoney(item.credito_a_contratar),
-      formatMoney(item.lance_embutido_valor),
-      formatMoney(item.lance_proprio),
-      formatMoney(item.fgts_utilizado),
-      formatMoney(item.lance_total),
-      formatPercent(item.lance_maximo_percentual),
-      formatPercent(item.taxa_adm),
-      formatPercent(item.fundo_reserva),
-      Number(item.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 }),
-      item.elegivel ? "Sim" : "Nao",
-      (item.alertas || []).join(", "),
-    ]),
-  ];
-  downloadCsv(`crediclass-viabilidade-administradoras-${new Date().toISOString().slice(0, 10)}.csv`, rows);
-  showToast("Analise de administradoras exportada.", "success");
-}
-
 function parseNumberInput(value) {
   const text = String(value || "").trim();
   if (!text) return "";
@@ -360,6 +330,14 @@ function optionalNumber(value) {
   if (normalized === "") return null;
   const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
 }
 
 function monthKeyToDate(monthKey) {
@@ -952,11 +930,15 @@ async function loadMapaGrupos() {
     const data = await apiGet(`/grupos?${buildQuery(filters)}`);
     mapState.total = data.total;
     mapState.items = data.items;
+    mapState.administradoras = data.administradoras || [];
     mapState.lastLoadAt = new Date().toLocaleString("pt-BR");
     updateFilterOptions(data.administradoras || [], data.tipos_bem || []);
     renderSummary(data.items, data.total, data.total_administradoras);
     renderGroupsTable(data.items);
     renderPagination();
+    if (document.getElementById("screen-administradoras")?.classList.contains("active") && configState.data) {
+      renderAdministratorPlans();
+    }
     document.getElementById("tableSubtitle").textContent = `${data.total} grupo(s) encontrado(s)`;
     setMapState(data.items.length ? "ready" : "empty");
     addOperationalLog(`Mapa de Grupos carregado: ${data.total} grupo(s)`);
@@ -987,21 +969,12 @@ async function reloadMapData() {
 }
 
 function updateViabilityTotals() {
+  if (!document.getElementById("viabilityFgtsTitular")) return { fgts: 0, renda: 0 };
   const fgts = toNumber(document.getElementById("viabilityFgtsTitular").value) + toNumber(document.getElementById("viabilityFgtsConjuge").value);
   const renda = toNumber(document.getElementById("viabilityRendaTitular").value) + toNumber(document.getElementById("viabilityRendaConjuge").value);
   document.getElementById("viabilityFgtsTotal").value = formatMoney(fgts);
   document.getElementById("viabilityRendaTotal").value = formatMoney(renda);
   return { fgts, renda };
-}
-
-function updateAdministratorTotals() {
-  const fgts = toNumber(document.getElementById("administratorFgtsTitular").value) + toNumber(document.getElementById("administratorFgtsConjuge").value);
-  const lance = toNumber(document.getElementById("administratorLanceProprio").value);
-  const renda = toNumber(document.getElementById("administratorRendaTitular").value) + toNumber(document.getElementById("administratorRendaConjuge").value);
-  document.getElementById("administratorFgtsTotal").value = formatMoney(fgts);
-  document.getElementById("administratorTotalDisponivel").value = formatMoney(lance + fgts);
-  document.getElementById("administratorRendaTotal").value = formatMoney(renda);
-  return { fgts, lance, renda };
 }
 
 function clientProfileConcept(months) {
@@ -1082,16 +1055,11 @@ function applyClientProfileToFlow(profile) {
     ["EstadoBem", "estado_bem"],
   ];
   pairs.forEach(([suffix, key]) => {
-    const adminTarget = document.getElementById(`administrator${suffix}`);
     const viabilityTarget = document.getElementById(`viability${suffix === "ParcelaIdeal" ? "Parcela" : suffix}`);
-    if (adminTarget) adminTarget.value = profile[key] ?? "";
     if (viabilityTarget) viabilityTarget.value = profile[key] ?? "";
   });
-  const adminTipo = document.getElementById("administratorTipoBem");
   const viabilityTipo = document.getElementById("viabilityTipoBem");
-  if (adminTipo) adminTipo.value = profile.tipo_bem || "Imovel";
   if (viabilityTipo) viabilityTipo.value = profile.tipo_bem || "Imovel";
-  updateAdministratorTotals();
   updateViabilityTotals();
 }
 
@@ -1146,160 +1114,6 @@ function advanceClientProfile() {
   activateScreen("administradoras");
 }
 
-function setAdministratorState(state) {
-  document.getElementById("administratorLoading").classList.toggle("d-none", state !== "loading");
-  document.getElementById("administratorError").classList.toggle("d-none", state !== "error");
-  document.getElementById("administratorEmpty").classList.toggle("d-none", state !== "empty");
-  document.getElementById("administratorResults").classList.toggle("d-none", state !== "ready");
-  const button = document.getElementById("analyzeAdministratorsBtn");
-  button.disabled = state === "loading";
-  button.textContent = state === "loading" ? "Analisando..." : "Recalcular Viabilidade";
-}
-
-function collectAdministratorPayload() {
-  const totals = updateAdministratorTotals();
-  const parcelaIdeal = toNumber(document.getElementById("administratorParcelaIdeal").value);
-  const parcelaLimite = toNumber(document.getElementById("administratorParcelaLimite").value);
-  const usarFgts = document.getElementById("administratorUsarFgts").value !== "nao";
-  const fgts = usarFgts ? totals.fgts : 0;
-  return {
-    objetivo: document.getElementById("administratorObjetivo").value,
-    credito_desejado: toNumber(document.getElementById("administratorCredito").value),
-    prazo_desejado: Number(document.getElementById("administratorPrazoDesejado").value),
-    lance_proprio: toNumber(document.getElementById("administratorLanceProprio").value),
-    fgts,
-    fgts_titular: usarFgts ? toNumber(document.getElementById("administratorFgtsTitular").value) : 0,
-    fgts_conjuge: usarFgts ? toNumber(document.getElementById("administratorFgtsConjuge").value) : 0,
-    renda_total: totals.renda,
-    renda_titular: toNumber(document.getElementById("administratorRendaTitular").value),
-    renda_conjuge: toNumber(document.getElementById("administratorRendaConjuge").value),
-    parcela_desejada: parcelaIdeal,
-    parcela_ideal: parcelaIdeal,
-    parcela_limite: parcelaLimite || parcelaIdeal,
-    data_nascimento: document.getElementById("administratorNascimento").value,
-    data_nascimento_conjuge: document.getElementById("administratorNascimentoConjuge").value,
-    tipo_bem: document.getElementById("administratorTipoBem").value,
-    estado_bem: document.getElementById("administratorEstadoBem").value,
-    considerar_lance_embutido: document.getElementById("administratorConsiderarLanceEmbutido").value !== "nao",
-  };
-}
-
-function validateAdministratorPayload(payload) {
-  const required = [
-    ["credito_desejado", "Informe o credito desejado."],
-    ["prazo_desejado", "Informe o prazo desejado."],
-    ["renda_total", "Informe a renda total."],
-    ["parcela_desejada", "Informe a parcela ideal."],
-    ["parcela_limite", "Informe a parcela limite."],
-    ["data_nascimento", "Informe a data de nascimento do titular."],
-  ];
-  const missing = required.find(([key]) => !payload[key]);
-  if (missing) {
-    showToast(missing[1], "warning");
-    return false;
-  }
-  const lanceInput = document.getElementById("administratorLanceProprio").value.trim();
-  if (lanceInput === "" || !Number.isFinite(payload.lance_proprio) || payload.lance_proprio < 0) {
-    showToast("Informe um lance proprio igual ou maior que zero.", "warning");
-    return false;
-  }
-  return true;
-}
-
-function renderAdministratorScreen(items = []) {
-  const onlyEligible = document.getElementById("administratorMostrarElegiveis").value === "elegiveis";
-  const orderBy = document.getElementById("administratorOrdenarPor").value;
-  const visibleItems = [...items]
-    .filter((item) => !onlyEligible || item.elegivel)
-    .sort((a, b) => {
-      if (orderBy === "lance_maximo_percentual") return (b.lance_maximo_percentual || 0) - (a.lance_maximo_percentual || 0);
-      return (a[orderBy] || 0) - (b[orderBy] || 0);
-    });
-  const eligibleCount = items.filter((item) => item.elegivel).length;
-  document.getElementById("administratorScreenSubtitle").textContent = `${eligibleCount} elegivel(is) de ${items.length} administradora(s) analisada(s)`;
-  document.getElementById("administratorFoundCount").textContent = `${visibleItems.length} administradora(s) encontrada(s)`;
-  document.getElementById("administratorScreenBody").innerHTML = visibleItems.map((item) => `
-    <tr>
-      <td>${escapeHtml(item.administradora)}</td>
-      <td>${item.seguro_obrigatorio ? "Sim" : "Nao"}</td>
-      <td>${item.idade_maxima ? `${item.idade_maxima} anos` : "-"}</td>
-      <td>${formatPercent(item.percentual_lance_embutido)}</td>
-      <td>${formatMoney(item.credito_a_contratar)}</td>
-      <td>${formatMoney(item.lance_embutido_valor)}</td>
-      <td>${formatMoney(item.lance_proprio)}</td>
-      <td>${formatMoney(item.fgts_utilizado)}</td>
-      <td>${formatMoney(item.lance_total)}</td>
-      <td class="text-success fw-bold">${formatPercent(item.lance_maximo_percentual)}</td>
-      <td>${formatPercent(item.taxa_adm)}</td>
-      <td>${formatPercent(item.fundo_reserva)}</td>
-      <td>${Number(item.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</td>
-      <td><span class="status-badge ${item.elegivel ? "" : "inactive"}">${item.elegivel ? "Sim" : "Nao"}</span></td>
-      <td><button class="btn btn-outline-primary btn-sm" type="button" data-admin-action="detalhes" data-admin-name="${escapeHtml(item.administradora)}">Ver Detalhes</button></td>
-    </tr>
-  `).join("");
-}
-
-function showAdministratorDetails(administradora) {
-  const item = (administratorState.lastResult?.items || []).find((candidate) => candidate.administradora === administradora);
-  if (!item) {
-    showToast("Detalhes da administradora indisponiveis.", "warning");
-    return;
-  }
-  const alerts = (item.alertas || []).length ? item.alertas.join(", ") : "sem alertas";
-  showToast(`${item.administradora}: ${item.elegivel ? "elegivel" : "nao elegivel"}; ${alerts}.`, item.elegivel ? "success" : "warning");
-}
-
-function syncAdministratorInterviewToGroups() {
-  const pairs = [
-    ["administratorObjetivo", "viabilityObjetivo"],
-    ["administratorPrazoDesejado", "viabilityPrazoDesejado"],
-    ["administratorTipoBem", "viabilityTipoBem"],
-    ["administratorCredito", "viabilityCredito"],
-    ["administratorLanceProprio", "viabilityLanceProprio"],
-    ["administratorFgtsTitular", "viabilityFgtsTitular"],
-    ["administratorFgtsConjuge", "viabilityFgtsConjuge"],
-    ["administratorRendaTitular", "viabilityRendaTitular"],
-    ["administratorRendaConjuge", "viabilityRendaConjuge"],
-    ["administratorParcelaIdeal", "viabilityParcela"],
-    ["administratorParcelaLimite", "viabilityParcelaLimite"],
-    ["administratorNascimento", "viabilityNascimento"],
-    ["administratorNascimentoConjuge", "viabilityNascimentoConjuge"],
-    ["administratorEstadoBem", "viabilityEstadoBem"],
-  ];
-  pairs.forEach(([sourceId, targetId]) => {
-    const source = document.getElementById(sourceId);
-    const target = document.getElementById(targetId);
-    if (source && target) target.value = source.value;
-  });
-  updateViabilityTotals();
-  activateScreen("viabilidade");
-}
-
-async function analyzeAdministrators() {
-  const payload = collectAdministratorPayload();
-  if (!validateAdministratorPayload(payload)) return;
-  setAdministratorState("loading");
-  try {
-    const result = await apiPost("/viabilidade/administradoras", payload);
-    administratorState.lastResult = result;
-    renderAdministratorScreen(result.items || []);
-    setAdministratorState((result.items || []).length ? "ready" : "empty");
-    showToast("Viabilidade das administradoras concluida.", "success");
-  } catch (error) {
-    setAdministratorState("error");
-  }
-}
-
-function resetAdministratorForm() {
-  document.getElementById("administratorInterviewForm").reset();
-  administratorState.lastResult = null;
-  updateAdministratorTotals();
-  document.getElementById("administratorScreenBody").innerHTML = "";
-  document.getElementById("administratorScreenSubtitle").textContent = "Aguardando analise";
-  document.getElementById("administratorFoundCount").textContent = "0 administradoras encontradas";
-  setAdministratorState("empty");
-}
-
 function setViabilityState(state) {
   document.getElementById("viabilityLoading").classList.toggle("d-none", state !== "loading");
   document.getElementById("viabilityError").classList.toggle("d-none", state !== "error");
@@ -1311,27 +1125,25 @@ function setViabilityState(state) {
 }
 
 function collectViabilityPayload() {
-  const totals = updateViabilityTotals();
-  const parcelaIdeal = toNumber(document.getElementById("viabilityParcela").value);
-  const parcelaLimite = toNumber(document.getElementById("viabilityParcelaLimite").value);
+  const profile = collectClientProfile();
   return {
-    objetivo: document.getElementById("viabilityObjetivo").value,
-    credito_desejado: toNumber(document.getElementById("viabilityCredito").value),
-    prazo_desejado: Number(document.getElementById("viabilityPrazoDesejado").value),
-    lance_proprio: toNumber(document.getElementById("viabilityLanceProprio").value),
-    fgts: totals.fgts,
-    fgts_titular: toNumber(document.getElementById("viabilityFgtsTitular").value),
-    fgts_conjuge: toNumber(document.getElementById("viabilityFgtsConjuge").value),
-    renda_total: totals.renda,
-    renda_titular: toNumber(document.getElementById("viabilityRendaTitular").value),
-    renda_conjuge: toNumber(document.getElementById("viabilityRendaConjuge").value),
-    parcela_desejada: parcelaIdeal,
-    parcela_ideal: parcelaIdeal,
-    parcela_limite: parcelaLimite || parcelaIdeal,
-    data_nascimento: document.getElementById("viabilityNascimento").value,
-    data_nascimento_conjuge: document.getElementById("viabilityNascimentoConjuge").value,
-    tipo_bem: document.getElementById("viabilityTipoBem").value,
-    estado_bem: document.getElementById("viabilityEstadoBem").value,
+    objetivo: profile.objetivo,
+    credito_desejado: profile.credito_desejado,
+    prazo_desejado: profile.prazo_desejado,
+    lance_proprio: profile.lance_proprio,
+    fgts: profile.fgts,
+    fgts_titular: profile.fgts_titular,
+    fgts_conjuge: profile.fgts_conjuge,
+    renda_total: profile.renda_total,
+    renda_titular: profile.renda_titular,
+    renda_conjuge: profile.renda_conjuge,
+    parcela_desejada: profile.parcela_ideal,
+    parcela_ideal: profile.parcela_ideal,
+    parcela_limite: profile.parcela_limite || profile.parcela_ideal,
+    data_nascimento: profile.data_nascimento,
+    data_nascimento_conjuge: profile.data_nascimento_conjuge,
+    tipo_bem: profile.tipo_bem,
+    estado_bem: profile.estado_bem,
   };
 }
 
@@ -1348,8 +1160,7 @@ function validateViabilityPayload(payload) {
     showToast(missing[1], "warning");
     return false;
   }
-  const lanceInput = document.getElementById("viabilityLanceProprio").value.trim();
-  if (lanceInput === "" || !Number.isFinite(payload.lance_proprio) || payload.lance_proprio < 0) {
+  if (!Number.isFinite(payload.lance_proprio) || payload.lance_proprio < 0) {
     showToast("Informe um lance proprio igual ou maior que zero.", "warning");
     return false;
   }
@@ -1357,11 +1168,28 @@ function validateViabilityPayload(payload) {
 }
 
 function renderViabilityChecklist(checklist) {
+  if (!document.getElementById("viabilityChecklist")) return;
   document.querySelectorAll("#viabilityChecklist li").forEach((item) => {
     const value = checklist?.[item.dataset.check];
     item.classList.toggle("check-ok", value === true);
     item.classList.toggle("check-fail", value === false);
   });
+}
+
+function renderViabilityProfileSummary() {
+  const profile = collectClientProfile();
+  const target = document.getElementById("viabilityProfileSummary");
+  if (!target) return;
+  target.innerHTML = [
+    ["Cliente", profile.nome || "-"],
+    ["Credito desejado", formatMoney(profile.credito_desejado)],
+    ["Conceito IA", profile.conceito_ia],
+    ["Tipo de bem", profile.tipo_bem],
+    ["Recursos proprios", formatMoney(profile.lance_proprio)],
+    ["FGTS total", formatMoney(profile.fgts)],
+    ["Renda total", formatMoney(profile.renda_total)],
+    ["Parcela ideal", formatMoney(profile.parcela_ideal)],
+  ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
 }
 
 function renderViabilitySummary(result) {
@@ -1377,7 +1205,8 @@ function renderViabilitySummary(result) {
   document.getElementById("viabilityBestInstallment").textContent = formatMoney(bestInstallment);
   document.getElementById("viabilityMaxCredit").textContent = formatMoney(maxCredit);
   document.getElementById("viabilityRankingSubtitle").textContent = `${items.length} grupo(s) no ranking - perfil ${result.perfil}`;
-  document.getElementById("viabilityScenario").textContent = `${result.cenario} - perfil ${result.perfil}`;
+  const scenario = document.getElementById("viabilityScenario");
+  if (scenario) scenario.textContent = `${result.cenario} - perfil ${result.perfil}`;
 }
 
 function renderAdministratorViability(items = []) {
@@ -1447,10 +1276,11 @@ async function analyzeViability() {
 }
 
 function resetViabilityForm() {
-  document.getElementById("viabilityForm").reset();
-  updateViabilityTotals();
   renderViabilityChecklist({});
-  document.getElementById("viabilityScenario").textContent = "Aguardando analise";
+  const scenario = document.getElementById("viabilityScenario");
+  if (scenario) scenario.textContent = "Aguardando analise";
+  document.getElementById("viabilityRankingBody").innerHTML = "";
+  renderViabilityProfileSummary();
   setViabilityState("idle");
 }
 
@@ -1492,7 +1322,7 @@ function renderStudyClient(payload) {
     ["Data nascimento titular", payload.data_nascimento || "-"],
     ["Data nascimento conjuge", payload.data_nascimento_conjuge || "-"],
     ["Renda total", formatMoney(payload.renda_total)],
-    ["Estado do bem", document.getElementById("viabilityEstadoBem").value || "Nao definido"],
+    ["Estado do bem", payload.estado_bem || "Nao definido"],
     ["Objetivo credito", payload.objetivo],
     ["Tipo de bem", payload.tipo_bem || "-"],
   ];
@@ -1774,7 +1604,7 @@ async function saveCurrentStudy() {
       parcela_desejada: currentStudy.payload.parcela_desejada,
       data_nascimento: currentStudy.payload.data_nascimento,
       data_nascimento_conjuge: currentStudy.payload.data_nascimento_conjuge,
-      estado_bem: document.getElementById("viabilityEstadoBem").value || "",
+      estado_bem: currentStudy.payload.estado_bem || "",
     },
     grupo_id: currentStudy.groupId,
     template_campos: collectStudyOperatorFields(),
@@ -2277,16 +2107,31 @@ function activeAdministratorPlanKind() {
 function administratorPlanRulesForKind(kind) {
   const rules = configState.data?.administradoras_regras || [];
   const byKind = rules.filter((rule) => (rule.tipo_bem || "Imovel") === kind);
-  if (byKind.length) return byKind;
-  return administratorPlanDefaultNames.map((administradora) => ({
-    administradora,
-    tipo_bem: kind,
-    seguro_obrigatorio: false,
-    seguro_obrigatorio_texto: "",
-    aceita_saida_fiscal: false,
-    aceita_saida_fiscal_texto: "",
-    aceita_fgts: true,
-  }));
+  const knownNames = [
+    ...(mapState.administradoras || []),
+    ...administratorPlanDefaultNames,
+    ...byKind.map((rule) => rule.administradora).filter(Boolean),
+  ];
+  const uniqueNames = [];
+  knownNames.forEach((name) => {
+    if (!name) return;
+    const alreadyAdded = uniqueNames.some((existing) => normalizeText(existing) === normalizeText(name));
+    if (!alreadyAdded) uniqueNames.push(name);
+  });
+
+  return uniqueNames.map((administradora) => {
+    const savedRule = byKind.find((rule) => normalizeText(rule.administradora) === normalizeText(administradora));
+    return {
+      administradora,
+      tipo_bem: kind,
+      seguro_obrigatorio: false,
+      seguro_obrigatorio_texto: "",
+      aceita_saida_fiscal: false,
+      aceita_saida_fiscal_texto: "",
+      aceita_fgts: true,
+      ...(savedRule || {}),
+    };
+  });
 }
 
 function administratorPlanCellValue(rule, row) {
@@ -2624,6 +2469,10 @@ document.querySelectorAll(".nav-item").forEach((item) => {
   item.addEventListener("click", () => activateScreen(item.dataset.screen));
 });
 
+document.querySelectorAll("[data-screen-jump]").forEach((button) => {
+  button.addEventListener("click", () => activateScreen(button.dataset.screenJump));
+});
+
 document.getElementById("primaryAction").addEventListener("click", () => {
   if (document.getElementById("screen-perfil").classList.contains("active")) {
     saveClientProfile();
@@ -2767,26 +2616,6 @@ document.getElementById("historyUpdateAddMonthBtn").addEventListener("click", ()
 document.getElementById("groupFormHistoryAddMonthBtn").addEventListener("click", () => addHistoryEditorMonth("groupFormHistory"));
 document.querySelector('[data-bs-target="#detailsHistory"]').addEventListener("shown.bs.tab", () => detailsChart?.resize());
 
-document.getElementById("administratorInterviewForm").addEventListener("submit", (event) => {
-  event.preventDefault();
-  analyzeAdministrators();
-});
-
-["administratorFgtsTitular", "administratorFgtsConjuge", "administratorLanceProprio", "administratorRendaTitular", "administratorRendaConjuge"].forEach((id) => {
-  document.getElementById(id).addEventListener("input", updateAdministratorTotals);
-});
-
-["administratorMostrarElegiveis", "administratorOrdenarPor"].forEach((id) => {
-  document.getElementById(id).addEventListener("change", () => renderAdministratorScreen(administratorState.lastResult?.items || []));
-});
-
-["administratorUsarFgts", "administratorConsiderarLanceEmbutido", "administratorTipoBem"].forEach((id) => {
-  document.getElementById(id).addEventListener("change", () => {
-    if (administratorState.lastResult) analyzeAdministrators();
-  });
-});
-
-document.getElementById("clearAdministratorBtn").addEventListener("click", resetAdministratorForm);
 document.querySelectorAll("[data-admin-plan-kind]").forEach((button) => {
   button.addEventListener("click", () => {
     document.querySelectorAll("[data-admin-plan-kind]").forEach((item) => item.classList.toggle("active", item === button));
@@ -2797,28 +2626,8 @@ document.getElementById("addAdministratorPlanBtn").addEventListener("click", add
 document.getElementById("saveAdministratorPlansBtn").addEventListener("click", () => {
   saveAdministratorPlans().catch(() => setConfigState("error"));
 });
-document.getElementById("administratorFilterSubmitBtn").addEventListener("click", analyzeAdministrators);
-document.getElementById("exportAdministratorsCsvBtn").addEventListener("click", exportAdministratorsCsv);
-document.getElementById("advanceToGroupsBtn").addEventListener("click", syncAdministratorInterviewToGroups);
-document.getElementById("focusAdministratorInterviewBtn").addEventListener("click", () => {
-  document.getElementById("administratorCredito").focus();
-});
-document.getElementById("administratorScreenBody").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-admin-action]");
-  if (!button) return;
-  showAdministratorDetails(button.dataset.adminName);
-});
 
-document.getElementById("viabilityForm").addEventListener("submit", (event) => {
-  event.preventDefault();
-  analyzeViability();
-});
-
-["viabilityFgtsTitular", "viabilityFgtsConjuge", "viabilityRendaTitular", "viabilityRendaConjuge"].forEach((id) => {
-  document.getElementById(id).addEventListener("input", updateViabilityTotals);
-});
-
-document.getElementById("clearViabilityBtn").addEventListener("click", resetViabilityForm);
+document.getElementById("analyzeViabilityBtn").addEventListener("click", analyzeViability);
 
 document.getElementById("viabilityRankingBody").addEventListener("click", (event) => {
   const button = event.target.closest("[data-viability-action]");
@@ -3015,5 +2824,4 @@ loadHealth().catch(() => {
 loadMapaGrupos();
 loadClientProfile();
 updateViabilityTotals();
-updateAdministratorTotals();
 openSharedStudyFromUrl().catch(() => showToast("Nao foi possivel abrir o estudo compartilhado.", "danger"));

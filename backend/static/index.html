@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="/static/favicon.svg?v=1" rel="icon" type="image/svg+xml">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260605-12" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260605-14" rel="stylesheet">
   </head>
   <body>
     <div class="app-shell">
@@ -323,306 +323,21 @@
             </div>
           </div>
 
-          <div class="legacy-admin-viability">
-          <div class="flow-stepper" aria-label="Etapas da viabilidade">
-            <span class="flow-step flow-step-done"><strong>1</strong>Entrevista do Cliente</span>
-            <span class="flow-step flow-step-active"><strong>2</strong>Viabilidade Administradoras</span>
-            <span class="flow-step"><strong>3</strong>Viabilidade Grupos</span>
-            <span class="flow-step"><strong>4</strong>Estrategias</span>
-            <span class="flow-step"><strong>5</strong>Estudo Financeiro</span>
-          </div>
-
-          <div class="content-card administrator-summary-card">
-            <div class="table-toolbar">
-              <div>
-                <h2>Resumo do Cliente</h2>
-                <p>Base da entrevista usada para calcular a viabilidade das administradoras</p>
-              </div>
-              <button id="focusAdministratorInterviewBtn" class="btn btn-outline-primary" type="button">Editar Entrevista</button>
-            </div>
-            <form id="administratorInterviewForm" class="viability-form administrator-summary-form">
-              <label><span>Credito Desejado Liquido</span><input id="administratorCredito" class="form-control summary-input-primary" inputmode="decimal" required></label>
-              <label><span>Recursos Proprios</span><input id="administratorLanceProprio" class="form-control summary-input-success" inputmode="decimal" required></label>
-              <label><span>FGTS Titular</span><input id="administratorFgtsTitular" class="form-control summary-input-primary" inputmode="decimal"></label>
-              <label><span>FGTS Conjuge</span><input id="administratorFgtsConjuge" class="form-control summary-input-primary" inputmode="decimal"></label>
-              <label><span>Total Disponivel Cliente + FGTS</span><input id="administratorTotalDisponivel" class="form-control summary-input-success" readonly></label>
-              <label><span>Renda Titular</span><input id="administratorRendaTitular" class="form-control" inputmode="decimal" required></label>
-              <label><span>Renda Conjuge</span><input id="administratorRendaConjuge" class="form-control" inputmode="decimal"></label>
-              <label><span>Renda Total</span><input id="administratorRendaTotal" class="form-control summary-input-primary" readonly></label>
-              <label><span>Parcela Ideal</span><input id="administratorParcelaIdeal" class="form-control summary-input-primary" inputmode="decimal" required></label>
-              <label><span>Parcela Limite</span><input id="administratorParcelaLimite" class="form-control summary-input-primary" inputmode="decimal" required></label>
-              <label>
-                <span>Prazo Desejado</span>
-                <select id="administratorPrazoDesejado" class="form-select" required>
-                  <option value="3">1 a 3 meses</option>
-                  <option value="6">4 a 6 meses</option>
-                  <option value="12">7 a 12 meses</option>
-                  <option value="24">13 a 24 meses</option>
-                  <option value="36">Sem urgencia</option>
-                </select>
-              </label>
-              <label>
-                <span>Objetivo do Credito</span>
-                <select id="administratorObjetivo" class="form-select" required>
-                  <option value="Aquisicao de Imovel">Aquisicao</option>
-                  <option value="Quitacao de Financiamento">Quitacao</option>
-                  <option value="Construcao">Construcao</option>
-                  <option value="Reforma">Reforma</option>
-                  <option value="Investimento">Investimento</option>
-                </select>
-              </label>
-              <label><span>Total FGTS</span><input id="administratorFgtsTotal" class="form-control" readonly></label>
-              <label><span>Data Nascimento Titular</span><input id="administratorNascimento" class="form-control" type="date" required></label>
-              <label><span>Data Nascimento Conjuge</span><input id="administratorNascimentoConjuge" class="form-control" type="date"></label>
-              <label>
-                <span>Estado do Bem</span>
-                <select id="administratorEstadoBem" class="form-select">
-                  <option value="Pronto">Pronto</option>
-                  <option value="Na Planta">Na Planta</option>
-                  <option value="Terreno">Terreno</option>
-                  <option value="Construcao">Construcao</option>
-                  <option value="Indefinido">Indefinido</option>
-                </select>
-              </label>
-              <div class="form-actions administrator-inline-actions">
-                <button id="clearAdministratorBtn" class="btn btn-outline-secondary" type="button">Limpar Entrevista</button>
-                <button id="analyzeAdministratorsBtn" class="btn btn-primary" type="submit">Recalcular Viabilidade</button>
-              </div>
-            </form>
-          </div>
-
-          <div class="content-card administrator-filter-card">
-            <div class="table-toolbar">
-              <div>
-                <h2>Filtros e Opcoes</h2>
-                <p>Parametros usados somente para esta etapa de administradoras</p>
-              </div>
-            </div>
-            <div class="filter-grid administrator-options-grid">
-              <label>
-                <span>Tipo de Bem</span>
-                <select id="administratorTipoBem" class="form-select">
-                  <option value="Imovel">Imovel</option>
-                  <option value="Veiculo">Veiculo</option>
-                  <option value="Servicos">Servicos</option>
-                  <option value="Pesados">Pesados</option>
-                  <option value="Outros">Outros</option>
-                </select>
-              </label>
-              <label>
-                <span>Usar FGTS?</span>
-                <select id="administratorUsarFgts" class="form-select">
-                  <option value="sim">Sim</option>
-                  <option value="nao">Nao</option>
-                </select>
-              </label>
-              <label>
-                <span>Considerar Lance Embutido?</span>
-                <select id="administratorConsiderarLanceEmbutido" class="form-select">
-                  <option value="sim">Sim</option>
-                  <option value="nao">Nao</option>
-                </select>
-              </label>
-              <label>
-                <span>Mostrar</span>
-                <select id="administratorMostrarElegiveis" class="form-select">
-                  <option value="todos">Todas</option>
-                  <option value="elegiveis">Apenas elegiveis</option>
-                </select>
-              </label>
-              <label>
-                <span>Ordenar por</span>
-                <select id="administratorOrdenarPor" class="form-select">
-                  <option value="prazo_minimo">Prazo minimo</option>
-                  <option value="credito_a_contratar">Credito a contratar</option>
-                  <option value="lance_maximo_percentual">Maior lance maximo</option>
-                </select>
-              </label>
-              <div class="administrator-filter-action">
-                <button id="administratorFilterSubmitBtn" class="btn btn-primary" type="button">Recalcular Viabilidade</button>
-              </div>
-            </div>
-          </div>
-
-          <div id="administratorLoading" class="table-state d-none">Analisando administradoras...</div>
-          <div id="administratorError" class="table-state table-state-error d-none">Nao foi possivel analisar as administradoras.</div>
-          <div id="administratorEmpty" class="table-state d-none">Nenhuma administradora cadastrada com regras completas para este cenario.</div>
-
-          <div id="administratorResults" class="content-card d-none">
-            <div class="table-toolbar">
-              <div>
-                <h2>Analise de Viabilidade por Administradoras</h2>
-                <p id="administratorScreenSubtitle">Aguardando analise</p>
-              </div>
-            </div>
-            <div class="table-responsive">
-              <table class="table table-hover align-middle viability-table administrator-viability-table">
-                <thead>
-                  <tr>
-                    <th>Administradora</th>
-                    <th>Seguro Obrigatorio</th>
-                    <th>Idade Maxima</th>
-                    <th>Lance Embutido (%)</th>
-                    <th>Credito a Contratar (f)</th>
-                    <th>Lance embutido</th>
-                    <th>Lance proprio</th>
-                    <th>FGTS</th>
-                    <th>Lance total</th>
-                    <th>Lance maximo (g)</th>
-                    <th>Taxa ADM</th>
-                    <th>Fundo reserva</th>
-                    <th>Prazo minimo (h)</th>
-                    <th>Elegivel</th>
-                    <th>Acoes</th>
-                  </tr>
-                </thead>
-                <tbody id="administratorScreenBody"></tbody>
-              </table>
-            </div>
-            <div class="administrator-table-note">
-              <span>Valores de credito, lance e prazo podem variar de acordo com a taxa de administracao e fundo de reserva de cada administradora.</span>
-              <strong id="administratorFoundCount">0 administradoras encontradas</strong>
-            </div>
-            <div class="administrator-results-footer">
-              <div class="administrator-legend">
-                <strong>Legenda:</strong>
-                <span>(f) Credito a ser contratado para utilizacao do lance embutido</span>
-                <span>(g) Percentual de lance maximo que o cliente consegue ofertar</span>
-                <span>(h) Prazo minimo necessario para atender a parcela desejada</span>
-              </div>
-              <div class="administrator-footer-actions">
-                <button id="exportAdministratorsCsvBtn" class="btn btn-outline-primary" type="button">Exportar Analise</button>
-                <button id="advanceToGroupsBtn" class="btn btn-primary" type="button">Avancar para Grupos</button>
-              </div>
-            </div>
-          </div>
-          </div>
         </section>
 
         <section id="screen-viabilidade" class="screen-panel">
-          <div class="viability-layout">
-            <div class="content-card">
-              <div class="table-toolbar">
-                <div>
-                  <h2>Cenario do Cliente</h2>
-                  <p>Dados para analise de compatibilidade dos grupos</p>
-                </div>
+          <div class="content-card viability-groups-intro">
+            <div class="table-toolbar">
+              <div>
+                <h2>Grupos Compatíveis</h2>
+                <p>Resultado calculado a partir do Perfil do Cliente salvo</p>
               </div>
-
-              <form id="viabilityForm" class="viability-form">
-                <label>
-                  <span>Objetivo do Credito</span>
-                  <select id="viabilityObjetivo" class="form-select" required>
-                    <option value="Aquisicao de Imovel">Aquisicao de Imovel</option>
-                    <option value="Quitacao de Financiamento">Quitacao de Financiamento</option>
-                    <option value="Construcao/Reforma">Construcao/Reforma</option>
-                    <option value="Investimento">Investimento</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Prazo Desejado de Contemplacao</span>
-                  <select id="viabilityPrazoDesejado" class="form-select" required>
-                    <option value="3">1 a 3 meses - Agressivo</option>
-                    <option value="6">4 a 6 meses - Moderado</option>
-                    <option value="12">7 a 12 meses - Conservador</option>
-                    <option value="24">13 a 24 meses - Super Conservador</option>
-                    <option value="36">Sem urgencia - Investidor</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Tipo de Bem</span>
-                  <select id="viabilityTipoBem" class="form-select" required>
-                    <option value="Imovel">Imovel</option>
-                    <option value="Veiculo">Veiculo</option>
-                    <option value="Servicos">Servicos</option>
-                    <option value="Pesados">Pesados</option>
-                    <option value="Outros">Outros</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Credito Desejado</span>
-                  <input id="viabilityCredito" class="form-control" inputmode="decimal" placeholder="500000" required>
-                </label>
-                <label>
-                  <span>Lance Proprio Disponivel</span>
-                  <input id="viabilityLanceProprio" class="form-control" inputmode="decimal" placeholder="100000" required>
-                </label>
-                <label>
-                  <span>FGTS Titular</span>
-                  <input id="viabilityFgtsTitular" class="form-control" inputmode="decimal" placeholder="0">
-                </label>
-                <label>
-                  <span>FGTS Conjuge</span>
-                  <input id="viabilityFgtsConjuge" class="form-control" inputmode="decimal" placeholder="0">
-                </label>
-                <label>
-                  <span>Total FGTS</span>
-                  <input id="viabilityFgtsTotal" class="form-control" readonly>
-                </label>
-                <label>
-                  <span>Renda Titular</span>
-                  <input id="viabilityRendaTitular" class="form-control" inputmode="decimal" placeholder="12000" required>
-                </label>
-                <label>
-                  <span>Renda Conjuge</span>
-                  <input id="viabilityRendaConjuge" class="form-control" inputmode="decimal" placeholder="0">
-                </label>
-                <label>
-                  <span>Renda Total</span>
-                  <input id="viabilityRendaTotal" class="form-control" readonly>
-                </label>
-                <label>
-                  <span>Parcela Ideal</span>
-                  <input id="viabilityParcela" class="form-control" inputmode="decimal" placeholder="3500" required>
-                </label>
-                <label>
-                  <span>Parcela Limite</span>
-                  <input id="viabilityParcelaLimite" class="form-control" inputmode="decimal" placeholder="6000" required>
-                </label>
-                <label>
-                  <span>Data Nascimento Titular</span>
-                  <input id="viabilityNascimento" class="form-control" type="date">
-                </label>
-                <label>
-                  <span>Data Nascimento Conjuge</span>
-                  <input id="viabilityNascimentoConjuge" class="form-control" type="date">
-                </label>
-                <label>
-                  <span>Estado do Bem</span>
-                  <select id="viabilityEstadoBem" class="form-select">
-                    <option value="Pronto">Pronto</option>
-                    <option value="Na planta">Na planta</option>
-                    <option value="Terreno">Terreno</option>
-                    <option value="Construcao">Construcao</option>
-                    <option value="Nao definido">Nao definido</option>
-                  </select>
-                </label>
-                <div class="form-actions">
-                  <button id="clearViabilityBtn" class="btn btn-outline-secondary" type="button">Limpar Cenario</button>
-                  <button id="analyzeViabilityBtn" class="btn btn-primary" type="submit">Analisar Viabilidade</button>
-                </div>
-              </form>
+              <div class="toolbar-actions">
+                <button class="btn btn-outline-secondary" type="button" data-screen-jump="perfil">Editar Perfil</button>
+                <button id="analyzeViabilityBtn" class="btn btn-primary" type="button">Analisar Grupos</button>
+              </div>
             </div>
-
-            <aside class="content-card checklist-card">
-              <div class="table-toolbar">
-                <div>
-                  <h2>Checklist</h2>
-                  <p id="viabilityScenario">Aguardando analise</p>
-                </div>
-              </div>
-              <ul id="viabilityChecklist" class="checklist-list">
-                <li data-check="idade_compativel">Idade compativel</li>
-                <li data-check="renda_compativel">Renda comporta parcela</li>
-                <li data-check="parcela_compativel">Parcela dentro do limite</li>
-                <li data-check="lance_compativel">Lance compativel</li>
-                <li data-check="fgts_permitido">FGTS permitido</li>
-                <li data-check="lance_embutido_permitido">Lance embutido permitido</li>
-                <li data-check="prazo_compativel">Prazo compativel</li>
-                <li data-check="tipo_bem_compativel">Tipo de bem compativel</li>
-                <li data-check="cenario_viavel">Cenario viavel</li>
-              </ul>
-            </aside>
+            <div id="viabilityProfileSummary" class="client-profile-summary viability-profile-summary"></div>
           </div>
 
           <div id="viabilityLoading" class="table-state d-none">Analisando grupos...</div>
@@ -1454,6 +1169,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260605-17"></script>
+    <script src="/static/js/app.js?v=20260605-19"></script>
   </body>
 </html>

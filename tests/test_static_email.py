@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-17", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-19", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -43,15 +43,28 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('id="administratorPlansBody"', index_html)
         self.assertIn("function renderAdministratorPlans()", app_js)
         self.assertIn("function saveAdministratorPlans()", app_js)
-        self.assertIn("administratorTotalDisponivel", index_html)
-        self.assertIn("administratorUsarFgts", index_html)
-        self.assertIn("Resumo do Cliente", index_html)
-        self.assertIn("Análise de Viabilidade por Administradoras".replace("á", "a"), index_html)
-        self.assertIn('id="exportAdministratorsCsvBtn"', index_html)
-        self.assertIn('id="advanceToGroupsBtn"', index_html)
-        self.assertIn('apiPost("/viabilidade/administradoras"', app_js)
-        self.assertIn("function exportAdministratorsCsv()", app_js)
-        self.assertIn("function syncAdministratorInterviewToGroups()", app_js)
+        self.assertIn("mapState.administradoras", app_js)
+        for administradora in ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"]:
+            self.assertIn(administradora, app_js)
+        self.assertNotIn("administratorTotalDisponivel", index_html)
+        self.assertNotIn("administratorUsarFgts", index_html)
+        self.assertNotIn('id="exportAdministratorsCsvBtn"', index_html)
+        self.assertNotIn('id="advanceToGroupsBtn"', index_html)
+        self.assertNotIn('apiPost("/viabilidade/administradoras"', app_js)
+        self.assertNotIn("function exportAdministratorsCsv()", app_js)
+        self.assertNotIn("function syncAdministratorInterviewToGroups()", app_js)
+
+    def test_viabilidade_grupos_nao_repete_formulario_do_cliente(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('id="viabilityProfileSummary"', index_html)
+        self.assertIn("Grupos Compat", index_html)
+        self.assertIn("function renderViabilityProfileSummary()", app_js)
+        self.assertIn("const profile = collectClientProfile();", app_js)
+        self.assertNotIn('id="viabilityForm"', index_html)
+        self.assertNotIn('id="clearViabilityBtn"', index_html)
+        self.assertNotIn('id="viabilityChecklist"', index_html)
 
     def test_tela_perfil_cliente_existe_apos_mapa(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -207,7 +220,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_estudo_financeiro_preserva_data_nascimento_conjuge(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn('data_nascimento_conjuge: document.getElementById("viabilityNascimentoConjuge").value', app_js)
+        self.assertIn("data_nascimento_conjuge: profile.data_nascimento_conjuge", app_js)
         self.assertIn('data_nascimento_conjuge: currentStudy.payload.data_nascimento_conjuge', app_js)
         self.assertIn('["Data nascimento conjuge", payload.data_nascimento_conjuge || "-"]', app_js)
         self.assertIn('["Data nascimento conjuge", cliente.data_nascimento_conjuge || "-"]', app_js)
@@ -217,16 +230,16 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
         for label in [
-            "1 a 3 meses - Agressivo",
-            "4 a 6 meses - Moderado",
-            "7 a 12 meses - Conservador",
-            "13 a 24 meses - Super Conservador",
+            "1 a 3 meses",
+            "4 a 6 meses",
+            "7 a 12 meses",
+            "13 a 24 meses",
         ]:
             self.assertIn(label, index_html)
-        self.assertIn('id="viabilityTipoBem"', index_html)
-        self.assertIn('tipo_bem: document.getElementById("viabilityTipoBem").value', app_js)
+        self.assertIn("function clientProfileConcept(months)", app_js)
+        self.assertIn('id="clientProfileTipoBem"', index_html)
+        self.assertIn("tipo_bem: profile.tipo_bem", app_js)
         self.assertNotIn('tipo_bem: "Imovel"', app_js)
-        self.assertIn('lanceInput === ""', app_js)
         self.assertIn("payload.lance_proprio < 0", app_js)
 
     def test_estudo_financeiro_exibe_metricas_historico_12_meses(self):
@@ -341,7 +354,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260605-12", index_html)
+        self.assertIn("/static/css/style.css?v=20260605-14", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

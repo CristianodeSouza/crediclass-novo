@@ -1176,10 +1176,6 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 700;
 }
 
-.legacy-admin-viability {
-  display: none;
-}
-
 .administrator-plans-card {
   min-height: 520px;
 }
