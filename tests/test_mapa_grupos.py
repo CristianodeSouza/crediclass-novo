@@ -5,10 +5,15 @@ from unittest.mock import patch
 from backend.main import grupo_detalhe, grupo_historico_atualizar, grupo_historico_lote_atualizar, grupos, reload_data
 from backend.models import GrupoCreateRequest, GrupoUpdateRequest, HistoricoBatchUpdateRequest, HistoricoUpdateRequest
 from backend.sheets_client import get_grupo as sheets_get_grupo
-from backend.sheets_client import build_historico, clean_text, create_grupo, delete_grupo, parse_credit, payload_to_row_values, row_to_grupo, row_to_grupo_detalhe, update_grupo, update_historico_mensal
+from backend.sheets_client import build_historico, clean_text, create_grupo, delete_grupo, format_history_value, parse_credit, payload_to_row_values, row_to_grupo, row_to_grupo_detalhe, update_grupo, update_historico_mensal
 
 
 class MapaGruposTest(unittest.TestCase):
+    def test_percentuais_de_historico_nao_gravam_residuos_decimais(self):
+        self.assertEqual(format_history_value("maior_lance", 0.56), "56,0")
+        self.assertEqual(format_history_value("menor_lance", 0.5256000000000001), "52,56")
+        self.assertEqual(format_history_value("maior_lance", 0.5550000000000001), "55,5")
+
     def test_grupo_aceita_campos_vazios_e_valores_zero(self):
         create_payload = GrupoCreateRequest(credito_minimo=0, credito_maximo=0, taxa_adm=0, prazo_total=0)
         update_payload = GrupoUpdateRequest(credito_minimo=0, credito_maximo=0, taxa_adm=0, prazo_total=0)
