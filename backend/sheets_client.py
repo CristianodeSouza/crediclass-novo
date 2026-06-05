@@ -771,6 +771,63 @@ def list_grupos_detalhe() -> list[dict[str, Any]]:
         return copy.deepcopy(items)
 
 
+def list_grupos_detalhe_by_ids(grupo_ids: list[str]) -> list[dict[str, Any]]:
+    wanted_ids = [str(grupo_id or "").strip().upper() for grupo_id in grupo_ids if str(grupo_id or "").strip()]
+    if not wanted_ids:
+        return []
+
+    now = time.time()
+    cached_items: dict[str, dict[str, Any]] = {}
+    missing_ids: list[str] = []
+    with _cache_lock:
+        for wanted in wanted_ids:
+            cached = _grupo_detail_cache.get(wanted)
+            if cached and now < cached[0]:
+                cached_items[wanted] = cached[1]
+            else:
+                missing_ids.append(wanted)
+
+    if missing_ids:
+        list_grupos()
+        with _cache_lock:
+            row_numbers = {wanted: _group_row_index.get(wanted) for wanted in missing_ids}
+
+        headers = read_sheet_headers()
+        if headers:
+            settings = get_settings()
+            last_column = column_letter(len(headers) - 1)
+            ranges = [
+                f"'{settings.google_sheet_name}'!A{row_number}:{last_column}{row_number}"
+                for row_number in row_numbers.values()
+                if row_number is not None
+            ]
+            if ranges:
+                result = get_service().spreadsheets().values().batchGet(
+                    spreadsheetId=settings.google_sheets_id,
+                    ranges=ranges,
+                ).execute()
+                value_ranges = result.get("valueRanges", [])
+                fetched_items: dict[str, dict[str, Any]] = {}
+                for value_range in value_ranges:
+                    values = value_range.get("values", [])
+                    if not values:
+                        continue
+                    row = values[0]
+                    row_dict = {header: row[index] if index < len(row) else "" for index, header in enumerate(headers)}
+                    item = row_to_grupo_detalhe(row_dict)
+                    fetched_items[item["grupo_id"].upper()] = item
+
+                with _cache_lock:
+                    for wanted, item in fetched_items.items():
+                        if len(_grupo_detail_cache) >= 64:
+                            oldest_key = min(_grupo_detail_cache, key=lambda key: _grupo_detail_cache[key][0])
+                            _grupo_detail_cache.pop(oldest_key, None)
+                        _grupo_detail_cache[wanted] = (time.time() + CACHE_TTL_SECONDS, item)
+                cached_items.update(fetched_items)
+
+    return [copy.deepcopy(cached_items[wanted]) for wanted in wanted_ids if wanted in cached_items]
+
+
 def warm_grupos_detalhe_cache_async() -> None:
     def warm() -> None:
         try:

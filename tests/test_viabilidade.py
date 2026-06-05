@@ -270,9 +270,13 @@ class ViabilidadeTest(unittest.TestCase):
         self.assertIn("parcela_compativel", result["motivos_reprovacao"])
 
     def test_endpoint_uses_sheets_and_returns_response(self):
-        with patch("backend.main.list_grupos_detalhe", return_value=[make_group()]):
+        with (
+            patch("backend.main.list_grupos", return_value=[make_group()]),
+            patch("backend.main.list_grupos_detalhe_by_ids", return_value=[make_group()]) as list_details,
+        ):
             result = viabilidade_analisar(make_payload())
 
+        list_details.assert_called_once_with(["128"])
         self.assertEqual(result["total_grupos_analisados"], 1)
         self.assertEqual(result["melhores_grupos"][0]["administradora"], "Itau")
 

@@ -311,6 +311,48 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(result["historico"]["2026-01"]["qtd_contemplacoes"], 12)
         self.assertEqual(service.values_api.get_kwargs["range"], "'Grupos'!A3:F3")
 
+    def test_sheets_lista_detalhes_por_ids_em_lote(self):
+        headers = ["ADM", "Grupo", "Tipo de Bem", "Credito Maximo", "Prazo Total", "JAN-26 Maior Lance", "JAN-26 Menor Lance", "JAN-26 Qtd"]
+
+        class ExecuteMock:
+            def execute(self):
+                return {
+                    "valueRanges": [
+                        {"values": [["Itau", "128", "Imovel", "500000", "180", "72", "24", "12"]]},
+                        {"values": [["Caixa", "1025", "Imovel", "600000", "200", "55", "40", "4"]]},
+                    ]
+                }
+
+        class ValuesMock:
+            def batchGet(self, **kwargs):
+                self.batch_get_kwargs = kwargs
+                return ExecuteMock()
+
+        class ServiceMock:
+            def __init__(self):
+                self.values_api = ValuesMock()
+
+            def spreadsheets(self):
+                return self
+
+            def values(self):
+                return self.values_api
+
+        service = ServiceMock()
+        settings = SimpleNamespace(google_sheets_id="sheet-id", google_sheet_name="Grupos")
+        with (
+            patch("backend.sheets_client.list_grupos", return_value=[]),
+            patch("backend.sheets_client.read_sheet_headers", return_value=headers),
+            patch("backend.sheets_client.get_service", return_value=service),
+            patch("backend.sheets_client.get_settings", return_value=settings),
+            patch.dict("backend.sheets_client._group_row_index", {"128": 3, "1025": 8}, clear=True),
+            patch.dict("backend.sheets_client._grupo_detail_cache", {}, clear=True),
+        ):
+            result = sheets_client.list_grupos_detalhe_by_ids(["128", "1025"])
+
+        self.assertEqual([item["grupo_id"] for item in result], ["128", "1025"])
+        self.assertEqual(service.values_api.batch_get_kwargs["ranges"], ["'Grupos'!A3:H3", "'Grupos'!A8:H8"])
+
     def test_payload_to_row_values_uses_headers_not_positions(self):
         headers = ["ADM", "Tipo de Bem", "Grup0", "Menor\nCredito", "Maior\nCredito", "Taxa\nAdm Original", "Prazo\nGrupo"]
 

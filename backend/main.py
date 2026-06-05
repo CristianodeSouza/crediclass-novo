@@ -11,8 +11,8 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
-from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_detalhe_cache_async
-from .viabilidade import analyze_viabilidade
+from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_detalhe_cache_async
+from .viabilidade import analyze_viabilidade, compatible_tipo_bem, normalize_text
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -225,8 +225,17 @@ def viabilidade_analisar(payload: ViabilidadeRequest):
         payload.prazo_desejado,
     )
     try:
-        groups = list_grupos_detalhe()
+        summary_groups = list_grupos()
+        candidate_ids = [
+            item["grupo_id"]
+            for item in summary_groups
+            if (item.get("credito_maximo") or 0) >= payload.credito_desejado
+            and normalize_text(str(item.get("status") or "")) == "ativo"
+            and compatible_tipo_bem(payload.objetivo, str(item.get("tipo_bem") or ""), payload.tipo_bem)
+        ]
+        groups = list_grupos_detalhe_by_ids(candidate_ids)
         result = analyze_viabilidade(payload, groups)
+        result["total_grupos_analisados"] = len(summary_groups)
     except Exception as error:
         logger.exception("Erro ao analisar viabilidade")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
