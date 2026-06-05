@@ -26,6 +26,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("/static/vendor/bootstrap.min.css?v=5.3.3", index_html)
         self.assertIn("/static/vendor/bootstrap.bundle.min.js?v=5.3.3", index_html)
         self.assertIn("/static/vendor/chart.umd.min.js?v=4.4.3", index_html)
+        self.assertIn("/static/favicon.svg?v=1", index_html)
         self.assertNotIn("cdn.jsdelivr.net", index_html)
         self.assertIn(".d-none", style_css)
 
