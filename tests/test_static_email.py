@@ -17,7 +17,13 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-04", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-05", index_html)
+
+    def test_filtros_de_credito_validam_intervalo(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function validateMapCreditFilters(filters)", app_js)
+        self.assertIn("O credito minimo nao pode ser maior que o credito maximo.", app_js)
 
     def test_percentuais_de_entrada_sao_formatados_sem_residuo_decimal(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
