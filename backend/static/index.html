@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="/static/favicon.svg?v=1" rel="icon" type="image/svg+xml">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260605-09" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260605-10" rel="stylesheet">
   </head>
   <body>
     <div class="app-shell">
@@ -912,6 +912,7 @@
             <ul class="nav nav-tabs details-tabs" role="tablist">
               <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#configGeral" type="button" role="tab">Geral</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configFinanceiro" type="button" role="tab">Parametros Financeiros</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configAdministradoras" type="button" role="tab">Planos Administradoras</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configIntegracoes" type="button" role="tab">Integracoes</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configUsuarios" type="button" role="tab">Usuarios</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configAcesso" type="button" role="tab">Acesso</button></li>
@@ -960,6 +961,67 @@
                     <label><span>Prazo minimo</span><input id="configPrazoMinimo" class="form-control" inputmode="numeric"></label>
                     <label><span>Indice correcao anual</span><input id="configIndiceCorrecao" class="form-control"></label>
                   </form>
+                </div>
+              </section>
+
+              <section id="configAdministradoras" class="tab-pane fade" role="tabpanel">
+                <div class="content-card">
+                  <div class="table-toolbar">
+                    <div>
+                      <h2>Planos Administradoras</h2>
+                      <p>Dados fixos por administradora usados antes da selecao dos grupos</p>
+                    </div>
+                    <button id="newAdministratorRuleBtn" class="btn btn-outline-primary" type="button">Nova Administradora</button>
+                  </div>
+                  <form id="administratorRulesForm" class="viability-form administrator-rules-form">
+                    <label><span>Administradora</span><input id="adminRuleAdministradora" class="form-control" placeholder="CNP, ITAU, CAOA, PORTO"></label>
+                    <label><span>Seguro obrigatorio?</span><select id="adminRuleSeguro" class="form-select"><option value="false">Nao</option><option value="true">Sim</option></select></label>
+                    <label><span>Idade maxima</span><input id="adminRuleIdadeMaxima" class="form-control" inputmode="numeric"></label>
+                    <label><span>Limite sem comprovacao de renda</span><input id="adminRuleLimiteRenda" class="form-control" inputmode="decimal"></label>
+                    <label><span>% Lance embutido</span><input id="adminRuleLanceEmbutido" class="form-control" inputmode="decimal"></label>
+                    <label><span>Calculo lance embutido</span><select id="adminRuleTipoLance" class="form-select"><option value="Credito">Credito</option><option value="Carta">Carta</option><option value="Sem lance embutido">Sem lance embutido</option></select></label>
+                    <label><span>Aceita saida fiscal?</span><select id="adminRuleSaidaFiscal" class="form-select"><option value="false">Nao</option><option value="true">Sim</option></select></label>
+                    <label><span>Taxa ADM</span><input id="adminRuleTaxaAdm" class="form-control" inputmode="decimal"></label>
+                    <label><span>Negociacao de taxa</span><input id="adminRuleNegociacao" class="form-control" placeholder="Nao, Tem promocao, Flexibilidade"></label>
+                    <label><span>Fundo de reserva</span><input id="adminRuleFundoReserva" class="form-control" inputmode="decimal"></label>
+                    <label><span>Aceita FGTS?</span><select id="adminRuleAceitaFgts" class="form-select"><option value="true">Sim</option><option value="false">Nao</option></select></label>
+                    <label class="administrator-rule-notes"><span>Observacoes / excecoes por grupo</span><textarea id="adminRuleObservacoes" class="form-control" rows="2" placeholder="Registre excecoes que devem ser conferidas na etapa de grupos"></textarea></label>
+                    <div class="form-actions administrator-rule-actions">
+                      <button id="cancelAdministratorRuleBtn" class="btn btn-outline-secondary" type="button">Limpar</button>
+                      <button id="saveAdministratorRuleBtn" class="btn btn-primary" type="button">Salvar Administradora</button>
+                    </div>
+                  </form>
+                </div>
+
+                <div class="content-card">
+                  <div class="table-toolbar">
+                    <div>
+                      <h2>Administradoras Cadastradas</h2>
+                      <p id="administratorRulesSubtitle">Nenhuma administradora cadastrada</p>
+                    </div>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle viability-table administrator-rules-table">
+                      <thead>
+                        <tr>
+                          <th>Administradora</th>
+                          <th>Seguro</th>
+                          <th>Idade maxima</th>
+                          <th>Limite renda</th>
+                          <th>Lance embutido</th>
+                          <th>Saida fiscal</th>
+                          <th>Taxa ADM</th>
+                          <th>Fundo reserva</th>
+                          <th>FGTS</th>
+                          <th>Acoes</th>
+                        </tr>
+                      </thead>
+                      <tbody id="administratorRulesBody"></tbody>
+                    </table>
+                  </div>
+                  <div class="administrator-table-note">
+                    <span>Os dados fixos acima filtram administradoras. Dados que mudam por grupo continuam sendo mantidos no Mapa de Grupos e no historico mensal.</span>
+                  </div>
                 </div>
               </section>
 
@@ -1264,6 +1326,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260605-14"></script>
+    <script src="/static/js/app.js?v=20260605-15"></script>
   </body>
 </html>

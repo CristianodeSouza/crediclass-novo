@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-14", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-15", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -46,6 +46,18 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('apiPost("/viabilidade/administradoras"', app_js)
         self.assertIn("function exportAdministratorsCsv()", app_js)
         self.assertIn("function syncAdministratorInterviewToGroups()", app_js)
+
+    def test_configuracoes_possui_planos_administradoras(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("Planos Administradoras", index_html)
+        self.assertIn('id="administratorRulesForm"', index_html)
+        self.assertIn('id="administratorRulesBody"', index_html)
+        self.assertIn("adminRuleAdministradora", index_html)
+        self.assertIn("function renderAdministratorRules(rules)", app_js)
+        self.assertIn("function saveAdministratorRule()", app_js)
+        self.assertIn("administradoras_regras", app_js)
 
     def test_filtros_de_credito_validam_intervalo(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
@@ -308,7 +320,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260605-09", index_html)
+        self.assertIn("/static/css/style.css?v=20260605-10", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

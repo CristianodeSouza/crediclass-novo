@@ -86,6 +86,7 @@ let currentStudyStrategyTab = "";
 let configUserModal = null;
 let configUserMode = "create";
 let configUserIndex = null;
+let configAdministratorRuleIndex = null;
 
 function showToast(message, type = "success") {
   const region = document.getElementById("toastRegion");
@@ -2048,6 +2049,7 @@ function renderConfiguracoes(data) {
   }).join("");
 
   renderAccessPolicy(data.acesso || {});
+  renderAdministratorRules(data.administradoras_regras || []);
   document.getElementById("configSystemGrid").innerHTML = [
     ["Aplicacao", sistema.app],
     ["Versao", sistema.version],
@@ -2066,6 +2068,107 @@ function renderAccessPolicy(acesso) {
     ["Dados", "Todos podem visualizar os dados dos paineis"],
     ["Observacao", acesso.descricao || "-"],
   ].map(([label, value]) => detailField(label, value)).join("");
+}
+
+function adminRuleNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) && number > 0 ? number : "";
+}
+
+function renderAdministratorRules(rules) {
+  document.getElementById("administratorRulesSubtitle").textContent = `${rules.length} administradora(s) cadastrada(s)`;
+  document.getElementById("administratorRulesBody").innerHTML = rules.map((rule, index) => `
+    <tr>
+      <td>${escapeHtml(rule.administradora || "-")}</td>
+      <td>${rule.seguro_obrigatorio ? "Sim" : "Nao"}</td>
+      <td>${rule.idade_maxima || "-"}</td>
+      <td>${formatMoney(rule.limite_sem_comprovacao_renda)}</td>
+      <td>${formatPercent(rule.percentual_lance_embutido || 0)}</td>
+      <td>${rule.aceita_saida_fiscal ? "Sim" : "Nao"}</td>
+      <td>${formatPercent(rule.taxa_adm || 0)}</td>
+      <td>${formatPercent(rule.fundo_reserva || 0)}</td>
+      <td>${rule.aceita_fgts === false ? "Nao" : "Sim"}</td>
+      <td>
+        <div class="row-actions">
+          <button class="btn btn-sm btn-outline-secondary" type="button" data-admin-rule-action="editar" data-admin-rule-index="${index}">Editar</button>
+          <button class="btn btn-sm btn-outline-danger" type="button" data-admin-rule-action="remover" data-admin-rule-index="${index}">Remover</button>
+        </div>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function clearAdministratorRuleForm() {
+  configAdministratorRuleIndex = null;
+  document.getElementById("administratorRulesForm").reset();
+  document.getElementById("adminRuleAceitaFgts").value = "true";
+  document.getElementById("saveAdministratorRuleBtn").textContent = "Salvar Administradora";
+}
+
+function collectAdministratorRuleForm() {
+  return {
+    administradora: document.getElementById("adminRuleAdministradora").value.trim(),
+    seguro_obrigatorio: getSelectBool("adminRuleSeguro"),
+    idade_maxima: adminRuleNumber(document.getElementById("adminRuleIdadeMaxima").value) || null,
+    limite_sem_comprovacao_renda: optionalNumber(document.getElementById("adminRuleLimiteRenda").value),
+    percentual_lance_embutido: inputToPercent("adminRuleLanceEmbutido"),
+    tipo_lance_embutido: document.getElementById("adminRuleTipoLance").value,
+    taxa_adm: inputToPercent("adminRuleTaxaAdm"),
+    possui_negociacao_taxa: document.getElementById("adminRuleNegociacao").value.trim(),
+    fundo_reserva: inputToPercent("adminRuleFundoReserva"),
+    aceita_saida_fiscal: getSelectBool("adminRuleSaidaFiscal"),
+    aceita_fgts: getSelectBool("adminRuleAceitaFgts"),
+    observacoes_operacionais: document.getElementById("adminRuleObservacoes").value.trim(),
+  };
+}
+
+function fillAdministratorRuleForm(rule, index) {
+  configAdministratorRuleIndex = index;
+  setInputValue("adminRuleAdministradora", rule.administradora);
+  setSelectBool("adminRuleSeguro", rule.seguro_obrigatorio);
+  setInputValue("adminRuleIdadeMaxima", rule.idade_maxima);
+  setInputValue("adminRuleLimiteRenda", rule.limite_sem_comprovacao_renda);
+  setInputValue("adminRuleLanceEmbutido", percentToInput(rule.percentual_lance_embutido));
+  setInputValue("adminRuleTipoLance", rule.tipo_lance_embutido || "Credito");
+  setSelectBool("adminRuleSaidaFiscal", rule.aceita_saida_fiscal);
+  setInputValue("adminRuleTaxaAdm", percentToInput(rule.taxa_adm));
+  setInputValue("adminRuleNegociacao", rule.possui_negociacao_taxa);
+  setInputValue("adminRuleFundoReserva", percentToInput(rule.fundo_reserva));
+  setSelectBool("adminRuleAceitaFgts", rule.aceita_fgts !== false);
+  setInputValue("adminRuleObservacoes", rule.observacoes_operacionais);
+  document.getElementById("saveAdministratorRuleBtn").textContent = "Atualizar Administradora";
+  document.getElementById("adminRuleAdministradora").focus();
+}
+
+async function saveAdministratorRule() {
+  const rule = collectAdministratorRuleForm();
+  if (!rule.administradora) {
+    showToast("Informe o nome da administradora.", "warning");
+    return;
+  }
+  const rules = [...(configState.data?.administradoras_regras || [])];
+  if (configAdministratorRuleIndex === null) {
+    rules.push(rule);
+  } else {
+    rules[configAdministratorRuleIndex] = rule;
+  }
+  await apiPut("/configuracoes", { administradoras_regras: rules });
+  configState.data.administradoras_regras = rules;
+  renderAdministratorRules(rules);
+  clearAdministratorRuleForm();
+  showToast("Plano da administradora salvo.", "success");
+  addOperationalLog("Plano de administradora salvo");
+}
+
+async function removeAdministratorRule(index) {
+  const rules = [...(configState.data?.administradoras_regras || [])];
+  const removed = rules.splice(index, 1)[0];
+  await apiPut("/configuracoes", { administradoras_regras: rules });
+  configState.data.administradoras_regras = rules;
+  renderAdministratorRules(rules);
+  clearAdministratorRuleForm();
+  showToast(`Plano removido: ${removed?.administradora || "administradora"}.`, "success");
+  addOperationalLog("Plano de administradora removido");
 }
 
 function collectConfiguracoesPayload() {
@@ -2112,6 +2215,7 @@ function collectConfiguracoesPayload() {
       alertar_historico_atualizado: getSelectBool("notifyHistoryUpdated"),
       alertar_falha_integracao: getSelectBool("notifyIntegrationFailure"),
     },
+    administradoras_regras: configState.data?.administradoras_regras || [],
   };
 }
 
@@ -2517,6 +2621,27 @@ document.getElementById("syncSheetsBtn").addEventListener("click", () => {
 });
 
 document.getElementById("downloadConfigBackupBtn").addEventListener("click", downloadConfigBackup);
+
+document.getElementById("newAdministratorRuleBtn").addEventListener("click", clearAdministratorRuleForm);
+document.getElementById("cancelAdministratorRuleBtn").addEventListener("click", clearAdministratorRuleForm);
+document.getElementById("saveAdministratorRuleBtn").addEventListener("click", () => {
+  saveAdministratorRule().catch(() => setConfigState("error"));
+});
+document.getElementById("administratorRulesBody").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-admin-rule-action]");
+  if (!button) return;
+  const index = Number(button.dataset.adminRuleIndex);
+  const rule = (configState.data?.administradoras_regras || [])[index];
+  if (!rule) return;
+  if (button.dataset.adminRuleAction === "editar") {
+    fillAdministratorRuleForm(rule, index);
+    return;
+  }
+  if (button.dataset.adminRuleAction === "remover") {
+    if (!window.confirm("Remover este plano de administradora?")) return;
+    removeAdministratorRule(index).catch(() => setConfigState("error"));
+  }
+});
 
 document.getElementById("newConfigUserBtn").addEventListener("click", () => openConfigUserForm("create"));
 

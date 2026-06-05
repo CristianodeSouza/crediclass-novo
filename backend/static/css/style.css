@@ -1061,6 +1061,26 @@ body[data-theme="escuro"] .btn-outline-secondary {
   white-space: nowrap;
 }
 
+.administrator-rules-form {
+  grid-template-columns: repeat(4, minmax(170px, 1fr));
+}
+
+.administrator-rule-notes {
+  grid-column: span 2;
+}
+
+.administrator-rule-actions {
+  grid-column: span 2;
+}
+
+.administrator-rules-table {
+  min-width: 1180px;
+}
+
+.administrator-rules-table td:first-child {
+  font-weight: 700;
+}
+
 .viability-table {
   min-width: 980px;
   margin-bottom: 0;
@@ -1538,6 +1558,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
     grid-template-columns: repeat(3, minmax(180px, 1fr));
   }
 
+  .administrator-rules-form {
+    grid-template-columns: repeat(3, minmax(160px, 1fr));
+  }
+
   .study-v4-shell {
     grid-template-columns: 1fr;
   }
@@ -1569,6 +1593,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .administrator-inline-actions {
+    grid-column: 1 / -1;
+  }
+
+  .administrator-rule-notes,
+  .administrator-rule-actions {
     grid-column: 1 / -1;
   }
 
@@ -1736,6 +1765,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .viability-form,
   .administrator-summary-form,
   .administrator-options-grid,
+  .administrator-rules-form,
   .study-layout,
   .history-charts,
   .details-grid,
