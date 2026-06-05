@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="/static/favicon.svg?v=1" rel="icon" type="image/svg+xml">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260605-10" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260605-11" rel="stylesheet">
   </head>
   <body>
     <div class="app-shell">
@@ -20,6 +20,10 @@
           <button class="nav-item active" type="button" data-screen="mapa">
             <span class="nav-icon">MG</span>
             <span>Mapa de Grupos</span>
+          </button>
+          <button class="nav-item" type="button" data-screen="perfil">
+            <span class="nav-icon">PC</span>
+            <span>Perfil do Cliente</span>
           </button>
           <button class="nav-item" type="button" data-screen="administradoras">
             <span class="nav-icon">VA</span>
@@ -193,6 +197,99 @@
                 <button id="nextPageBtn" class="btn btn-outline-secondary btn-sm" type="button">Proxima</button>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section id="screen-perfil" class="screen-panel">
+          <div class="client-profile-layout">
+            <div class="content-card client-profile-card">
+              <div class="table-toolbar">
+                <div>
+                  <h2>Perfil do Cliente</h2>
+                  <p>Dados de entrada da entrevista, capacidade financeira e necessidade de credito</p>
+                </div>
+                <div class="toolbar-actions">
+                  <button id="clearClientProfileBtn" class="btn btn-outline-secondary" type="button">Limpar Perfil</button>
+                  <button id="saveClientProfileBtn" class="btn btn-primary" type="button">Salvar Perfil</button>
+                </div>
+              </div>
+
+              <form id="clientProfileForm" class="client-profile-form">
+                <div class="client-profile-section">
+                  <h3>Identificacao</h3>
+                  <label><span>Nome do Cliente</span><input id="clientProfileNome" class="form-control" placeholder="Nome do cliente"></label>
+                  <label><span>Nome do Conjuge</span><input id="clientProfileConjuge" class="form-control" placeholder="Nome do conjuge"></label>
+                  <label><span>Data Nascimento Titular</span><input id="clientProfileNascimento" class="form-control" type="date"></label>
+                  <label><span>Data Nascimento Conjuge</span><input id="clientProfileNascimentoConjuge" class="form-control" type="date"></label>
+                </div>
+
+                <div class="client-profile-section">
+                  <h3>Credito e Objetivo</h3>
+                  <label><span>Credito Desejado Liquido</span><input id="clientProfileCredito" class="form-control" inputmode="decimal"></label>
+                  <label>
+                    <span>Prazo Desejado</span>
+                    <select id="clientProfilePrazo" class="form-select">
+                      <option value="3">1 a 3 meses</option>
+                      <option value="6">4 a 6 meses</option>
+                      <option value="12">7 a 12 meses</option>
+                      <option value="24">13 a 24 meses</option>
+                      <option value="36">Sem urgencia</option>
+                    </select>
+                  </label>
+                  <label><span>Conceito IA</span><input id="clientProfileConceito" class="form-control" readonly></label>
+                  <label>
+                    <span>Objetivo do Credito</span>
+                    <select id="clientProfileObjetivo" class="form-select">
+                      <option value="Aquisicao de Imovel">Aquisicao</option>
+                      <option value="Quitacao de Financiamento">Quitacao</option>
+                      <option value="Construcao">Construcao</option>
+                      <option value="Reforma">Reforma</option>
+                      <option value="Investimento">Investimento</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Tipo de Bem</span>
+                    <select id="clientProfileTipoBem" class="form-select">
+                      <option value="Imovel">Imovel</option>
+                      <option value="Veiculo">Veiculo</option>
+                      <option value="Servicos">Servicos</option>
+                      <option value="Pesados">Pesados</option>
+                      <option value="Outros">Outros</option>
+                    </select>
+                  </label>
+                  <label>
+                    <span>Estado do Bem</span>
+                    <select id="clientProfileEstadoBem" class="form-select">
+                      <option value="Pronto">Pronto</option>
+                      <option value="Na Planta">Na Planta</option>
+                      <option value="Terreno">Terreno</option>
+                      <option value="Construcao">Construcao</option>
+                      <option value="Indefinido">Indefinido</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="client-profile-section">
+                  <h3>Capacidade Financeira</h3>
+                  <label><span>Recursos Proprios para Lance</span><input id="clientProfileLanceProprio" class="form-control" inputmode="decimal"></label>
+                  <label><span>FGTS Titular</span><input id="clientProfileFgtsTitular" class="form-control" inputmode="decimal"></label>
+                  <label><span>FGTS Conjuge</span><input id="clientProfileFgtsConjuge" class="form-control" inputmode="decimal"></label>
+                  <label><span>Total FGTS</span><input id="clientProfileFgtsTotal" class="form-control client-calculated" readonly></label>
+                  <label><span>Total Disponivel Cliente + FGTS</span><input id="clientProfileTotalDisponivel" class="form-control client-calculated client-success" readonly></label>
+                  <label><span>Renda Titular</span><input id="clientProfileRendaTitular" class="form-control" inputmode="decimal"></label>
+                  <label><span>Renda Conjuge</span><input id="clientProfileRendaConjuge" class="form-control" inputmode="decimal"></label>
+                  <label><span>Renda Total</span><input id="clientProfileRendaTotal" class="form-control client-calculated" readonly></label>
+                  <label><span>Parcela Ideal</span><input id="clientProfileParcelaIdeal" class="form-control" inputmode="decimal"></label>
+                  <label><span>Parcela Limite</span><input id="clientProfileParcelaLimite" class="form-control" inputmode="decimal"></label>
+                </div>
+              </form>
+            </div>
+
+            <aside class="content-card client-profile-side">
+              <h2>Resumo do Perfil</h2>
+              <div id="clientProfileSummary" class="client-profile-summary"></div>
+              <button id="advanceClientProfileBtn" class="btn btn-primary w-100" type="button">Avancar para Administradoras</button>
+            </aside>
           </div>
         </section>
 
@@ -1326,6 +1423,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260605-15"></script>
+    <script src="/static/js/app.js?v=20260605-16"></script>
   </body>
 </html>

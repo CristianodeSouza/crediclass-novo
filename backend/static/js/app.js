@@ -5,32 +5,38 @@ const screens = {
     subtitle: "Lista e manutencao da base de grupos",
     action: "Novo Grupo",
   },
+  perfil: {
+    letter: "B) PERFIL DO CLIENTE",
+    title: "Perfil do Cliente",
+    subtitle: "Entrevista, capacidade financeira e necessidade de credito",
+    action: "Salvar Perfil",
+  },
   viabilidade: {
-    letter: "C) VIABILIDADE GRUPOS",
+    letter: "D) VIABILIDADE GRUPOS",
     title: "Viabilidade Grupos",
     subtitle: "Selecao de grupos apos administradoras elegiveis",
     action: "Analisar Viabilidade",
   },
   administradoras: {
-    letter: "B) VIABILIDADE ADMINISTRADORAS",
+    letter: "C) VIABILIDADE ADMINISTRADORAS",
     title: "Viabilidade Administradoras",
     subtitle: "Analise anterior obrigatoria por administradora",
     action: "Recalcular Viabilidade",
   },
   estudo: {
-    letter: "D) ESTUDO FINANCEIRO",
+    letter: "E) ESTUDO FINANCEIRO",
     title: "Estudo Financeiro",
     subtitle: "Geracao do estudo financeiro detalhado",
     action: "Salvar Estudo",
   },
   historico: {
-    letter: "E) HISTORICO DE ESTUDOS",
+    letter: "F) HISTORICO DE ESTUDOS",
     title: "Historico de Estudos",
     subtitle: "Consulta e gestao dos estudos financeiros gerados",
     action: "Buscar Estudos",
   },
   configuracoes: {
-    letter: "F) CONFIGURACOES",
+    letter: "G) CONFIGURACOES",
     title: "Configuracoes",
     subtitle: "Configuracoes do sistema e preferencias",
     action: "Salvar Configuracoes",
@@ -63,6 +69,7 @@ const configState = {
 
 const operationalLogs = [];
 const HISTORY_START_MONTH = "2024-01";
+const CLIENT_PROFILE_STORAGE_KEY = "crediclass.clientProfile.v1";
 const studyOperatorFields = [
   ["observacoes_comerciais", "Observacoes comerciais", "studyFieldObservacoes"],
   ["comentario_cliente", "Comentario para o cliente", "studyFieldComentario"],
@@ -978,6 +985,148 @@ function updateAdministratorTotals() {
   document.getElementById("administratorTotalDisponivel").value = formatMoney(lance + fgts);
   document.getElementById("administratorRendaTotal").value = formatMoney(renda);
   return { fgts, lance, renda };
+}
+
+function clientProfileConcept(months) {
+  const prazo = Number(months || 0);
+  if (prazo <= 3) return "Agressivo";
+  if (prazo <= 6) return "Moderado";
+  if (prazo <= 12) return "Conservador";
+  if (prazo <= 24) return "Super Conservador";
+  return "Investidor";
+}
+
+function updateClientProfileTotals() {
+  const fgts = toNumber(document.getElementById("clientProfileFgtsTitular").value) + toNumber(document.getElementById("clientProfileFgtsConjuge").value);
+  const lance = toNumber(document.getElementById("clientProfileLanceProprio").value);
+  const renda = toNumber(document.getElementById("clientProfileRendaTitular").value) + toNumber(document.getElementById("clientProfileRendaConjuge").value);
+  const conceito = clientProfileConcept(document.getElementById("clientProfilePrazo").value);
+  document.getElementById("clientProfileFgtsTotal").value = formatMoney(fgts);
+  document.getElementById("clientProfileTotalDisponivel").value = formatMoney(lance + fgts);
+  document.getElementById("clientProfileRendaTotal").value = formatMoney(renda);
+  document.getElementById("clientProfileConceito").value = conceito;
+  renderClientProfileSummary({ fgts, lance, renda, conceito });
+  return { fgts, lance, renda, conceito };
+}
+
+function collectClientProfile() {
+  const totals = updateClientProfileTotals();
+  return {
+    nome: document.getElementById("clientProfileNome").value.trim(),
+    nome_conjuge: document.getElementById("clientProfileConjuge").value.trim(),
+    credito_desejado: toNumber(document.getElementById("clientProfileCredito").value),
+    prazo_desejado: Number(document.getElementById("clientProfilePrazo").value),
+    conceito_ia: totals.conceito,
+    lance_proprio: toNumber(document.getElementById("clientProfileLanceProprio").value),
+    fgts_titular: toNumber(document.getElementById("clientProfileFgtsTitular").value),
+    fgts_conjuge: toNumber(document.getElementById("clientProfileFgtsConjuge").value),
+    fgts: totals.fgts,
+    renda_titular: toNumber(document.getElementById("clientProfileRendaTitular").value),
+    renda_conjuge: toNumber(document.getElementById("clientProfileRendaConjuge").value),
+    renda_total: totals.renda,
+    parcela_ideal: toNumber(document.getElementById("clientProfileParcelaIdeal").value),
+    parcela_limite: toNumber(document.getElementById("clientProfileParcelaLimite").value),
+    parcela_desejada: toNumber(document.getElementById("clientProfileParcelaIdeal").value),
+    data_nascimento: document.getElementById("clientProfileNascimento").value,
+    data_nascimento_conjuge: document.getElementById("clientProfileNascimentoConjuge").value,
+    objetivo: document.getElementById("clientProfileObjetivo").value,
+    tipo_bem: document.getElementById("clientProfileTipoBem").value,
+    estado_bem: document.getElementById("clientProfileEstadoBem").value,
+  };
+}
+
+function renderClientProfileSummary(totals = null) {
+  const current = totals || updateClientProfileTotals();
+  document.getElementById("clientProfileSummary").innerHTML = [
+    ["Conceito IA", current.conceito],
+    ["Credito desejado", formatMoney(toNumber(document.getElementById("clientProfileCredito").value))],
+    ["Recursos proprios", formatMoney(current.lance)],
+    ["FGTS total", formatMoney(current.fgts)],
+    ["Renda total", formatMoney(current.renda)],
+    ["Parcela ideal", formatMoney(toNumber(document.getElementById("clientProfileParcelaIdeal").value))],
+    ["Parcela limite", formatMoney(toNumber(document.getElementById("clientProfileParcelaLimite").value))],
+  ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
+}
+
+function applyClientProfileToFlow(profile) {
+  const pairs = [
+    ["Credito", "credito_desejado"],
+    ["LanceProprio", "lance_proprio"],
+    ["FgtsTitular", "fgts_titular"],
+    ["FgtsConjuge", "fgts_conjuge"],
+    ["RendaTitular", "renda_titular"],
+    ["RendaConjuge", "renda_conjuge"],
+    ["ParcelaIdeal", "parcela_ideal"],
+    ["ParcelaLimite", "parcela_limite"],
+    ["Nascimento", "data_nascimento"],
+    ["NascimentoConjuge", "data_nascimento_conjuge"],
+    ["PrazoDesejado", "prazo_desejado"],
+    ["Objetivo", "objetivo"],
+    ["EstadoBem", "estado_bem"],
+  ];
+  pairs.forEach(([suffix, key]) => {
+    const adminTarget = document.getElementById(`administrator${suffix}`);
+    const viabilityTarget = document.getElementById(`viability${suffix === "ParcelaIdeal" ? "Parcela" : suffix}`);
+    if (adminTarget) adminTarget.value = profile[key] ?? "";
+    if (viabilityTarget) viabilityTarget.value = profile[key] ?? "";
+  });
+  const adminTipo = document.getElementById("administratorTipoBem");
+  const viabilityTipo = document.getElementById("viabilityTipoBem");
+  if (adminTipo) adminTipo.value = profile.tipo_bem || "Imovel";
+  if (viabilityTipo) viabilityTipo.value = profile.tipo_bem || "Imovel";
+  updateAdministratorTotals();
+  updateViabilityTotals();
+}
+
+function saveClientProfile({ silent = false } = {}) {
+  const profile = collectClientProfile();
+  window.localStorage.setItem(CLIENT_PROFILE_STORAGE_KEY, JSON.stringify(profile));
+  applyClientProfileToFlow(profile);
+  if (!silent) showToast("Perfil do cliente salvo.", "success");
+  return profile;
+}
+
+function loadClientProfile() {
+  let profile = null;
+  try {
+    profile = JSON.parse(window.localStorage.getItem(CLIENT_PROFILE_STORAGE_KEY) || "null");
+  } catch {
+    profile = null;
+  }
+  if (!profile) {
+    updateClientProfileTotals();
+    return;
+  }
+  setInputValue("clientProfileNome", profile.nome);
+  setInputValue("clientProfileConjuge", profile.nome_conjuge);
+  setInputValue("clientProfileCredito", profile.credito_desejado || "");
+  setInputValue("clientProfilePrazo", profile.prazo_desejado || 3);
+  setInputValue("clientProfileLanceProprio", profile.lance_proprio || "");
+  setInputValue("clientProfileFgtsTitular", profile.fgts_titular || "");
+  setInputValue("clientProfileFgtsConjuge", profile.fgts_conjuge || "");
+  setInputValue("clientProfileRendaTitular", profile.renda_titular || "");
+  setInputValue("clientProfileRendaConjuge", profile.renda_conjuge || "");
+  setInputValue("clientProfileParcelaIdeal", profile.parcela_ideal || profile.parcela_desejada || "");
+  setInputValue("clientProfileParcelaLimite", profile.parcela_limite || "");
+  setInputValue("clientProfileNascimento", profile.data_nascimento);
+  setInputValue("clientProfileNascimentoConjuge", profile.data_nascimento_conjuge);
+  setInputValue("clientProfileObjetivo", profile.objetivo || "Aquisicao de Imovel");
+  setInputValue("clientProfileTipoBem", profile.tipo_bem || "Imovel");
+  setInputValue("clientProfileEstadoBem", profile.estado_bem || "Pronto");
+  updateClientProfileTotals();
+  applyClientProfileToFlow(collectClientProfile());
+}
+
+function resetClientProfile() {
+  document.getElementById("clientProfileForm").reset();
+  window.localStorage.removeItem(CLIENT_PROFILE_STORAGE_KEY);
+  updateClientProfileTotals();
+  showToast("Perfil do cliente limpo.", "success");
+}
+
+function advanceClientProfile() {
+  saveClientProfile({ silent: true });
+  activateScreen("administradoras");
 }
 
 function setAdministratorState(state) {
@@ -2343,6 +2492,10 @@ document.querySelectorAll(".nav-item").forEach((item) => {
 });
 
 document.getElementById("primaryAction").addEventListener("click", () => {
+  if (document.getElementById("screen-perfil").classList.contains("active")) {
+    saveClientProfile();
+    return;
+  }
   if (document.getElementById("screen-administradoras").classList.contains("active")) {
     analyzeAdministrators();
     return;
@@ -2402,6 +2555,27 @@ document.getElementById("pageSizeSelect").addEventListener("change", (event) => 
 });
 
 document.getElementById("exportGroupsCsvBtn").addEventListener("click", exportGroupsCsv);
+
+[
+  "clientProfileCredito",
+  "clientProfileLanceProprio",
+  "clientProfileFgtsTitular",
+  "clientProfileFgtsConjuge",
+  "clientProfileRendaTitular",
+  "clientProfileRendaConjuge",
+  "clientProfileParcelaIdeal",
+  "clientProfileParcelaLimite",
+].forEach((id) => {
+  document.getElementById(id).addEventListener("input", updateClientProfileTotals);
+});
+
+["clientProfilePrazo", "clientProfileObjetivo", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
+  document.getElementById(id).addEventListener("change", updateClientProfileTotals);
+});
+
+document.getElementById("saveClientProfileBtn").addEventListener("click", () => saveClientProfile());
+document.getElementById("clearClientProfileBtn").addEventListener("click", resetClientProfile);
+document.getElementById("advanceClientProfileBtn").addEventListener("click", advanceClientProfile);
 
 document.getElementById("prevPageBtn").addEventListener("click", () => {
   if (mapState.page > 1) {
@@ -2696,6 +2870,7 @@ loadHealth().catch(() => {
 });
 
 loadMapaGrupos();
+loadClientProfile();
 updateViabilityTotals();
 updateAdministratorTotals();
 openSharedStudyFromUrl().catch(() => showToast("Nao foi possivel abrir o estudo compartilhado.", "danger"));

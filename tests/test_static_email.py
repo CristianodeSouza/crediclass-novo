@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-15", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-16", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -46,6 +46,21 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('apiPost("/viabilidade/administradoras"', app_js)
         self.assertIn("function exportAdministratorsCsv()", app_js)
         self.assertIn("function syncAdministratorInterviewToGroups()", app_js)
+
+    def test_tela_perfil_cliente_existe_apos_mapa(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+
+        self.assertLess(index_html.index('data-screen="mapa"'), index_html.index('data-screen="perfil"'))
+        self.assertIn('id="screen-perfil"', index_html)
+        self.assertIn("Perfil do Cliente", index_html)
+        self.assertIn("clientProfileCredito", index_html)
+        self.assertIn("clientProfileTotalDisponivel", index_html)
+        self.assertIn("clientProfileConceito", index_html)
+        self.assertIn("function saveClientProfile", app_js)
+        self.assertIn("function applyClientProfileToFlow", app_js)
+        self.assertIn(".client-profile-layout", style_css)
 
     def test_configuracoes_possui_planos_administradoras(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -320,7 +335,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260605-10", index_html)
+        self.assertIn("/static/css/style.css?v=20260605-11", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

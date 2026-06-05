@@ -302,6 +302,101 @@ body[data-theme="escuro"] .btn-outline-secondary {
   justify-content: flex-end;
 }
 
+.client-profile-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 16px;
+  align-items: start;
+}
+
+.client-profile-card {
+  margin-bottom: 0;
+}
+
+.client-profile-form {
+  display: grid;
+  gap: 16px;
+}
+
+.client-profile-section {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(150px, 1fr));
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.client-profile-section h3 {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.client-profile-section label {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.client-profile-section .form-control,
+.client-profile-section .form-select {
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.client-calculated {
+  color: var(--primary);
+  font-weight: 800;
+  background: #f8fbff;
+}
+
+.client-success {
+  color: #15803d;
+}
+
+.client-profile-side {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.client-profile-side h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.client-profile-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.client-profile-summary div {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.client-profile-summary span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.client-profile-summary strong {
+  font-size: 0.94rem;
+}
+
 .table-toolbar,
 .pagination-row {
   display: flex;
@@ -1550,6 +1645,18 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 @media (max-width: 1500px) {
+  .client-profile-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .client-profile-side {
+    position: static;
+  }
+
+  .client-profile-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
   .administrator-summary-form {
     grid-template-columns: repeat(5, minmax(120px, 1fr));
   }
@@ -1573,6 +1680,14 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 @media (max-width: 1320px) {
+  .client-profile-section {
+    grid-template-columns: repeat(3, minmax(150px, 1fr));
+  }
+
+  .client-profile-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .flow-stepper {
     overflow-x: auto;
     grid-template-columns: repeat(5, minmax(210px, 1fr));
@@ -1761,6 +1876,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
   .summary-grid,
   .filter-grid,
+  .client-profile-layout,
+  .client-profile-section,
+  .client-profile-summary,
   .viability-layout,
   .viability-form,
   .administrator-summary-form,
