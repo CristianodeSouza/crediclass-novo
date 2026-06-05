@@ -289,6 +289,36 @@ function exportStudiesCsv() {
   showToast("CSV de estudos gerado.", "success");
 }
 
+function exportAdministratorsCsv() {
+  const items = administratorState.lastResult?.items || [];
+  if (!items.length) {
+    showToast("Execute a viabilidade de administradoras antes de exportar.", "warning");
+    return;
+  }
+  const rows = [
+    ["Administradora", "Seguro Obrigatorio", "Idade Maxima", "Lance Embutido (%)", "Credito a Contratar", "Lance Embutido", "Lance Proprio", "FGTS", "Lance Total", "Lance Maximo (%)", "Taxa ADM (%)", "Fundo Reserva (%)", "Prazo Minimo", "Elegivel", "Alertas"],
+    ...items.map((item) => [
+      item.administradora,
+      item.seguro_obrigatorio ? "Sim" : "Nao",
+      item.idade_maxima || "",
+      formatPercent(item.percentual_lance_embutido),
+      formatMoney(item.credito_a_contratar),
+      formatMoney(item.lance_embutido_valor),
+      formatMoney(item.lance_proprio),
+      formatMoney(item.fgts_utilizado),
+      formatMoney(item.lance_total),
+      formatPercent(item.lance_maximo_percentual),
+      formatPercent(item.taxa_adm),
+      formatPercent(item.fundo_reserva),
+      Number(item.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 }),
+      item.elegivel ? "Sim" : "Nao",
+      (item.alertas || []).join(", "),
+    ]),
+  ];
+  downloadCsv(`crediclass-viabilidade-administradoras-${new Date().toISOString().slice(0, 10)}.csv`, rows);
+  showToast("Analise de administradoras exportada.", "success");
+}
+
 function parseNumberInput(value) {
   const text = String(value || "").trim();
   if (!text) return "";
@@ -1018,10 +1048,15 @@ function renderAdministratorScreen(items = []) {
       if (orderBy === "lance_maximo_percentual") return (b.lance_maximo_percentual || 0) - (a.lance_maximo_percentual || 0);
       return (a[orderBy] || 0) - (b[orderBy] || 0);
     });
-  document.getElementById("administratorScreenSubtitle").textContent = `${items.filter((item) => item.elegivel).length} elegivel(is) de ${items.length} administradora(s) analisada(s)`;
+  const eligibleCount = items.filter((item) => item.elegivel).length;
+  document.getElementById("administratorScreenSubtitle").textContent = `${eligibleCount} elegivel(is) de ${items.length} administradora(s) analisada(s)`;
+  document.getElementById("administratorFoundCount").textContent = `${visibleItems.length} administradora(s) encontrada(s)`;
   document.getElementById("administratorScreenBody").innerHTML = visibleItems.map((item) => `
     <tr>
       <td>${escapeHtml(item.administradora)}</td>
+      <td>${item.seguro_obrigatorio ? "Sim" : "Nao"}</td>
+      <td>${item.idade_maxima ? `${item.idade_maxima} anos` : "-"}</td>
+      <td>${formatPercent(item.percentual_lance_embutido)}</td>
       <td>${formatMoney(item.credito_a_contratar)}</td>
       <td>${formatMoney(item.lance_embutido_valor)}</td>
       <td>${formatMoney(item.lance_proprio)}</td>
@@ -1032,8 +1067,45 @@ function renderAdministratorScreen(items = []) {
       <td>${formatPercent(item.fundo_reserva)}</td>
       <td>${Number(item.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</td>
       <td><span class="status-badge ${item.elegivel ? "" : "inactive"}">${item.elegivel ? "Sim" : "Nao"}</span></td>
+      <td><button class="btn btn-outline-primary btn-sm" type="button" data-admin-action="detalhes" data-admin-name="${escapeHtml(item.administradora)}">Ver Detalhes</button></td>
     </tr>
   `).join("");
+}
+
+function showAdministratorDetails(administradora) {
+  const item = (administratorState.lastResult?.items || []).find((candidate) => candidate.administradora === administradora);
+  if (!item) {
+    showToast("Detalhes da administradora indisponiveis.", "warning");
+    return;
+  }
+  const alerts = (item.alertas || []).length ? item.alertas.join(", ") : "sem alertas";
+  showToast(`${item.administradora}: ${item.elegivel ? "elegivel" : "nao elegivel"}; ${alerts}.`, item.elegivel ? "success" : "warning");
+}
+
+function syncAdministratorInterviewToGroups() {
+  const pairs = [
+    ["administratorObjetivo", "viabilityObjetivo"],
+    ["administratorPrazoDesejado", "viabilityPrazoDesejado"],
+    ["administratorTipoBem", "viabilityTipoBem"],
+    ["administratorCredito", "viabilityCredito"],
+    ["administratorLanceProprio", "viabilityLanceProprio"],
+    ["administratorFgtsTitular", "viabilityFgtsTitular"],
+    ["administratorFgtsConjuge", "viabilityFgtsConjuge"],
+    ["administratorRendaTitular", "viabilityRendaTitular"],
+    ["administratorRendaConjuge", "viabilityRendaConjuge"],
+    ["administratorParcelaIdeal", "viabilityParcela"],
+    ["administratorParcelaLimite", "viabilityParcelaLimite"],
+    ["administratorNascimento", "viabilityNascimento"],
+    ["administratorNascimentoConjuge", "viabilityNascimentoConjuge"],
+    ["administratorEstadoBem", "viabilityEstadoBem"],
+  ];
+  pairs.forEach(([sourceId, targetId]) => {
+    const source = document.getElementById(sourceId);
+    const target = document.getElementById(targetId);
+    if (source && target) target.value = source.value;
+  });
+  updateViabilityTotals();
+  activateScreen("viabilidade");
 }
 
 async function analyzeAdministrators() {
@@ -1057,6 +1129,7 @@ function resetAdministratorForm() {
   updateAdministratorTotals();
   document.getElementById("administratorScreenBody").innerHTML = "";
   document.getElementById("administratorScreenSubtitle").textContent = "Aguardando analise";
+  document.getElementById("administratorFoundCount").textContent = "0 administradoras encontradas";
   setAdministratorState("empty");
 }
 
@@ -2303,6 +2376,17 @@ document.getElementById("administratorInterviewForm").addEventListener("submit",
 });
 
 document.getElementById("clearAdministratorBtn").addEventListener("click", resetAdministratorForm);
+document.getElementById("administratorFilterSubmitBtn").addEventListener("click", analyzeAdministrators);
+document.getElementById("exportAdministratorsCsvBtn").addEventListener("click", exportAdministratorsCsv);
+document.getElementById("advanceToGroupsBtn").addEventListener("click", syncAdministratorInterviewToGroups);
+document.getElementById("focusAdministratorInterviewBtn").addEventListener("click", () => {
+  document.getElementById("administratorCredito").focus();
+});
+document.getElementById("administratorScreenBody").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-admin-action]");
+  if (!button) return;
+  showAdministratorDetails(button.dataset.adminName);
+});
 
 document.getElementById("viabilityForm").addEventListener("submit", (event) => {
   event.preventDefault();

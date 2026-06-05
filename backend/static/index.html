@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="/static/favicon.svg?v=1" rel="icon" type="image/svg+xml">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260605-08" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260605-09" rel="stylesheet">
   </head>
   <body>
     <div class="app-shell">
@@ -197,25 +197,33 @@
         </section>
 
         <section id="screen-administradoras" class="screen-panel">
-          <div class="content-card">
+          <div class="flow-stepper" aria-label="Etapas da viabilidade">
+            <span class="flow-step flow-step-done"><strong>1</strong>Entrevista do Cliente</span>
+            <span class="flow-step flow-step-active"><strong>2</strong>Viabilidade Administradoras</span>
+            <span class="flow-step"><strong>3</strong>Viabilidade Grupos</span>
+            <span class="flow-step"><strong>4</strong>Estrategias</span>
+            <span class="flow-step"><strong>5</strong>Estudo Financeiro</span>
+          </div>
+
+          <div class="content-card administrator-summary-card">
             <div class="table-toolbar">
               <div>
-                <h2>Entrevista do Cliente</h2>
-                <p>Dados obrigatorios para calcular a viabilidade das administradoras</p>
+                <h2>Resumo do Cliente</h2>
+                <p>Base da entrevista usada para calcular a viabilidade das administradoras</p>
               </div>
+              <button id="focusAdministratorInterviewBtn" class="btn btn-outline-primary" type="button">Editar Entrevista</button>
             </div>
-            <form id="administratorInterviewForm" class="viability-form">
-              <label><span>Credito Desejado</span><input id="administratorCredito" class="form-control" inputmode="decimal" required></label>
-              <label><span>Lance Proprio Disponivel</span><input id="administratorLanceProprio" class="form-control" inputmode="decimal" required></label>
-              <label><span>FGTS Titular</span><input id="administratorFgtsTitular" class="form-control" inputmode="decimal"></label>
-              <label><span>FGTS Conjuge</span><input id="administratorFgtsConjuge" class="form-control" inputmode="decimal"></label>
-              <label><span>Total FGTS</span><input id="administratorFgtsTotal" class="form-control" readonly></label>
-              <label><span>Total Disponivel</span><input id="administratorTotalDisponivel" class="form-control" readonly></label>
+            <form id="administratorInterviewForm" class="viability-form administrator-summary-form">
+              <label><span>Credito Desejado Liquido</span><input id="administratorCredito" class="form-control summary-input-primary" inputmode="decimal" required></label>
+              <label><span>Recursos Proprios</span><input id="administratorLanceProprio" class="form-control summary-input-success" inputmode="decimal" required></label>
+              <label><span>FGTS Titular</span><input id="administratorFgtsTitular" class="form-control summary-input-primary" inputmode="decimal"></label>
+              <label><span>FGTS Conjuge</span><input id="administratorFgtsConjuge" class="form-control summary-input-primary" inputmode="decimal"></label>
+              <label><span>Total Disponivel Cliente + FGTS</span><input id="administratorTotalDisponivel" class="form-control summary-input-success" readonly></label>
               <label><span>Renda Titular</span><input id="administratorRendaTitular" class="form-control" inputmode="decimal" required></label>
               <label><span>Renda Conjuge</span><input id="administratorRendaConjuge" class="form-control" inputmode="decimal"></label>
-              <label><span>Renda Total</span><input id="administratorRendaTotal" class="form-control" readonly></label>
-              <label><span>Parcela Ideal</span><input id="administratorParcelaIdeal" class="form-control" inputmode="decimal" required></label>
-              <label><span>Parcela Limite</span><input id="administratorParcelaLimite" class="form-control" inputmode="decimal" required></label>
+              <label><span>Renda Total</span><input id="administratorRendaTotal" class="form-control summary-input-primary" readonly></label>
+              <label><span>Parcela Ideal</span><input id="administratorParcelaIdeal" class="form-control summary-input-primary" inputmode="decimal" required></label>
+              <label><span>Parcela Limite</span><input id="administratorParcelaLimite" class="form-control summary-input-primary" inputmode="decimal" required></label>
               <label>
                 <span>Prazo Desejado</span>
                 <select id="administratorPrazoDesejado" class="form-select" required>
@@ -226,8 +234,6 @@
                   <option value="36">Sem urgencia</option>
                 </select>
               </label>
-              <label><span>Data Nascimento Titular</span><input id="administratorNascimento" class="form-control" type="date" required></label>
-              <label><span>Data Nascimento Conjuge</span><input id="administratorNascimentoConjuge" class="form-control" type="date"></label>
               <label>
                 <span>Objetivo do Credito</span>
                 <select id="administratorObjetivo" class="form-select" required>
@@ -238,6 +244,9 @@
                   <option value="Investimento">Investimento</option>
                 </select>
               </label>
+              <label><span>Total FGTS</span><input id="administratorFgtsTotal" class="form-control" readonly></label>
+              <label><span>Data Nascimento Titular</span><input id="administratorNascimento" class="form-control" type="date" required></label>
+              <label><span>Data Nascimento Conjuge</span><input id="administratorNascimentoConjuge" class="form-control" type="date"></label>
               <label>
                 <span>Estado do Bem</span>
                 <select id="administratorEstadoBem" class="form-select">
@@ -248,14 +257,14 @@
                   <option value="Indefinido">Indefinido</option>
                 </select>
               </label>
-              <div class="form-actions">
+              <div class="form-actions administrator-inline-actions">
                 <button id="clearAdministratorBtn" class="btn btn-outline-secondary" type="button">Limpar Entrevista</button>
                 <button id="analyzeAdministratorsBtn" class="btn btn-primary" type="submit">Recalcular Viabilidade</button>
               </div>
             </form>
           </div>
 
-          <div class="content-card">
+          <div class="content-card administrator-filter-card">
             <div class="table-toolbar">
               <div>
                 <h2>Filtros e Opcoes</h2>
@@ -302,6 +311,9 @@
                   <option value="lance_maximo_percentual">Maior lance maximo</option>
                 </select>
               </label>
+              <div class="administrator-filter-action">
+                <button id="administratorFilterSubmitBtn" class="btn btn-primary" type="button">Recalcular Viabilidade</button>
+              </div>
             </div>
           </div>
 
@@ -321,20 +333,40 @@
                 <thead>
                   <tr>
                     <th>Administradora</th>
-                    <th>Credito a contratar</th>
+                    <th>Seguro Obrigatorio</th>
+                    <th>Idade Maxima</th>
+                    <th>Lance Embutido (%)</th>
+                    <th>Credito a Contratar (f)</th>
                     <th>Lance embutido</th>
                     <th>Lance proprio</th>
                     <th>FGTS</th>
                     <th>Lance total</th>
-                    <th>Lance maximo</th>
+                    <th>Lance maximo (g)</th>
                     <th>Taxa ADM</th>
                     <th>Fundo reserva</th>
-                    <th>Prazo minimo</th>
+                    <th>Prazo minimo (h)</th>
                     <th>Elegivel</th>
+                    <th>Acoes</th>
                   </tr>
                 </thead>
                 <tbody id="administratorScreenBody"></tbody>
               </table>
+            </div>
+            <div class="administrator-table-note">
+              <span>Valores de credito, lance e prazo podem variar de acordo com a taxa de administracao e fundo de reserva de cada administradora.</span>
+              <strong id="administratorFoundCount">0 administradoras encontradas</strong>
+            </div>
+            <div class="administrator-results-footer">
+              <div class="administrator-legend">
+                <strong>Legenda:</strong>
+                <span>(f) Credito a ser contratado para utilizacao do lance embutido</span>
+                <span>(g) Percentual de lance maximo que o cliente consegue ofertar</span>
+                <span>(h) Prazo minimo necessario para atender a parcela desejada</span>
+              </div>
+              <div class="administrator-footer-actions">
+                <button id="exportAdministratorsCsvBtn" class="btn btn-outline-primary" type="button">Exportar Analise</button>
+                <button id="advanceToGroupsBtn" class="btn btn-primary" type="button">Avancar para Grupos</button>
+              </div>
             </div>
           </div>
         </section>
@@ -1232,6 +1264,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260605-13"></script>
+    <script src="/static/js/app.js?v=20260605-14"></script>
   </body>
 </html>
