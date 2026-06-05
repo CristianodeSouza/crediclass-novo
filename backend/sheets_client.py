@@ -343,8 +343,6 @@ def create_grupo(payload: dict[str, Any]) -> dict[str, Any]:
     if not values:
         raise RuntimeError("Planilha sem cabecalhos")
     headers = [str(header).strip() for header in values[0]]
-    required = ["administradora", "grupo", "tipo_bem", "credito_minimo", "credito_maximo", "taxa_adm", "prazo_total"]
-    validate_required_headers(headers, required)
 
     row_payload = {**payload, "status": payload.get("status") or "Ativo"}
     row_values = payload_to_row_values(headers, row_payload)

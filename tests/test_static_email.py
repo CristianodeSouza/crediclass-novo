@@ -17,7 +17,17 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-41", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-01", index_html)
+
+    def test_formulario_grupo_nao_exige_campos_obrigatorios(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        group_form = index_html.split('id="groupCrudForm"', 1)[1].split("</form>", 1)[0]
+        self.assertNotIn(" required", group_form)
+        self.assertIn("Preencha somente os dados que deseja salvar", group_form)
+        self.assertNotIn("Preencha os campos obrigatorios do grupo.", app_js)
+        self.assertIn("function optionalNumber(value)", app_js)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")

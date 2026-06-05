@@ -274,6 +274,13 @@ function toNumber(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function optionalNumber(value) {
+  const normalized = parseNumberInput(value);
+  if (normalized === "") return null;
+  const parsed = Number(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function monthKeyToDate(monthKey) {
   const [year, month] = String(monthKey || "").split("-").map(Number);
   if (!year || !month) return null;
@@ -756,15 +763,15 @@ function findLoadedGroupSummary(groupId) {
 }
 
 function collectGroupFormPayload() {
-  const taxa = toNumber(document.getElementById("groupFormTaxaAdm").value);
+  const taxa = optionalNumber(document.getElementById("groupFormTaxaAdm").value);
   return {
     administradora: document.getElementById("groupFormAdministradora").value.trim(),
     grupo: document.getElementById("groupFormGrupo").value.trim(),
     tipo_bem: document.getElementById("groupFormTipoBem").value.trim(),
-    credito_minimo: toNumber(document.getElementById("groupFormCreditoMinimo").value),
-    credito_maximo: toNumber(document.getElementById("groupFormCreditoMaximo").value),
-    taxa_adm: taxa > 1 ? taxa / 100 : taxa,
-    prazo_total: Number(document.getElementById("groupFormPrazoTotal").value || 0),
+    credito_minimo: optionalNumber(document.getElementById("groupFormCreditoMinimo").value),
+    credito_maximo: optionalNumber(document.getElementById("groupFormCreditoMaximo").value),
+    taxa_adm: taxa !== null && taxa > 1 ? taxa / 100 : taxa,
+    prazo_total: optionalNumber(document.getElementById("groupFormPrazoTotal").value),
     status: document.getElementById("groupFormStatus").value,
   };
 }
@@ -821,10 +828,6 @@ async function saveGroupForm() {
     historyPayloads = collectHistoryBatchPayloads("groupFormHistory");
   } catch (error) {
     setGroupFormHistoryState("error", error.message || "Revise os valores do historico.");
-    return;
-  }
-  if (!payload.administradora || !payload.grupo || !payload.tipo_bem || !payload.credito_minimo || !payload.credito_maximo || !payload.prazo_total) {
-    showToast("Preencha os campos obrigatorios do grupo.", "warning");
     return;
   }
   let targetGroupId = payload.grupo;
