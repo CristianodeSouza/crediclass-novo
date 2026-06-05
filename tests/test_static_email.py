@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-05", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-06", index_html)
 
     def test_filtros_de_credito_validam_intervalo(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
@@ -151,6 +151,23 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('["Data nascimento conjuge", payload.data_nascimento_conjuge || "-"]', app_js)
         self.assertIn('["Data nascimento conjuge", cliente.data_nascimento_conjuge || "-"]', app_js)
 
+    def test_viabilidade_alinha_perfis_tipo_bem_e_lance_zero(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        for label in [
+            "1 a 3 meses - Super Agressivo",
+            "4 a 6 meses - Agressivo",
+            "7 a 12 meses - Moderado",
+            "13 a 24 meses - Conservador",
+        ]:
+            self.assertIn(label, index_html)
+        self.assertIn('id="viabilityTipoBem"', index_html)
+        self.assertIn('tipo_bem: document.getElementById("viabilityTipoBem").value', app_js)
+        self.assertNotIn('tipo_bem: "Imovel"', app_js)
+        self.assertIn('lanceInput === ""', app_js)
+        self.assertIn("payload.lance_proprio < 0", app_js)
+
     def test_estudo_financeiro_exibe_metricas_historico_12_meses(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
@@ -218,7 +235,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260605-02", index_html)
+        self.assertIn("/static/css/style.css?v=20260605-03", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

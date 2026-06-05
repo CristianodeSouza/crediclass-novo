@@ -3,109 +3,263 @@ from unittest.mock import patch
 
 from backend.main import viabilidade_analisar
 from backend.models import ViabilidadeRequest
-from backend.viabilidade import analyze_viabilidade, classify_profile
+from backend.viabilidade import (
+    analyze_viabilidade,
+    calculate_age,
+    classify_profile,
+    group_selo,
+    history_last_12_months,
+)
+
+
+def make_payload(**overrides):
+    values = {
+        "objetivo": "Aquisicao",
+        "credito_desejado": 500000,
+        "prazo_desejado": 12,
+        "lance_proprio": 100000,
+        "fgts": 50000,
+        "renda_total": 25000,
+        "parcela_desejada": 4500,
+        "data_nascimento": "1985-01-01",
+        "data_nascimento_conjuge": "1987-01-01",
+        "tipo_bem": "Imovel",
+        "estado_bem": "Pronto",
+    }
+    values.update(overrides)
+    return ViabilidadeRequest(**values)
+
+
+def make_group(**overrides):
+    values = {
+        "grupo_id": "128",
+        "administradora": "Itau",
+        "grupo": "128",
+        "tipo_bem": "Imovel",
+        "credito_minimo": 100000,
+        "credito_maximo": 1000000,
+        "taxa_adm": 0.2,
+        "fundo_reserva": 0.03,
+        "prazo_total": 222,
+        "prazo_restante": 180,
+        "lance_embutido": True,
+        "percentual_lance_embutido": 0.3,
+        "fgts": True,
+        "moderado": 0.25,
+        "status": "Ativo",
+        "historico": {
+            "2026-01": {
+                "maior_lance": 0.32,
+                "menor_lance": 0.24,
+                "qtd_contemplacoes": 5,
+            }
+        },
+    }
+    values.update(overrides)
+    return values
 
 
 class ViabilidadeTest(unittest.TestCase):
-    def test_classify_profile_by_prazo(self):
-        self.assertEqual(classify_profile(3)[0], "Super Agressivo")
-        self.assertEqual(classify_profile(6)[0], "Agressivo")
-        self.assertEqual(classify_profile(12)[0], "Moderado")
-        self.assertEqual(classify_profile(24)[0], "Conservador")
-        self.assertEqual(classify_profile(36)[0], "Investidor")
+    def test_classify_profile_all_intervals(self):
+        expected = {
+            1: "Super Agressivo",
+            3: "Super Agressivo",
+            4: "Agressivo",
+            6: "Agressivo",
+            7: "Moderado",
+            12: "Moderado",
+            13: "Conservador",
+            24: "Conservador",
+            25: "Investidor",
+        }
+        for months, profile in expected.items():
+            with self.subTest(months=months):
+                self.assertEqual(classify_profile(months)[0], profile)
 
-    def test_analyze_filters_and_orders_groups(self):
-        payload = ViabilidadeRequest(
-            objetivo="Aquisicao de Imovel",
-            credito_desejado=500000,
-            prazo_desejado=12,
-            lance_proprio=100000,
-            fgts=50000,
-            renda_total=25000,
-            parcela_desejada=4500,
-            data_nascimento="1985-01-01",
-        )
+    def test_history_uses_only_latest_12_valid_months(self):
+        history = {
+            f"2025-{month:02d}": {
+                "maior_lance": month / 100,
+                "menor_lance": month / 200,
+                "qtd_contemplacoes": month,
+            }
+            for month in range(1, 13)
+        }
+        history["2024-12"] = {
+            "maior_lance": 0.99,
+            "menor_lance": 0.99,
+            "qtd_contemplacoes": 999,
+        }
+        history["invalido"] = {"maior_lance": 1, "menor_lance": 1, "qtd_contemplacoes": 1}
+
+        result = history_last_12_months(history)
+
+        self.assertAlmostEqual(result["media_maior_lance"], 0.065)
+        self.assertAlmostEqual(result["media_menor_lance"], 0.0325)
+        self.assertEqual(result["media_qtd_contemplacoes"], 6.5)
+        self.assertEqual(result["total_contemplacoes"], 78)
+
+    def test_filters_inactive_credit_above_maximum_and_wrong_type(self):
         groups = [
-            {
-                "grupo_id": "ITAU-128-IMOVEL",
-                "administradora": "Itau",
-                "grupo": "128",
-                "tipo_bem": "Imovel",
-                "credito_maximo": 1000000,
-                "taxa_adm": 0.2,
-                "fundo_reserva": 0.03,
-                "prazo_total": 222,
-                "prazo_restante": 180,
-                "percentual_lance_embutido": 0.3,
-                "moderado": 0.25,
-                "status": "Ativo",
-                "historico": {"2026-01": {"menor_lance": 0.24, "qtd_contemplacoes": 5}},
-            },
-            {
-                "grupo_id": "AUTO-001",
-                "administradora": "Auto",
-                "grupo": "001",
-                "tipo_bem": "Auto",
-                "credito_maximo": 900000,
-                "prazo_total": 100,
-                "prazo_restante": 100,
-                "status": "Ativo",
-                "historico": {},
-            },
-            {
-                "grupo_id": "OLD-001-IMOVEL",
-                "administradora": "Old",
-                "grupo": "001",
-                "tipo_bem": "Imovel",
-                "credito_maximo": 900000,
-                "prazo_total": 100,
-                "prazo_restante": 0,
-                "status": "Ativo",
-                "historico": {},
-            },
+            make_group(grupo_id="inactive", status="Inativo"),
+            make_group(grupo_id="low-max", credito_maximo=400000),
+            make_group(grupo_id="vehicle", tipo_bem="Veiculo"),
         ]
 
-        result = analyze_viabilidade(payload, groups)
+        result = analyze_viabilidade(make_payload(), groups)
+
+        self.assertEqual(result["total_grupos_encontrados"], 0)
+        self.assertFalse(result["cenario_viavel"])
+
+    def test_credit_below_minimum_scores_zero_and_is_not_approved(self):
+        result = analyze_viabilidade(
+            make_payload(credito_desejado=500000),
+            [make_group(credito_minimo=600000)],
+        )
 
         self.assertEqual(result["total_grupos_encontrados"], 1)
-        self.assertEqual(result["perfil"], "Moderado")
-        self.assertEqual(result["melhores_grupos"][0]["grupo_id"], "ITAU-128-IMOVEL")
-        self.assertEqual(result["melhores_grupos"][0]["ranking"], 1)
-        self.assertTrue(result["checklist"]["cenario_viavel"])
+        self.assertEqual(result["total_grupos_compativeis"], 0)
+        self.assertIn("Credito fora da faixa do grupo", result["melhores_grupos"][0]["motivos"])
+
+    def test_credit_inside_range_is_approved_when_other_rules_pass(self):
+        result = analyze_viabilidade(make_payload(), [make_group()])
+
+        self.assertTrue(result["cenario_viavel"])
+        self.assertEqual(result["total_grupos_compativeis"], 1)
+
+    def test_fgts_is_used_only_when_group_allows_it(self):
+        allowed = analyze_viabilidade(make_payload(), [make_group(fgts=True)])
+        blocked = analyze_viabilidade(make_payload(), [make_group(fgts=False)])
+
+        self.assertEqual(allowed["melhores_grupos"][0]["fgts_utilizado"], 50000)
+        self.assertEqual(blocked["melhores_grupos"][0]["fgts_utilizado"], 0)
+        self.assertFalse(blocked["checklist"]["fgts_permitido"])
+        self.assertIn("fgts_nao_permitido", blocked["melhores_grupos"][0]["alertas"])
+
+    def test_embedded_bid_is_used_only_when_group_allows_it(self):
+        allowed = analyze_viabilidade(make_payload(), [make_group(lance_embutido=True)])
+        blocked = analyze_viabilidade(make_payload(), [make_group(lance_embutido=False)])
+
+        self.assertAlmostEqual(allowed["melhores_grupos"][0]["credito_contratado"], 714285.71, places=2)
+        self.assertAlmostEqual(allowed["melhores_grupos"][0]["lance_embutido_utilizado"], 214285.71, places=2)
+        self.assertEqual(blocked["melhores_grupos"][0]["credito_contratado"], 500000)
+        self.assertEqual(blocked["melhores_grupos"][0]["lance_embutido_utilizado"], 0)
+
+    def test_lance_zero_is_accepted_but_can_make_scenario_unviable(self):
+        result = analyze_viabilidade(
+            make_payload(lance_proprio=0, fgts=0),
+            [make_group(lance_embutido=False, percentual_lance_embutido=0)],
+        )
+
+        self.assertEqual(result["melhores_grupos"][0]["lance_proprio_utilizado"], 0)
+        self.assertFalse(result["checklist"]["lance_compativel"])
+        self.assertFalse(result["cenario_viavel"])
+
+    def test_no_artificial_fifty_percent_is_added_to_available_bid(self):
+        result = analyze_viabilidade(
+            make_payload(lance_proprio=10000, fgts=0),
+            [make_group(lance_embutido=False, percentual_lance_embutido=0, moderado=0.2)],
+        )
+
+        self.assertEqual(result["lance_total_disponivel"], 10000)
+        self.assertFalse(result["checklist"]["lance_compativel"])
+
+    def test_group_without_bid_history_or_reference_gets_zero_bid_score_alert(self):
+        result = analyze_viabilidade(
+            make_payload(),
+            [
+                make_group(
+                    moderado=None,
+                    percentual_lance_fixo=None,
+                    historico={},
+                    lance_embutido=False,
+                )
+            ],
+        )
+
+        item = result["melhores_grupos"][0]
+        self.assertIn("historico_lance_insuficiente", item["alertas"])
+        self.assertFalse(result["checklist"]["lance_compativel"])
+        self.assertLess(item["afinidade"], 0.9)
+
+    def test_seals_cover_every_score_range(self):
+        cases = [
+            (100, "Excelente"),
+            (90, "Excelente"),
+            (89.9, "Muito Bom"),
+            (80, "Muito Bom"),
+            (79.9, "Bom"),
+            (70, "Bom"),
+            (69.9, "Regular"),
+            (60, "Regular"),
+            (59.9, "Baixa Compatibilidade"),
+            (0, "Baixa Compatibilidade"),
+        ]
+        for score, seal in cases:
+            with self.subTest(score=score):
+                self.assertEqual(group_selo(score), seal)
+
+    def test_age_calculates_holder_and_spouse_and_preserves_state(self):
+        result = analyze_viabilidade(make_payload(), [make_group()])
+
+        self.assertEqual(result["idade_titular"], calculate_age("1985-01-01"))
+        self.assertEqual(result["idade_conjuge"], calculate_age("1987-01-01"))
+        self.assertTrue(result["idade_validada"])
+        self.assertEqual(result["estado_bem"], "Pronto")
+
+    def test_missing_age_is_not_marked_compatible_automatically(self):
+        result = analyze_viabilidade(
+            make_payload(data_nascimento="", data_nascimento_conjuge=""),
+            [make_group()],
+        )
+
+        self.assertFalse(result["idade_validada"])
+        self.assertFalse(result["checklist"]["idade_compativel"])
+        self.assertEqual(result["idade_alerta"], "idade_nao_informada")
+
+    def test_group_age_limit_can_reject_scenario(self):
+        result = analyze_viabilidade(
+            make_payload(data_nascimento="1940-01-01", data_nascimento_conjuge=""),
+            [make_group(idade_maxima=70)],
+        )
+
+        self.assertFalse(result["cenario_viavel"])
+        self.assertFalse(result["checklist"]["idade_compativel"])
+        self.assertIn("idade_incompativel", result["melhores_grupos"][0]["alertas"])
+
+    def test_calculates_installment_and_contract_credit(self):
+        result = analyze_viabilidade(make_payload(), [make_group()])
+        item = result["melhores_grupos"][0]
+        expected_installment = (item["credito_contratado"] * 1.23) / 222
+
+        self.assertAlmostEqual(item["parcela_estimada"], expected_installment, places=2)
+        self.assertAlmostEqual(item["credito_disponivel"], 500000, places=2)
+
+    def test_vehicle_request_does_not_return_property_group(self):
+        result = analyze_viabilidade(
+            make_payload(tipo_bem="Veiculo", objetivo="Aquisicao"),
+            [make_group(tipo_bem="Imovel")],
+        )
+
+        self.assertEqual(result["total_grupos_encontrados"], 0)
+
+    def test_found_group_with_failed_checklist_is_inviable(self):
+        result = analyze_viabilidade(
+            make_payload(renda_total=1000, parcela_desejada=100),
+            [make_group()],
+        )
+
+        self.assertEqual(result["total_grupos_encontrados"], 1)
+        self.assertFalse(result["cenario_viavel"])
+        self.assertIn("renda_compativel", result["motivos_reprovacao"])
+        self.assertIn("parcela_compativel", result["motivos_reprovacao"])
 
     def test_endpoint_uses_sheets_and_returns_response(self):
-        payload = ViabilidadeRequest(
-            objetivo="Aquisicao de Imovel",
-            credito_desejado=300000,
-            prazo_desejado=24,
-            lance_proprio=60000,
-            fgts=20000,
-            renda_total=20000,
-            parcela_desejada=2500,
-        )
-        fake_groups = [
-            {
-                "grupo_id": "CNP-017-IMOVEL",
-                "administradora": "CNP",
-                "grupo": "017",
-                "tipo_bem": "Imovel",
-                "credito_maximo": 500000,
-                "taxa_adm": 0.18,
-                "fundo_reserva": 0.02,
-                "prazo_total": 180,
-                "prazo_restante": 150,
-                "percentual_lance_embutido": 0.2,
-                "conservador": 0.2,
-                "status": "Ativo",
-                "historico": {},
-            }
-        ]
+        with patch("backend.main.list_grupos_detalhe", return_value=[make_group()]):
+            result = viabilidade_analisar(make_payload())
 
-        with patch("backend.main.list_grupos_detalhe", return_value=fake_groups):
-            result = viabilidade_analisar(payload)
-
-        self.assertEqual(result["total_grupos_encontrados"], 1)
-        self.assertEqual(result["melhores_grupos"][0]["administradora"], "CNP")
+        self.assertEqual(result["total_grupos_analisados"], 1)
+        self.assertEqual(result["melhores_grupos"][0]["administradora"], "Itau")
 
 
 if __name__ == "__main__":

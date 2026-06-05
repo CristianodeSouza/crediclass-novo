@@ -762,6 +762,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 700;
 }
 
+#viabilityPrazoDesejado {
+  font-size: 10.5px;
+}
+
 .form-actions {
   display: flex;
   grid-column: 1 / -1;
