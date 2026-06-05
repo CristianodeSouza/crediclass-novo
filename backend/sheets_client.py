@@ -796,10 +796,11 @@ def list_grupos_detalhe_by_ids(grupo_ids: list[str]) -> list[dict[str, Any]]:
         if headers:
             settings = get_settings()
             last_column = column_letter(len(headers) - 1)
+            id_by_row = {row_number: wanted for wanted, row_number in row_numbers.items() if row_number is not None}
+            blocks = row_blocks(sorted(id_by_row))
             ranges = [
-                f"'{settings.google_sheet_name}'!A{row_number}:{last_column}{row_number}"
-                for row_number in row_numbers.values()
-                if row_number is not None
+                f"'{settings.google_sheet_name}'!A{start}:{last_column}{end}"
+                for start, end in blocks
             ]
             if ranges:
                 result = get_service().spreadsheets().values().batchGet(
@@ -808,14 +809,18 @@ def list_grupos_detalhe_by_ids(grupo_ids: list[str]) -> list[dict[str, Any]]:
                 ).execute()
                 value_ranges = result.get("valueRanges", [])
                 fetched_items: dict[str, dict[str, Any]] = {}
-                for value_range in value_ranges:
+                for (start, _), value_range in zip(blocks, value_ranges):
                     values = value_range.get("values", [])
                     if not values:
                         continue
-                    row = values[0]
-                    row_dict = {header: row[index] if index < len(row) else "" for index, header in enumerate(headers)}
-                    item = row_to_grupo_detalhe(row_dict)
-                    fetched_items[item["grupo_id"].upper()] = item
+                    for offset, row in enumerate(values):
+                        row_number = start + offset
+                        wanted = id_by_row.get(row_number)
+                        if not wanted:
+                            continue
+                        row_dict = {header: row[index] if index < len(row) else "" for index, header in enumerate(headers)}
+                        item = row_to_grupo_detalhe(row_dict)
+                        fetched_items[item["grupo_id"].upper()] = item
 
                 with _cache_lock:
                     for wanted, item in fetched_items.items():
@@ -826,6 +831,23 @@ def list_grupos_detalhe_by_ids(grupo_ids: list[str]) -> list[dict[str, Any]]:
                 cached_items.update(fetched_items)
 
     return [copy.deepcopy(cached_items[wanted]) for wanted in wanted_ids if wanted in cached_items]
+
+
+def row_blocks(row_numbers: list[int], max_gap: int = 2) -> list[tuple[int, int]]:
+    if not row_numbers:
+        return []
+    blocks: list[tuple[int, int]] = []
+    start = row_numbers[0]
+    previous = row_numbers[0]
+    for row_number in row_numbers[1:]:
+        if row_number - previous <= max_gap + 1:
+            previous = row_number
+            continue
+        blocks.append((start, previous))
+        start = row_number
+        previous = row_number
+    blocks.append((start, previous))
+    return blocks
 
 
 def warm_grupos_detalhe_cache_async() -> None:

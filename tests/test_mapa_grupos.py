@@ -56,6 +56,9 @@ class MapaGruposTest(unittest.TestCase):
 
         self.assertEqual(read_rows.call_count, 2)
 
+    def test_row_blocks_agrupa_linhas_proximas(self):
+        self.assertEqual(sheets_client.row_blocks([3, 4, 6, 10, 14], max_gap=1), [(3, 6), (10, 10), (14, 14)])
+
     def test_percentuais_de_historico_nao_gravam_residuos_decimais(self):
         self.assertEqual(format_history_value("maior_lance", 0.56), "56,0")
         self.assertEqual(format_history_value("menor_lance", 0.5256000000000001), "52,56")
