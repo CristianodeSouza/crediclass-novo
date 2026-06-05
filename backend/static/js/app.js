@@ -466,24 +466,24 @@ function renderDetailsParams(group) {
 function renderDetailsHistory(group) {
   const entries = buildHistoryRows(group.historico || {});
   renderHistoryEditor("historyUpdate", group.historico || {});
-  document.getElementById("detailsHistoryBody").innerHTML = entries.map(([month, item]) => `
-    <tr>
-      <td><strong>${escapeHtml(historyMonthLabel(month))}</strong><small>${escapeHtml(month)}</small></td>
-      <td>${formatPercent(item.maior_lance)}</td>
-      <td>${formatPercent(item.menor_lance)}</td>
-      <td>${item.qtd_contemplacoes ?? "-"}</td>
-    </tr>
-  `).join("") || `<tr><td colspan="4" class="text-center text-secondary">Historico nao encontrado.</td></tr>`;
 
-  const chartEntries = entries
+  const filledEntries = entries
     .filter(([, item]) => item.maior_lance !== null || item.menor_lance !== null)
-    .slice(-18);
+    .sort(([a], [b]) => compareMonthKeys(a, b));
+  const recentEntries = filledEntries.slice(-6).reverse();
+  document.getElementById("detailsHistoryBody").innerHTML = recentEntries.map(([month, item]) => `
+    <div class="history-summary-item">
+      <strong>${escapeHtml(historyMonthLabel(month))}</strong>
+      <b>${formatPercent(item.maior_lance)}</b>
+      <span>${escapeHtml(month)} - menor ${formatPercent(item.menor_lance)}</span>
+      <span>${item.qtd_contemplacoes ?? "-"} contemplacao(oes)</span>
+    </div>
+  `).join("") || `<div class="history-summary-empty">Ainda nao ha meses preenchidos para este grupo.</div>`;
+
+  const chartEntries = filledEntries.slice(-24);
   const labels = chartEntries.map(([month]) => formatChartMonth(month));
   const maiores = chartEntries.map(([, item]) => item.maior_lance !== null && item.maior_lance !== undefined ? item.maior_lance * 100 : null);
   const menores = chartEntries.map(([, item]) => item.menor_lance !== null && item.menor_lance !== undefined ? item.menor_lance * 100 : null);
-  const percentValues = [...maiores, ...menores].filter((value) => value !== null);
-  const minPercent = percentValues.length ? Math.max(0, Math.floor((Math.min(...percentValues) - 5) / 5) * 5) : 0;
-  const maxPercent = percentValues.length ? Math.min(100, Math.ceil((Math.max(...percentValues) + 5) / 5) * 5) : 100;
 
   if (detailsChart) detailsChart.destroy();
   const canvas = document.getElementById("detailsHistoryChart");
@@ -492,8 +492,8 @@ function renderDetailsHistory(group) {
     data: {
       labels,
       datasets: [
-        { label: "Maior Lance", data: maiores, borderColor: "#0d6efd", backgroundColor: "rgba(13, 110, 253, 0.08)", borderWidth: 2.5, tension: 0.28, pointRadius: 3, pointHoverRadius: 5, spanGaps: true },
-        { label: "Menor Lance", data: menores, borderColor: "#16a34a", backgroundColor: "rgba(22, 163, 74, 0.08)", borderWidth: 2.5, tension: 0.28, pointRadius: 3, pointHoverRadius: 5, spanGaps: true },
+        { label: "Maior Lance", data: maiores, borderColor: "#0d6efd", backgroundColor: "rgba(13, 110, 253, 0.08)", borderWidth: 2, tension: 0.18, pointRadius: 2, pointHoverRadius: 4, spanGaps: false },
+        { label: "Menor Lance", data: menores, borderColor: "#16a34a", backgroundColor: "rgba(22, 163, 74, 0.08)", borderWidth: 2, tension: 0.18, pointRadius: 2, pointHoverRadius: 4, spanGaps: false },
       ],
     },
     options: {
@@ -511,11 +511,12 @@ function renderDetailsHistory(group) {
         },
       },
       scales: {
-        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkipPadding: 18 } },
-        y: { min: minPercent, max: maxPercent, ticks: { callback: (value) => `${value}%` }, title: { display: true, text: "Percentual do lance" } },
+        x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } },
+        y: { min: 0, max: 100, ticks: { stepSize: 10, callback: (value) => `${value}%` }, title: { display: true, text: "Percentual do lance" } },
       },
     },
   });
+  setTimeout(() => detailsChart?.resize(), 50);
 }
 
 function renderDetailsAudit(group) {
@@ -1971,6 +1972,7 @@ document.getElementById("historyUpdateForm").addEventListener("submit", (event) 
 
 document.getElementById("historyUpdateAddMonthBtn").addEventListener("click", () => addHistoryEditorMonth("historyUpdate"));
 document.getElementById("groupFormHistoryAddMonthBtn").addEventListener("click", () => addHistoryEditorMonth("groupFormHistory"));
+document.querySelector('[data-bs-target="#detailsHistory"]').addEventListener("shown.bs.tab", () => detailsChart?.resize());
 
 document.getElementById("viabilityForm").addEventListener("submit", (event) => {
   event.preventDefault();
