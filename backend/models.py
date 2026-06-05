@@ -282,6 +282,7 @@ class ViabilidadeRequest(BaseModel):
     data_nascimento_conjuge: str = ""
     tipo_bem: str = "Imovel"
     estado_bem: str = ""
+    considerar_lance_embutido: bool = True
 
 
 class ViabilidadeHistorico(BaseModel):

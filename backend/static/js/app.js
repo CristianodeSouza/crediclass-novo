@@ -49,6 +49,10 @@ const viabilityState = {
   lastResult: null,
 };
 
+const administratorState = {
+  lastResult: null,
+};
+
 const historyState = {
   items: [],
 };
@@ -937,10 +941,12 @@ function updateViabilityTotals() {
 
 function updateAdministratorTotals() {
   const fgts = toNumber(document.getElementById("administratorFgtsTitular").value) + toNumber(document.getElementById("administratorFgtsConjuge").value);
+  const lance = toNumber(document.getElementById("administratorLanceProprio").value);
   const renda = toNumber(document.getElementById("administratorRendaTitular").value) + toNumber(document.getElementById("administratorRendaConjuge").value);
   document.getElementById("administratorFgtsTotal").value = formatMoney(fgts);
+  document.getElementById("administratorTotalDisponivel").value = formatMoney(lance + fgts);
   document.getElementById("administratorRendaTotal").value = formatMoney(renda);
-  return { fgts, renda };
+  return { fgts, lance, renda };
 }
 
 function setAdministratorState(state) {
@@ -957,14 +963,16 @@ function collectAdministratorPayload() {
   const totals = updateAdministratorTotals();
   const parcelaIdeal = toNumber(document.getElementById("administratorParcelaIdeal").value);
   const parcelaLimite = toNumber(document.getElementById("administratorParcelaLimite").value);
+  const usarFgts = document.getElementById("administratorUsarFgts").value !== "nao";
+  const fgts = usarFgts ? totals.fgts : 0;
   return {
     objetivo: document.getElementById("administratorObjetivo").value,
     credito_desejado: toNumber(document.getElementById("administratorCredito").value),
     prazo_desejado: Number(document.getElementById("administratorPrazoDesejado").value),
     lance_proprio: toNumber(document.getElementById("administratorLanceProprio").value),
-    fgts: totals.fgts,
-    fgts_titular: toNumber(document.getElementById("administratorFgtsTitular").value),
-    fgts_conjuge: toNumber(document.getElementById("administratorFgtsConjuge").value),
+    fgts,
+    fgts_titular: usarFgts ? toNumber(document.getElementById("administratorFgtsTitular").value) : 0,
+    fgts_conjuge: usarFgts ? toNumber(document.getElementById("administratorFgtsConjuge").value) : 0,
     renda_total: totals.renda,
     renda_titular: toNumber(document.getElementById("administratorRendaTitular").value),
     renda_conjuge: toNumber(document.getElementById("administratorRendaConjuge").value),
@@ -975,6 +983,7 @@ function collectAdministratorPayload() {
     data_nascimento_conjuge: document.getElementById("administratorNascimentoConjuge").value,
     tipo_bem: document.getElementById("administratorTipoBem").value,
     estado_bem: document.getElementById("administratorEstadoBem").value,
+    considerar_lance_embutido: document.getElementById("administratorConsiderarLanceEmbutido").value !== "nao",
   };
 }
 
@@ -1001,8 +1010,16 @@ function validateAdministratorPayload(payload) {
 }
 
 function renderAdministratorScreen(items = []) {
+  const onlyEligible = document.getElementById("administratorMostrarElegiveis").value === "elegiveis";
+  const orderBy = document.getElementById("administratorOrdenarPor").value;
+  const visibleItems = [...items]
+    .filter((item) => !onlyEligible || item.elegivel)
+    .sort((a, b) => {
+      if (orderBy === "lance_maximo_percentual") return (b.lance_maximo_percentual || 0) - (a.lance_maximo_percentual || 0);
+      return (a[orderBy] || 0) - (b[orderBy] || 0);
+    });
   document.getElementById("administratorScreenSubtitle").textContent = `${items.filter((item) => item.elegivel).length} elegivel(is) de ${items.length} administradora(s) analisada(s)`;
-  document.getElementById("administratorScreenBody").innerHTML = items.map((item) => `
+  document.getElementById("administratorScreenBody").innerHTML = visibleItems.map((item) => `
     <tr>
       <td>${escapeHtml(item.administradora)}</td>
       <td>${formatMoney(item.credito_a_contratar)}</td>
@@ -1025,6 +1042,7 @@ async function analyzeAdministrators() {
   setAdministratorState("loading");
   try {
     const result = await apiPost("/viabilidade/administradoras", payload);
+    administratorState.lastResult = result;
     renderAdministratorScreen(result.items || []);
     setAdministratorState((result.items || []).length ? "ready" : "empty");
     showToast("Viabilidade das administradoras concluida.", "success");
@@ -1035,6 +1053,7 @@ async function analyzeAdministrators() {
 
 function resetAdministratorForm() {
   document.getElementById("administratorInterviewForm").reset();
+  administratorState.lastResult = null;
   updateAdministratorTotals();
   document.getElementById("administratorScreenBody").innerHTML = "";
   document.getElementById("administratorScreenSubtitle").textContent = "Aguardando analise";
@@ -2269,8 +2288,18 @@ document.getElementById("administratorInterviewForm").addEventListener("submit",
   analyzeAdministrators();
 });
 
-["administratorFgtsTitular", "administratorFgtsConjuge", "administratorRendaTitular", "administratorRendaConjuge"].forEach((id) => {
+["administratorFgtsTitular", "administratorFgtsConjuge", "administratorLanceProprio", "administratorRendaTitular", "administratorRendaConjuge"].forEach((id) => {
   document.getElementById(id).addEventListener("input", updateAdministratorTotals);
+});
+
+["administratorMostrarElegiveis", "administratorOrdenarPor"].forEach((id) => {
+  document.getElementById(id).addEventListener("change", () => renderAdministratorScreen(administratorState.lastResult?.items || []));
+});
+
+["administratorUsarFgts", "administratorConsiderarLanceEmbutido", "administratorTipoBem"].forEach((id) => {
+  document.getElementById(id).addEventListener("change", () => {
+    if (administratorState.lastResult) analyzeAdministrators();
+  });
 });
 
 document.getElementById("clearAdministratorBtn").addEventListener("click", resetAdministratorForm);

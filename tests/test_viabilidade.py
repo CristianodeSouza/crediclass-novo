@@ -148,6 +148,37 @@ class ViabilidadeTest(unittest.TestCase):
 
         self.assertEqual(result, [])
 
+    def test_administrator_feasibility_pode_desconsiderar_lance_embutido(self):
+        rule = AdministratorRule(
+            administradora="Teste",
+            seguro_obrigatorio=False,
+            idade_maxima=80,
+            limite_sem_comprovacao_renda=None,
+            percentual_lance_embutido=0.30,
+            tipo_lance_embutido="Credito",
+            taxa_adm=0.15,
+            possui_negociacao_taxa="Sim",
+            fundo_reserva=0.01,
+            aceita_saida_fiscal=True,
+            aceita_fgts=True,
+        )
+        payload = make_payload(
+            credito_desejado=400000,
+            lance_proprio=100000,
+            fgts=50000,
+            renda_total=15000,
+            parcela_desejada=4500,
+            parcela_limite=6000,
+            data_nascimento="1980-01-01",
+            considerar_lance_embutido=False,
+        )
+
+        result = calculate_administrator_feasibility(payload, rule)
+
+        self.assertEqual(result["percentual_lance_embutido"], 0)
+        self.assertEqual(result["credito_a_contratar"], 400000)
+        self.assertEqual(result["lance_embutido_valor"], 0)
+
     def test_classify_profile_all_intervals(self):
         expected = {
             1: "Agressivo",

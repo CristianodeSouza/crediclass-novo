@@ -30,6 +30,8 @@ def client_parcela_ideal(payload: ViabilidadeRequest) -> float:
 
 def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: AdministratorRule) -> dict[str, Any]:
     percentual_lance_embutido = max(0.0, min(float(rule.percentual_lance_embutido or 0), 0.95))
+    if not payload.considerar_lance_embutido:
+        percentual_lance_embutido = 0.0
     credito_a_contratar = payload.credito_desejado / (1 - percentual_lance_embutido)
     lance_embutido_valor = credito_a_contratar * percentual_lance_embutido
     fgts_total = client_fgts_total(payload)

@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-12", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-13", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -37,6 +37,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('data-screen="administradoras"', index_html)
         self.assertIn('id="screen-administradoras"', index_html)
         self.assertIn("Viabilidade Administradoras", index_html)
+        self.assertIn("administratorTotalDisponivel", index_html)
+        self.assertIn("administratorUsarFgts", index_html)
         self.assertIn('apiPost("/viabilidade/administradoras"', app_js)
 
     def test_filtros_de_credito_validam_intervalo(self):
