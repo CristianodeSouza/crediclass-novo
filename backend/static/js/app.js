@@ -1175,7 +1175,7 @@ function renderViabilityChecklist(checklist) {
 
 function renderViabilitySummary(result) {
   const items = result.melhores_grupos || [];
-  document.getElementById("viabilityRankingSubtitle").textContent = `${items.length} grupo(s) compativel(is) - perfil ${result.perfil}`;
+  document.getElementById("viabilityRankingSubtitle").textContent = `${items.length} grupo(s) candidato(s) - perfil ${result.perfil}`;
   const scenario = document.getElementById("viabilityScenario");
   if (scenario) scenario.textContent = `${result.cenario} - perfil ${result.perfil}`;
 }
@@ -1202,13 +1202,9 @@ function renderViabilityRanking(items) {
       <td>${formatMoney(item.credito_contratado)}</td>
       <td>${item.prazo} meses</td>
       <td>${Number(item.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</td>
-      <td>${formatPercent(item.lance_referencia_percentual)}</td>
-      <td>${formatPercent(item.percentual_lance)}</td>
       <td>${formatPercent(item.taxa_adm)}</td>
       <td>${formatPercent(item.fundo_reserva)}</td>
       <td>${formatMoney(item.parcela_estimada)}</td>
-      <td><span class="status-badge">Sim</span></td>
-      <td>${escapeHtml((item.alertas || []).concat(item.motivos || []).join("; ") || "-")}</td>
       <td>
         <div class="row-actions">
           <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver detalhes</button>
