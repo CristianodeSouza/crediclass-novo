@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 import math
+import re
 import unicodedata
 from typing import Any
 
@@ -31,30 +32,53 @@ def classify_profile(prazo_desejado: int) -> tuple[str, str]:
 
 
 def compatible_tipo_bem(objetivo: str, tipo_bem: str, requested_tipo_bem: str) -> bool:
-    wanted = normalize_text(requested_tipo_bem or "Imovel")
+    wanted = normalize_text(requested_tipo_bem)
     group_type = normalize_text(tipo_bem)
     objective = normalize_text(objetivo)
 
-    if "imovel" in wanted or "imovel" in objective or "financiamento" in objective or "construcao" in objective:
+    if not wanted:
+        wanted = "imovel" if any(term in objective for term in ("imovel", "financiamento", "construcao")) else objective
+    if "imovel" in wanted:
         return "imovel" in group_type
     if "auto" in wanted or "veiculo" in wanted:
         return "auto" in group_type or "veiculo" in group_type
-    return True
+    if "servico" in wanted:
+        return "servico" in group_type
+    if "pesado" in wanted:
+        return "pesado" in group_type
+    if "outro" in wanted:
+        return "outro" in group_type
+    return wanted == group_type
 
 
-def latest_history_values(historico: dict[str, Any]) -> tuple[float | None, int]:
+def history_last_12_months(historico: dict[str, Any]) -> dict[str, float | int | None]:
+    valid_items = [
+        (month, item)
+        for month, item in historico.items()
+        if re.fullmatch(r"\d{4}-\d{2}", str(month))
+    ]
+    recent_items = sorted(valid_items, key=lambda entry: entry[0], reverse=True)[:12]
+    maiores: list[float] = []
     menores: list[float] = []
-    contemplacoes = 0
-    for item in historico.values():
-        menor = item.get("menor_lance") if isinstance(item, dict) else getattr(item, "menor_lance", None)
-        qtd = item.get("qtd_contemplacoes") if isinstance(item, dict) else getattr(item, "qtd_contemplacoes", None)
+    quantidades: list[int] = []
+    for _, item in recent_items:
+        get_value = item.get if isinstance(item, dict) else lambda key: getattr(item, key, None)
+        maior = get_value("maior_lance")
+        menor = get_value("menor_lance")
+        qtd = get_value("qtd_contemplacoes")
+        if maior is not None:
+            maiores.append(float(maior))
         if menor is not None:
             menores.append(float(menor))
         if qtd is not None:
-            contemplacoes += int(qtd)
-    if not menores:
-        return None, contemplacoes
-    return sum(menores) / len(menores), contemplacoes
+            quantidades.append(int(qtd))
+
+    return {
+        "media_maior_lance": round(sum(maiores) / len(maiores), 6) if maiores else None,
+        "media_menor_lance": round(sum(menores) / len(menores), 6) if menores else None,
+        "media_qtd_contemplacoes": round(sum(quantidades) / len(quantidades), 2) if quantidades else None,
+        "total_contemplacoes": sum(quantidades),
+    }
 
 
 def bounded_score(value: float) -> float:
@@ -74,16 +98,44 @@ def group_selo(score: float) -> str:
         return "Muito Bom"
     if score >= 70:
         return "Bom"
-    return "Analise"
+    if score >= 60:
+        return "Regular"
+    return "Baixa Compatibilidade"
+
+
+def calculate_age(date_text: str) -> int | None:
+    if not date_text:
+        return None
+    try:
+        born = date.fromisoformat(date_text)
+    except ValueError:
+        return None
+    today = date.today()
+    return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+
+
+def group_age_validation(group: dict[str, Any], titular_age: int | None, spouse_age: int | None) -> tuple[bool, str]:
+    maximum_age = group.get("idade_maxima")
+    informed_ages = [age for age in (titular_age, spouse_age) if age is not None]
+    if not informed_ages:
+        return False, "idade_nao_informada"
+    if maximum_age is None:
+        return True, "idade_nao_validada"
+    if any(age > int(maximum_age) for age in informed_ages):
+        return False, "idade_incompativel"
+    return True, ""
 
 
 def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]]) -> dict[str, Any]:
     profile_label, profile_field = classify_profile(payload.prazo_desejado)
     fgts_total = payload.fgts
-    lance_total_disponivel = payload.lance_proprio + fgts_total
+    titular_age = calculate_age(payload.data_nascimento)
+    spouse_age = calculate_age(payload.data_nascimento_conjuge)
+    age_informed = titular_age is not None or spouse_age is not None
     results: list[dict[str, Any]] = []
 
     for group in groups:
+        credito_minimo = group.get("credito_minimo") or 0
         credito_maximo = group.get("credito_maximo") or 0
         prazo_restante = group.get("prazo_restante")
         if prazo_restante is None:
@@ -99,13 +151,16 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         if not compatible_tipo_bem(payload.objetivo, str(group.get("tipo_bem") or ""), payload.tipo_bem):
             continue
 
-        percentual_lance_embutido = group.get("percentual_lance_embutido") or 0
-        if percentual_lance_embutido >= 1:
+        fgts_permitido = bool(group.get("fgts"))
+        fgts_utilizado = fgts_total if fgts_permitido else 0
+        lance_embutido_permitido = bool(group.get("lance_embutido"))
+        percentual_lance_embutido = (group.get("percentual_lance_embutido") or 0) if lance_embutido_permitido else 0
+        if percentual_lance_embutido < 0 or percentual_lance_embutido >= 1:
             percentual_lance_embutido = 0
 
         credito_contratado = payload.credito_desejado / (1 - percentual_lance_embutido)
         lance_embutido = credito_contratado * percentual_lance_embutido
-        lance_total = lance_embutido + payload.lance_proprio + fgts_total
+        lance_total = lance_embutido + payload.lance_proprio + fgts_utilizado
         percentual_lance = lance_total / credito_contratado if credito_contratado else 0
         credito_disponivel = credito_contratado - lance_embutido
 
@@ -114,17 +169,23 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         prazo_total = group.get("prazo_total") or prazo_restante
         parcela_estimada = (credito_contratado + credito_contratado * taxa_adm + credito_contratado * fundo_reserva) / prazo_total
 
-        lance_referencia = group.get(profile_field) or group.get("percentual_lance_fixo") or 0
-        menor_lance_historico, qtd_contemplacoes = latest_history_values(group.get("historico") or {})
+        historico_12m = history_last_12_months(group.get("historico") or {})
+        lance_referencia = (
+            group.get(profile_field)
+            or group.get("percentual_lance_fixo")
+            or historico_12m["media_menor_lance"]
+        )
+        historico_disponivel = lance_referencia is not None and float(lance_referencia) > 0
 
-        credito_score = 100 if credito_disponivel >= payload.credito_desejado else score_ratio(credito_disponivel, payload.credito_desejado)
+        credito_score = 0 if payload.credito_desejado < credito_minimo else 100
         parcela_score = 100 if parcela_estimada <= payload.parcela_desejada else score_ratio(payload.parcela_desejada, parcela_estimada)
-        lance_score = 100 if not lance_referencia or percentual_lance >= lance_referencia else score_ratio(percentual_lance, lance_referencia)
+        lance_score = 0 if not historico_disponivel else (100 if percentual_lance >= float(lance_referencia) else score_ratio(percentual_lance, float(lance_referencia)))
         prazo_score = 100 if prazo_restante >= payload.prazo_desejado else score_ratio(prazo_restante, payload.prazo_desejado)
-        historico_score = 50
-        if menor_lance_historico is not None:
-            historico_score = (70 if percentual_lance >= menor_lance_historico else score_ratio(percentual_lance, menor_lance_historico) * 0.7)
-            historico_score += min(30, qtd_contemplacoes * 2)
+        historico_score = 0
+        if historico_12m["media_menor_lance"] is not None:
+            menor_lance = float(historico_12m["media_menor_lance"])
+            historico_score = 70 if percentual_lance >= menor_lance else score_ratio(percentual_lance, menor_lance) * 0.7
+            historico_score += min(30, int(historico_12m["total_contemplacoes"]) * 2)
 
         afinidade_score = (
             credito_score * 25
@@ -134,10 +195,40 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             + bounded_score(historico_score) * 10
         ) / 100
 
+        idade_compativel, idade_alerta = group_age_validation(group, titular_age, spouse_age)
+        renda_compativel = parcela_estimada * 3 <= payload.renda_total
+        parcela_compativel = parcela_estimada <= payload.parcela_desejada
+        lance_compativel = historico_disponivel and percentual_lance >= float(lance_referencia)
+        prazo_compativel = prazo_restante >= payload.prazo_desejado
+        credito_compativel = credito_minimo <= payload.credito_desejado <= credito_maximo
+        permissoes_compativeis = (fgts_total <= 0 or fgts_permitido) and (
+            percentual_lance_embutido <= 0 or lance_embutido_permitido
+        )
+
+        alertas = []
+        if not historico_disponivel:
+            alertas.append("historico_lance_insuficiente")
+        if idade_alerta:
+            alertas.append(idade_alerta)
+        if fgts_total > 0 and not fgts_permitido:
+            alertas.append("fgts_nao_permitido")
+        if group.get("percentual_lance_embutido") and not lance_embutido_permitido:
+            alertas.append("lance_embutido_nao_permitido")
+
+        aprovado = all((
+            credito_compativel,
+            renda_compativel,
+            parcela_compativel,
+            lance_compativel,
+            prazo_compativel,
+            permissoes_compativeis,
+            idade_compativel if age_informed else True,
+        ))
+
         motivos = []
-        motivos.append("Credito compativel" if credito_disponivel >= payload.credito_desejado else "Credito abaixo do desejado")
+        motivos.append("Credito compativel" if credito_compativel else "Credito fora da faixa do grupo")
         motivos.append("Parcela dentro do limite" if parcela_estimada <= payload.parcela_desejada else "Parcela acima do limite")
-        motivos.append("Lance compativel com o perfil" if not lance_referencia or percentual_lance >= lance_referencia else "Lance abaixo do perfil")
+        motivos.append("Lance compativel com o perfil" if lance_compativel else "Lance abaixo do perfil ou sem historico")
         motivos.append("Prazo compativel" if prazo_restante >= payload.prazo_desejado else "Prazo abaixo do desejado")
 
         results.append({
@@ -147,13 +238,34 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             "grupo": group.get("grupo") or "",
             "tipo_bem": group.get("tipo_bem") or "",
             "credito": round(credito_disponivel, 2),
+            "credito_desejado": round(payload.credito_desejado, 2),
+            "credito_contratado": round(credito_contratado, 2),
+            "credito_disponivel": round(credito_disponivel, 2),
+            "lance_embutido_utilizado": round(lance_embutido, 2),
+            "fgts_utilizado": round(fgts_utilizado, 2),
+            "lance_proprio_utilizado": round(payload.lance_proprio, 2),
+            "lance_total": round(lance_total, 2),
+            "percentual_lance": round(percentual_lance, 4),
             "parcela_estimada": round(parcela_estimada, 2),
             "lance_sugerido_percentual": round(percentual_lance, 4),
             "lance_sugerido_valor": round(lance_total, 2),
             "prazo": int(prazo_restante),
             "afinidade": round(afinidade_score / 100, 4),
             "selo": group_selo(afinidade_score),
+            "historico_12m": historico_12m,
+            "alertas": alertas,
             "motivos": motivos,
+            "_aprovado": aprovado,
+            "_checks": {
+                "idade_compativel": idade_compativel,
+                "renda_compativel": renda_compativel,
+                "parcela_compativel": parcela_compativel,
+                "lance_compativel": lance_compativel,
+                "fgts_permitido": fgts_total <= 0 or fgts_permitido,
+                "lance_embutido_permitido": percentual_lance_embutido <= 0 or lance_embutido_permitido,
+                "prazo_compativel": prazo_compativel,
+                "tipo_bem_compativel": True,
+            },
         })
 
     results.sort(key=lambda item: item["afinidade"], reverse=True)
@@ -161,38 +273,53 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
     for index, item in enumerate(melhores, start=1):
         item["ranking"] = index
 
-    renda_comporta = any(item["parcela_estimada"] * 3 <= payload.renda_total for item in melhores) if melhores else False
-    parcela_comporta = any(item["parcela_estimada"] <= payload.parcela_desejada for item in melhores)
-    prazo_compativel = any(item["prazo"] >= payload.prazo_desejado for item in melhores)
-    lance_suficiente = any(item["lance_sugerido_valor"] <= lance_total_disponivel + (payload.credito_desejado * 0.5) for item in melhores)
-    cenario_viavel = bool(melhores) and renda_comporta and parcela_comporta and prazo_compativel
+    approved_groups = [item for item in results if item["_aprovado"]]
+    cenario_viavel = bool(approved_groups)
+    checklist_keys = (
+        "idade_compativel",
+        "renda_compativel",
+        "parcela_compativel",
+        "lance_compativel",
+        "fgts_permitido",
+        "lance_embutido_permitido",
+        "prazo_compativel",
+        "tipo_bem_compativel",
+    )
+    representative_group = approved_groups[0] if approved_groups else (results[0] if results else None)
+    checklist = {
+        key: representative_group["_checks"][key] if representative_group else False
+        for key in checklist_keys
+    }
+    if not age_informed:
+        checklist["idade_compativel"] = False
+    checklist["cenario_viavel"] = cenario_viavel
+    motivos_reprovacao = [
+        key
+        for key in checklist_keys
+        if not checklist[key] and not (key == "idade_compativel" and not age_informed)
+    ]
+    if not results:
+        motivos_reprovacao.append("nenhum_grupo_compativel_com_filtros_iniciais")
+    public_results = []
+    for item in melhores:
+        public_results.append({key: value for key, value in item.items() if not key.startswith("_")})
 
     return {
+        "cenario_viavel": cenario_viavel,
         "total_grupos_encontrados": len(results),
+        "total_grupos_analisados": len(groups),
+        "total_grupos_compativeis": len(approved_groups),
         "perfil": profile_label,
         "fgts_total": round(fgts_total, 2),
-        "lance_total_disponivel": round(lance_total_disponivel, 2),
+        "lance_total_disponivel": round(payload.lance_proprio + fgts_total, 2),
         "renda_total": round(payload.renda_total, 2),
+        "estado_bem": payload.estado_bem,
+        "idade_titular": titular_age,
+        "idade_conjuge": spouse_age,
+        "idade_validada": age_informed,
+        "idade_alerta": "" if age_informed else "idade_nao_informada",
         "cenario": "Viavel" if cenario_viavel else "Inviavel",
-        "checklist": {
-            "idade_compativel": is_age_compatible(payload.data_nascimento),
-            "renda_comporta_parcela": renda_comporta,
-            "lance_proprio_suficiente": lance_suficiente,
-            "fgts_disponivel": fgts_total > 0,
-            "prazo_compativel": prazo_compativel,
-            "cenario_viavel": cenario_viavel,
-        },
-        "melhores_grupos": melhores,
+        "motivos_reprovacao": motivos_reprovacao,
+        "checklist": checklist,
+        "melhores_grupos": public_results,
     }
-
-
-def is_age_compatible(date_text: str) -> bool:
-    if not date_text:
-        return True
-    try:
-        born = date.fromisoformat(date_text)
-    except ValueError:
-        return False
-    today = date.today()
-    age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
-    return 18 <= age <= 80

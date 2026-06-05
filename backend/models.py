@@ -115,7 +115,16 @@ class ViabilidadeRequest(BaseModel):
     renda_total: float = Field(gt=0)
     parcela_desejada: float = Field(gt=0)
     data_nascimento: str = ""
+    data_nascimento_conjuge: str = ""
     tipo_bem: str = "Imovel"
+    estado_bem: str = ""
+
+
+class ViabilidadeHistorico(BaseModel):
+    media_maior_lance: float | None = None
+    media_menor_lance: float | None = None
+    media_qtd_contemplacoes: float | None = None
+    total_contemplacoes: int = 0
 
 
 class ViabilidadeGrupo(BaseModel):
@@ -125,31 +134,53 @@ class ViabilidadeGrupo(BaseModel):
     grupo: str = ""
     tipo_bem: str = ""
     credito: float
+    credito_desejado: float
+    credito_contratado: float
+    credito_disponivel: float
+    lance_embutido_utilizado: float
+    fgts_utilizado: float
+    lance_proprio_utilizado: float
+    lance_total: float
+    percentual_lance: float
     parcela_estimada: float
     lance_sugerido_percentual: float
     lance_sugerido_valor: float
     prazo: int
     afinidade: float
     selo: str
+    historico_12m: ViabilidadeHistorico
+    alertas: list[str] = Field(default_factory=list)
     motivos: list[str] = Field(default_factory=list)
 
 
 class ViabilidadeChecklist(BaseModel):
     idade_compativel: bool
-    renda_comporta_parcela: bool
-    lance_proprio_suficiente: bool
-    fgts_disponivel: bool
+    renda_compativel: bool
+    parcela_compativel: bool
+    lance_compativel: bool
+    fgts_permitido: bool
+    lance_embutido_permitido: bool
     prazo_compativel: bool
+    tipo_bem_compativel: bool
     cenario_viavel: bool
 
 
 class ViabilidadeResponse(BaseModel):
+    cenario_viavel: bool
     total_grupos_encontrados: int
+    total_grupos_analisados: int
+    total_grupos_compativeis: int
     perfil: str
     fgts_total: float
     lance_total_disponivel: float
     renda_total: float
+    estado_bem: str
+    idade_titular: int | None = None
+    idade_conjuge: int | None = None
+    idade_validada: bool
+    idade_alerta: str = ""
     cenario: str
+    motivos_reprovacao: list[str] = Field(default_factory=list)
     checklist: ViabilidadeChecklist
     melhores_grupos: list[ViabilidadeGrupo] = Field(default_factory=list)
 

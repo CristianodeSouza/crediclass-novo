@@ -942,7 +942,8 @@ function collectViabilityPayload() {
     parcela_desejada: toNumber(document.getElementById("viabilityParcela").value),
     data_nascimento: document.getElementById("viabilityNascimento").value,
     data_nascimento_conjuge: document.getElementById("viabilityNascimentoConjuge").value,
-    tipo_bem: "Imovel",
+    tipo_bem: document.getElementById("viabilityTipoBem").value,
+    estado_bem: document.getElementById("viabilityEstadoBem").value,
   };
 }
 
@@ -950,13 +951,17 @@ function validateViabilityPayload(payload) {
   const required = [
     ["credito_desejado", "Informe o credito desejado."],
     ["prazo_desejado", "Informe o prazo desejado."],
-    ["lance_proprio", "Informe o lance proprio disponivel."],
     ["renda_total", "Informe a renda total."],
     ["parcela_desejada", "Informe a parcela maxima desejada."],
   ];
   const missing = required.find(([key]) => !payload[key]);
   if (missing) {
     showToast(missing[1], "warning");
+    return false;
+  }
+  const lanceInput = document.getElementById("viabilityLanceProprio").value.trim();
+  if (lanceInput === "" || !Number.isFinite(payload.lance_proprio) || payload.lance_proprio < 0) {
+    showToast("Informe um lance proprio igual ou maior que zero.", "warning");
     return false;
   }
   return true;
@@ -978,7 +983,7 @@ function renderViabilitySummary(result) {
   const maxCredit = items.reduce((best, item) => Math.max(best, item.credito || 0), 0);
 
   document.getElementById("viabilityAdministradoras").textContent = administradoras.size;
-  document.getElementById("viabilityTotal").textContent = result.total_grupos_encontrados;
+  document.getElementById("viabilityTotal").textContent = result.total_grupos_compativeis;
   document.getElementById("viabilityTop").textContent = top;
   document.getElementById("viabilityBestInstallment").textContent = formatMoney(bestInstallment);
   document.getElementById("viabilityMaxCredit").textContent = formatMoney(maxCredit);
@@ -999,6 +1004,7 @@ function renderViabilityRanking(items) {
       <td>${formatMoney(item.lance_sugerido_valor)}</td>
       <td>${item.prazo} meses</td>
       <td><span class="status-badge">${formatPercent(item.afinidade)}</span></td>
+      <td>${escapeHtml(item.selo)}</td>
       <td>
         <div class="row-actions">
           <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver</button>
