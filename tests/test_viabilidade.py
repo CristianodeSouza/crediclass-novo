@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from backend.administrator_feasibility import analyze_administradoras, calculate_administrator_feasibility
-from backend.administrator_rules import AdministratorRule
+from backend.administrator_rules import AdministratorRule, rule_from_config
 from backend.main import viabilidade_analisar
 from backend.models import ViabilidadeRequest
 from backend.viabilidade import (
@@ -147,6 +147,24 @@ class ViabilidadeTest(unittest.TestCase):
         result = analyze_administradoras(make_payload(), ["ITAÚ", "CAIXA"], config_rules=[])
 
         self.assertEqual(result, [])
+
+    def test_administrator_rule_normaliza_campos_vazios_e_percentuais_humanos(self):
+        rule = rule_from_config(
+            make_admin_rule(
+                idade_maxima="",
+                limite_sem_comprovacao_renda="R$ 3.000.000,00",
+                percentual_lance_embutido="30%",
+                taxa_adm="20",
+                fundo_reserva="3%",
+            )
+        )
+
+        self.assertIsNotNone(rule)
+        self.assertIsNone(rule.idade_maxima)
+        self.assertEqual(rule.limite_sem_comprovacao_renda, 3000000)
+        self.assertEqual(rule.percentual_lance_embutido, 0.30)
+        self.assertEqual(rule.taxa_adm, 0.20)
+        self.assertEqual(rule.fundo_reserva, 0.03)
 
     def test_administrator_feasibility_pode_desconsiderar_lance_embutido(self):
         rule = AdministratorRule(

@@ -26,6 +26,39 @@ def normalize_admin_name(value: str) -> str:
     return " ".join(text.upper().replace("CONSORCIO", "").replace("CONSORCIOS", "").split())
 
 
+def parse_optional_number(value: object) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip()
+    if not text:
+        return None
+    text = text.replace("R$", "").replace("%", "").strip()
+    if "," in text:
+        text = text.replace(".", "").replace(",", ".")
+    try:
+        return float(text)
+    except ValueError:
+        return None
+
+
+def parse_optional_int(value: object) -> int | None:
+    number = parse_optional_number(value)
+    if number is None:
+        return None
+    return int(number)
+
+
+def parse_percent(value: object) -> float:
+    number = parse_optional_number(value)
+    if number is None:
+        return 0.0
+    return number / 100 if number > 1 else number
+
+
 def rule_from_config(data: dict) -> AdministratorRule | None:
     administradora = str(data.get("administradora") or "").strip()
     if not administradora:
@@ -33,13 +66,13 @@ def rule_from_config(data: dict) -> AdministratorRule | None:
     return AdministratorRule(
         administradora=administradora,
         seguro_obrigatorio=bool(data.get("seguro_obrigatorio", False)),
-        idade_maxima=data.get("idade_maxima"),
-        limite_sem_comprovacao_renda=data.get("limite_sem_comprovacao_renda"),
-        percentual_lance_embutido=float(data.get("percentual_lance_embutido") or 0),
+        idade_maxima=parse_optional_int(data.get("idade_maxima")),
+        limite_sem_comprovacao_renda=parse_optional_number(data.get("limite_sem_comprovacao_renda")),
+        percentual_lance_embutido=parse_percent(data.get("percentual_lance_embutido")),
         tipo_lance_embutido=str(data.get("tipo_lance_embutido") or "Credito"),
-        taxa_adm=float(data.get("taxa_adm") or 0),
+        taxa_adm=parse_percent(data.get("taxa_adm")),
         possui_negociacao_taxa=str(data.get("possui_negociacao_taxa") or "Nao"),
-        fundo_reserva=float(data.get("fundo_reserva") or 0),
+        fundo_reserva=parse_percent(data.get("fundo_reserva")),
         aceita_saida_fiscal=bool(data.get("aceita_saida_fiscal", False)),
         aceita_fgts=bool(data.get("aceita_fgts", False)),
         observacoes_operacionais=str(data.get("observacoes_operacionais") or ""),
