@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-11", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-12", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -29,6 +29,15 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("/static/favicon.svg?v=1", index_html)
         self.assertNotIn("cdn.jsdelivr.net", index_html)
         self.assertIn(".d-none", style_css)
+
+    def test_tela_viabilidade_administradoras_existe_no_menu(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('data-screen="administradoras"', index_html)
+        self.assertIn('id="screen-administradoras"', index_html)
+        self.assertIn("Viabilidade Administradoras", index_html)
+        self.assertIn('apiPost("/viabilidade/administradoras"', app_js)
 
     def test_filtros_de_credito_validam_intervalo(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")

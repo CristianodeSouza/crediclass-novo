@@ -6,25 +6,31 @@ const screens = {
     action: "Novo Grupo",
   },
   viabilidade: {
-    letter: "B) VIABILIDADE",
-    title: "Viabilidade",
-    subtitle: "Analise de viabilidade e selecao dos melhores grupos",
+    letter: "C) VIABILIDADE GRUPOS",
+    title: "Viabilidade Grupos",
+    subtitle: "Selecao de grupos apos administradoras elegiveis",
     action: "Analisar Viabilidade",
   },
+  administradoras: {
+    letter: "B) VIABILIDADE ADMINISTRADORAS",
+    title: "Viabilidade Administradoras",
+    subtitle: "Analise anterior obrigatoria por administradora",
+    action: "Recalcular Viabilidade",
+  },
   estudo: {
-    letter: "C) ESTUDO FINANCEIRO",
+    letter: "D) ESTUDO FINANCEIRO",
     title: "Estudo Financeiro",
     subtitle: "Geracao do estudo financeiro detalhado",
     action: "Salvar Estudo",
   },
   historico: {
-    letter: "D) HISTORICO DE ESTUDOS",
+    letter: "E) HISTORICO DE ESTUDOS",
     title: "Historico de Estudos",
     subtitle: "Consulta e gestao dos estudos financeiros gerados",
     action: "Buscar Estudos",
   },
   configuracoes: {
-    letter: "E) CONFIGURACOES",
+    letter: "F) CONFIGURACOES",
     title: "Configuracoes",
     subtitle: "Configuracoes do sistema e preferencias",
     action: "Salvar Configuracoes",
@@ -927,6 +933,112 @@ function updateViabilityTotals() {
   document.getElementById("viabilityFgtsTotal").value = formatMoney(fgts);
   document.getElementById("viabilityRendaTotal").value = formatMoney(renda);
   return { fgts, renda };
+}
+
+function updateAdministratorTotals() {
+  const fgts = toNumber(document.getElementById("administratorFgtsTitular").value) + toNumber(document.getElementById("administratorFgtsConjuge").value);
+  const renda = toNumber(document.getElementById("administratorRendaTitular").value) + toNumber(document.getElementById("administratorRendaConjuge").value);
+  document.getElementById("administratorFgtsTotal").value = formatMoney(fgts);
+  document.getElementById("administratorRendaTotal").value = formatMoney(renda);
+  return { fgts, renda };
+}
+
+function setAdministratorState(state) {
+  document.getElementById("administratorLoading").classList.toggle("d-none", state !== "loading");
+  document.getElementById("administratorError").classList.toggle("d-none", state !== "error");
+  document.getElementById("administratorEmpty").classList.toggle("d-none", state !== "empty");
+  document.getElementById("administratorResults").classList.toggle("d-none", state !== "ready");
+  const button = document.getElementById("analyzeAdministratorsBtn");
+  button.disabled = state === "loading";
+  button.textContent = state === "loading" ? "Analisando..." : "Recalcular Viabilidade";
+}
+
+function collectAdministratorPayload() {
+  const totals = updateAdministratorTotals();
+  const parcelaIdeal = toNumber(document.getElementById("administratorParcelaIdeal").value);
+  const parcelaLimite = toNumber(document.getElementById("administratorParcelaLimite").value);
+  return {
+    objetivo: document.getElementById("administratorObjetivo").value,
+    credito_desejado: toNumber(document.getElementById("administratorCredito").value),
+    prazo_desejado: Number(document.getElementById("administratorPrazoDesejado").value),
+    lance_proprio: toNumber(document.getElementById("administratorLanceProprio").value),
+    fgts: totals.fgts,
+    fgts_titular: toNumber(document.getElementById("administratorFgtsTitular").value),
+    fgts_conjuge: toNumber(document.getElementById("administratorFgtsConjuge").value),
+    renda_total: totals.renda,
+    renda_titular: toNumber(document.getElementById("administratorRendaTitular").value),
+    renda_conjuge: toNumber(document.getElementById("administratorRendaConjuge").value),
+    parcela_desejada: parcelaIdeal,
+    parcela_ideal: parcelaIdeal,
+    parcela_limite: parcelaLimite || parcelaIdeal,
+    data_nascimento: document.getElementById("administratorNascimento").value,
+    data_nascimento_conjuge: document.getElementById("administratorNascimentoConjuge").value,
+    tipo_bem: document.getElementById("administratorTipoBem").value,
+    estado_bem: document.getElementById("administratorEstadoBem").value,
+  };
+}
+
+function validateAdministratorPayload(payload) {
+  const required = [
+    ["credito_desejado", "Informe o credito desejado."],
+    ["prazo_desejado", "Informe o prazo desejado."],
+    ["renda_total", "Informe a renda total."],
+    ["parcela_desejada", "Informe a parcela ideal."],
+    ["parcela_limite", "Informe a parcela limite."],
+    ["data_nascimento", "Informe a data de nascimento do titular."],
+  ];
+  const missing = required.find(([key]) => !payload[key]);
+  if (missing) {
+    showToast(missing[1], "warning");
+    return false;
+  }
+  const lanceInput = document.getElementById("administratorLanceProprio").value.trim();
+  if (lanceInput === "" || !Number.isFinite(payload.lance_proprio) || payload.lance_proprio < 0) {
+    showToast("Informe um lance proprio igual ou maior que zero.", "warning");
+    return false;
+  }
+  return true;
+}
+
+function renderAdministratorScreen(items = []) {
+  document.getElementById("administratorScreenSubtitle").textContent = `${items.filter((item) => item.elegivel).length} elegivel(is) de ${items.length} administradora(s) analisada(s)`;
+  document.getElementById("administratorScreenBody").innerHTML = items.map((item) => `
+    <tr>
+      <td>${escapeHtml(item.administradora)}</td>
+      <td>${formatMoney(item.credito_a_contratar)}</td>
+      <td>${formatMoney(item.lance_embutido_valor)}</td>
+      <td>${formatMoney(item.lance_proprio)}</td>
+      <td>${formatMoney(item.fgts_utilizado)}</td>
+      <td>${formatMoney(item.lance_total)}</td>
+      <td class="text-success fw-bold">${formatPercent(item.lance_maximo_percentual)}</td>
+      <td>${formatPercent(item.taxa_adm)}</td>
+      <td>${formatPercent(item.fundo_reserva)}</td>
+      <td>${Number(item.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</td>
+      <td><span class="status-badge ${item.elegivel ? "" : "inactive"}">${item.elegivel ? "Sim" : "Nao"}</span></td>
+    </tr>
+  `).join("");
+}
+
+async function analyzeAdministrators() {
+  const payload = collectAdministratorPayload();
+  if (!validateAdministratorPayload(payload)) return;
+  setAdministratorState("loading");
+  try {
+    const result = await apiPost("/viabilidade/administradoras", payload);
+    renderAdministratorScreen(result.items || []);
+    setAdministratorState((result.items || []).length ? "ready" : "empty");
+    showToast("Viabilidade das administradoras concluida.", "success");
+  } catch (error) {
+    setAdministratorState("error");
+  }
+}
+
+function resetAdministratorForm() {
+  document.getElementById("administratorInterviewForm").reset();
+  updateAdministratorTotals();
+  document.getElementById("administratorScreenBody").innerHTML = "";
+  document.getElementById("administratorScreenSubtitle").textContent = "Aguardando analise";
+  setAdministratorState("empty");
 }
 
 function setViabilityState(state) {
@@ -2035,6 +2147,10 @@ document.querySelectorAll(".nav-item").forEach((item) => {
 });
 
 document.getElementById("primaryAction").addEventListener("click", () => {
+  if (document.getElementById("screen-administradoras").classList.contains("active")) {
+    analyzeAdministrators();
+    return;
+  }
   if (document.getElementById("screen-viabilidade").classList.contains("active")) {
     analyzeViability();
     return;
@@ -2147,6 +2263,17 @@ document.getElementById("historyUpdateForm").addEventListener("submit", (event) 
 document.getElementById("historyUpdateAddMonthBtn").addEventListener("click", () => addHistoryEditorMonth("historyUpdate"));
 document.getElementById("groupFormHistoryAddMonthBtn").addEventListener("click", () => addHistoryEditorMonth("groupFormHistory"));
 document.querySelector('[data-bs-target="#detailsHistory"]').addEventListener("shown.bs.tab", () => detailsChart?.resize());
+
+document.getElementById("administratorInterviewForm").addEventListener("submit", (event) => {
+  event.preventDefault();
+  analyzeAdministrators();
+});
+
+["administratorFgtsTitular", "administratorFgtsConjuge", "administratorRendaTitular", "administratorRendaConjuge"].forEach((id) => {
+  document.getElementById(id).addEventListener("input", updateAdministratorTotals);
+});
+
+document.getElementById("clearAdministratorBtn").addEventListener("click", resetAdministratorForm);
 
 document.getElementById("viabilityForm").addEventListener("submit", (event) => {
   event.preventDefault();
@@ -2332,4 +2459,5 @@ loadHealth().catch(() => {
 
 loadMapaGrupos();
 updateViabilityTotals();
+updateAdministratorTotals();
 openSharedStudyFromUrl().catch(() => showToast("Nao foi possivel abrir o estudo compartilhado.", "danger"));

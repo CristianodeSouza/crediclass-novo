@@ -21,9 +21,13 @@
             <span class="nav-icon">MG</span>
             <span>Mapa de Grupos</span>
           </button>
+          <button class="nav-item" type="button" data-screen="administradoras">
+            <span class="nav-icon">VA</span>
+            <span>Viabilidade Administradoras</span>
+          </button>
           <button class="nav-item" type="button" data-screen="viabilidade">
-            <span class="nav-icon">VI</span>
-            <span>Viabilidade</span>
+            <span class="nav-icon">VG</span>
+            <span>Viabilidade Grupos</span>
           </button>
           <button class="nav-item" type="button" data-screen="estudo">
             <span class="nav-icon">EF</span>
@@ -188,6 +192,108 @@
                 <button id="prevPageBtn" class="btn btn-outline-secondary btn-sm" type="button">Anterior</button>
                 <button id="nextPageBtn" class="btn btn-outline-secondary btn-sm" type="button">Proxima</button>
               </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="screen-administradoras" class="screen-panel">
+          <div class="content-card">
+            <div class="table-toolbar">
+              <div>
+                <h2>Entrevista do Cliente</h2>
+                <p>Dados obrigatorios para calcular a viabilidade das administradoras</p>
+              </div>
+            </div>
+            <form id="administratorInterviewForm" class="viability-form">
+              <label>
+                <span>Objetivo do Credito</span>
+                <select id="administratorObjetivo" class="form-select" required>
+                  <option value="Aquisicao de Imovel">Aquisicao</option>
+                  <option value="Quitacao de Financiamento">Quitacao</option>
+                  <option value="Construcao">Construcao</option>
+                  <option value="Reforma">Reforma</option>
+                  <option value="Investimento">Investimento</option>
+                </select>
+              </label>
+              <label>
+                <span>Prazo Desejado</span>
+                <select id="administratorPrazoDesejado" class="form-select" required>
+                  <option value="3">1 a 3 meses</option>
+                  <option value="6">4 a 6 meses</option>
+                  <option value="12">7 a 12 meses</option>
+                  <option value="24">13 a 24 meses</option>
+                  <option value="36">Sem urgencia</option>
+                </select>
+              </label>
+              <label>
+                <span>Tipo de Bem</span>
+                <select id="administratorTipoBem" class="form-select" required>
+                  <option value="Imovel">Imovel</option>
+                  <option value="Veiculo">Veiculo</option>
+                  <option value="Servicos">Servicos</option>
+                  <option value="Pesados">Pesados</option>
+                  <option value="Outros">Outros</option>
+                </select>
+              </label>
+              <label><span>Credito Desejado</span><input id="administratorCredito" class="form-control" inputmode="decimal" required></label>
+              <label><span>Lance Proprio Disponivel</span><input id="administratorLanceProprio" class="form-control" inputmode="decimal" required></label>
+              <label><span>FGTS Titular</span><input id="administratorFgtsTitular" class="form-control" inputmode="decimal"></label>
+              <label><span>FGTS Conjuge</span><input id="administratorFgtsConjuge" class="form-control" inputmode="decimal"></label>
+              <label><span>Total FGTS</span><input id="administratorFgtsTotal" class="form-control" readonly></label>
+              <label><span>Renda Titular</span><input id="administratorRendaTitular" class="form-control" inputmode="decimal" required></label>
+              <label><span>Renda Conjuge</span><input id="administratorRendaConjuge" class="form-control" inputmode="decimal"></label>
+              <label><span>Renda Total</span><input id="administratorRendaTotal" class="form-control" readonly></label>
+              <label><span>Parcela Ideal</span><input id="administratorParcelaIdeal" class="form-control" inputmode="decimal" required></label>
+              <label><span>Parcela Limite</span><input id="administratorParcelaLimite" class="form-control" inputmode="decimal" required></label>
+              <label><span>Data Nascimento Titular</span><input id="administratorNascimento" class="form-control" type="date" required></label>
+              <label><span>Data Nascimento Conjuge</span><input id="administratorNascimentoConjuge" class="form-control" type="date"></label>
+              <label>
+                <span>Estado do Bem</span>
+                <select id="administratorEstadoBem" class="form-select">
+                  <option value="Pronto">Pronto</option>
+                  <option value="Na Planta">Na Planta</option>
+                  <option value="Terreno">Terreno</option>
+                  <option value="Construcao">Construcao</option>
+                  <option value="Indefinido">Indefinido</option>
+                </select>
+              </label>
+              <div class="form-actions">
+                <button id="clearAdministratorBtn" class="btn btn-outline-secondary" type="button">Limpar Entrevista</button>
+                <button id="analyzeAdministratorsBtn" class="btn btn-primary" type="submit">Recalcular Viabilidade</button>
+              </div>
+            </form>
+          </div>
+
+          <div id="administratorLoading" class="table-state d-none">Analisando administradoras...</div>
+          <div id="administratorError" class="table-state table-state-error d-none">Nao foi possivel analisar as administradoras.</div>
+          <div id="administratorEmpty" class="table-state d-none">Nenhuma administradora cadastrada com regras completas para este cenario.</div>
+
+          <div id="administratorResults" class="content-card d-none">
+            <div class="table-toolbar">
+              <div>
+                <h2>Analise de Viabilidade por Administradoras</h2>
+                <p id="administratorScreenSubtitle">Aguardando analise</p>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-hover align-middle viability-table administrator-viability-table">
+                <thead>
+                  <tr>
+                    <th>Administradora</th>
+                    <th>Credito a contratar</th>
+                    <th>Lance embutido</th>
+                    <th>Lance proprio</th>
+                    <th>FGTS</th>
+                    <th>Lance total</th>
+                    <th>Lance maximo</th>
+                    <th>Taxa ADM</th>
+                    <th>Fundo reserva</th>
+                    <th>Prazo minimo</th>
+                    <th>Elegivel</th>
+                  </tr>
+                </thead>
+                <tbody id="administratorScreenBody"></tbody>
+              </table>
             </div>
           </div>
         </section>
@@ -1085,6 +1191,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260605-11"></script>
+    <script src="/static/js/app.js?v=20260605-12"></script>
   </body>
 </html>
