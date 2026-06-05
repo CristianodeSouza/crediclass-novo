@@ -1,6 +1,8 @@
+import copy
 import json
 import logging
 import re
+import threading
 import time
 import unicodedata
 from functools import lru_cache
@@ -13,9 +15,27 @@ from .config import get_settings
 
 logger = logging.getLogger("crediclass.sheets")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
-CACHE_TTL_SECONDS = 120
+CACHE_TTL_SECONDS = 300
+METADATA_CACHE_TTL_SECONDS = 900
 MAX_CREDIT_VALUE = 100_000_000
 _grupos_cache: dict[str, Any] = {"expires_at": 0.0, "items": None}
+_sheet_metadata_cache: dict[str, Any] = {"expires_at": 0.0, "headers": None}
+_group_row_index: dict[str, int] = {}
+_grupo_detail_cache: dict[str, tuple[float, dict[str, Any]]] = {}
+_cache_lock = threading.RLock()
+
+SUMMARY_FIELDS = [
+    "administradora",
+    "grupo",
+    "tipo_bem",
+    "credito_minimo",
+    "credito_maximo",
+    "taxa_adm",
+    "prazo_total",
+    "primeira_assembleia",
+    "ultima_assembleia",
+    "status",
+]
 
 
 def normalize_header(value: str) -> str:
@@ -145,8 +165,80 @@ def get_service():
 
 
 def clear_rows_cache() -> None:
-    _grupos_cache["expires_at"] = 0.0
-    _grupos_cache["items"] = None
+    with _cache_lock:
+        _grupos_cache["expires_at"] = 0.0
+        _grupos_cache["items"] = None
+        _sheet_metadata_cache["expires_at"] = 0.0
+        _sheet_metadata_cache["headers"] = None
+        _group_row_index.clear()
+        _grupo_detail_cache.clear()
+
+
+def read_sheet_headers(force_reload: bool = False) -> list[str]:
+    now = time.time()
+    with _cache_lock:
+        headers = _sheet_metadata_cache["headers"]
+        if not force_reload and headers is not None and now < _sheet_metadata_cache["expires_at"]:
+            return list(headers)
+
+        settings = get_settings()
+        result = get_service().spreadsheets().values().get(
+            spreadsheetId=settings.google_sheets_id,
+            range=f"'{settings.google_sheet_name}'!A1:ZZ1",
+        ).execute()
+        values = result.get("values", [])
+        headers = [str(header).strip() for header in (values[0] if values else [])]
+        _sheet_metadata_cache["headers"] = headers
+        _sheet_metadata_cache["expires_at"] = now + METADATA_CACHE_TTL_SECONDS
+        return list(headers)
+
+
+def read_summary_rows(force_reload: bool = False) -> list[dict[str, Any]]:
+    headers = read_sheet_headers(force_reload=force_reload)
+    if not headers:
+        return []
+
+    selected: list[tuple[str, str, int]] = []
+    header_positions = headers_index(headers)
+    for field in SUMMARY_FIELDS:
+        header = find_header(headers, field)
+        if header is None:
+            continue
+        index = header_positions[header]
+        selected.append((field, header, index))
+
+    validate_required_headers(headers, ["administradora", "grupo", "tipo_bem"])
+    settings = get_settings()
+    ranges = [
+        f"'{settings.google_sheet_name}'!{column_letter(index)}2:{column_letter(index)}"
+        for _, _, index in selected
+    ]
+    result = get_service().spreadsheets().values().batchGet(
+        spreadsheetId=settings.google_sheets_id,
+        ranges=ranges,
+    ).execute()
+    value_ranges = result.get("valueRanges", [])
+    columns = [item.get("values", []) for item in value_ranges]
+    row_count = max((len(column) for column in columns), default=0)
+    rows: list[dict[str, Any]] = []
+    row_index: dict[str, int] = {}
+
+    for offset in range(row_count):
+        row: dict[str, Any] = {}
+        for (_, header, _), column in zip(selected, columns):
+            cell = column[offset] if offset < len(column) else []
+            row[header] = cell[0] if cell else ""
+        if not any(str(value).strip() for value in row.values()):
+            continue
+        rows.append(row)
+        grupo_id = build_grupo_id(row)
+        if grupo_id:
+            row_index[grupo_id.upper()] = offset + 2
+
+    with _cache_lock:
+        _group_row_index.clear()
+        _group_row_index.update(row_index)
+    return rows
 
 
 def read_sheet_rows(force_reload: bool = False) -> list[dict[str, Any]]:
@@ -580,28 +672,61 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
 
 def list_grupos() -> list[dict[str, Any]]:
     now = time.time()
-    if _grupos_cache["items"] is not None and now < _grupos_cache["expires_at"]:
-        logger.info("Usando cache de grupos")
-        return list(_grupos_cache["items"])
+    with _cache_lock:
+        if _grupos_cache["items"] is not None and now < _grupos_cache["expires_at"]:
+            logger.info("Usando cache de grupos")
+            return list(_grupos_cache["items"])
 
-    items = [row_to_grupo(row) for row in read_sheet_rows()]
-    _grupos_cache["items"] = items
-    _grupos_cache["expires_at"] = now + CACHE_TTL_SECONDS
-    return items
+        items = [row_to_grupo(row) for row in read_summary_rows()]
+        _grupos_cache["items"] = items
+        _grupos_cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
+        return list(items)
 
 
 def list_grupos_detalhe() -> list[dict[str, Any]]:
     return [row_to_grupo_detalhe(row) for row in read_sheet_rows()]
 
 
-def get_grupo(grupo_id: str) -> dict[str, Any] | None:
-    values = read_sheet_values()
+def get_grupo(grupo_id: str, _retry_on_stale_index: bool = True) -> dict[str, Any] | None:
+    wanted = grupo_id.strip().upper()
+    now = time.time()
+    with _cache_lock:
+        cached = _grupo_detail_cache.get(wanted)
+        if cached and now < cached[0]:
+            logger.info("Usando cache de detalhes do grupo %s", wanted)
+            return copy.deepcopy(cached[1])
+
+        row_number = _group_row_index.get(wanted)
+        if row_number is None:
+            list_grupos()
+            row_number = _group_row_index.get(wanted)
+    if row_number is None:
+        return None
+
+    headers = read_sheet_headers()
+    if not headers:
+        return None
+    settings = get_settings()
+    last_column = column_letter(len(headers) - 1)
+    result = get_service().spreadsheets().values().get(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"'{settings.google_sheet_name}'!A{row_number}:{last_column}{row_number}",
+    ).execute()
+    values = result.get("values", [])
     if not values:
         return None
-    headers = [str(header).strip() for header in values[0]]
-    found = find_group_row(values, grupo_id)
-    if not found:
-        return None
-    _, row = found
+    row = values[0]
     row_dict = {header: row[index] if index < len(row) else "" for index, header in enumerate(headers)}
-    return row_to_grupo_detalhe(row_dict)
+    item = row_to_grupo_detalhe(row_dict)
+    if item["grupo_id"].upper() != wanted:
+        if not _retry_on_stale_index:
+            return None
+        clear_rows_cache()
+        return get_grupo(grupo_id, _retry_on_stale_index=False)
+
+    with _cache_lock:
+        if len(_grupo_detail_cache) >= 32:
+            oldest_key = min(_grupo_detail_cache, key=lambda key: _grupo_detail_cache[key][0])
+            _grupo_detail_cache.pop(oldest_key, None)
+        _grupo_detail_cache[wanted] = (time.time() + CACHE_TTL_SECONDS, item)
+    return copy.deepcopy(item)

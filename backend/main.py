@@ -11,7 +11,7 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
-from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows, update_grupo, update_historico_mensal, update_historico_mensal_lote
+from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, update_grupo, update_historico_mensal, update_historico_mensal_lote
 from .viabilidade import analyze_viabilidade
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -52,7 +52,7 @@ def reload_data():
     logger.info("POST /api/reload")
     try:
         clear_rows_cache()
-        total = len(read_sheet_rows(force_reload=True))
+        total = len(list_grupos())
     except Exception as error:
         logger.exception("Erro ao recarregar dados da planilha")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
