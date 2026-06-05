@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260604-39", index_html)
+        self.assertIn("/static/js/app.js?v=20260604-40", index_html)
 
     def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -67,6 +67,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('id="groupFormHistoryAddMonthBtn"', index_html)
         self.assertIn("const HISTORY_START_MONTH = \"2024-01\"", app_js)
         self.assertIn("function collectHistoryBatchPayloads(prefix)", app_js)
+        self.assertIn("markHistoryPayloadsSaved", app_js)
+        self.assertIn("/historico/lote", app_js)
         self.assertIn("function normalizeHistoryField(field, rawValue)", app_js)
         self.assertIn("data-original-value", app_js)
         self.assertIn("Nenhuma alteracao de historico para salvar.", app_js)
@@ -77,7 +79,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("Nao foi possivel carregar o historico completo", app_js)
         self.assertIn(".group-form-dialog .modal-footer", style_css)
         self.assertIn('collectHistoryBatchPayloads("groupFormHistory")', app_js)
-        self.assertIn('/historico`, historyPayload)', app_js)
+        self.assertIn('/historico/lote`, { items: historyPayloads })', app_js)
 
     def test_grafico_historico_grupo_exibe_lances_sem_barras(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")

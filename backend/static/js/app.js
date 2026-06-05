@@ -639,6 +639,21 @@ function collectHistoryBatchPayloads(prefix) {
     .filter(hasMonthlyHistoryMetrics);
 }
 
+function markHistoryPayloadsSaved(prefix, payloads) {
+  const grid = document.getElementById(`${prefix}Grid`);
+  if (!grid) return;
+  payloads.forEach((payload) => {
+    const row = grid.querySelector(`[data-history-month="${payload.mes}"]`);
+    if (!row) return;
+    ["maior_lance", "menor_lance", "qtd_contemplacoes"].forEach((field) => {
+      if (!(field in payload)) return;
+      const input = row.querySelector(`[data-history-field="${field}"]`);
+      if (!input) return;
+      input.dataset.originalValue = normalizeHistoryField(field, input.value).comparable;
+    });
+  });
+}
+
 function hasMonthlyHistoryMetrics(payload) {
   return payload.maior_lance !== undefined || payload.menor_lance !== undefined || payload.qtd_contemplacoes !== undefined;
 }
@@ -674,10 +689,8 @@ async function saveHistoryUpdate() {
     return;
   }
   setHistoryUpdateState("loading", `Salvando ${payloads.length} mes(es) na Google Sheets...`);
-  for (const payload of payloads) {
-    await apiPut(`/grupos/${encodeURIComponent(currentDetailsGroupId)}/historico`, payload);
-  }
-  await openGroupDetails(currentDetailsGroupId);
+  await apiPut(`/grupos/${encodeURIComponent(currentDetailsGroupId)}/historico/lote`, { items: payloads });
+  markHistoryPayloadsSaved("historyUpdate", payloads);
   setHistoryUpdateState("success", "Historico atualizado na Google Sheets.");
   notifyWhen("alertar_historico_atualizado", "Historico mensal atualizado na Google Sheets.", "success");
   await loadMapaGrupos();
@@ -824,9 +837,8 @@ async function saveGroupForm() {
   }
   if (historyPayloads.length) {
     setGroupFormHistoryState("success", `Salvando ${historyPayloads.length} mes(es) de historico...`);
-    for (const historyPayload of historyPayloads) {
-      await apiPut(`/grupos/${encodeURIComponent(targetGroupId)}/historico`, historyPayload);
-    }
+    await apiPut(`/grupos/${encodeURIComponent(targetGroupId)}/historico/lote`, { items: historyPayloads });
+    markHistoryPayloadsSaved("groupFormHistory", historyPayloads);
     notifyWhen("alertar_historico_atualizado", "Historico mensal atualizado na Google Sheets.", "success");
   }
   groupFormModal.hide();

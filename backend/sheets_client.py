@@ -365,8 +365,35 @@ def format_history_value(metric: str, value: Any) -> str:
     return str(int(value))
 
 
-def update_historico_mensal(grupo_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+def history_updates_for_payload(headers: list[str], row_number: int, payload: dict[str, Any], sheet_name: str) -> tuple[list[str], list[dict[str, Any]], str]:
     month_key = str(payload.get("mes") or "")
+    sent_metrics = [metric for metric in ("maior_lance", "menor_lance", "qtd_contemplacoes") if metric in payload]
+    if not sent_metrics:
+        raise RuntimeError("Nenhum campo de historico enviado")
+    headers, history_headers, headers_changed = ensure_history_headers(headers, month_key, sent_metrics)
+    index_by_header = headers_index(headers)
+    updates = []
+
+    if headers_changed:
+        for metric in sent_metrics:
+            header = history_headers[metric]
+            col = column_letter(index_by_header[header])
+            updates.append({
+                "range": f"'{sheet_name}'!{col}1",
+                "values": [[header]],
+            })
+
+    for metric in sent_metrics:
+        header = history_headers[metric]
+        col = column_letter(index_by_header[header])
+        updates.append({
+            "range": f"'{sheet_name}'!{col}{row_number}",
+            "values": [[format_history_value(metric, payload[metric])]],
+        })
+    return headers, updates, month_key
+
+
+def update_historico_mensal(grupo_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     values = read_sheet_values()
     if not values:
         raise RuntimeError("Planilha sem cabecalhos")
@@ -375,32 +402,9 @@ def update_historico_mensal(grupo_id: str, payload: dict[str, Any]) -> dict[str,
     if not found:
         raise KeyError("Grupo nao encontrado")
 
-    sent_metrics = [metric for metric in ("maior_lance", "menor_lance", "qtd_contemplacoes") if metric in payload]
-    if not sent_metrics:
-        raise RuntimeError("Nenhum campo de historico enviado")
-    headers, history_headers, headers_changed = ensure_history_headers(headers, month_key, sent_metrics)
-
-    index_by_header = headers_index(headers)
     settings = get_settings()
-    updates = []
-
-    if headers_changed:
-        for metric in sent_metrics:
-            header = history_headers[metric]
-            col = column_letter(index_by_header[header])
-            updates.append({
-                "range": f"'{settings.google_sheet_name}'!{col}1",
-                "values": [[header]],
-            })
-
     row_number, _ = found
-    for metric in sent_metrics:
-        header = history_headers[metric]
-        col = column_letter(index_by_header[header])
-        updates.append({
-            "range": f"'{settings.google_sheet_name}'!{col}{row_number}",
-            "values": [[format_history_value(metric, payload[metric])]],
-        })
+    _, updates, month_key = history_updates_for_payload(headers, row_number, payload, settings.google_sheet_name)
 
     get_service().spreadsheets().values().batchUpdate(
         spreadsheetId=settings.google_sheets_id,
@@ -408,6 +412,34 @@ def update_historico_mensal(grupo_id: str, payload: dict[str, Any]) -> dict[str,
     ).execute()
     clear_rows_cache()
     return {"success": True, "mes": month_key}
+
+
+def update_historico_mensal_lote(grupo_id: str, payloads: list[dict[str, Any]]) -> dict[str, Any]:
+    if not payloads:
+        raise RuntimeError("Nenhum historico enviado")
+    values = read_sheet_values()
+    if not values:
+        raise RuntimeError("Planilha sem cabecalhos")
+    headers = [str(header).strip() for header in values[0]]
+    found = find_group_row(values, grupo_id)
+    if not found:
+        raise KeyError("Grupo nao encontrado")
+
+    settings = get_settings()
+    row_number, _ = found
+    updates = []
+    months = []
+    for payload in payloads:
+        headers, payload_updates, month_key = history_updates_for_payload(headers, row_number, payload, settings.google_sheet_name)
+        updates.extend(payload_updates)
+        months.append(month_key)
+
+    get_service().spreadsheets().values().batchUpdate(
+        spreadsheetId=settings.google_sheets_id,
+        body={"valueInputOption": "USER_ENTERED", "data": updates},
+    ).execute()
+    clear_rows_cache()
+    return {"success": True, "meses": months}
 
 
 def get_field(row: dict[str, Any], field: str) -> Any:

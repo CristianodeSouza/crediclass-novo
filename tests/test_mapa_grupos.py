@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import patch
 
-from backend.main import grupo_detalhe, grupo_historico_atualizar, grupos, reload_data
-from backend.models import HistoricoUpdateRequest
+from backend.main import grupo_detalhe, grupo_historico_atualizar, grupo_historico_lote_atualizar, grupos, reload_data
+from backend.models import HistoricoBatchUpdateRequest, HistoricoUpdateRequest
 from backend.sheets_client import get_grupo as sheets_get_grupo
 from backend.sheets_client import build_historico, clean_text, create_grupo, delete_grupo, parse_credit, payload_to_row_values, row_to_grupo, row_to_grupo_detalhe, update_grupo, update_historico_mensal
 
@@ -396,6 +396,18 @@ class MapaGruposTest(unittest.TestCase):
         with patch("backend.main.update_historico_mensal", return_value={"success": True}):
             result = grupo_historico_atualizar("128", payload)
 
+        self.assertTrue(result["success"])
+
+    def test_historico_lote_endpoint_returns_success(self):
+        payload = HistoricoBatchUpdateRequest(items=[
+            HistoricoUpdateRequest(mes="2026-11", maior_lance=0.5, menor_lance=0.5, qtd_contemplacoes=2),
+            HistoricoUpdateRequest(mes="2026-12", maior_lance=0.51, menor_lance=0.49, qtd_contemplacoes=3),
+        ])
+
+        with patch("backend.main.update_historico_mensal_lote", return_value={"success": True}) as update_lote:
+            result = grupo_historico_lote_atualizar("128", payload)
+
+        update_lote.assert_called_once()
         self.assertTrue(result["success"])
 
 
