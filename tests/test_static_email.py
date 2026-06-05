@@ -17,7 +17,14 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-03", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-04", index_html)
+
+    def test_percentuais_de_entrada_sao_formatados_sem_residuo_decimal(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("function percentToInputValue(value)", app_js)
+        self.assertIn('maximumFractionDigits: 3', app_js)
+        self.assertIn("return percentToInputValue(value);", app_js)
 
     def test_mapa_grupos_possui_recarregamento_manual(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")

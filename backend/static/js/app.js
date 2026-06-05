@@ -125,6 +125,15 @@ function formatPercent(value) {
   return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(value * 100)}%`;
 }
 
+function percentToInputValue(value) {
+  if (value === null || value === undefined) return "";
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+    useGrouping: false,
+  }).format(Number(value) * 100);
+}
+
 function formatBool(value) {
   if (value === true) return "Sim";
   if (value === false) return "Nao";
@@ -539,8 +548,7 @@ function renderDetailsAudit(group) {
 }
 
 function inputPercent(value) {
-  if (value === null || value === undefined) return "";
-  return String(value * 100).replace(".", ",");
+  return percentToInputValue(value);
 }
 
 function normalizeHistoryField(field, rawValue) {
@@ -730,7 +738,7 @@ function setGroupFormValues(group = {}) {
   document.getElementById("groupFormTipoBem").value = group.tipo_bem || "";
   document.getElementById("groupFormCreditoMinimo").value = group.credito_minimo ?? "";
   document.getElementById("groupFormCreditoMaximo").value = group.credito_maximo ?? "";
-  document.getElementById("groupFormTaxaAdm").value = group.taxa_adm !== null && group.taxa_adm !== undefined ? String(group.taxa_adm * 100).replace(".", ",") : "";
+  document.getElementById("groupFormTaxaAdm").value = percentToInputValue(group.taxa_adm);
   document.getElementById("groupFormPrazoTotal").value = group.prazo_total ?? "";
   document.getElementById("groupFormStatus").value = group.status || "Ativo";
   setGroupFormHistoryValues(group.historico || {});
@@ -1588,7 +1596,7 @@ function setInputValue(id, value) {
 }
 
 function percentToInput(value) {
-  return value === null || value === undefined ? "" : String(value * 100).replace(".", ",");
+  return percentToInputValue(value);
 }
 
 function inputToPercent(id) {

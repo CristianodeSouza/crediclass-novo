@@ -299,10 +299,18 @@ def format_sheet_value(field: str, value: Any) -> str:
     if value is None:
         return ""
     if field in {"taxa_adm", "fundo_reserva", "percentual_lance_embutido", "percentual_lance_fixo"}:
-        return str(float(value) * 100).replace(".", ",")
+        return format_decimal_value(float(value) * 100, minimum_decimals=1)
     if isinstance(value, float):
         return str(value).replace(".", ",")
     return str(value)
+
+
+def format_decimal_value(value: float, minimum_decimals: int = 0, maximum_decimals: int = 8) -> str:
+    text = f"{round(float(value), maximum_decimals):.{maximum_decimals}f}".rstrip("0").rstrip(".")
+    if minimum_decimals:
+        integer, separator, decimals = text.partition(".")
+        text = f"{integer}.{decimals.ljust(minimum_decimals, '0')}" if separator else f"{integer}.{''.ljust(minimum_decimals, '0')}"
+    return text.replace(".", ",")
 
 
 def payload_to_row_values(headers: list[str], payload: dict[str, Any], existing: list[Any] | None = None) -> list[Any]:
@@ -438,7 +446,7 @@ def format_history_value(metric: str, value: Any) -> str:
     if value is None:
         return ""
     if metric in {"maior_lance", "menor_lance"}:
-        return str(float(value) * 100).replace(".", ",")
+        return format_decimal_value(float(value) * 100, minimum_decimals=1)
     return str(int(value))
 
 
