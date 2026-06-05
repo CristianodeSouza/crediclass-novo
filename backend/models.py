@@ -299,6 +299,8 @@ class ViabilidadeGrupo(BaseModel):
     administradora: str
     grupo: str = ""
     tipo_bem: str = ""
+    credito_minimo: float | None = None
+    credito_maximo: float | None = None
     credito: float
     credito_desejado: float
     credito_contratado: float
@@ -315,6 +317,9 @@ class ViabilidadeGrupo(BaseModel):
     lance_sugerido_valor: float | None = None
     lance_referencia_percentual: float | None = None
     perfil_prazo_operacional: str = ""
+    prazo_minimo: float | None = None
+    taxa_adm: float | None = None
+    fundo_reserva: float | None = None
     prazo: int
     afinidade: float
     selo: str

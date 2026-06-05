@@ -256,7 +256,7 @@ class ViabilidadeTest(unittest.TestCase):
 
         self.assertEqual(result["total_grupos_encontrados"], 1)
         self.assertEqual(result["total_grupos_compativeis"], 0)
-        self.assertIn("Credito fora da faixa do grupo", result["melhores_grupos"][0]["motivos"])
+        self.assertEqual(result["melhores_grupos"], [])
 
     def test_credit_inside_range_is_approved_when_other_rules_pass(self):
         result = analyze_viabilidade(make_payload(), [make_group()])
@@ -276,9 +276,8 @@ class ViabilidadeTest(unittest.TestCase):
         blocked = analyze_viabilidade(make_payload(), [make_group(fgts=False)])
 
         self.assertEqual(allowed["melhores_grupos"][0]["fgts_utilizado"], 50000)
-        self.assertEqual(blocked["melhores_grupos"][0]["fgts_utilizado"], 0)
+        self.assertEqual(blocked["melhores_grupos"], [])
         self.assertFalse(blocked["checklist"]["fgts_permitido"])
-        self.assertIn("fgts_nao_permitido", blocked["melhores_grupos"][0]["alertas"])
 
     def test_embedded_bid_is_used_only_when_group_allows_it(self):
         allowed = analyze_viabilidade(make_payload(), [make_group(lance_embutido=True)])
@@ -295,7 +294,8 @@ class ViabilidadeTest(unittest.TestCase):
             [make_group(lance_embutido=False, percentual_lance_embutido=0)],
         )
 
-        self.assertEqual(result["melhores_grupos"][0]["lance_proprio_utilizado"], 0)
+        self.assertEqual(result["total_grupos_encontrados"], 1)
+        self.assertEqual(result["melhores_grupos"], [])
         self.assertFalse(result["checklist"]["lance_compativel"])
         self.assertFalse(result["cenario_viavel"])
 
@@ -320,10 +320,9 @@ class ViabilidadeTest(unittest.TestCase):
             ],
         )
 
-        item = result["melhores_grupos"][0]
-        self.assertIn("historico_lance_insuficiente", item["alertas"])
+        self.assertEqual(result["total_grupos_encontrados"], 1)
+        self.assertEqual(result["melhores_grupos"], [])
         self.assertFalse(result["checklist"]["lance_compativel"])
-        self.assertLess(item["afinidade"], 0.9)
 
     def test_seals_cover_every_score_range(self):
         cases = [
@@ -370,7 +369,7 @@ class ViabilidadeTest(unittest.TestCase):
 
         self.assertFalse(result["cenario_viavel"])
         self.assertFalse(result["checklist"]["idade_compativel"])
-        self.assertIn("idade_incompativel", result["melhores_grupos"][0]["alertas"])
+        self.assertEqual(result["melhores_grupos"], [])
 
     def test_calculates_installment_and_contract_credit(self):
         result = analyze_viabilidade(make_payload(), [make_group()])
@@ -398,7 +397,7 @@ class ViabilidadeTest(unittest.TestCase):
 
         self.assertEqual(result["total_grupos_encontrados"], 1)
         self.assertFalse(result["cenario_viavel"])
-        self.assertFalse(result["melhores_grupos"][0]["grupo_aprovado"])
+        self.assertEqual(result["melhores_grupos"], [])
         self.assertIn("renda_compativel", result["motivos_reprovacao"])
         self.assertIn("parcela_compativel", result["motivos_reprovacao"])
 
@@ -417,7 +416,7 @@ class ViabilidadeTest(unittest.TestCase):
         self.assertEqual(result["total_grupos_analisados"], 1)
         self.assertEqual(result["melhores_grupos"][0]["administradora"], "Itau")
 
-    def test_endpoint_nao_bloqueia_grupos_quando_regras_administradoras_estao_vazias(self):
+    def test_endpoint_exige_regra_de_administradora_para_grupo_compativel(self):
         with (
             patch("backend.main.list_grupos", return_value=[make_group()]),
             patch("backend.main.get_configuracoes", return_value={"administradoras_regras": []}),
@@ -425,10 +424,10 @@ class ViabilidadeTest(unittest.TestCase):
         ):
             result = viabilidade_analisar(make_payload())
 
-        list_details.assert_called_once_with(["128"])
+        list_details.assert_not_called()
         self.assertEqual(result["total_administradoras_analisadas"], 0)
         self.assertEqual(result["total_grupos_analisados"], 1)
-        self.assertEqual(result["melhores_grupos"][0]["administradora"], "Itau")
+        self.assertEqual(result["melhores_grupos"], [])
 
 
 if __name__ == "__main__":

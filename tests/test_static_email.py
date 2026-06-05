@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-19", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-20", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -58,10 +58,16 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn('id="viabilityProfileSummary"', index_html)
         self.assertIn("Grupos Compat", index_html)
-        self.assertIn("function renderViabilityProfileSummary()", app_js)
         self.assertIn("const profile = collectClientProfile();", app_js)
+        self.assertIn("Credito a contratar", index_html)
+        self.assertIn("Lance referencia perfil", index_html)
+        self.assertIn("Motivo / Alerta", index_html)
+        self.assertNotIn('id="viabilityProfileSummary"', index_html)
+        self.assertNotIn("function renderViabilityProfileSummary()", app_js)
+        self.assertNotIn("Viabilidade por Administradoras", index_html)
+        self.assertNotIn("administratorViabilityBody", index_html)
+        self.assertNotIn("function renderAdministratorViability", app_js)
         self.assertNotIn('id="viabilityForm"', index_html)
         self.assertNotIn('id="clearViabilityBtn"', index_html)
         self.assertNotIn('id="viabilityChecklist"', index_html)
@@ -354,7 +360,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260605-14", index_html)
+        self.assertIn("/static/css/style.css?v=20260605-15", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

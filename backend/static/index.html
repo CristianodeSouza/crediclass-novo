@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="/static/favicon.svg?v=1" rel="icon" type="image/svg+xml">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260605-14" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260605-15" rel="stylesheet">
   </head>
   <body>
     <div class="app-shell">
@@ -330,14 +330,13 @@
             <div class="table-toolbar">
               <div>
                 <h2>Grupos Compatíveis</h2>
-                <p>Resultado calculado a partir do Perfil do Cliente salvo</p>
+                <p>Selecao de grupos compativeis com o perfil salvo</p>
               </div>
               <div class="toolbar-actions">
                 <button class="btn btn-outline-secondary" type="button" data-screen-jump="perfil">Editar Perfil</button>
                 <button id="analyzeViabilityBtn" class="btn btn-primary" type="button">Analisar Grupos</button>
               </div>
             </div>
-            <div id="viabilityProfileSummary" class="client-profile-summary viability-profile-summary"></div>
           </div>
 
           <div id="viabilityLoading" class="table-state d-none">Analisando grupos...</div>
@@ -345,68 +344,11 @@
           <div id="viabilityEmpty" class="table-state d-none">Nenhum grupo compativel encontrado para este cenario.</div>
 
           <div id="viabilityResults" class="d-none">
-            <div class="summary-grid viability-summary" aria-label="Resumo da viabilidade">
-              <article class="summary-card">
-                <span class="summary-label">Administradoras Analisadas</span>
-                <strong id="viabilityAdministradoras">0</strong>
-                <small>Com grupos compativeis</small>
-              </article>
-              <article class="summary-card">
-                <span class="summary-label">Grupos Compativeis</span>
-                <strong id="viabilityTotal">0</strong>
-                <small>Depois das regras iniciais</small>
-              </article>
-              <article class="summary-card">
-                <span class="summary-label">Muito Compativeis</span>
-                <strong id="viabilityTop">0</strong>
-                <small>Afinidade acima de 80%</small>
-              </article>
-              <article class="summary-card">
-                <span class="summary-label">Melhor Parcela Estimada</span>
-                <strong id="viabilityBestInstallment">-</strong>
-                <small>No ranking retornado</small>
-              </article>
-              <article class="summary-card">
-                <span class="summary-label">Credito Maximo</span>
-                <strong id="viabilityMaxCredit">-</strong>
-                <small>Credito disponivel</small>
-              </article>
-            </div>
-
             <div class="content-card">
               <div class="table-toolbar">
                 <div>
-                  <h2>Viabilidade por Administradoras</h2>
-                  <p id="administratorViabilitySubtitle">Administradoras elegiveis antes da busca de grupos</p>
-                </div>
-              </div>
-              <div class="table-responsive">
-                <table class="table table-hover align-middle viability-table administrator-viability-table">
-                  <thead>
-                    <tr>
-                      <th>Administradora</th>
-                      <th>Credito a contratar</th>
-                      <th>Lance embutido</th>
-                      <th>Lance proprio</th>
-                      <th>FGTS</th>
-                      <th>Lance total</th>
-                      <th>Lance maximo</th>
-                      <th>Taxa ADM</th>
-                      <th>Fundo reserva</th>
-                      <th>Prazo minimo</th>
-                      <th>Elegivel</th>
-                    </tr>
-                  </thead>
-                  <tbody id="administratorViabilityBody"></tbody>
-                </table>
-              </div>
-            </div>
-
-            <div class="content-card">
-              <div class="table-toolbar">
-                <div>
-                  <h2>Ranking de Grupos</h2>
-                  <p id="viabilityRankingSubtitle">Resultado ordenado por afinidade</p>
+                  <h2>Grupos Compatíveis</h2>
+                  <p id="viabilityRankingSubtitle">Resultado dos grupos aprovados pela compatibilidade</p>
                 </div>
               </div>
               <div class="table-responsive">
@@ -414,16 +356,21 @@
                   <thead>
                     <tr>
                       <th>Ranking</th>
-                      <th>Grupo</th>
                       <th>Administradora</th>
+                      <th>Grupo</th>
                       <th>Tipo de Bem</th>
-                      <th>Credito</th>
+                      <th>Credito minimo</th>
+                      <th>Credito maximo</th>
+                      <th>Credito a contratar</th>
+                      <th>Prazo restante</th>
+                      <th>Prazo minimo</th>
+                      <th>Lance referencia perfil</th>
+                      <th>Lance maximo cliente</th>
+                      <th>Taxa ADM</th>
+                      <th>Fundo reserva</th>
                       <th>Parcela Estimada</th>
-                      <th>Lance (%)</th>
-                      <th>Lance (R$)</th>
-                      <th>Prazo</th>
-                      <th>Afinidade</th>
-                      <th>Selo</th>
+                      <th>Compativel</th>
+                      <th>Motivo / Alerta</th>
                       <th>Acoes</th>
                     </tr>
                   </thead>
@@ -1169,6 +1116,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260605-19"></script>
+    <script src="/static/js/app.js?v=20260605-20"></script>
   </body>
 </html>

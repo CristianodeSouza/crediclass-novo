@@ -148,9 +148,6 @@ function activateScreen(screenName) {
   if (screenName === "administradoras") {
     loadConfiguracoes();
   }
-  if (screenName === "viabilidade") {
-    renderViabilityProfileSummary();
-  }
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
@@ -1176,76 +1173,36 @@ function renderViabilityChecklist(checklist) {
   });
 }
 
-function renderViabilityProfileSummary() {
-  const profile = collectClientProfile();
-  const target = document.getElementById("viabilityProfileSummary");
-  if (!target) return;
-  target.innerHTML = [
-    ["Cliente", profile.nome || "-"],
-    ["Credito desejado", formatMoney(profile.credito_desejado)],
-    ["Conceito IA", profile.conceito_ia],
-    ["Tipo de bem", profile.tipo_bem],
-    ["Recursos proprios", formatMoney(profile.lance_proprio)],
-    ["FGTS total", formatMoney(profile.fgts)],
-    ["Renda total", formatMoney(profile.renda_total)],
-    ["Parcela ideal", formatMoney(profile.parcela_ideal)],
-  ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
-}
-
 function renderViabilitySummary(result) {
   const items = result.melhores_grupos || [];
-  const administradoras = result.administradoras_viabilidade || [];
-  const top = items.filter((item) => item.afinidade >= 0.8).length;
-  const bestInstallment = items.reduce((best, item) => best === null || item.parcela_estimada < best ? item.parcela_estimada : best, null);
-  const maxCredit = items.reduce((best, item) => Math.max(best, item.credito || 0), 0);
-
-  document.getElementById("viabilityAdministradoras").textContent = result.total_administradoras_elegiveis ?? administradoras.filter((item) => item.elegivel).length;
-  document.getElementById("viabilityTotal").textContent = result.total_grupos_compativeis;
-  document.getElementById("viabilityTop").textContent = top;
-  document.getElementById("viabilityBestInstallment").textContent = formatMoney(bestInstallment);
-  document.getElementById("viabilityMaxCredit").textContent = formatMoney(maxCredit);
-  document.getElementById("viabilityRankingSubtitle").textContent = `${items.length} grupo(s) no ranking - perfil ${result.perfil}`;
+  document.getElementById("viabilityRankingSubtitle").textContent = `${items.length} grupo(s) compativel(is) - perfil ${result.perfil}`;
   const scenario = document.getElementById("viabilityScenario");
   if (scenario) scenario.textContent = `${result.cenario} - perfil ${result.perfil}`;
-}
-
-function renderAdministratorViability(items = []) {
-  document.getElementById("administratorViabilitySubtitle").textContent = `${items.filter((item) => item.elegivel).length} elegivel(is) de ${items.length} administradora(s) analisada(s)`;
-  document.getElementById("administratorViabilityBody").innerHTML = items.map((item) => `
-    <tr>
-      <td>${escapeHtml(item.administradora)}</td>
-      <td>${formatMoney(item.credito_a_contratar)}</td>
-      <td>${formatMoney(item.lance_embutido_valor)}</td>
-      <td>${formatMoney(item.lance_proprio)}</td>
-      <td>${formatMoney(item.fgts_utilizado)}</td>
-      <td>${formatMoney(item.lance_total)}</td>
-      <td class="text-success fw-bold">${formatPercent(item.lance_maximo_percentual)}</td>
-      <td>${formatPercent(item.taxa_adm)}</td>
-      <td>${formatPercent(item.fundo_reserva)}</td>
-      <td>${Number(item.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</td>
-      <td><span class="status-badge ${item.elegivel ? "" : "inactive"}">${item.elegivel ? "Sim" : "Nao"}</span></td>
-    </tr>
-  `).join("");
 }
 
 function renderViabilityRanking(items) {
   document.getElementById("viabilityRankingBody").innerHTML = items.map((item) => `
     <tr>
       <td>${item.ranking}</td>
-      <td>${escapeHtml(item.grupo)}</td>
       <td>${escapeHtml(item.administradora)}</td>
+      <td>${escapeHtml(item.grupo)}</td>
       <td>${escapeHtml(item.tipo_bem)}</td>
-      <td>${formatMoney(item.credito)}</td>
-      <td>${formatMoney(item.parcela_estimada)}</td>
-      <td>${formatPercent(item.lance_sugerido_percentual)}</td>
-      <td>${formatMoney(item.lance_sugerido_valor)}</td>
+      <td>${formatMoney(item.credito_minimo)}</td>
+      <td>${formatMoney(item.credito_maximo)}</td>
+      <td>${formatMoney(item.credito_contratado)}</td>
       <td>${item.prazo} meses</td>
-      <td><span class="status-badge">${formatPercent(item.afinidade)}</span></td>
-      <td>${escapeHtml(item.selo)}</td>
+      <td>${Number(item.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</td>
+      <td>${formatPercent(item.lance_referencia_percentual)}</td>
+      <td>${formatPercent(item.percentual_lance)}</td>
+      <td>${formatPercent(item.taxa_adm)}</td>
+      <td>${formatPercent(item.fundo_reserva)}</td>
+      <td>${formatMoney(item.parcela_estimada)}</td>
+      <td><span class="status-badge">Sim</span></td>
+      <td>${escapeHtml((item.alertas || []).concat(item.motivos || []).join("; ") || "-")}</td>
       <td>
         <div class="row-actions">
-          <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver</button>
-          <button class="btn btn-sm btn-outline-secondary" type="button" data-viability-action="estudo" data-group-id="${escapeHtml(item.grupo_id)}">Estudo</button>
+          <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver detalhes</button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" data-viability-action="estrategias" data-group-id="${escapeHtml(item.grupo_id)}">Selecionar</button>
         </div>
       </td>
     </tr>
@@ -1261,7 +1218,6 @@ async function analyzeViability() {
     const result = await apiPost("/viabilidade/analisar", payload);
     viabilityState.lastResult = result;
     renderViabilityChecklist(result.checklist);
-    renderAdministratorViability(result.administradoras_viabilidade || []);
     renderViabilitySummary(result);
     if (!result.melhores_grupos.length) {
       setViabilityState("empty");
@@ -1280,7 +1236,6 @@ function resetViabilityForm() {
   const scenario = document.getElementById("viabilityScenario");
   if (scenario) scenario.textContent = "Aguardando analise";
   document.getElementById("viabilityRankingBody").innerHTML = "";
-  renderViabilityProfileSummary();
   setViabilityState("idle");
 }
 
@@ -2641,7 +2596,10 @@ document.getElementById("viabilityRankingBody").addEventListener("click", (event
     showToast("Execute a Viabilidade antes de selecionar o estudo.", "warning");
     return;
   }
-  openFinancialStudy(button.dataset.groupId, item);
+  if (button.dataset.viabilityAction === "estrategias") {
+    showToast("Grupo selecionado. A proxima etapa e a aba Estrategias.", "success");
+    return;
+  }
 });
 
 document.getElementById("studyChangeGroupBtn").addEventListener("click", () => activateScreen("viabilidade"));

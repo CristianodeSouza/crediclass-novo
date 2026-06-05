@@ -166,6 +166,12 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             + taxa_administrativa_valor
             + fundo_reserva_valor
         ) / prazo_total
+        prazo_minimo = (
+            credito_contratado
+            + taxa_administrativa_valor
+            + fundo_reserva_valor
+            - lance_total
+        ) / payload.parcela_desejada
 
         historico = group.get("historico") or {}
         historico_12m = history_last_12_months(historico)
@@ -236,6 +242,8 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             "administradora": group.get("administradora") or "",
             "grupo": group.get("grupo") or "",
             "tipo_bem": group.get("tipo_bem") or "",
+            "credito_minimo": round(credito_minimo, 2),
+            "credito_maximo": round(credito_maximo, 2),
             "credito": round(credito_disponivel, 2),
             "credito_desejado": round(payload.credito_desejado, 2),
             "credito_contratado": round(credito_contratado, 2),
@@ -264,6 +272,9 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
                 else None
             ),
             "perfil_prazo_operacional": operational_range,
+            "prazo_minimo": round(max(0, prazo_minimo), 2),
+            "taxa_adm": round(taxa_adm, 6),
+            "fundo_reserva": round(fundo_reserva, 6),
             "prazo": int(prazo_restante),
             "afinidade": round(afinidade_score / 100, 4),
             "selo": group_selo(afinidade_score),
@@ -284,11 +295,11 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         })
 
     results.sort(key=lambda item: item["afinidade"], reverse=True)
-    melhores = results[:10]
+    approved_groups = [item for item in results if item["_aprovado"]]
+    melhores = approved_groups[:10]
     for index, item in enumerate(melhores, start=1):
         item["ranking"] = index
 
-    approved_groups = [item for item in results if item["_aprovado"]]
     cenario_viavel = bool(approved_groups)
     checklist_keys = (
         "idade_compativel",
