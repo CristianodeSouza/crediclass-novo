@@ -894,21 +894,26 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .viability-table {
-  min-width: 1180px;
+  min-width: 980px;
   margin-bottom: 0;
 }
 
 .viability-table th {
   background: var(--table-head);
   color: var(--text);
-  font-size: 0.76rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .viability-table td {
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   white-space: nowrap;
+}
+
+.viability-table th,
+.viability-table td {
+  padding: 0.58rem 0.42rem;
 }
 
 .study-layout {
