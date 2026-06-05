@@ -118,11 +118,11 @@ def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: Admin
     }
 
 
-def analyze_administradoras(payload: ViabilidadeRequest, administradoras: list[str]) -> list[dict[str, Any]]:
+def analyze_administradoras(payload: ViabilidadeRequest, administradoras: list[str], config_rules: list[dict] | None = None) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     seen: set[str] = set()
     for administradora in administradoras:
-        rule = get_rule_for_administradora(administradora)
+        rule = get_rule_for_administradora(administradora, config_rules)
         if not rule:
             continue
         key = rule.administradora.upper()

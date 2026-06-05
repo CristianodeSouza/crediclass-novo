@@ -46,6 +46,7 @@ DEFAULT_CONFIG = {
         "alertar_historico_atualizado": True,
         "alertar_falha_integracao": True,
     },
+    "administradoras_regras": [],
     "usuarios": [
         {
             "nome": "Larissa",
@@ -110,6 +111,8 @@ def update_configuracoes(payload: dict) -> dict:
     for section in ["empresa", "preferencias", "parametros_financeiros", "integracoes", "notificacoes"]:
         if section in payload and isinstance(payload[section], dict):
             _settings[section].update(payload[section])
+    if "administradoras_regras" in payload and isinstance(payload["administradoras_regras"], list):
+        _settings["administradoras_regras"] = payload["administradoras_regras"]
     if "usuarios" in payload and isinstance(payload["usuarios"], list):
         _settings["usuarios"] = payload["usuarios"]
     save_config()

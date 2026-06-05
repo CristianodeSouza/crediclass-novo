@@ -223,8 +223,10 @@ def viabilidade_analisar(payload: ViabilidadeRequest):
     )
     try:
         summary_groups = list_grupos()
+        config = get_configuracoes()
+        administrator_rules = config.get("administradoras_regras") or []
         administradoras = sorted({item["administradora"] for item in summary_groups if item.get("administradora")})
-        administradoras_viabilidade = analyze_administradoras(payload, administradoras)
+        administradoras_viabilidade = analyze_administradoras(payload, administradoras, administrator_rules)
         administradoras_elegiveis = {
             normalize_admin_name(item["administradora"])
             for item in administradoras_viabilidade
@@ -265,8 +267,10 @@ def viabilidade_administradoras(payload: ViabilidadeRequest):
     )
     try:
         summary_groups = list_grupos()
+        config = get_configuracoes()
+        administrator_rules = config.get("administradoras_regras") or []
         administradoras = sorted({item["administradora"] for item in summary_groups if item.get("administradora")})
-        items = analyze_administradoras(payload, administradoras)
+        items = analyze_administradoras(payload, administradoras, administrator_rules)
     except Exception as error:
         logger.exception("Erro ao analisar administradoras")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})

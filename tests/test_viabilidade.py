@@ -65,6 +65,24 @@ def make_group(**overrides):
     return values
 
 
+def make_admin_rule(**overrides):
+    values = {
+        "administradora": "Itau",
+        "seguro_obrigatorio": False,
+        "idade_maxima": 80,
+        "limite_sem_comprovacao_renda": None,
+        "percentual_lance_embutido": 0.30,
+        "tipo_lance_embutido": "Credito",
+        "taxa_adm": 0.20,
+        "possui_negociacao_taxa": "Sim",
+        "fundo_reserva": 0.03,
+        "aceita_saida_fiscal": True,
+        "aceita_fgts": True,
+    }
+    values.update(overrides)
+    return values
+
+
 class ViabilidadeTest(unittest.TestCase):
     def test_administrator_feasibility_calcula_credito_lance_e_prazo(self):
         rule = AdministratorRule(
@@ -114,11 +132,21 @@ class ViabilidadeTest(unittest.TestCase):
                 data_nascimento="1980-01-01",
             ),
             ["ITAÚ", "PORTO", "EMBRACON"],
+            [
+                make_admin_rule(administradora="ITAÚ", taxa_adm=0.20, fundo_reserva=0.03),
+                make_admin_rule(administradora="PORTO", taxa_adm=0.16, fundo_reserva=0.005),
+                make_admin_rule(administradora="EMBRACON", taxa_adm=0.20, fundo_reserva=0.02, percentual_lance_embutido=0.25),
+            ],
         )
 
         self.assertGreaterEqual(len(result), 3)
         self.assertTrue(result[0]["elegivel"])
         self.assertLessEqual(result[0]["credito_a_contratar"], result[1]["credito_a_contratar"])
+
+    def test_administrator_feasibility_nao_usa_regras_importadas_da_planilha(self):
+        result = analyze_administradoras(make_payload(), ["ITAÚ", "CAIXA"], config_rules=[])
+
+        self.assertEqual(result, [])
 
     def test_classify_profile_all_intervals(self):
         expected = {
@@ -328,6 +356,7 @@ class ViabilidadeTest(unittest.TestCase):
     def test_endpoint_uses_sheets_and_returns_response(self):
         with (
             patch("backend.main.list_grupos", return_value=[make_group()]),
+            patch("backend.main.get_configuracoes", return_value={"administradoras_regras": [make_admin_rule(administradora="Itau")]}),
             patch("backend.main.list_grupos_detalhe_by_ids", return_value=[make_group()]) as list_details,
         ):
             result = viabilidade_analisar(make_payload())
@@ -335,7 +364,7 @@ class ViabilidadeTest(unittest.TestCase):
         list_details.assert_called_once_with(["128"])
         self.assertEqual(result["total_administradoras_analisadas"], 1)
         self.assertEqual(result["total_administradoras_elegiveis"], 1)
-        self.assertEqual(result["administradoras_viabilidade"][0]["administradora"], "ITAÚ")
+        self.assertEqual(result["administradoras_viabilidade"][0]["administradora"], "Itau")
         self.assertEqual(result["total_grupos_analisados"], 1)
         self.assertEqual(result["melhores_grupos"][0]["administradora"], "Itau")
 
