@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import patch
 
+from backend.administrator_feasibility import analyze_administradoras, calculate_administrator_feasibility
+from backend.administrator_rules import AdministratorRule
 from backend.main import viabilidade_analisar
 from backend.models import ViabilidadeRequest
 from backend.viabilidade import (
@@ -64,6 +66,60 @@ def make_group(**overrides):
 
 
 class ViabilidadeTest(unittest.TestCase):
+    def test_administrator_feasibility_calcula_credito_lance_e_prazo(self):
+        rule = AdministratorRule(
+            administradora="Teste",
+            seguro_obrigatorio=False,
+            idade_maxima=80,
+            limite_sem_comprovacao_renda=None,
+            percentual_lance_embutido=0.30,
+            tipo_lance_embutido="Credito",
+            taxa_adm=0.15,
+            possui_negociacao_taxa="Sim",
+            fundo_reserva=0.01,
+            aceita_saida_fiscal=True,
+            aceita_fgts=True,
+        )
+        payload = make_payload(
+            credito_desejado=400000,
+            lance_proprio=100000,
+            fgts=50000,
+            renda_total=15000,
+            parcela_desejada=4500,
+            parcela_limite=6000,
+            prazo_desejado=6,
+            data_nascimento="1980-01-01",
+            data_nascimento_conjuge="",
+        )
+
+        result = calculate_administrator_feasibility(payload, rule)
+
+        self.assertAlmostEqual(result["credito_a_contratar"], 571428.57, places=2)
+        self.assertAlmostEqual(result["lance_embutido_valor"], 171428.57, places=2)
+        self.assertAlmostEqual(result["lance_total"], 321428.57, places=2)
+        self.assertAlmostEqual(result["lance_maximo_percentual"], 0.5625, places=4)
+        self.assertAlmostEqual(result["prazo_minimo"], 56.9, places=2)
+        self.assertTrue(result["elegivel"])
+
+    def test_administrator_feasibility_ordena_elegiveis_por_credito_prazo_e_lance(self):
+        result = analyze_administradoras(
+            make_payload(
+                credito_desejado=400000,
+                lance_proprio=100000,
+                fgts=100000,
+                renda_total=15000,
+                parcela_desejada=4500,
+                parcela_limite=6000,
+                prazo_desejado=6,
+                data_nascimento="1980-01-01",
+            ),
+            ["ITAÚ", "PORTO", "EMBRACON"],
+        )
+
+        self.assertGreaterEqual(len(result), 3)
+        self.assertTrue(result[0]["elegivel"])
+        self.assertLessEqual(result[0]["credito_a_contratar"], result[1]["credito_a_contratar"])
+
     def test_classify_profile_all_intervals(self):
         expected = {
             1: "Agressivo",
@@ -277,6 +333,9 @@ class ViabilidadeTest(unittest.TestCase):
             result = viabilidade_analisar(make_payload())
 
         list_details.assert_called_once_with(["128"])
+        self.assertEqual(result["total_administradoras_analisadas"], 1)
+        self.assertEqual(result["total_administradoras_elegiveis"], 1)
+        self.assertEqual(result["administradoras_viabilidade"][0]["administradora"], "ITAÚ")
         self.assertEqual(result["total_grupos_analisados"], 1)
         self.assertEqual(result["melhores_grupos"][0]["administradora"], "Itau")
 

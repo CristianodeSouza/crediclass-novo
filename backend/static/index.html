@@ -265,8 +265,12 @@
                   <input id="viabilityRendaTotal" class="form-control" readonly>
                 </label>
                 <label>
-                  <span>Parcela Maxima Desejada</span>
+                  <span>Parcela Ideal</span>
                   <input id="viabilityParcela" class="form-control" inputmode="decimal" placeholder="3500" required>
+                </label>
+                <label>
+                  <span>Parcela Limite</span>
+                  <input id="viabilityParcelaLimite" class="form-control" inputmode="decimal" placeholder="6000" required>
                 </label>
                 <label>
                   <span>Data Nascimento Titular</span>
@@ -345,6 +349,35 @@
                 <strong id="viabilityMaxCredit">-</strong>
                 <small>Credito disponivel</small>
               </article>
+            </div>
+
+            <div class="content-card">
+              <div class="table-toolbar">
+                <div>
+                  <h2>Viabilidade por Administradoras</h2>
+                  <p id="administratorViabilitySubtitle">Administradoras elegiveis antes da busca de grupos</p>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="table table-hover align-middle viability-table administrator-viability-table">
+                  <thead>
+                    <tr>
+                      <th>Administradora</th>
+                      <th>Credito a contratar</th>
+                      <th>Lance embutido</th>
+                      <th>Lance proprio</th>
+                      <th>FGTS</th>
+                      <th>Lance total</th>
+                      <th>Lance maximo</th>
+                      <th>Taxa ADM</th>
+                      <th>Fundo reserva</th>
+                      <th>Prazo minimo</th>
+                      <th>Elegivel</th>
+                    </tr>
+                  </thead>
+                  <tbody id="administratorViabilityBody"></tbody>
+                </table>
+              </div>
             </div>
 
             <div class="content-card">
@@ -1052,6 +1085,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260605-10"></script>
+    <script src="/static/js/app.js?v=20260605-11"></script>
   </body>
 </html>

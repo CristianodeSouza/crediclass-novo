@@ -1,0 +1,140 @@
+from __future__ import annotations
+
+import math
+from typing import Any
+
+from .administrator_rules import AdministratorRule, get_rule_for_administradora
+from .models import ViabilidadeRequest
+from .viabilidade import calculate_age
+
+
+def client_fgts_total(payload: ViabilidadeRequest) -> float:
+    if payload.fgts_titular is not None or payload.fgts_conjuge is not None:
+        return float(payload.fgts_titular or 0) + float(payload.fgts_conjuge or 0)
+    return float(payload.fgts or 0)
+
+
+def client_renda_total(payload: ViabilidadeRequest) -> float:
+    if payload.renda_titular is not None or payload.renda_conjuge is not None:
+        return float(payload.renda_titular or 0) + float(payload.renda_conjuge or 0)
+    return float(payload.renda_total or 0)
+
+
+def client_parcela_limite(payload: ViabilidadeRequest) -> float:
+    return float(payload.parcela_limite or payload.parcela_desejada)
+
+
+def client_parcela_ideal(payload: ViabilidadeRequest) -> float:
+    return float(payload.parcela_ideal or payload.parcela_desejada)
+
+
+def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: AdministratorRule) -> dict[str, Any]:
+    percentual_lance_embutido = max(0.0, min(float(rule.percentual_lance_embutido or 0), 0.95))
+    credito_a_contratar = payload.credito_desejado / (1 - percentual_lance_embutido)
+    lance_embutido_valor = credito_a_contratar * percentual_lance_embutido
+    fgts_total = client_fgts_total(payload)
+    fgts_utilizado = fgts_total if rule.aceita_fgts else 0.0
+    lance_proprio = float(payload.lance_proprio or 0)
+    lance_total = lance_embutido_valor + lance_proprio + fgts_utilizado
+    lance_maximo_percentual = lance_total / credito_a_contratar if credito_a_contratar else 0.0
+    taxa_adm_valor = credito_a_contratar * float(rule.taxa_adm or 0)
+    fundo_reserva_valor = credito_a_contratar * float(rule.fundo_reserva or 0)
+    parcela_limite = client_parcela_limite(payload)
+    parcela_ideal = client_parcela_ideal(payload)
+    prazo_minimo = (
+        (credito_a_contratar + taxa_adm_valor + fundo_reserva_valor - lance_total) / parcela_limite
+        if parcela_limite > 0
+        else math.inf
+    )
+    prazo_minimo = max(0.0, prazo_minimo)
+
+    titular_age = calculate_age(payload.data_nascimento)
+    spouse_age = calculate_age(payload.data_nascimento_conjuge)
+    informed_ages = [age for age in (titular_age, spouse_age) if age is not None]
+    idade_compativel = bool(informed_ages)
+    if informed_ages and rule.idade_maxima is not None:
+        idade_compativel = all(age <= rule.idade_maxima for age in informed_ages)
+
+    renda_total = client_renda_total(payload)
+    parcela_compativel = math.isfinite(prazo_minimo) and parcela_limite > 0
+    renda_compativel = parcela_ideal * 3 <= renda_total
+    limite_compativel = (
+        True
+        if rule.limite_sem_comprovacao_renda is None
+        else credito_a_contratar <= float(rule.limite_sem_comprovacao_renda)
+    )
+    fgts_permitido = fgts_total <= 0 or rule.aceita_fgts
+    lance_embutido_permitido = percentual_lance_embutido > 0
+
+    alertas: list[str] = []
+    if not informed_ages:
+        alertas.append("idade_nao_validada")
+    elif not idade_compativel:
+        alertas.append("idade_incompativel")
+    if not renda_compativel:
+        alertas.append("renda_insuficiente")
+    if not parcela_compativel:
+        alertas.append("parcela_limite_invalida")
+    if not limite_compativel:
+        alertas.append("credito_acima_limite_sem_comprovacao")
+    if fgts_total > 0 and not rule.aceita_fgts:
+        alertas.append("fgts_nao_permitido")
+    if rule.seguro_obrigatorio:
+        alertas.append("seguro_obrigatorio")
+
+    elegivel = all((
+        idade_compativel,
+        renda_compativel,
+        parcela_compativel,
+        limite_compativel,
+        fgts_permitido,
+        lance_embutido_permitido,
+    ))
+
+    return {
+        "administradora": rule.administradora,
+        "seguro_obrigatorio": rule.seguro_obrigatorio,
+        "idade_maxima": rule.idade_maxima,
+        "limite_sem_comprovacao_renda": rule.limite_sem_comprovacao_renda,
+        "percentual_lance_embutido": round(percentual_lance_embutido, 6),
+        "tipo_lance_embutido": rule.tipo_lance_embutido,
+        "credito_a_contratar": round(credito_a_contratar, 2),
+        "lance_embutido_valor": round(lance_embutido_valor, 2),
+        "lance_proprio": round(lance_proprio, 2),
+        "fgts_utilizado": round(fgts_utilizado, 2),
+        "lance_total": round(lance_total, 2),
+        "lance_maximo_percentual": round(lance_maximo_percentual, 6),
+        "taxa_adm": round(float(rule.taxa_adm or 0), 6),
+        "fundo_reserva": round(float(rule.fundo_reserva or 0), 6),
+        "prazo_minimo": round(prazo_minimo, 2),
+        "renda_compativel": renda_compativel,
+        "idade_compativel": idade_compativel,
+        "parcela_compativel": parcela_compativel,
+        "limite_sem_comprovacao_compativel": limite_compativel,
+        "fgts_permitido": fgts_permitido,
+        "lance_embutido_permitido": lance_embutido_permitido,
+        "elegivel": elegivel,
+        "alertas": alertas,
+    }
+
+
+def analyze_administradoras(payload: ViabilidadeRequest, administradoras: list[str]) -> list[dict[str, Any]]:
+    results: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for administradora in administradoras:
+        rule = get_rule_for_administradora(administradora)
+        if not rule:
+            continue
+        key = rule.administradora.upper()
+        if key in seen:
+            continue
+        seen.add(key)
+        results.append(calculate_administrator_feasibility(payload, rule))
+
+    results.sort(key=lambda item: (
+        not item["elegivel"],
+        item["credito_a_contratar"],
+        item["prazo_minimo"],
+        -item["lance_maximo_percentual"],
+    ))
+    return results

@@ -272,6 +272,12 @@ class ViabilidadeRequest(BaseModel):
     fgts: float = Field(ge=0)
     renda_total: float = Field(gt=0)
     parcela_desejada: float = Field(gt=0)
+    parcela_ideal: float | None = Field(default=None, gt=0)
+    parcela_limite: float | None = Field(default=None, gt=0)
+    fgts_titular: float | None = Field(default=None, ge=0)
+    fgts_conjuge: float | None = Field(default=None, ge=0)
+    renda_titular: float | None = Field(default=None, ge=0)
+    renda_conjuge: float | None = Field(default=None, ge=0)
     data_nascimento: str = ""
     data_nascimento_conjuge: str = ""
     tipo_bem: str = "Imovel"
@@ -328,11 +334,39 @@ class ViabilidadeChecklist(BaseModel):
     cenario_viavel: bool
 
 
+class AdministradoraViabilidade(BaseModel):
+    administradora: str
+    seguro_obrigatorio: bool = False
+    idade_maxima: int | None = None
+    limite_sem_comprovacao_renda: float | None = None
+    percentual_lance_embutido: float = 0
+    tipo_lance_embutido: str = "Credito"
+    credito_a_contratar: float
+    lance_embutido_valor: float
+    lance_proprio: float
+    fgts_utilizado: float
+    lance_total: float
+    lance_maximo_percentual: float
+    taxa_adm: float
+    fundo_reserva: float
+    prazo_minimo: float
+    renda_compativel: bool
+    idade_compativel: bool
+    parcela_compativel: bool
+    limite_sem_comprovacao_compativel: bool
+    fgts_permitido: bool
+    lance_embutido_permitido: bool
+    elegivel: bool
+    alertas: list[str] = Field(default_factory=list)
+
+
 class ViabilidadeResponse(BaseModel):
     cenario_viavel: bool
     total_grupos_encontrados: int
     total_grupos_analisados: int
     total_grupos_compativeis: int
+    total_administradoras_analisadas: int = 0
+    total_administradoras_elegiveis: int = 0
     perfil: str
     perfil_prazo_operacional: str = ""
     fgts_total: float
@@ -346,6 +380,7 @@ class ViabilidadeResponse(BaseModel):
     cenario: str
     motivos_reprovacao: list[str] = Field(default_factory=list)
     checklist: ViabilidadeChecklist
+    administradoras_viabilidade: list[AdministradoraViabilidade] = Field(default_factory=list)
     melhores_grupos: list[ViabilidadeGrupo] = Field(default_factory=list)
 
 

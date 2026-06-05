@@ -933,7 +933,7 @@ function setViabilityState(state) {
   document.getElementById("viabilityLoading").classList.toggle("d-none", state !== "loading");
   document.getElementById("viabilityError").classList.toggle("d-none", state !== "error");
   document.getElementById("viabilityEmpty").classList.toggle("d-none", state !== "empty");
-  document.getElementById("viabilityResults").classList.toggle("d-none", state !== "ready");
+  document.getElementById("viabilityResults").classList.toggle("d-none", !["ready", "empty"].includes(state));
   const button = document.getElementById("analyzeViabilityBtn");
   button.disabled = state === "loading";
   button.textContent = state === "loading" ? "Analisando..." : "Analisar Viabilidade";
@@ -941,14 +941,22 @@ function setViabilityState(state) {
 
 function collectViabilityPayload() {
   const totals = updateViabilityTotals();
+  const parcelaIdeal = toNumber(document.getElementById("viabilityParcela").value);
+  const parcelaLimite = toNumber(document.getElementById("viabilityParcelaLimite").value);
   return {
     objetivo: document.getElementById("viabilityObjetivo").value,
     credito_desejado: toNumber(document.getElementById("viabilityCredito").value),
     prazo_desejado: Number(document.getElementById("viabilityPrazoDesejado").value),
     lance_proprio: toNumber(document.getElementById("viabilityLanceProprio").value),
     fgts: totals.fgts,
+    fgts_titular: toNumber(document.getElementById("viabilityFgtsTitular").value),
+    fgts_conjuge: toNumber(document.getElementById("viabilityFgtsConjuge").value),
     renda_total: totals.renda,
-    parcela_desejada: toNumber(document.getElementById("viabilityParcela").value),
+    renda_titular: toNumber(document.getElementById("viabilityRendaTitular").value),
+    renda_conjuge: toNumber(document.getElementById("viabilityRendaConjuge").value),
+    parcela_desejada: parcelaIdeal,
+    parcela_ideal: parcelaIdeal,
+    parcela_limite: parcelaLimite || parcelaIdeal,
     data_nascimento: document.getElementById("viabilityNascimento").value,
     data_nascimento_conjuge: document.getElementById("viabilityNascimentoConjuge").value,
     tipo_bem: document.getElementById("viabilityTipoBem").value,
@@ -961,7 +969,8 @@ function validateViabilityPayload(payload) {
     ["credito_desejado", "Informe o credito desejado."],
     ["prazo_desejado", "Informe o prazo desejado."],
     ["renda_total", "Informe a renda total."],
-    ["parcela_desejada", "Informe a parcela maxima desejada."],
+    ["parcela_desejada", "Informe a parcela ideal."],
+    ["parcela_limite", "Informe a parcela limite."],
   ];
   const missing = required.find(([key]) => !payload[key]);
   if (missing) {
@@ -986,18 +995,37 @@ function renderViabilityChecklist(checklist) {
 
 function renderViabilitySummary(result) {
   const items = result.melhores_grupos || [];
-  const administradoras = new Set(items.map((item) => item.administradora).filter(Boolean));
+  const administradoras = result.administradoras_viabilidade || [];
   const top = items.filter((item) => item.afinidade >= 0.8).length;
   const bestInstallment = items.reduce((best, item) => best === null || item.parcela_estimada < best ? item.parcela_estimada : best, null);
   const maxCredit = items.reduce((best, item) => Math.max(best, item.credito || 0), 0);
 
-  document.getElementById("viabilityAdministradoras").textContent = administradoras.size;
+  document.getElementById("viabilityAdministradoras").textContent = result.total_administradoras_elegiveis ?? administradoras.filter((item) => item.elegivel).length;
   document.getElementById("viabilityTotal").textContent = result.total_grupos_compativeis;
   document.getElementById("viabilityTop").textContent = top;
   document.getElementById("viabilityBestInstallment").textContent = formatMoney(bestInstallment);
   document.getElementById("viabilityMaxCredit").textContent = formatMoney(maxCredit);
   document.getElementById("viabilityRankingSubtitle").textContent = `${items.length} grupo(s) no ranking - perfil ${result.perfil}`;
   document.getElementById("viabilityScenario").textContent = `${result.cenario} - perfil ${result.perfil}`;
+}
+
+function renderAdministratorViability(items = []) {
+  document.getElementById("administratorViabilitySubtitle").textContent = `${items.filter((item) => item.elegivel).length} elegivel(is) de ${items.length} administradora(s) analisada(s)`;
+  document.getElementById("administratorViabilityBody").innerHTML = items.map((item) => `
+    <tr>
+      <td>${escapeHtml(item.administradora)}</td>
+      <td>${formatMoney(item.credito_a_contratar)}</td>
+      <td>${formatMoney(item.lance_embutido_valor)}</td>
+      <td>${formatMoney(item.lance_proprio)}</td>
+      <td>${formatMoney(item.fgts_utilizado)}</td>
+      <td>${formatMoney(item.lance_total)}</td>
+      <td class="text-success fw-bold">${formatPercent(item.lance_maximo_percentual)}</td>
+      <td>${formatPercent(item.taxa_adm)}</td>
+      <td>${formatPercent(item.fundo_reserva)}</td>
+      <td>${Number(item.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</td>
+      <td><span class="status-badge ${item.elegivel ? "" : "inactive"}">${item.elegivel ? "Sim" : "Nao"}</span></td>
+    </tr>
+  `).join("");
 }
 
 function renderViabilityRanking(items) {
@@ -1033,11 +1061,12 @@ async function analyzeViability() {
     const result = await apiPost("/viabilidade/analisar", payload);
     viabilityState.lastResult = result;
     renderViabilityChecklist(result.checklist);
+    renderAdministratorViability(result.administradoras_viabilidade || []);
+    renderViabilitySummary(result);
     if (!result.melhores_grupos.length) {
       setViabilityState("empty");
       return;
     }
-    renderViabilitySummary(result);
     renderViabilityRanking(result.melhores_grupos);
     setViabilityState("ready");
     showToast("Analise de viabilidade concluida.", "success");

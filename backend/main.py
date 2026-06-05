@@ -7,6 +7,8 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .auditoria import list_auditoria, record_auditoria
+from .administrator_feasibility import analyze_administradoras
+from .administrator_rules import normalize_admin_name
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
@@ -221,16 +223,27 @@ def viabilidade_analisar(payload: ViabilidadeRequest):
     )
     try:
         summary_groups = list_grupos()
+        administradoras = sorted({item["administradora"] for item in summary_groups if item.get("administradora")})
+        administradoras_viabilidade = analyze_administradoras(payload, administradoras)
+        administradoras_elegiveis = {
+            normalize_admin_name(item["administradora"])
+            for item in administradoras_viabilidade
+            if item["elegivel"]
+        }
         candidate_ids = [
             item["grupo_id"]
             for item in summary_groups
-            if (item.get("credito_maximo") or 0) >= payload.credito_desejado
+            if normalize_admin_name(item.get("administradora", "")) in administradoras_elegiveis
+            and (item.get("credito_maximo") or 0) >= payload.credito_desejado
             and normalize_text(str(item.get("status") or "")) == "ativo"
             and compatible_tipo_bem(payload.objetivo, str(item.get("tipo_bem") or ""), payload.tipo_bem)
         ]
         groups = list_grupos_detalhe_by_ids(candidate_ids)
         result = analyze_viabilidade(payload, groups)
         result["total_grupos_analisados"] = len(summary_groups)
+        result["total_administradoras_analisadas"] = len(administradoras_viabilidade)
+        result["total_administradoras_elegiveis"] = len(administradoras_elegiveis)
+        result["administradoras_viabilidade"] = administradoras_viabilidade
     except Exception as error:
         logger.exception("Erro ao analisar viabilidade")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
@@ -241,6 +254,28 @@ def viabilidade_analisar(payload: ViabilidadeRequest):
         result["perfil"],
     )
     return result
+
+
+@app.post("/api/viabilidade/administradoras")
+def viabilidade_administradoras(payload: ViabilidadeRequest):
+    logger.info(
+        "POST /api/viabilidade/administradoras credito=%s prazo=%s",
+        payload.credito_desejado,
+        payload.prazo_desejado,
+    )
+    try:
+        summary_groups = list_grupos()
+        administradoras = sorted({item["administradora"] for item in summary_groups if item.get("administradora")})
+        items = analyze_administradoras(payload, administradoras)
+    except Exception as error:
+        logger.exception("Erro ao analisar administradoras")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+    return {
+        "total": len(items),
+        "total_elegiveis": len([item for item in items if item["elegivel"]]),
+        "items": items,
+    }
 
 
 @app.post("/api/estudos", response_model=EstudoCreateResponse)
