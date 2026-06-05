@@ -1,4 +1,5 @@
 import unittest
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from backend.main import grupo_detalhe, grupo_historico_atualizar, grupo_historico_lote_atualizar, grupos, reload_data
@@ -166,7 +167,7 @@ class MapaGruposTest(unittest.TestCase):
             {"Administradora": "CNP", "Grupo": "017"},
         ]
 
-        with patch("backend.main.clear_rows_cache") as clear_cache, patch("backend.main.read_sheet_rows", return_value=fake_rows):
+        with patch("backend.main.clear_rows_cache") as clear_cache, patch("backend.main.list_grupos", return_value=fake_rows):
             result = reload_data()
 
         clear_cache.assert_called_once()
@@ -174,17 +175,41 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(result["total"], 2)
 
     def test_sheets_get_grupo_builds_only_matching_row_detail(self):
-        values = [
-            ["ADM", "Grupo", "Tipo de Bem", "JAN-26 Maior Lance", "JAN-26 Menor Lance", "JAN-26 Qtd"],
-            ["Itau", "127", "Imovel", "70", "20", "5"],
-            ["Itau", "128", "Imovel", "72", "24", "12"],
-        ]
+        headers = ["ADM", "Grupo", "Tipo de Bem", "JAN-26 Maior Lance", "JAN-26 Menor Lance", "JAN-26 Qtd"]
 
-        with patch("backend.sheets_client.read_sheet_values", return_value=values):
+        class ExecuteMock:
+            def execute(self):
+                return {"values": [["Itau", "128", "Imovel", "72", "24", "12"]]}
+
+        class ValuesMock:
+            def get(self, **kwargs):
+                self.get_kwargs = kwargs
+                return ExecuteMock()
+
+        class ServiceMock:
+            def __init__(self):
+                self.values_api = ValuesMock()
+
+            def spreadsheets(self):
+                return self
+
+            def values(self):
+                return self.values_api
+
+        service = ServiceMock()
+        settings = SimpleNamespace(google_sheets_id="sheet-id", google_sheet_name="Grupos")
+        with (
+            patch("backend.sheets_client.read_sheet_headers", return_value=headers),
+            patch("backend.sheets_client.get_service", return_value=service),
+            patch("backend.sheets_client.get_settings", return_value=settings),
+            patch.dict("backend.sheets_client._group_row_index", {"128": 3}, clear=True),
+            patch.dict("backend.sheets_client._grupo_detail_cache", {}, clear=True),
+        ):
             result = sheets_get_grupo("128")
 
         self.assertEqual(result["grupo_id"], "128")
         self.assertEqual(result["historico"]["2026-01"]["qtd_contemplacoes"], 12)
+        self.assertEqual(service.values_api.get_kwargs["range"], "'Grupos'!A3:F3")
 
     def test_payload_to_row_values_uses_headers_not_positions(self):
         headers = ["ADM", "Tipo de Bem", "Grup0", "Menor\nCredito", "Maior\nCredito", "Taxa\nAdm Original", "Prazo\nGrupo"]
