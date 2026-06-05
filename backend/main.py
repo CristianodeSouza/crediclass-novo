@@ -11,7 +11,7 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
-from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_detalhe_cache_async
+from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote
 from .viabilidade import analyze_viabilidade, compatible_tipo_bem, normalize_text
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -23,11 +23,6 @@ logger = logging.getLogger("crediclass.api")
 app = FastAPI(title="Crediclass Dashboard V3")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/files", StaticFiles(directory=FILES_DIR), name="files")
-
-
-@app.on_event("startup")
-def warm_runtime_caches():
-    warm_grupos_detalhe_cache_async()
 
 
 @app.get("/")
