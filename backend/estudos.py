@@ -169,6 +169,7 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None) -> dict:
         "grupo_id": payload.grupo_id,
         "grupo": grupo_data,
         "financeiro": financeiro,
+        "template_campos": payload.template_campos,
         "estrategia": financeiro["estrategia_recomendada"],
         "status": "Concluido",
         "operador": "Joyce",
@@ -287,8 +288,15 @@ def study_pdf_lines(estudo: dict) -> list[str]:
         f"Chance: {financeiro.get('chance_contemplacao', '-')}",
         f"Total contemplacoes 12m: {historico.get('total_contemplacoes', '-')}",
         "",
-        "Estrategias",
+        "Campos do Operador",
     ]
+    template_campos = estudo.get("template_campos") or {}
+    for label, value in template_campos.items():
+        lines.append(f"{label}: {value or '-'}")
+    lines.extend([
+        "",
+        "Estrategias",
+    ])
     for strategy in financeiro.get("estrategias", [])[:8]:
         lines.append(
             f"{strategy.get('estrategia', '-')}: {percent(strategy.get('percentual_lance'))} | "

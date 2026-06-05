@@ -53,6 +53,12 @@ const configState = {
 
 const operationalLogs = [];
 const HISTORY_START_MONTH = "2024-01";
+const studyOperatorFields = [
+  ["observacoes_comerciais", "Observacoes comerciais", "studyFieldObservacoes"],
+  ["comentario_cliente", "Comentario para o cliente", "studyFieldComentario"],
+  ["beneficios_personalizados", "Beneficios personalizados", "studyFieldBeneficios"],
+  ["condicoes_especiais", "Condicoes especiais", "studyFieldCondicoes"],
+];
 
 let detailsModal = null;
 let detailsChart = null;
@@ -1164,6 +1170,8 @@ function renderStudySummary(financial, group, viabilityItem) {
   };
   document.getElementById("studyRecommendedStrategy").textContent = recommended;
   document.getElementById("studyAlternativeStrategy").textContent = alternatives[recommended] || "Acompanhar historico";
+  renderStudyTemplateTechnical(financial, group, viabilityItem);
+  updateStudyCompletion();
 }
 
 function renderStudyStrategies(group, financial) {
@@ -1263,11 +1271,69 @@ function renderStudyRecommendations(viabilityItem, financial, group) {
   ];
   document.getElementById("studyRecommendations").innerHTML = recommendations.map((text) => `<li class="check-ok">${escapeHtml(text)}</li>`).join("");
   document.getElementById("studyRecommendationReasons").innerHTML = recommendations.slice(0, 5).map((text) => `<li>${escapeHtml(text)}</li>`).join("");
+  updateStudyTemplatePreview();
+}
+
+function collectStudyOperatorFields() {
+  return Object.fromEntries(studyOperatorFields.map(([key, , id]) => [key, document.getElementById(id)?.value.trim() || ""]));
+}
+
+function renderStudyTemplateFields(values = {}) {
+  studyOperatorFields.forEach(([key, , id]) => {
+    const input = document.getElementById(id);
+    if (input) input.value = values[key] || "";
+  });
+  updateStudyCompletion();
+  updateStudyTemplatePreview();
+}
+
+function updateStudyCompletion() {
+  const values = collectStudyOperatorFields();
+  const filled = studyOperatorFields.filter(([key]) => values[key]).length;
+  const percent = Math.round(((8 + filled) / 12) * 100);
+  document.getElementById("studyCompletionPercent").textContent = `${percent}%`;
+  const missing = studyOperatorFields.filter(([key]) => !values[key]);
+  document.getElementById("studyPendingFields").innerHTML = missing.length
+    ? missing.map(([, label]) => `<li>${escapeHtml(label)}</li>`).join("")
+    : `<li>Todos os campos do operador foram preenchidos</li>`;
+}
+
+function updateStudyTemplatePreview() {
+  if (!currentStudy) return;
+  const values = collectStudyOperatorFields();
+  const group = currentStudy.group || {};
+  const financial = currentStudy.financial || {};
+  document.getElementById("studyTemplatePreviewText").textContent = [
+    `Estudo para credito de ${formatMoney(currentStudy.payload.credito_desejado)} no grupo ${group.grupo || "-"} da ${group.administradora || "administradora selecionada"}.`,
+    `Estrategia recomendada: ${document.getElementById("studyRecommendedStrategy")?.textContent || "-"} com referencia de ${formatPercent(financial.lanceReferencia)}.`,
+    values.comentario_cliente ? `Comentario ao cliente: ${values.comentario_cliente}` : "Comentario ao cliente pendente.",
+    values.condicoes_especiais ? `Condicoes especiais: ${values.condicoes_especiais}` : "Condicoes especiais pendentes.",
+  ].join(" ");
+}
+
+function renderStudyTemplateTechnical(financial, group, viabilityItem) {
+  document.getElementById("studyTemplateTechnicalGrid").innerHTML = [
+    ["Grupo ID", group.grupo_id || "-"],
+    ["Afinidade", formatPercent(viabilityItem.afinidade)],
+    ["Lance referencia", formatPercent(financial.lanceReferencia)],
+    ["Prazo operacional", financial.prazoOperacional],
+    ["Credito contratado", formatMoney(financial.creditoContratado)],
+    ["Parcela inicial", formatMoney(financial.parcela)],
+  ].map(([label, value]) => studyField(label, value)).join("");
+}
+
+function activateStudyTemplateTab(tabName) {
+  document.querySelectorAll("[data-study-template-tab]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.studyTemplateTab === tabName);
+  });
+  document.getElementById("studyTemplatePreview").classList.toggle("active", tabName === "preview");
+  document.getElementById("studyTemplateFields").classList.toggle("active", tabName === "fields");
+  document.getElementById("studyTemplateTechnical").classList.toggle("active", tabName === "technical");
 }
 
 async function openFinancialStudy(groupId, viabilityItem) {
   const payload = collectViabilityPayload();
-  currentStudy = { groupId, viabilityItem, payload, group: null };
+  currentStudy = { groupId, viabilityItem, payload, group: null, templateCampos: {} };
   activateScreen("estudo");
   setStudyState("loading");
   try {
@@ -1281,6 +1347,7 @@ async function openFinancialStudy(groupId, viabilityItem) {
     renderStudyStrategies(group, financial);
     renderStudyHistory(group);
     renderStudyRecommendations(viabilityItem, financial, group);
+    renderStudyTemplateFields(currentStudy.templateCampos);
     setStudyState("ready");
   } catch (error) {
     setStudyState("error");
@@ -1307,6 +1374,7 @@ async function saveCurrentStudy() {
       estado_bem: document.getElementById("viabilityEstadoBem").value || "",
     },
     grupo_id: currentStudy.groupId,
+    template_campos: collectStudyOperatorFields(),
   };
   const result = await apiPost("/estudos", payload);
   currentStudy.savedStudyId = result.estudo_id;
@@ -2081,6 +2149,16 @@ document.getElementById("studyViewStrategyBtn").addEventListener("click", () => 
 document.getElementById("studyHistoryShortcutBtn").addEventListener("click", () => activateScreen("historico"));
 document.getElementById("studyCompareStrategiesBtn").addEventListener("click", () => {
   document.querySelector(".study-v4-strategy-tabs")?.scrollIntoView({ behavior: "smooth", block: "center" });
+});
+document.querySelectorAll("[data-study-template-tab]").forEach((button) => {
+  button.addEventListener("click", () => activateStudyTemplateTab(button.dataset.studyTemplateTab));
+});
+studyOperatorFields.forEach(([, , id]) => {
+  document.getElementById(id).addEventListener("input", () => {
+    if (currentStudy) currentStudy.templateCampos = collectStudyOperatorFields();
+    updateStudyCompletion();
+    updateStudyTemplatePreview();
+  });
 });
 document.getElementById("studyNewSimulationBtn").addEventListener("click", () => {
   resetViabilityForm();

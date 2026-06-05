@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="/static/favicon.svg?v=1" rel="icon" type="image/svg+xml">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260605-05" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260605-06" rel="stylesheet">
   </head>
   <body>
     <div class="app-shell">
@@ -510,7 +510,7 @@
 
                   <section class="study-v4-card">
                     <div class="study-v4-card-title"><h3>9. Campos Pendentes</h3><span class="operator-badge">OPERADOR</span></div>
-                    <ul class="study-v4-pending">
+                    <ul id="studyPendingFields" class="study-v4-pending">
                       <li>Observacoes comerciais</li>
                       <li>Comentario para o cliente</li>
                       <li>Beneficios personalizados</li>
@@ -521,11 +521,22 @@
 
                 <section class="study-v4-card study-v4-template">
                   <div class="study-v4-template-tabs">
-                    <button class="active" type="button">Previa do Template</button>
-                    <button type="button">Campos do Template</button>
-                    <button type="button">Dados Tecnicos</button>
+                    <button class="active" type="button" data-study-template-tab="preview">Previa do Template</button>
+                    <button type="button" data-study-template-tab="fields">Campos do Template</button>
+                    <button type="button" data-study-template-tab="technical">Dados Tecnicos</button>
                   </div>
-                  <p>Abaixo esta a previa do template preenchido com as informacoes disponiveis. Revise os campos pendentes antes do envio ao cliente.</p>
+                  <div id="studyTemplatePreview" class="study-template-panel active">
+                    <p id="studyTemplatePreviewText">Abaixo esta a previa do template preenchido com as informacoes disponiveis. Revise os campos pendentes antes do envio ao cliente.</p>
+                  </div>
+                  <div id="studyTemplateFields" class="study-template-panel">
+                    <label><span>Observacoes comerciais</span><textarea id="studyFieldObservacoes" class="form-control" rows="2"></textarea></label>
+                    <label><span>Comentario para o cliente</span><textarea id="studyFieldComentario" class="form-control" rows="2"></textarea></label>
+                    <label><span>Beneficios personalizados</span><textarea id="studyFieldBeneficios" class="form-control" rows="2"></textarea></label>
+                    <label><span>Condicoes especiais</span><textarea id="studyFieldCondicoes" class="form-control" rows="2"></textarea></label>
+                  </div>
+                  <div id="studyTemplateTechnical" class="study-template-panel">
+                    <div id="studyTemplateTechnicalGrid" class="study-v4-fields study-v4-fields-three"></div>
+                  </div>
                 </section>
               </div>
 
@@ -1041,6 +1052,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260605-08"></script>
+    <script src="/static/js/app.js?v=20260605-09"></script>
   </body>
 </html>

@@ -366,6 +366,7 @@ class EstudoCliente(BaseModel):
 class EstudoRequest(BaseModel):
     cliente: EstudoCliente
     grupo_id: str
+    template_campos: dict[str, str] = Field(default_factory=dict)
 
 
 class EstudoCreateResponse(BaseModel):

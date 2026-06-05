@@ -49,6 +49,25 @@ class EstudosTest(unittest.TestCase):
         self.assertEqual(detail["cliente"]["data_nascimento_conjuge"], "1988-02-03")
         self.assertEqual(detail["status"], "Concluido")
 
+    def test_criar_estudo_persiste_campos_do_template(self):
+        payload = EstudoRequest(
+            cliente=EstudoCliente(nome="Cliente Template", credito_desejado=400000),
+            grupo_id="128",
+            template_campos={
+                "observacoes_comerciais": "Cliente prefere comunicacao por WhatsApp.",
+                "comentario_cliente": "Estudo gerado com base no grupo selecionado.",
+            },
+        )
+
+        with patch("backend.main.get_grupo", return_value={"grupo_id": "128", "grupo": "128"}):
+            created = estudos_criar(payload)
+
+        detail = estudos_obter(created["estudo_id"])
+        self.assertEqual(
+            detail["template_campos"]["observacoes_comerciais"],
+            "Cliente prefere comunicacao por WhatsApp.",
+        )
+
     def test_listar_obter_e_excluir_estudo(self):
         payload = EstudoRequest(
             cliente=EstudoCliente(nome="Cliente Historico", credito_desejado=300000),

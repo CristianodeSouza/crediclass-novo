@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-08", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-09", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -241,6 +241,27 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('id="studyOperationalDates"', index_html)
         self.assertIn('document.getElementById("studyDisplayId").textContent', app_js)
 
+    def test_estudo_financeiro_campos_do_template_sao_editaveis(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+
+        for field_id in [
+            "studyFieldObservacoes",
+            "studyFieldComentario",
+            "studyFieldBeneficios",
+            "studyFieldCondicoes",
+            "studyPendingFields",
+            "studyCompletionPercent",
+            "studyTemplateTechnicalGrid",
+        ]:
+            self.assertIn(f'id="{field_id}"', index_html)
+        self.assertIn("const studyOperatorFields", app_js)
+        self.assertIn("function collectStudyOperatorFields()", app_js)
+        self.assertIn("template_campos: collectStudyOperatorFields()", app_js)
+        self.assertIn("function activateStudyTemplateTab(tabName)", app_js)
+        self.assertIn(".study-template-panel.active", style_css)
+
     def test_estudo_financeiro_exibe_abas_de_estrategias(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
@@ -270,7 +291,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260605-05", index_html)
+        self.assertIn("/static/css/style.css?v=20260605-06", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)
