@@ -1,21 +1,15 @@
 from __future__ import annotations
 
 from datetime import date
-import math
 import re
 import unicodedata
 from typing import Any
 
+from .lance_reference import (
+    calculate_lance_references,
+    classify_profile as classify_lance_profile,
+)
 from .models import ViabilidadeRequest
-
-
-PROFILE_BY_MONTHS = [
-    (3, "Super Agressivo", "super_agressivo"),
-    (6, "Agressivo", "agressivo"),
-    (12, "Moderado", "moderado"),
-    (24, "Conservador", "conservador"),
-    (math.inf, "Investidor", "investidor"),
-]
 
 
 def normalize_text(value: str) -> str:
@@ -25,10 +19,8 @@ def normalize_text(value: str) -> str:
 
 
 def classify_profile(prazo_desejado: int) -> tuple[str, str]:
-    for max_months, label, field in PROFILE_BY_MONTHS:
-        if prazo_desejado <= max_months:
-            return label, field
-    return "Investidor", "investidor"
+    label, field, _ = classify_lance_profile(prazo_desejado)
+    return label, field
 
 
 def compatible_tipo_bem(objetivo: str, tipo_bem: str, requested_tipo_bem: str) -> bool:
@@ -127,7 +119,7 @@ def group_age_validation(group: dict[str, Any], titular_age: int | None, spouse_
 
 
 def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]]) -> dict[str, Any]:
-    profile_label, profile_field = classify_profile(payload.prazo_desejado)
+    profile_label, profile_field, operational_range = classify_lance_profile(payload.prazo_desejado)
     fgts_total = payload.fgts
     titular_age = calculate_age(payload.data_nascimento)
     spouse_age = calculate_age(payload.data_nascimento_conjuge)
@@ -175,22 +167,22 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             + fundo_reserva_valor
         ) / prazo_total
 
-        historico_12m = history_last_12_months(group.get("historico") or {})
-        lance_referencia = (
-            group.get(profile_field)
-            or group.get("percentual_lance_fixo")
-            or historico_12m["media_menor_lance"]
+        historico = group.get("historico") or {}
+        historico_12m = history_last_12_months(historico)
+        lance_references = calculate_lance_references(
+            historico,
+            group.get("percentual_lance_fixo"),
         )
-        historico_disponivel = lance_referencia is not None and float(lance_referencia) > 0
+        lance_referencia = lance_references[profile_field]
+        historico_disponivel = lance_referencia is not None
 
         credito_score = 0 if payload.credito_desejado < credito_minimo else 100
         parcela_score = 100 if parcela_estimada <= payload.parcela_desejada else score_ratio(payload.parcela_desejada, parcela_estimada)
         lance_score = 0 if not historico_disponivel else (100 if percentual_lance >= float(lance_referencia) else score_ratio(percentual_lance, float(lance_referencia)))
         prazo_score = 100 if prazo_restante >= payload.prazo_desejado else score_ratio(prazo_restante, payload.prazo_desejado)
         historico_score = 0
-        if historico_12m["media_menor_lance"] is not None:
-            menor_lance = float(historico_12m["media_menor_lance"])
-            historico_score = 70 if percentual_lance >= menor_lance else score_ratio(percentual_lance, menor_lance) * 0.7
+        if lance_referencia is not None:
+            historico_score = 70 if percentual_lance >= float(lance_referencia) else score_ratio(percentual_lance, float(lance_referencia)) * 0.7
             historico_score += min(30, int(historico_12m["total_contemplacoes"]) * 2)
 
         afinidade_score = (
@@ -256,8 +248,22 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             "taxa_administrativa_valor": round(taxa_administrativa_valor, 2),
             "fundo_reserva_valor": round(fundo_reserva_valor, 2),
             "parcela_estimada": round(parcela_estimada, 2),
-            "lance_sugerido_percentual": round(percentual_lance, 4),
-            "lance_sugerido_valor": round(lance_total, 2),
+            "lance_sugerido_percentual": (
+                round(float(lance_referencia), 6)
+                if lance_referencia is not None
+                else None
+            ),
+            "lance_sugerido_valor": (
+                round(credito_contratado * float(lance_referencia), 2)
+                if lance_referencia is not None
+                else None
+            ),
+            "lance_referencia_percentual": (
+                round(float(lance_referencia), 6)
+                if lance_referencia is not None
+                else None
+            ),
+            "perfil_prazo_operacional": operational_range,
             "prazo": int(prazo_restante),
             "afinidade": round(afinidade_score / 100, 4),
             "selo": group_selo(afinidade_score),
@@ -319,6 +325,7 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         "total_grupos_analisados": len(groups),
         "total_grupos_compativeis": len(approved_groups),
         "perfil": profile_label,
+        "perfil_prazo_operacional": operational_range,
         "fgts_total": round(fgts_total, 2),
         "lance_total_disponivel": round(payload.lance_proprio + fgts_total, 2),
         "renda_total": round(payload.renda_total, 2),
