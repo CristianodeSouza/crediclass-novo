@@ -118,7 +118,7 @@ def group_age_validation(group: dict[str, Any], titular_age: int | None, spouse_
     return True, ""
 
 
-def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]]) -> dict[str, Any]:
+def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]], modo_preliminar: bool = False) -> dict[str, Any]:
     profile_label, profile_field, operational_range = classify_lance_profile(payload.prazo_desejado)
     fgts_total = payload.fgts
     titular_age = calculate_age(payload.data_nascimento)
@@ -210,6 +210,8 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         )
 
         alertas = []
+        if modo_preliminar:
+            alertas.append("regras_administradoras_pendentes_analise_humana")
         if not historico_disponivel:
             alertas.append("historico_lance_insuficiente")
         if idade_alerta:
@@ -219,21 +221,26 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         if group.get("percentual_lance_embutido") and not lance_embutido_permitido:
             alertas.append("lance_embutido_nao_permitido")
 
-        aprovado = all((
-            credito_compativel,
-            renda_compativel,
-            parcela_compativel,
-            lance_compativel,
-            prazo_compativel,
-            permissoes_compativeis,
-            idade_compativel if age_informed else True,
-        ))
+        if modo_preliminar:
+            aprovado = credito_compativel
+        else:
+            aprovado = all((
+                credito_compativel,
+                renda_compativel,
+                parcela_compativel,
+                lance_compativel,
+                prazo_compativel,
+                permissoes_compativeis,
+                idade_compativel if age_informed else True,
+            ))
 
         motivos = []
         motivos.append("Credito compativel" if credito_compativel else "Credito fora da faixa do grupo")
         motivos.append("Parcela dentro do limite" if parcela_estimada <= payload.parcela_desejada else "Parcela acima do limite")
         motivos.append("Lance compativel com o perfil" if lance_compativel else "Lance abaixo do perfil ou sem historico")
         motivos.append("Prazo compativel" if prazo_restante >= payload.prazo_desejado else "Prazo abaixo do desejado")
+        if modo_preliminar:
+            motivos.append("Analise preliminar: regras da administradora pendentes de revisao humana")
 
         results.append({
             "ranking": 0,

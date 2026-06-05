@@ -227,25 +227,38 @@ def viabilidade_analisar(payload: ViabilidadeRequest):
         administrator_rules = config.get("administradoras_regras") or []
         administradoras = sorted({item["administradora"] for item in summary_groups if item.get("administradora")})
         administradoras_viabilidade = analyze_administradoras(payload, administradoras, administrator_rules)
+        administradoras_com_regra = {
+            normalize_admin_name(item["administradora"])
+            for item in administradoras_viabilidade
+        }
         administradoras_elegiveis = {
             normalize_admin_name(item["administradora"])
             for item in administradoras_viabilidade
             if item["elegivel"]
         }
+        administradoras_sem_regra = {
+            normalize_admin_name(administradora)
+            for administradora in administradoras
+            if normalize_admin_name(administradora) not in administradoras_com_regra
+        }
+        modo_preliminar = bool(administradoras_sem_regra)
+        administradoras_para_busca = administradoras_elegiveis | administradoras_sem_regra
         candidate_ids = [
             item["grupo_id"]
             for item in summary_groups
-            if normalize_admin_name(item.get("administradora", "")) in administradoras_elegiveis
+            if normalize_admin_name(item.get("administradora", "")) in administradoras_para_busca
             and (item.get("credito_maximo") or 0) >= payload.credito_desejado
             and normalize_text(str(item.get("status") or "")) == "ativo"
             and compatible_tipo_bem(payload.objetivo, str(item.get("tipo_bem") or ""), payload.tipo_bem)
         ]
         groups = list_grupos_detalhe_by_ids(candidate_ids) if candidate_ids else []
-        result = analyze_viabilidade(payload, groups)
+        result = analyze_viabilidade(payload, groups, modo_preliminar=modo_preliminar)
         result["total_grupos_analisados"] = len(summary_groups)
         result["total_administradoras_analisadas"] = len(administradoras_viabilidade)
-        result["total_administradoras_elegiveis"] = len(administradoras_elegiveis)
+        result["total_administradoras_elegiveis"] = len(administradoras_para_busca)
         result["administradoras_viabilidade"] = administradoras_viabilidade
+        if administradoras_sem_regra:
+            result["motivos_reprovacao"].append("regras_administradoras_pendentes_analise_humana")
     except Exception as error:
         logger.exception("Erro ao analisar viabilidade")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})

@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-20", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-22", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -63,6 +63,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("Credito a contratar", index_html)
         self.assertIn("Lance referencia perfil", index_html)
         self.assertIn("Motivo / Alerta", index_html)
+        self.assertIn("function renderViabilityEmpty(result)", app_js)
+        self.assertIn("regras_administradoras_pendentes_analise_humana", app_js)
         self.assertNotIn('id="viabilityProfileSummary"', index_html)
         self.assertNotIn("function renderViabilityProfileSummary()", app_js)
         self.assertNotIn("Viabilidade por Administradoras", index_html)

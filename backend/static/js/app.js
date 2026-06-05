@@ -1180,6 +1180,16 @@ function renderViabilitySummary(result) {
   if (scenario) scenario.textContent = `${result.cenario} - perfil ${result.perfil}`;
 }
 
+function renderViabilityEmpty(result) {
+  const empty = document.getElementById("viabilityEmpty");
+  const reasons = result?.motivos_reprovacao || [];
+  if (reasons.includes("regras_administradoras_pendentes_analise_humana")) {
+    empty.textContent = "Nenhum grupo passou nos filtros basicos do perfil. As regras das administradoras pendentes nao bloquearam a busca.";
+    return;
+  }
+  empty.textContent = "Nenhum grupo compativel encontrado para este cenario.";
+}
+
 function renderViabilityRanking(items) {
   document.getElementById("viabilityRankingBody").innerHTML = items.map((item) => `
     <tr>
@@ -1220,6 +1230,7 @@ async function analyzeViability() {
     renderViabilityChecklist(result.checklist);
     renderViabilitySummary(result);
     if (!result.melhores_grupos.length) {
+      renderViabilityEmpty(result);
       setViabilityState("empty");
       return;
     }

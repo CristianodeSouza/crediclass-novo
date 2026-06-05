@@ -416,7 +416,7 @@ class ViabilidadeTest(unittest.TestCase):
         self.assertEqual(result["total_grupos_analisados"], 1)
         self.assertEqual(result["melhores_grupos"][0]["administradora"], "Itau")
 
-    def test_endpoint_exige_regra_de_administradora_para_grupo_compativel(self):
+    def test_endpoint_busca_grupos_em_modo_preliminar_sem_regra_de_administradora(self):
         with (
             patch("backend.main.list_grupos", return_value=[make_group()]),
             patch("backend.main.get_configuracoes", return_value={"administradoras_regras": []}),
@@ -424,10 +424,12 @@ class ViabilidadeTest(unittest.TestCase):
         ):
             result = viabilidade_analisar(make_payload())
 
-        list_details.assert_not_called()
+        list_details.assert_called_once_with(["128"])
         self.assertEqual(result["total_administradoras_analisadas"], 0)
         self.assertEqual(result["total_grupos_analisados"], 1)
-        self.assertEqual(result["melhores_grupos"], [])
+        self.assertEqual(result["melhores_grupos"][0]["administradora"], "Itau")
+        self.assertIn("regras_administradoras_pendentes_analise_humana", result["melhores_grupos"][0]["alertas"])
+        self.assertIn("regras_administradoras_pendentes_analise_humana", result["motivos_reprovacao"])
 
 
 if __name__ == "__main__":
