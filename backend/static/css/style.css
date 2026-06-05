@@ -96,7 +96,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   gap: 8px;
 }
 
-.nav-item {
+.nav-menu .nav-item {
   display: flex;
   align-items: center;
   width: 100%;
@@ -111,8 +111,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   text-align: left;
 }
 
-.nav-item:hover,
-.nav-item.active {
+.nav-menu .nav-item:hover,
+.nav-menu .nav-item.active {
   background: var(--primary);
   color: #fff;
 }
