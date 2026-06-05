@@ -81,6 +81,9 @@ def grupos(
         logger.exception("Erro ao listar grupos")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
 
+    administradoras = sorted({item["administradora"] for item in items if item["administradora"]})
+    tipos_bem = sorted({item["tipo_bem"] for item in items if item["tipo_bem"]})
+
     if administradora:
         items = [item for item in items if item["administradora"].lower() == administradora.lower()]
     if tipo_bem:
@@ -105,10 +108,19 @@ def grupos(
         items = [item for item in items if item["prazo_total"] is not None and item["prazo_total"] <= prazo_maximo]
 
     total = len(items)
+    total_administradoras = len({item["administradora"] for item in items if item["administradora"]})
     start = (page - 1) * page_size
     end = start + page_size
     logger.info("GET /api/grupos retornou total=%s page=%s", total, page)
-    return {"total": total, "page": page, "page_size": page_size, "items": items[start:end]}
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_administradoras": total_administradoras,
+        "administradoras": administradoras,
+        "tipos_bem": tipos_bem,
+        "items": items[start:end],
+    }
 
 
 @app.get("/api/grupos/{grupo_id}", response_model=GrupoDetalhe)

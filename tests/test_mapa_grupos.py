@@ -128,6 +128,9 @@ class MapaGruposTest(unittest.TestCase):
             result = grupos(administradora="Itau", page=1, page_size=10)
 
         self.assertEqual(result["total"], 1)
+        self.assertEqual(result["total_administradoras"], 1)
+        self.assertEqual(result["administradoras"], ["CNP", "Itau"])
+        self.assertEqual(result["tipos_bem"], ["Imovel"])
         self.assertEqual(result["items"][0]["grupo_id"], "128")
 
     def test_grupo_detalhe_endpoint_returns_item(self):

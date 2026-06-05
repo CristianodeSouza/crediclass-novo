@@ -17,7 +17,18 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-02", index_html)
+        self.assertIn("/static/js/app.js?v=20260605-03", index_html)
+
+    def test_mapa_grupos_possui_recarregamento_manual(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn('id="reloadMapDataBtn"', index_html)
+        self.assertIn("Recarregar dados", index_html)
+        self.assertIn("async function reloadMapData()", app_js)
+        self.assertIn('apiPost("/reload", {})', app_js)
+        self.assertIn("data.administradoras", app_js)
+        self.assertIn("data.total_administradoras", app_js)
 
     def test_formulario_grupo_nao_exige_campos_obrigatorios(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
