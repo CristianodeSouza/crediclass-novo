@@ -30,6 +30,10 @@ class HistoricoUpdateRequest(BaseModel):
     qtd_contemplacoes: int | None = Field(default=None, ge=0)
 
 
+class HistoricoBatchUpdateRequest(BaseModel):
+    items: list[HistoricoUpdateRequest] = Field(default_factory=list, min_length=1)
+
+
 class GrupoDetalhe(GrupoResumo):
     fundo_reserva: float | None = None
     prazo_restante: int | None = None

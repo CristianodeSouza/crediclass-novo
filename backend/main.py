@@ -10,8 +10,8 @@ from .auditoria import list_auditoria, record_auditoria
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
-from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
-from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows, update_grupo, update_historico_mensal
+from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
+from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, read_sheet_rows, update_grupo, update_historico_mensal, update_historico_mensal_lote
 from .viabilidade import analyze_viabilidade
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -172,7 +172,7 @@ def grupo_excluir(grupo_id: str):
 @app.put("/api/grupos/{grupo_id}/historico", response_model=SuccessResponse)
 def grupo_historico_atualizar(grupo_id: str, payload: HistoricoUpdateRequest):
     logger.info("PUT /api/grupos/%s/historico mes=%s", grupo_id, payload.mes)
-    data = payload.model_dump(exclude_none=True)
+    data = payload.model_dump(exclude_unset=True)
     try:
         result = update_historico_mensal(grupo_id, data)
         record_auditoria(grupo_id, "Atualizacao de historico", f"Historico mensal atualizado: {payload.mes}", data)
@@ -181,6 +181,22 @@ def grupo_historico_atualizar(grupo_id: str, payload: HistoricoUpdateRequest):
         return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
     except Exception as error:
         logger.exception("Erro ao atualizar historico mensal")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+
+@app.put("/api/grupos/{grupo_id}/historico/lote", response_model=SuccessResponse)
+def grupo_historico_lote_atualizar(grupo_id: str, payload: HistoricoBatchUpdateRequest):
+    logger.info("PUT /api/grupos/%s/historico/lote total=%s", grupo_id, len(payload.items))
+    try:
+        items = [item.model_dump(exclude_unset=True) for item in payload.items]
+        update_historico_mensal_lote(grupo_id, items)
+        meses = [item.mes for item in payload.items]
+        record_auditoria(grupo_id, "Atualizacao de historico", f"Historico mensal atualizado em lote: {', '.join(meses)}", {"items": [item.model_dump(exclude_unset=True) for item in payload.items]})
+        return {"success": True}
+    except KeyError:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
+    except Exception as error:
+        logger.exception("Erro ao atualizar historico mensal em lote")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
 
 
