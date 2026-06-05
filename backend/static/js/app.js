@@ -934,6 +934,9 @@ function setViabilityState(state) {
   document.getElementById("viabilityError").classList.toggle("d-none", state !== "error");
   document.getElementById("viabilityEmpty").classList.toggle("d-none", state !== "empty");
   document.getElementById("viabilityResults").classList.toggle("d-none", state !== "ready");
+  const button = document.getElementById("analyzeViabilityBtn");
+  button.disabled = state === "loading";
+  button.textContent = state === "loading" ? "Analisando..." : "Analisar Viabilidade";
 }
 
 function collectViabilityPayload() {

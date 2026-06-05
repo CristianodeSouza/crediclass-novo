@@ -4,11 +4,58 @@ from unittest.mock import patch
 
 from backend.main import grupo_detalhe, grupo_historico_atualizar, grupo_historico_lote_atualizar, grupos, reload_data
 from backend.models import GrupoCreateRequest, GrupoUpdateRequest, HistoricoBatchUpdateRequest, HistoricoUpdateRequest
+from backend import sheets_client
 from backend.sheets_client import get_grupo as sheets_get_grupo
 from backend.sheets_client import build_historico, clean_text, create_grupo, delete_grupo, format_history_value, parse_credit, payload_to_row_values, row_to_grupo, row_to_grupo_detalhe, update_grupo, update_historico_mensal
 
 
 class MapaGruposTest(unittest.TestCase):
+    def test_grupos_detalhados_usam_cache_e_preservam_copia(self):
+        sheets_client.clear_rows_cache()
+        row = {
+            "Administradora": "Itau",
+            "Grupo": "128",
+            "Tipo de Bem": "Imovel",
+            "Credito Minimo": "100.000,00",
+            "Credito Maximo": "500.000,00",
+            "Prazo Total": "180",
+            "Status": "Ativo",
+        }
+
+        with patch("backend.sheets_client.read_sheet_rows", return_value=[row]) as read_rows:
+            first = sheets_client.list_grupos_detalhe()
+            first[0]["administradora"] = "Alterado"
+            second = sheets_client.list_grupos_detalhe()
+
+        self.assertEqual(read_rows.call_count, 1)
+        self.assertEqual(second[0]["administradora"], "Itau")
+
+    def test_limpeza_de_cache_invalida_grupos_detalhados(self):
+        sheets_client.clear_rows_cache()
+        first_row = {
+            "Administradora": "Itau",
+            "Grupo": "128",
+            "Tipo de Bem": "Imovel",
+            "Credito Maximo": "500.000,00",
+            "Prazo Total": "180",
+            "Status": "Ativo",
+        }
+        second_row = {
+            "Administradora": "Caixa",
+            "Grupo": "1025",
+            "Tipo de Bem": "Imovel",
+            "Credito Maximo": "600.000,00",
+            "Prazo Total": "200",
+            "Status": "Ativo",
+        }
+
+        with patch("backend.sheets_client.read_sheet_rows", side_effect=[[first_row], [second_row]]) as read_rows:
+            self.assertEqual(sheets_client.list_grupos_detalhe()[0]["administradora"], "Itau")
+            sheets_client.clear_rows_cache()
+            self.assertEqual(sheets_client.list_grupos_detalhe()[0]["administradora"], "Caixa")
+
+        self.assertEqual(read_rows.call_count, 2)
+
     def test_percentuais_de_historico_nao_gravam_residuos_decimais(self):
         self.assertEqual(format_history_value("maior_lance", 0.56), "56,0")
         self.assertEqual(format_history_value("menor_lance", 0.5256000000000001), "52,56")

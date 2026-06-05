@@ -19,10 +19,13 @@ CACHE_TTL_SECONDS = 300
 METADATA_CACHE_TTL_SECONDS = 900
 MAX_CREDIT_VALUE = 100_000_000
 _grupos_cache: dict[str, Any] = {"expires_at": 0.0, "items": None}
+_grupos_detalhe_cache: dict[str, Any] = {"expires_at": 0.0, "items": None}
+_sheet_rows_cache: dict[str, Any] = {"expires_at": 0.0, "rows": None}
 _sheet_metadata_cache: dict[str, Any] = {"expires_at": 0.0, "headers": None}
 _group_row_index: dict[str, int] = {}
 _grupo_detail_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 _cache_lock = threading.RLock()
+_detail_build_lock = threading.Lock()
 
 SUMMARY_FIELDS = [
     "administradora",
@@ -183,6 +186,10 @@ def clear_rows_cache() -> None:
     with _cache_lock:
         _grupos_cache["expires_at"] = 0.0
         _grupos_cache["items"] = None
+        _grupos_detalhe_cache["expires_at"] = 0.0
+        _grupos_detalhe_cache["items"] = None
+        _sheet_rows_cache["expires_at"] = 0.0
+        _sheet_rows_cache["rows"] = None
         _sheet_metadata_cache["expires_at"] = 0.0
         _sheet_metadata_cache["headers"] = None
         _group_row_index.clear()
@@ -257,6 +264,13 @@ def read_summary_rows(force_reload: bool = False) -> list[dict[str, Any]]:
 
 
 def read_sheet_rows(force_reload: bool = False) -> list[dict[str, Any]]:
+    now = time.time()
+    with _cache_lock:
+        cached_rows = _sheet_rows_cache["rows"]
+        if not force_reload and cached_rows is not None and now < _sheet_rows_cache["expires_at"]:
+            logger.info("Usando cache de linhas completas da planilha")
+            return copy.deepcopy(cached_rows)
+
     settings = get_settings()
     logger.info("Lendo Google Sheets: %s", settings.google_sheet_name)
     result = get_service().spreadsheets().values().get(
@@ -276,7 +290,10 @@ def read_sheet_rows(force_reload: bool = False) -> list[dict[str, Any]]:
         if any(str(value).strip() for value in row_dict.values()):
             rows.append(row_dict)
 
-    return rows
+    with _cache_lock:
+        _sheet_rows_cache["rows"] = rows
+        _sheet_rows_cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
+    return copy.deepcopy(rows)
 
 
 def read_sheet_values() -> list[list[Any]]:
@@ -732,7 +749,37 @@ def list_grupos() -> list[dict[str, Any]]:
 
 
 def list_grupos_detalhe() -> list[dict[str, Any]]:
-    return [row_to_grupo_detalhe(row) for row in read_sheet_rows()]
+    now = time.time()
+    with _cache_lock:
+        items = _grupos_detalhe_cache["items"]
+        if items is not None and now < _grupos_detalhe_cache["expires_at"]:
+            logger.info("Usando cache de grupos detalhados")
+            return copy.deepcopy(items)
+
+    with _detail_build_lock:
+        now = time.time()
+        with _cache_lock:
+            items = _grupos_detalhe_cache["items"]
+            if items is not None and now < _grupos_detalhe_cache["expires_at"]:
+                logger.info("Usando cache de grupos detalhados")
+                return copy.deepcopy(items)
+
+        items = [row_to_grupo_detalhe(row) for row in read_sheet_rows()]
+        with _cache_lock:
+            _grupos_detalhe_cache["items"] = items
+            _grupos_detalhe_cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
+        return copy.deepcopy(items)
+
+
+def warm_grupos_detalhe_cache_async() -> None:
+    def warm() -> None:
+        try:
+            total = len(list_grupos_detalhe())
+            logger.info("Cache de grupos detalhados aquecido total=%s", total)
+        except Exception:
+            logger.exception("Nao foi possivel aquecer o cache de grupos detalhados")
+
+    threading.Thread(target=warm, name="warm-grupos-detalhe-cache", daemon=True).start()
 
 
 def get_grupo(grupo_id: str, _retry_on_stale_index: bool = True) -> dict[str, Any] | None:
