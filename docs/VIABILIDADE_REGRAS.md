@@ -32,6 +32,20 @@ criterio de credito e nao pode aprovar o cenario.
 - Lance proprio pode ser igual a zero.
 - Nenhum valor artificial e acrescentado aos recursos disponiveis.
 
+## Parcela estimada
+
+```text
+taxa_administrativa_valor =
+credito_contratado x taxa_administrativa_percentual
+
+fundo_reserva_valor =
+credito_contratado x fundo_reserva_percentual
+
+parcela =
+(credito_contratado + taxa_administrativa_valor + fundo_reserva_valor)
+/ prazo_total
+```
+
 ## Historico
 
 Sao considerados somente os 12 meses validos mais recentes. O response informa:
@@ -69,6 +83,17 @@ credito, renda, parcela, lance, prazo, tipo de bem e permissoes aplicaveis.
 
 Quando uma data de nascimento e informada, ela e calculada. Se o grupo nao
 possuir limite de idade, a analise nao reprova por idade e retorna
-`idade_nao_validada`. Data ausente nunca e apresentada como idade compativel.
+`idade_nao_validada`.
+
+Quando nenhuma data e informada, o cenario nao reprova automaticamente por
+idade, mas o checklist nao marca a idade como compativel e o response retorna
+`idade_nao_validada`.
+
+```text
+cenario_viavel = existe pelo menos um grupo com grupo_aprovado = true
+```
+
+`grupo_aprovado` somente e verdadeiro quando todos os criterios obrigatorios
+aplicaveis ao grupo forem aprovados.
 
 O estado do bem e preservado no response e no Estudo Financeiro.

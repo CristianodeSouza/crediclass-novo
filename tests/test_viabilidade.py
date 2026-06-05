@@ -215,7 +215,9 @@ class ViabilidadeTest(unittest.TestCase):
 
         self.assertFalse(result["idade_validada"])
         self.assertFalse(result["checklist"]["idade_compativel"])
-        self.assertEqual(result["idade_alerta"], "idade_nao_informada")
+        self.assertEqual(result["idade_alerta"], "idade_nao_validada")
+        self.assertIn("idade_nao_validada", result["melhores_grupos"][0]["alertas"])
+        self.assertTrue(result["melhores_grupos"][0]["grupo_aprovado"])
 
     def test_group_age_limit_can_reject_scenario(self):
         result = analyze_viabilidade(
@@ -232,6 +234,8 @@ class ViabilidadeTest(unittest.TestCase):
         item = result["melhores_grupos"][0]
         expected_installment = (item["credito_contratado"] * 1.23) / 222
 
+        self.assertAlmostEqual(item["taxa_administrativa_valor"], item["credito_contratado"] * 0.2, places=2)
+        self.assertAlmostEqual(item["fundo_reserva_valor"], item["credito_contratado"] * 0.03, places=2)
         self.assertAlmostEqual(item["parcela_estimada"], expected_installment, places=2)
         self.assertAlmostEqual(item["credito_disponivel"], 500000, places=2)
 
@@ -251,6 +255,7 @@ class ViabilidadeTest(unittest.TestCase):
 
         self.assertEqual(result["total_grupos_encontrados"], 1)
         self.assertFalse(result["cenario_viavel"])
+        self.assertFalse(result["melhores_grupos"][0]["grupo_aprovado"])
         self.assertIn("renda_compativel", result["motivos_reprovacao"])
         self.assertIn("parcela_compativel", result["motivos_reprovacao"])
 
