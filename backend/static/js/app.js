@@ -1077,20 +1077,31 @@ function computeStudy(payload, viabilityItem, group) {
 }
 
 function renderStudyClient(payload) {
-  const fields = [
-    ["Objetivo", payload.objetivo],
-    ["Prazo desejado", `${payload.prazo_desejado} meses`],
-    ["Credito desejado", formatMoney(payload.credito_desejado)],
-    ["Lance proprio disponivel", formatMoney(payload.lance_proprio)],
-    ["FGTS utilizado", formatMoney(payload.fgts)],
-    ["Renda total informada", formatMoney(payload.renda_total)],
-    ["Parcela maxima desejada", formatMoney(payload.parcela_desejada)],
+  const clientFields = [
+    ["Nome do cliente", "Pendente"],
+    ["Nome do conjuge", "Pendente"],
     ["Data nascimento titular", payload.data_nascimento || "-"],
     ["Data nascimento conjuge", payload.data_nascimento_conjuge || "-"],
+    ["Renda total", formatMoney(payload.renda_total)],
     ["Estado do bem", document.getElementById("viabilityEstadoBem").value || "Nao definido"],
+    ["Objetivo credito", payload.objetivo],
+    ["Tipo de bem", payload.tipo_bem || "-"],
   ];
-  document.getElementById("studyClientGrid").innerHTML = fields.map(([label, value]) => studyField(label, value)).join("");
-  document.getElementById("studyScenarioDate").textContent = `Data da analise: ${new Date().toLocaleDateString("pt-BR")}`;
+  const scenarioFields = [
+    ["Credito desejado", formatMoney(payload.credito_desejado)],
+    ["Prazo desejado", `${payload.prazo_desejado} meses`],
+    ["Lance proprio disponivel", formatMoney(payload.lance_proprio)],
+    ["FGTS total informado", formatMoney(payload.fgts)],
+    ["Recurso total disponivel", formatMoney((payload.lance_proprio || 0) + (payload.fgts || 0))],
+    ["Parcela maxima desejada", formatMoney(payload.parcela_desejada)],
+    ["Renda total", formatMoney(payload.renda_total)],
+    ["Perfil por prazo", currentStudy?.viabilityItem?.perfil_prazo_operacional || "-"],
+  ];
+  document.getElementById("studyClientGrid").innerHTML = clientFields.map(([label, value]) => studyField(label, value)).join("");
+  document.getElementById("studyScenarioGrid").innerHTML = scenarioFields.map(([label, value]) => studyField(label, value)).join("");
+  const now = new Date();
+  document.getElementById("studyScenarioDate").textContent = `Criado em: ${now.toLocaleString("pt-BR")}`;
+  document.getElementById("studyVersionDate").textContent = now.toLocaleString("pt-BR");
 }
 
 function renderStudyGroup(group) {
@@ -1111,7 +1122,13 @@ function renderStudyGroup(group) {
   document.getElementById("studyAdminLogo").textContent = initialsFromName(administradora);
   document.getElementById("studyAdminName").textContent = administradora;
   document.getElementById("studyGroupGrid").innerHTML = fields.map(([label, value]) => studyField(label, value)).join("");
-  document.getElementById("studyGroupSubtitle").textContent = `${administradora} - Grupo ${group.grupo || "-"}`;
+  document.getElementById("studyGroupSubtitle").textContent = `Grupo ${group.grupo || "-"} - ${group.tipo_bem || "-"}`;
+  document.getElementById("studyOperationalDates").innerHTML = [
+    ["Proxima assembleia", group.proxima_assembleia || group.ultima_assembleia || "-"],
+    ["Limite de adesao", group.limite_adesao || "-"],
+    ["Vencimento 1a parcela", group.vencimento_primeira_parcela || group.vencimento_parcela || "-"],
+    ["Vencimento do lance", group.vencimento_lance || "-"],
+  ].map(([label, value]) => studyField(label, value)).join("");
 }
 
 function renderStudySummary(financial, group, viabilityItem) {
@@ -1128,7 +1145,25 @@ function renderStudySummary(financial, group, viabilityItem) {
   document.getElementById("studySeguroGarantia").textContent = formatBool(group.seguro_garantia);
   document.getElementById("studyProximaAssembleia").textContent = group.proxima_assembleia || group.ultima_assembleia || "-";
   document.getElementById("studyChanceContemplacao").textContent = "Referencia operacional";
-  document.getElementById("studyRankingPosition").textContent = viabilityItem.ranking ? `${viabilityItem.ranking}o lugar` : "-";
+  const score = Math.round((viabilityItem.afinidade || 0) * 100);
+  document.getElementById("studyRankingPosition").textContent = score || "-";
+  const profileByRange = {
+    "1 a 3 meses": "Lance Agressivo",
+    "4 a 6 meses": "Lance Moderado",
+    "7 a 12 meses": "Lance Conservador",
+    "13 a 24 meses": "Lance Super Conservador",
+    "Sem urgencia": "Investidor",
+  };
+  const recommended = profileByRange[financial.prazoOperacional] || "Perfil operacional";
+  const alternatives = {
+    "Lance Agressivo": "Lance Moderado",
+    "Lance Moderado": "Lance Conservador",
+    "Lance Conservador": "Lance Super Conservador",
+    "Lance Super Conservador": "Investidor",
+    "Investidor": "Lance Super Conservador",
+  };
+  document.getElementById("studyRecommendedStrategy").textContent = recommended;
+  document.getElementById("studyAlternativeStrategy").textContent = alternatives[recommended] || "Acompanhar historico";
 }
 
 function renderStudyStrategies(group, financial) {
@@ -1214,7 +1249,7 @@ function renderStudyHistory(group) {
 
 function renderStudyRecommendations(viabilityItem, financial, group) {
   const level = viabilityItem.afinidade >= 0.9 ? "Recomendacao forte" : viabilityItem.afinidade >= 0.8 ? "Recomendacao moderada" : "Recomendacao com acompanhamento";
-  document.getElementById("studyRecommendationLevel").textContent = `${level} - afinidade ${formatPercent(viabilityItem.afinidade)}`;
+  document.getElementById("studyRecommendationLevel").textContent = viabilityItem.selo || level;
   const historyEntries = Object.values(group.historico || {}).slice(-12);
   const totalContemplacoes = historyEntries.reduce((sum, item) => sum + (item.qtd_contemplacoes || 0), 0);
   const estrategiaRecomendada = currentStudyStrategies.find((strategy) => strategy.percent === financial.lanceReferencia) || currentStudyStrategies[0];
@@ -1227,6 +1262,7 @@ function renderStudyRecommendations(viabilityItem, financial, group) {
     "A analise nao garante contemplacao.",
   ];
   document.getElementById("studyRecommendations").innerHTML = recommendations.map((text) => `<li class="check-ok">${escapeHtml(text)}</li>`).join("");
+  document.getElementById("studyRecommendationReasons").innerHTML = recommendations.slice(0, 5).map((text) => `<li>${escapeHtml(text)}</li>`).join("");
 }
 
 async function openFinancialStudy(groupId, viabilityItem) {
@@ -1274,6 +1310,7 @@ async function saveCurrentStudy() {
   };
   const result = await apiPost("/estudos", payload);
   currentStudy.savedStudyId = result.estudo_id;
+  document.getElementById("studyDisplayId").textContent = result.estudo_id;
   notifyWhen("alertar_estudo_salvo", `Estudo salvo: ${result.estudo_id}`, "success");
   loadHistoryStudies();
   return result;
@@ -2038,6 +2075,13 @@ document.getElementById("viabilityRankingBody").addEventListener("click", (event
 });
 
 document.getElementById("studyChangeGroupBtn").addEventListener("click", () => activateScreen("viabilidade"));
+document.getElementById("studyViewStrategyBtn").addEventListener("click", () => {
+  document.querySelector(".study-v4-strategy")?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+document.getElementById("studyHistoryShortcutBtn").addEventListener("click", () => activateScreen("historico"));
+document.getElementById("studyCompareStrategiesBtn").addEventListener("click", () => {
+  document.querySelector(".study-v4-strategy-tabs")?.scrollIntoView({ behavior: "smooth", block: "center" });
+});
 document.getElementById("studyNewSimulationBtn").addEventListener("click", () => {
   resetViabilityForm();
   activateScreen("viabilidade");

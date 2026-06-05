@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="/static/favicon.svg?v=1" rel="icon" type="image/svg+xml">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260605-04" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260605-05" rel="stylesheet">
   </head>
   <body>
     <div class="app-shell">
@@ -390,112 +390,174 @@
           <div id="studyError" class="table-state table-state-error d-none">Nao foi possivel carregar o estudo financeiro.</div>
 
           <div id="studyContent" class="d-none">
-            <div class="study-layout">
-              <div class="content-card">
-                <div class="table-toolbar">
-                  <div>
-                    <h2>Dados do Cliente / Cenario</h2>
-                    <p id="studyScenarioDate">Data da analise</p>
-                  </div>
-                  <button id="studyNewSimulationBtn" class="btn btn-outline-secondary" type="button">Nova Simulacao</button>
-                </div>
-                <div id="studyClientGrid" class="details-grid"></div>
+            <div class="study-v4-toolbar">
+              <div>
+                <h2>Estudo Financeiro</h2>
+                <p>Template pre-preenchido</p>
               </div>
-
-              <div class="content-card">
-                <div class="table-toolbar">
-                  <div>
-                    <h2>Grupo Selecionado</h2>
-                    <p id="studyGroupSubtitle">Dados completos do grupo</p>
-                  </div>
-                  <button id="studyChangeGroupBtn" class="btn btn-outline-primary" type="button">Alterar Grupo</button>
-                </div>
-                <div class="admin-identity">
-                  <div id="studyAdminLogo" class="admin-logo" aria-hidden="true">--</div>
-                  <div><strong id="studyAdminName">Administradora</strong><span>Logo da administradora</span></div>
-                </div>
-                <div id="studyGroupGrid" class="details-grid"></div>
+              <div class="study-v4-toolbar-actions">
+                <button id="studyChangeGroupBtn" class="btn btn-outline-secondary" type="button">Voltar para Viabilidade</button>
+                <button id="studyViewStrategyBtn" class="btn btn-outline-secondary" type="button">Ver Estrategia</button>
+                <button id="studyHistoryShortcutBtn" class="btn btn-outline-secondary" type="button">Historico de Estudos</button>
+                <button id="studySaveBtn" class="btn btn-primary" type="button">Salvar</button>
               </div>
             </div>
 
-            <div class="summary-grid study-summary">
-              <article class="summary-card"><span class="summary-label">Carta de Credito Original</span><strong id="studyCreditoOriginal">-</strong><small>Credito contratado</small></article>
-              <article class="summary-card"><span class="summary-label">Lance Embutido</span><strong id="studyLanceEmbutido">-</strong><small>Percentual permitido</small></article>
-              <article class="summary-card"><span class="summary-label">Credito Disponivel</span><strong id="studyCreditoDisponivel">-</strong><small>Liquido ao cliente</small></article>
-              <article class="summary-card"><span class="summary-label">Recurso Proprio</span><strong id="studyRecursoProprio">-</strong><small>Lance proprio + FGTS</small></article>
-              <article class="summary-card"><span class="summary-label">Percentual Lance Total</span><strong id="studyPercentualLanceTotal">-</strong><small>Sobre a carta original</small></article>
-              <article class="summary-card"><span class="summary-label">Valor Total do Lance</span><strong id="studyLanceTotal">-</strong><small>Embutido + proprio + FGTS</small></article>
-              <article class="summary-card"><span class="summary-label">Parcela Inicial</span><strong id="studyParcelaInicial">-</strong><small>Estimativa mensal</small></article>
-              <article class="summary-card"><span class="summary-label">Referencia de Lance</span><strong id="studyParcelaApos">-</strong><small>Percentual operacional do perfil</small></article>
-              <article class="summary-card"><span class="summary-label">Prazo Operacional</span><strong id="studyPrazoApos">-</strong><small>Faixa definida pelo perfil</small></article>
-              <article class="summary-card"><span class="summary-label">Custo Efetivo Total</span><strong id="studyCustoTotal">-</strong><small>Credito + taxas</small></article>
-              <article class="summary-card"><span class="summary-label">Seguro Garantia</span><strong id="studySeguroGarantia">-</strong><small>Disponibilidade do grupo</small></article>
-              <article class="summary-card"><span class="summary-label">Proxima Assembleia</span><strong id="studyProximaAssembleia">-</strong><small>Referencia operacional</small></article>
-              <article class="summary-card"><span class="summary-label">Chance de Contemplacao</span><strong id="studyChanceContemplacao">-</strong><small>Com lance total</small></article>
-              <article class="summary-card"><span class="summary-label">Posicao no Ranking</span><strong id="studyRankingPosition">-</strong><small>Resultado da Viabilidade</small></article>
+            <div class="study-v4-meta">
+              <span>Estudo: <strong id="studyDisplayId">Novo estudo</strong></span>
+              <span class="study-v4-divider"></span>
+              <span>Status: <strong class="study-draft-badge">Rascunho</strong></span>
+              <span class="study-v4-divider"></span>
+              <span id="studyScenarioDate">Data da analise</span>
+              <span class="study-v4-divider"></span>
+              <span>Por: <strong>Joyce</strong></span>
             </div>
 
-            <div class="content-card">
-              <div class="table-toolbar">
-                <div>
-                  <h2>Estrategias de Contemplacao</h2>
-                  <p>Comparativo de lances por perfil</p>
+            <div class="study-v4-shell">
+              <div class="study-v4-main">
+                <div class="study-v4-top-grid">
+                  <section class="study-v4-card">
+                    <div class="study-v4-card-title"><h3>1. Dados do Cliente</h3><span class="auto-badge">AUTO</span></div>
+                    <div id="studyClientGrid" class="study-v4-fields"></div>
+                  </section>
+
+                  <section class="study-v4-card">
+                    <div class="study-v4-card-title"><h3>2. Cenario Financeiro</h3><span class="auto-badge">AUTO</span></div>
+                    <div id="studyScenarioGrid" class="study-v4-fields study-v4-fields-two"></div>
+                  </section>
+
+                  <section class="study-v4-card">
+                    <div class="study-v4-card-title"><h3>3. Grupo Selecionado</h3><span class="auto-badge">AUTO</span></div>
+                    <div class="admin-identity study-v4-admin">
+                      <div id="studyAdminLogo" class="admin-logo" aria-hidden="true">--</div>
+                      <div><strong id="studyAdminName">Administradora</strong><span id="studyGroupSubtitle">Dados completos do grupo</span></div>
+                    </div>
+                    <div id="studyGroupGrid" class="study-v4-fields study-v4-fields-three"></div>
+                  </section>
                 </div>
-              </div>
-              <ul id="studyStrategyTabs" class="nav nav-tabs details-tabs compact-tabs" role="tablist"></ul>
-              <div class="table-responsive">
-                <table class="table table-hover align-middle viability-table">
-                  <thead>
-                    <tr>
-                      <th>Estrategia</th>
-                      <th>% Lance</th>
-                      <th>Lance Embutido</th>
-                      <th>Lance Proprio</th>
-                      <th>Credito Disponivel</th>
-                      <th>Parcela Inicial</th>
-                      <th>Prazo Operacional</th>
-                      <th>Classificacao</th>
-                    </tr>
-                  </thead>
-                  <tbody id="studyStrategiesBody"></tbody>
-                </table>
-              </div>
-            </div>
 
-            <div class="study-layout">
-              <div class="content-card">
-                <div class="table-toolbar">
-                  <div>
-                    <h2>Historico de Lances</h2>
-                    <p>Ultimos registros mensais do grupo</p>
+                <section class="study-v4-card study-v4-strategy">
+                  <div class="study-v4-card-title"><h3>4. Estrategia Recomendada</h3><span class="auto-badge">AUTO</span></div>
+                  <div class="study-v4-strategy-grid">
+                    <div class="study-v4-recommended">
+                      <span class="strategy-trophy">★</span>
+                      <small>Recomendada</small>
+                      <strong id="studyRecommendedStrategy">Perfil operacional</strong>
+                    </div>
+                    <div class="study-v4-score">
+                      <span>Score</span>
+                      <strong id="studyRankingPosition">-</strong>
+                      <span>Selo</span>
+                      <strong id="studyRecommendationLevel">Analise automatica</strong>
+                    </div>
+                    <ul id="studyRecommendations" class="study-v4-reasons"></ul>
+                    <div class="study-v4-alternative">
+                      <small>Estrategia Alternativa</small>
+                      <strong id="studyAlternativeStrategy">Acompanhar historico</strong>
+                      <button id="studyCompareStrategiesBtn" class="btn btn-outline-primary btn-sm" type="button">Comparar Estrategias</button>
+                    </div>
                   </div>
-                </div>
-                <div class="chart-card">
-                  <canvas id="studyHistoryChart" height="220"></canvas>
-                </div>
-                <div class="summary-grid history-metrics-grid">
-                  <article class="summary-card"><span class="summary-label">Media Maior Lance</span><strong id="studyAvgMaiorLance">-</strong><small>Ultimos 12 meses</small></article>
-                  <article class="summary-card"><span class="summary-label">Media Menor Lance</span><strong id="studyAvgMenorLance">-</strong><small>Ultimos 12 meses</small></article>
-                  <article class="summary-card"><span class="summary-label">Media Contemplacoes</span><strong id="studyAvgContemplacoes">-</strong><small>Ultimos 12 meses</small></article>
-                  <article class="summary-card"><span class="summary-label">Total Contemplacoes</span><strong id="studyTotalContemplacoes">-</strong><small>Ultimos 12 meses</small></article>
-                </div>
-              </div>
-              <div class="content-card">
-                <div class="table-toolbar">
-                  <div>
-                    <h2>Recomendacoes</h2>
-                    <p id="studyRecommendationLevel">Analise automatica</p>
+                  <ul id="studyStrategyTabs" class="nav nav-tabs details-tabs compact-tabs study-v4-strategy-tabs" role="tablist"></ul>
+                  <div class="table-responsive study-v4-strategy-table">
+                    <table class="table table-hover align-middle viability-table">
+                      <thead><tr><th>Estrategia</th><th>% Lance</th><th>Lance Embutido</th><th>Lance Proprio</th><th>Credito Disponivel</th><th>Parcela Inicial</th><th>Prazo Operacional</th><th>Classificacao</th></tr></thead>
+                      <tbody id="studyStrategiesBody"></tbody>
+                    </table>
                   </div>
-                </div>
-                <ul id="studyRecommendations" class="checklist-list"></ul>
-              </div>
-            </div>
+                </section>
 
-            <div class="content-card study-actions">
-              <button id="studyPdfBtn" class="btn btn-outline-secondary" type="button">Gerar PDF do Estudo</button>
-              <button id="studyEmailBtn" class="btn btn-outline-secondary" type="button">Enviar por E-mail</button>
-              <button id="studyShareBtn" class="btn btn-outline-secondary" type="button">Compartilhar Link</button>
-              <button id="studySaveBtn" class="btn btn-primary" type="button">Salvar Estudo</button>
+                <section class="study-v4-card">
+                  <div class="study-v4-card-title"><h3>5. Simulacao Financeira da Estrategia Recomendada</h3><span class="auto-badge">AUTO</span></div>
+                  <div class="study-v4-simulation">
+                    <div><span>Credito Contratado</span><strong id="studyCreditoOriginal">-</strong></div>
+                    <div><span>Percentual de Lance</span><strong id="studyPercentualLanceTotal">-</strong></div>
+                    <div><span>Lance Embutido</span><strong id="studyLanceEmbutido">-</strong></div>
+                    <div><span>Valor do Lance</span><strong id="studyLanceTotal">-</strong></div>
+                    <div><span>Recurso Proprio</span><strong id="studyRecursoProprio">-</strong></div>
+                    <div><span>Credito Disponivel</span><strong id="studyCreditoDisponivel">-</strong></div>
+                    <div><span>Parcela Estimada</span><strong id="studyParcelaInicial">-</strong></div>
+                    <div><span>Referencia de Lance</span><strong id="studyParcelaApos">-</strong></div>
+                    <div><span>Prazo Operacional</span><strong id="studyPrazoApos">-</strong></div>
+                    <div><span>Classificacao</span><strong id="studyChanceContemplacao">-</strong></div>
+                  </div>
+                  <div class="study-v4-hidden-values">
+                    <span id="studyCustoTotal">-</span><span id="studySeguroGarantia">-</span>
+                  </div>
+                </section>
+
+                <div class="study-v4-bottom-grid">
+                  <section class="study-v4-card study-v4-history">
+                    <div class="study-v4-card-title"><h3>6. Historico do Grupo <small>(ultimos 12 meses)</small></h3><span class="auto-badge">AUTO</span></div>
+                    <div class="study-v4-history-metrics">
+                      <div><span>Media do Maior Lance</span><strong id="studyAvgMaiorLance">-</strong></div>
+                      <div><span>Media do Menor Lance</span><strong id="studyAvgMenorLance">-</strong></div>
+                      <div><span>Media Mensal</span><strong id="studyAvgContemplacoes">-</strong></div>
+                      <div><span>Total</span><strong id="studyTotalContemplacoes">-</strong></div>
+                    </div>
+                    <div class="study-v4-chart"><canvas id="studyHistoryChart" height="190"></canvas></div>
+                  </section>
+
+                  <section class="study-v4-card">
+                    <div class="study-v4-card-title"><h3>7. Datas Operacionais</h3><span class="auto-badge">AUTO</span></div>
+                    <div id="studyOperationalDates" class="study-v4-date-list"></div>
+                    <span id="studyProximaAssembleia" class="d-none">-</span>
+                  </section>
+
+                  <section class="study-v4-card">
+                    <div class="study-v4-card-title"><h3>8. Motivos da Recomendacao</h3><span class="auto-badge">AUTO</span></div>
+                    <ul id="studyRecommendationReasons" class="study-v4-bullets"></ul>
+                  </section>
+
+                  <section class="study-v4-card">
+                    <div class="study-v4-card-title"><h3>9. Campos Pendentes</h3><span class="operator-badge">OPERADOR</span></div>
+                    <ul class="study-v4-pending">
+                      <li>Observacoes comerciais</li>
+                      <li>Comentario para o cliente</li>
+                      <li>Beneficios personalizados</li>
+                      <li>Condicoes especiais</li>
+                    </ul>
+                  </section>
+                </div>
+
+                <section class="study-v4-card study-v4-template">
+                  <div class="study-v4-template-tabs">
+                    <button class="active" type="button">Previa do Template</button>
+                    <button type="button">Campos do Template</button>
+                    <button type="button">Dados Tecnicos</button>
+                  </div>
+                  <p>Abaixo esta a previa do template preenchido com as informacoes disponiveis. Revise os campos pendentes antes do envio ao cliente.</p>
+                </section>
+              </div>
+
+              <aside class="study-v4-sidebar">
+                <section class="study-v4-card">
+                  <h3>Status do Preenchimento</h3>
+                  <div class="study-progress-ring"><strong id="studyCompletionPercent">87%</strong><span>Completo</span></div>
+                  <ul class="study-progress-legend">
+                    <li><i class="auto"></i><span><strong>AUTO</strong>Preenchido automaticamente</span></li>
+                    <li><i class="operator"></i><span><strong>OPERADOR</strong>Preenchido pelo operador</span></li>
+                    <li><i class="pending"></i><span><strong>PENDENTE</strong>Nao preenchido</span></li>
+                  </ul>
+                  <div class="study-v4-alert">Revise os campos pendentes e as observacoes antes de finalizar o estudo.</div>
+                </section>
+
+                <section class="study-v4-card">
+                  <h3>Acoes</h3>
+                  <div class="study-v4-actions">
+                    <button id="studyPdfBtn" class="btn btn-outline-secondary" type="button">Gerar Previa do Estudo</button>
+                    <button id="studyShareBtn" class="btn btn-outline-secondary" type="button">Compartilhar Link</button>
+                    <button id="studyEmailBtn" class="btn btn-outline-secondary" type="button">Enviar por E-mail</button>
+                    <button id="studyNewSimulationBtn" class="btn btn-outline-danger" type="button">Cancelar Estudo</button>
+                  </div>
+                </section>
+
+                <section class="study-v4-card">
+                  <h3>Versoes do Estudo</h3>
+                  <div class="study-v4-versions">
+                    <div><strong>v1.0</strong><span id="studyVersionDate">Agora</span><span>Joyce</span></div>
+                  </div>
+                </section>
+              </aside>
             </div>
           </div>
         </section>
@@ -979,6 +1041,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260605-07"></script>
+    <script src="/static/js/app.js?v=20260605-08"></script>
   </body>
 </html>
