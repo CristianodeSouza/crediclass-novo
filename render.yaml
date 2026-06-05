@@ -3,7 +3,7 @@ services:
     name: crediclass-dashboard-v3
     runtime: python
     buildCommand: pip install --no-cache-dir -r requirements.txt
-    startCommand: python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    startCommand: python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT --no-access-log --timeout-keep-alive 5
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.4
