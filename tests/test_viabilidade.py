@@ -468,6 +468,31 @@ class ViabilidadeTest(unittest.TestCase):
         self.assertIn("regras_administradoras_pendentes_analise_humana", result["melhores_grupos"][0]["alertas"])
         self.assertIn("regras_administradoras_pendentes_analise_humana", result["motivos_reprovacao"])
 
+    def test_endpoint_nao_bloqueia_grupos_com_regra_de_administradora_incompleta(self):
+        incomplete_rule = make_admin_rule(
+            idade_maxima=None,
+            limite_sem_comprovacao_renda=30000,
+            percentual_lance_embutido=0,
+            taxa_adm=0,
+            fundo_reserva=0,
+            aceita_saida_fiscal=False,
+            aceita_fgts=False,
+            possui_negociacao_taxa="Nao",
+        )
+
+        with (
+            patch("backend.main.list_grupos", return_value=[make_group()]),
+            patch("backend.main.get_configuracoes", return_value={"administradoras_regras": [incomplete_rule]}),
+            patch("backend.main.list_grupos_detalhe_by_ids", return_value=[make_group()]) as list_details,
+        ):
+            result = viabilidade_analisar(make_payload())
+
+        list_details.assert_called_once_with(["128"])
+        self.assertEqual(result["total_administradoras_analisadas"], 0)
+        self.assertEqual(result["total_administradoras_elegiveis"], 1)
+        self.assertEqual(result["melhores_grupos"][0]["administradora"], "Itau")
+        self.assertIn("regras_administradoras_pendentes_analise_humana", result["melhores_grupos"][0]["alertas"])
+
 
 if __name__ == "__main__":
     unittest.main()

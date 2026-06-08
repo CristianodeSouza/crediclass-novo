@@ -120,12 +120,27 @@ def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: Admin
     }
 
 
+def administrator_rule_has_operational_data(rule: AdministratorRule) -> bool:
+    """Retorna true somente quando a regra tem dados reais para bloquear administradora."""
+    return any((
+        float(rule.percentual_lance_embutido or 0) > 0,
+        float(rule.taxa_adm or 0) > 0,
+        float(rule.fundo_reserva or 0) > 0,
+        rule.idade_maxima is not None,
+        rule.aceita_fgts,
+        rule.aceita_saida_fiscal,
+        bool(str(rule.possui_negociacao_taxa or "").strip() not in {"", "Nao", "Não"}),
+    ))
+
+
 def analyze_administradoras(payload: ViabilidadeRequest, administradoras: list[str], config_rules: list[dict] | None = None) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     seen: set[str] = set()
     for administradora in administradoras:
         rule = get_rule_for_administradora(administradora, config_rules)
         if not rule:
+            continue
+        if not administrator_rule_has_operational_data(rule):
             continue
         key = rule.administradora.upper()
         if key in seen:
