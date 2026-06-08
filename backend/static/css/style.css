@@ -849,8 +849,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   background: var(--surface-soft);
 }
 
-.history-batch-toolbar,
-.history-add-month {
+.history-batch-toolbar {
   display: flex;
   align-items: end;
   justify-content: space-between;
@@ -866,18 +865,6 @@ body[data-theme="escuro"] .btn-outline-secondary {
   margin: 2px 0 0;
   color: var(--muted);
   font-size: 0.86rem;
-}
-
-.history-add-month {
-  justify-content: flex-start;
-}
-
-.history-add-month label {
-  display: grid;
-  width: 180px;
-  gap: 6px;
-  font-size: 0.82rem;
-  font-weight: 700;
 }
 
 .history-edit-grid {
@@ -2282,14 +2269,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
     width: 100%;
   }
 
-  .history-batch-toolbar,
-  .history-add-month {
+  .history-batch-toolbar {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .history-add-month label {
-    width: 100%;
   }
 
   .history-edit-head,

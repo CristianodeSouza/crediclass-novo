@@ -818,25 +818,6 @@ function renderHistoryEditor(prefix, historico = {}, extraMonths = []) {
   setHistoryUpdateStateForPrefix(prefix, "");
 }
 
-function addHistoryEditorMonth(prefix) {
-  const input = document.getElementById(`${prefix}ExtraMes`);
-  const grid = document.getElementById(`${prefix}Grid`);
-  const month = input?.value;
-  if (!month || !grid) return;
-  if (grid.querySelector(`[data-history-month="${month}"]`)) {
-    setHistoryUpdateStateForPrefix(prefix, "error", "Este mes ja esta na grade.");
-    return;
-  }
-  const head = grid.querySelector(".history-edit-head");
-  const row = document.createElement("div");
-  row.innerHTML = historyEditorRow(prefix, month, {}).trim();
-  grid.insertBefore(row.firstElementChild, head?.nextElementSibling || null);
-  const rows = [...grid.querySelectorAll(".history-edit-row")].sort((a, b) => compareMonthKeys(a.dataset.historyMonth, b.dataset.historyMonth));
-  rows.forEach((item) => grid.appendChild(item));
-  input.value = "";
-  setHistoryUpdateStateForPrefix(prefix, "success", "Mes adicionado para preenchimento.");
-}
-
 function collectHistoryRowPayload(row) {
   const payload = {
     mes: row.dataset.historyMonth,
@@ -2875,8 +2856,6 @@ document.getElementById("historyUpdateForm").addEventListener("submit", (event) 
   saveHistoryUpdate().catch((error) => setHistoryUpdateState("error", error.message || "Nao foi possivel atualizar o historico."));
 });
 
-document.getElementById("historyUpdateAddMonthBtn").addEventListener("click", () => addHistoryEditorMonth("historyUpdate"));
-document.getElementById("groupFormHistoryAddMonthBtn").addEventListener("click", () => addHistoryEditorMonth("groupFormHistory"));
 document.querySelector('[data-bs-target="#detailsHistory"]').addEventListener("shown.bs.tab", () => detailsChart?.resize());
 
 document.querySelectorAll("[data-admin-plan-kind]").forEach((button) => {
