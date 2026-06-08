@@ -1,4 +1,6 @@
 import copy
+import csv
+import io
 import json
 import logging
 import re
@@ -303,6 +305,20 @@ def read_sheet_values() -> list[list[Any]]:
         range=f"'{settings.google_sheet_name}'!A:ZZ",
     ).execute()
     return result.get("values", [])
+
+
+def export_sheet_csv() -> str:
+    values = read_sheet_values()
+    max_columns = max((len(row) for row in values), default=0)
+    output = io.StringIO(newline="")
+    writer = csv.writer(output, delimiter=";", lineterminator="\n")
+
+    for row in values:
+        normalized = [str(value) if value is not None else "" for value in row]
+        normalized.extend([""] * (max_columns - len(normalized)))
+        writer.writerow(normalized)
+
+    return output.getvalue()
 
 
 def find_header(headers: list[str], field: str) -> str | None:

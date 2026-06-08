@@ -18,7 +18,7 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
-from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote
+from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote
 from .viabilidade import analyze_viabilidade, compatible_tipo_bem, normalize_text
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -180,6 +180,23 @@ def grupos(
         "tipos_bem": tipos_bem,
         "items": items[start:end],
     }
+
+
+@app.get("/api/grupos/exportar-planilha")
+def grupos_exportar_planilha():
+    logger.info("GET /api/grupos/exportar-planilha")
+    try:
+        csv_content = export_sheet_csv()
+    except Exception as error:
+        logger.exception("Erro ao exportar planilha oficial")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+    filename = f"crediclass-planilha-oficial-{time.strftime('%Y-%m-%d')}.csv"
+    return Response(
+        content="\ufeff" + csv_content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @app.get("/api/grupos/{grupo_id}", response_model=GrupoDetalhe)

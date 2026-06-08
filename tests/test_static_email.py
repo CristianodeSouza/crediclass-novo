@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260608-26", index_html)
+        self.assertIn("/static/js/app.js?v=20260608-27", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -199,11 +199,14 @@ class StaticEmailTest(unittest.TestCase):
 
         self.assertIn('id="exportGroupsCsvBtn"', index_html)
         self.assertIn('id="exportStudiesCsvBtn"', index_html)
+        self.assertIn("Exportar Planilha", index_html)
         self.assertIn("function downloadCsv(filename, rows)", app_js)
+        self.assertIn("function downloadBlob(filename, blob)", app_js)
         self.assertIn("function exportGroupsCsv()", app_js)
         self.assertIn("function exportStudiesCsv()", app_js)
         self.assertIn("text/csv;charset=utf-8", app_js)
-        self.assertIn("crediclass-grupos-", app_js)
+        self.assertIn("/api/grupos/exportar-planilha", app_js)
+        self.assertIn("crediclass-planilha-oficial-", app_js)
         self.assertIn("crediclass-estudos-", app_js)
 
     def test_backup_logs_disponivel_em_configuracoes(self):

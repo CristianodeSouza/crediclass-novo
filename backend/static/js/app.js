@@ -372,6 +372,10 @@ function csvValue(value) {
 function downloadCsv(filename, rows) {
   const content = rows.map((row) => row.map(csvValue).join(";")).join("\n");
   const blob = new Blob([`\uFEFF${content}`], { type: "text/csv;charset=utf-8" });
+  downloadBlob(filename, blob);
+}
+
+function downloadBlob(filename, blob) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -423,28 +427,31 @@ function downloadConfigBackup() {
   showToast("Backup JSON gerado.", "success");
 }
 
-function exportGroupsCsv() {
-  if (!mapState.items.length) {
-    showToast("Carregue grupos antes de exportar.", "warning");
-    return;
+async function exportGroupsCsv() {
+  const button = document.getElementById("exportGroupsCsvBtn");
+  button.disabled = true;
+  try {
+    const response = await fetch("/api/grupos/exportar-planilha", {
+      cache: "no-store",
+      credentials: "same-origin",
+    });
+    if (response.status === 401) {
+      showLogin("Sessao expirada. Entre novamente para exportar a planilha.");
+      return;
+    }
+    if (!response.ok) throw new Error("Falha ao exportar planilha oficial");
+
+    const disposition = response.headers.get("Content-Disposition") || "";
+    const match = disposition.match(/filename="?([^";]+)"?/i);
+    const filename = match?.[1] || `crediclass-planilha-oficial-${new Date().toISOString().slice(0, 10)}.csv`;
+    const blob = await response.blob();
+    downloadBlob(filename, blob);
+    showToast("Planilha oficial exportada.", "success");
+  } catch (error) {
+    showToast("Nao foi possivel exportar a planilha oficial.", "danger");
+  } finally {
+    button.disabled = false;
   }
-  const rows = [
-    ["ID Grupo", "Administradora", "Tipo de Bem", "Credito Minimo", "Credito Maximo", "Taxa ADM", "Prazo", "1a Assembleia", "Ultima Assembleia", "Status"],
-    ...mapState.items.map((item) => [
-      item.grupo_id,
-      item.administradora,
-      item.tipo_bem,
-      item.credito_minimo,
-      item.credito_maximo,
-      item.taxa_adm,
-      item.prazo_total,
-      item.primeira_assembleia,
-      item.ultima_assembleia,
-      item.status,
-    ]),
-  ];
-  downloadCsv(`crediclass-grupos-${new Date().toISOString().slice(0, 10)}.csv`, rows);
-  showToast("CSV de grupos gerado.", "success");
 }
 
 function exportStudiesCsv() {

@@ -2,7 +2,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from backend.main import grupo_detalhe, grupo_historico_atualizar, grupo_historico_lote_atualizar, grupos, reload_data
+from backend.main import grupo_detalhe, grupo_historico_atualizar, grupo_historico_lote_atualizar, grupos, grupos_exportar_planilha, reload_data
 from backend.models import GrupoCreateRequest, GrupoUpdateRequest, HistoricoBatchUpdateRequest, HistoricoUpdateRequest
 from backend import sheets_client
 from backend.sheets_client import get_grupo as sheets_get_grupo
@@ -276,6 +276,22 @@ class MapaGruposTest(unittest.TestCase):
         clear_cache.assert_called_once()
         self.assertEqual(result["success"], True)
         self.assertEqual(result["total"], 2)
+
+    def test_export_sheet_csv_preserva_matriz_da_planilha(self):
+        with patch("backend.sheets_client.read_sheet_values", return_value=[["ADM", "Grupo", "Status"], ["ITAU", "128"]]):
+            csv_content = sheets_client.export_sheet_csv()
+
+        self.assertEqual(csv_content, "ADM;Grupo;Status\nITAU;128;\n")
+
+    def test_exportar_planilha_devolve_csv_oficial(self):
+        with patch("backend.main.export_sheet_csv", return_value="ADM;Grupo;Status\nITAU;128;Ativo\n") as export_sheet:
+            response = grupos_exportar_planilha()
+
+        export_sheet.assert_called_once()
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/csv", response.media_type)
+        self.assertIn("crediclass-planilha-oficial-", response.headers["content-disposition"])
+        self.assertTrue(response.body.startswith("\ufeffADM;Grupo;Status".encode("utf-8")))
 
     def test_sheets_get_grupo_builds_only_matching_row_detail(self):
         headers = ["ADM", "Grupo", "Tipo de Bem", "JAN-26 Maior Lance", "JAN-26 Menor Lance", "JAN-26 Qtd"]
