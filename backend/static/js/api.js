@@ -3,6 +3,7 @@ const API_BASE = "/api";
 async function apiRequest(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     cache: "no-store",
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {}),
@@ -14,6 +15,9 @@ async function apiRequest(path, options = {}) {
 
   if (!response.ok) {
     const message = data.error || data.detail || "Erro ao comunicar com o servidor";
+    if (response.status === 401 && typeof showLogin === "function") {
+      showLogin(message);
+    }
     showToast(message, "danger");
     throw new Error(message);
   }

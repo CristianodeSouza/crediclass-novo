@@ -6,9 +6,36 @@
     <title>Crediclass Dashboard V3</title>
     <link href="/static/favicon.svg?v=1" rel="icon" type="image/svg+xml">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260605-16" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260608-17" rel="stylesheet">
   </head>
-  <body>
+  <body class="auth-pending">
+    <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
+      <div class="login-brand-panel">
+        <img class="login-logo" src="/static/images/crediclass-logo.png" alt="Crediclass">
+        <div>
+          <p class="login-kicker">Dashboard de Grupos</p>
+          <h1>Acesso restrito para equipe</h1>
+          <p class="login-copy">Entre com o usuario operacional autorizado para acessar os paineis internos.</p>
+        </div>
+      </div>
+      <form id="loginForm" class="login-card" autocomplete="off">
+        <div>
+          <span class="login-card-eyebrow">Crediclass</span>
+          <h2>Login</h2>
+          <p>Controle simples de acesso para homologacao e testes da equipe.</p>
+        </div>
+        <label>
+          <span>Usuario</span>
+          <input id="loginUsuario" class="form-control" name="usuario" autocomplete="username" required>
+        </label>
+        <label>
+          <span>Senha</span>
+          <input id="loginSenha" class="form-control" name="senha" type="password" autocomplete="current-password" required>
+        </label>
+        <div id="loginError" class="login-error d-none">Usuario ou senha invalidos.</div>
+        <button id="loginSubmitBtn" class="btn login-submit" type="submit">Entrar</button>
+      </form>
+    </section>
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand">
@@ -48,12 +75,12 @@
         </nav>
 
         <div class="user-card">
-          <div class="user-avatar">L</div>
+          <div id="sessionAvatar" class="user-avatar">L</div>
           <div>
-            <div class="user-name">Larissa</div>
-            <div class="user-role">Administradora</div>
+            <div id="sessionUserName" class="user-name">Larissa</div>
+            <div id="sessionUserRole" class="user-role">Administradora</div>
           </div>
-          <span class="user-arrow">v</span>
+          <button id="logoutBtn" class="logout-btn" type="button">Sair</button>
         </div>
       </aside>
 
@@ -1112,6 +1139,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260605-24"></script>
+    <script src="/static/js/app.js?v=20260608-25"></script>
   </body>
 </html>

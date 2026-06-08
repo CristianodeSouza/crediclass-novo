@@ -67,6 +67,8 @@ const configState = {
 const operationalLogs = [];
 const HISTORY_START_MONTH = "2024-01";
 const CLIENT_PROFILE_STORAGE_KEY = "crediclass.clientProfile.v1";
+const authState = { user: null };
+let appBootstrapped = false;
 const administratorPlanDefaultNames = ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"];
 const administratorPlanRows = [
   { key: "data_cadastro_produto", label: "Data de cadastro do produto", type: "date" },
@@ -110,6 +112,108 @@ let configUserModal = null;
 let configUserMode = "create";
 let configUserIndex = null;
 let configAdministratorRuleIndex = null;
+
+function setLoginError(message) {
+  const errorBox = document.getElementById("loginError");
+  if (!errorBox) return;
+  errorBox.textContent = message || "Usuario ou senha invalidos.";
+  errorBox.classList.toggle("d-none", !message);
+}
+
+function showLogin(message = "") {
+  authState.user = null;
+  document.body.classList.remove("auth-pending", "authenticated");
+  document.body.classList.add("auth-login");
+  setLoginError(message);
+  window.setTimeout(() => document.getElementById("loginUsuario")?.focus(), 60);
+}
+
+function showApp(user) {
+  authState.user = user;
+  document.body.classList.remove("auth-pending", "auth-login");
+  document.body.classList.add("authenticated");
+  setLoginError("");
+
+  const displayName = user?.nome || user?.usuario || "Usuario";
+  document.getElementById("sessionUserName").textContent = displayName;
+  document.getElementById("sessionUserRole").textContent = user?.perfil || "Equipe";
+  document.getElementById("sessionAvatar").textContent = displayName.trim().charAt(0).toUpperCase() || "U";
+}
+
+async function checkSession() {
+  const response = await fetch("/api/auth/me", {
+    cache: "no-store",
+    credentials: "same-origin",
+  });
+  if (!response.ok) return null;
+  const data = await response.json().catch(() => ({}));
+  return data.user || null;
+}
+
+async function submitLogin(event) {
+  event.preventDefault();
+  const button = document.getElementById("loginSubmitBtn");
+  const usuario = document.getElementById("loginUsuario").value.trim();
+  const senha = document.getElementById("loginSenha").value;
+
+  setLoginError("");
+  button.disabled = true;
+  button.textContent = "Entrando...";
+
+  try {
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, senha }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setLoginError(data.error || "Usuario ou senha invalidos.");
+      return;
+    }
+    showApp(data.user);
+    await initializeDashboardData();
+  } catch (error) {
+    setLoginError("Nao foi possivel comunicar com o servidor.");
+  } finally {
+    button.disabled = false;
+    button.textContent = "Entrar";
+  }
+}
+
+async function logout() {
+  await fetch("/api/auth/logout", {
+    method: "POST",
+    cache: "no-store",
+    credentials: "same-origin",
+  }).catch(() => null);
+  appBootstrapped = false;
+  window.location.reload();
+}
+
+async function initializeDashboardData() {
+  if (appBootstrapped) return;
+  appBootstrapped = true;
+  loadHealth().catch(() => {
+    document.getElementById("environmentLabel").textContent = "indisponivel";
+  });
+  loadMapaGrupos();
+  loadClientProfile();
+  updateViabilityTotals();
+  openSharedStudyFromUrl().catch(() => showToast("Nao foi possivel abrir o estudo compartilhado.", "danger"));
+}
+
+async function bootApp() {
+  const user = await checkSession();
+  if (!user) {
+    showLogin();
+    return;
+  }
+  showApp(user);
+  await initializeDashboardData();
+}
 
 function showToast(message, type = "success") {
   const region = document.getElementById("toastRegion");
@@ -2883,11 +2987,7 @@ document.getElementById("restartSyncBtn").addEventListener("click", () => {
   restartSystemSync().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel reiniciar a sincronizacao.", "danger"));
 });
 
-loadHealth().catch(() => {
-  document.getElementById("environmentLabel").textContent = "indisponivel";
-});
+document.getElementById("loginForm").addEventListener("submit", submitLogin);
+document.getElementById("logoutBtn").addEventListener("click", logout);
 
-loadMapaGrupos();
-loadClientProfile();
-updateViabilityTotals();
-openSharedStudyFromUrl().catch(() => showToast("Nao foi possivel abrir o estudo compartilhado.", "danger"));
+bootApp().catch(() => showLogin("Nao foi possivel validar a sessao."));

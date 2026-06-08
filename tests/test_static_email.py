@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260605-24", index_html)
+        self.assertIn("/static/js/app.js?v=20260608-25", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -392,12 +392,36 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260605-16", index_html)
+        self.assertIn("/static/css/style.css?v=20260608-17", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)
         self.assertIn('document.getElementById("configTema").addEventListener("change"', app_js)
         self.assertIn('body[data-theme="escuro"]', style_css)
+
+    def test_login_inicial_protege_dashboard(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        api_js = (ROOT / "backend" / "static" / "js" / "api.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn('class="auth-pending"', index_html)
+        self.assertIn('id="loginScreen"', index_html)
+        self.assertIn('id="loginForm"', index_html)
+        self.assertIn("/static/images/crediclass-logo.png", index_html)
+        self.assertIn('id="logoutBtn"', index_html)
+        self.assertIn("async function submitLogin(event)", app_js)
+        self.assertIn("/api/auth/login", app_js)
+        self.assertIn("/api/auth/me", app_js)
+        self.assertIn("/api/auth/logout", app_js)
+        self.assertIn("function showLogin", app_js)
+        self.assertIn("function showApp", app_js)
+        self.assertIn("async function initializeDashboardData()", app_js)
+        self.assertIn('document.getElementById("loginForm").addEventListener("submit", submitLogin)', app_js)
+        self.assertIn('credentials: "same-origin"', api_js)
+        self.assertIn("response.status === 401", api_js)
+        self.assertIn(".login-screen", style_css)
+        self.assertIn(".logout-btn", style_css)
 
     def test_estudo_financeiro_exibe_logo_da_administradora(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")

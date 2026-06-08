@@ -1,8 +1,13 @@
 from pathlib import Path
+import base64
+import hashlib
+import hmac
 import logging
+import os
+import time
 from typing import Annotated
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -25,6 +30,58 @@ logger = logging.getLogger("crediclass.api")
 app = FastAPI(title="Crediclass Dashboard V3")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/files", StaticFiles(directory=FILES_DIR), name="files")
+
+AUTH_COOKIE = "crediclass_session"
+AUTH_USERS = {
+    "adm": {"password": "cristiano", "name": "Administrador", "role": "Administrador"},
+    "operador1": {"password": "teste123", "name": "Operador 1", "role": "Operador"},
+    "operador2": {"password": "teste123", "name": "Operador 2", "role": "Operador"},
+}
+AUTH_SECRET = os.getenv("AUTH_SECRET", "crediclass-dashboard-v3-local-login")
+
+
+def _sign_session(username: str, issued_at: int) -> str:
+    payload = f"{username}:{issued_at}"
+    signature = hmac.new(AUTH_SECRET.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
+    return base64.urlsafe_b64encode(f"{payload}:{signature}".encode("utf-8")).decode("ascii")
+
+
+def _verify_session(token: str | None) -> str | None:
+    if not token:
+        return None
+    try:
+        decoded = base64.urlsafe_b64decode(token.encode("ascii")).decode("utf-8")
+        username, issued_at_text, signature = decoded.rsplit(":", 2)
+        issued_at = int(issued_at_text)
+    except (ValueError, UnicodeDecodeError):
+        return None
+    if username not in AUTH_USERS:
+        return None
+    expected = hmac.new(AUTH_SECRET.encode("utf-8"), f"{username}:{issued_at}".encode("utf-8"), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(signature, expected):
+        return None
+    if time.time() - issued_at > 60 * 60 * 12:
+        return None
+    return username
+
+
+def _public_auth_path(path: str) -> bool:
+    return path in {"/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/health"}
+
+
+@app.middleware("http")
+async def require_authenticated_session(request: Request, call_next):
+    path = request.url.path
+    if path.startswith("/api/") and not _public_auth_path(path):
+        username = _verify_session(request.cookies.get(AUTH_COOKIE))
+        if not username:
+            return JSONResponse(status_code=401, content={"success": False, "error": "Acesso restrito. Faca login para continuar."})
+        request.state.auth_user = username
+    if path.startswith("/files/"):
+        username = _verify_session(request.cookies.get(AUTH_COOKIE))
+        if not username:
+            return JSONResponse(status_code=401, content={"success": False, "error": "Acesso restrito. Faca login para continuar."})
+    return await call_next(request)
 
 
 @app.get("/")
@@ -292,6 +349,47 @@ def viabilidade_administradoras(payload: ViabilidadeRequest):
         "total": len(items),
         "total_elegiveis": len([item for item in items if item["elegivel"]]),
         "items": items,
+    }
+
+
+@app.post("/api/auth/login")
+async def auth_login(request: Request, response: Response):
+    payload = await request.json()
+    username = str(payload.get("usuario") or "").strip()
+    password = str(payload.get("senha") or "")
+    user = AUTH_USERS.get(username)
+    if not user or not hmac.compare_digest(password, user["password"]):
+        return JSONResponse(status_code=401, content={"success": False, "error": "Usuario ou senha invalidos."})
+    token = _sign_session(username, int(time.time()))
+    response.set_cookie(
+        AUTH_COOKIE,
+        token,
+        httponly=True,
+        samesite="lax",
+        max_age=60 * 60 * 12,
+        path="/",
+    )
+    return {
+        "success": True,
+        "user": {"usuario": username, "nome": user["name"], "perfil": user["role"]},
+    }
+
+
+@app.post("/api/auth/logout")
+def auth_logout(response: Response):
+    response.delete_cookie(AUTH_COOKIE, path="/")
+    return {"success": True}
+
+
+@app.get("/api/auth/me")
+def auth_me(request: Request):
+    username = _verify_session(request.cookies.get(AUTH_COOKIE))
+    if not username:
+        return JSONResponse(status_code=401, content={"success": False, "error": "Sessao nao autenticada."})
+    user = AUTH_USERS[username]
+    return {
+        "success": True,
+        "user": {"usuario": username, "nome": user["name"], "perfil": user["role"]},
     }
 
 
