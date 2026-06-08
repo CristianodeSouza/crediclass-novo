@@ -18,7 +18,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260608-20", index_html)
-        self.assertIn("/static/js/app.js?v=20260608-30", index_html)
+        self.assertIn("/static/js/app.js?v=20260608-31", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -97,6 +97,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function renderViabilityEmpty(result)", app_js)
         self.assertIn("function openViabilityAudit(groupId)", app_js)
         self.assertIn("data-viability-action=\"auditar\"", app_js)
+        self.assertIn('button.dataset.viabilityAction === "estrategias"', app_js)
+        self.assertIn("openFinancialStudy(button.dataset.groupId, item)", app_js)
         self.assertIn("<th>Auditoria</th>", index_html)
         self.assertIn("regras_administradoras_pendentes_analise_humana", app_js)
         self.assertNotIn('id="viabilityProfileSummary"', index_html)

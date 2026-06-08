@@ -3131,7 +3131,7 @@ document.getElementById("viabilityRankingBody").addEventListener("click", (event
     return;
   }
   if (button.dataset.viabilityAction === "estrategias") {
-    showToast("Grupo selecionado. A proxima etapa e a aba Estrategias.", "success");
+    openFinancialStudy(button.dataset.groupId, item);
     return;
   }
 });
