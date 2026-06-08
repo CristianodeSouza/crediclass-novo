@@ -849,6 +849,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
   background: var(--surface-soft);
 }
 
+.history-add-month {
+  display: none !important;
+}
+
 .history-batch-toolbar {
   display: flex;
   align-items: end;

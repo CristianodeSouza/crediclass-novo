@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260608-25", index_html)
+        self.assertIn("/static/js/app.js?v=20260608-26", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -242,6 +242,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn('id="historyUpdateAddMonthBtn"', index_html)
         self.assertNotIn("Adicionar mes", index_html)
         self.assertNotIn("function addHistoryEditorMonth", app_js)
+        self.assertIn(".history-add-month", style_css)
+        self.assertIn("display: none !important", style_css)
         self.assertIn("const HISTORY_START_MONTH = \"2024-01\"", app_js)
         self.assertIn("function collectHistoryBatchPayloads(prefix)", app_js)
         self.assertIn("markHistoryPayloadsSaved", app_js)
@@ -423,7 +425,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260608-17", index_html)
+        self.assertIn("/static/css/style.css?v=20260608-18", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)
