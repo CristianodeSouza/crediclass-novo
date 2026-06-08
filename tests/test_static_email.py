@@ -17,7 +17,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/js/app.js?v=20260608-27", index_html)
+        self.assertIn("/static/js/app.js?v=20260608-28", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -117,6 +117,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("clientProfileConceito", index_html)
         self.assertIn("function saveClientProfile", app_js)
         self.assertIn("function applyClientProfileToFlow", app_js)
+        self.assertIn("function formatMoneyInputValue(value)", app_js)
+        self.assertIn("const moneyInputIds", app_js)
         self.assertIn(".client-profile-layout", style_css)
 
     def test_configuracoes_possui_planos_administradoras(self):

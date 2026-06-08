@@ -322,6 +322,27 @@ function formatMoney(value) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 }
 
+function formatMoneyInputValue(value) {
+  const number = Number(parseNumberInput(value));
+  if (!Number.isFinite(number)) return "";
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(number);
+}
+
+function formatMoneyInputById(id) {
+  const input = document.getElementById(id);
+  if (!input || !String(input.value || "").trim()) return;
+  input.value = formatMoneyInputValue(input.value);
+}
+
+function setMoneyInputValue(id, value) {
+  const input = document.getElementById(id);
+  if (!input) return;
+  input.value = value === null || value === undefined || value === "" ? "" : formatMoneyInputValue(value);
+}
+
 function formatPercent(value) {
   if (value === null || value === undefined) return "-";
   return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(value * 100)}%`;
@@ -944,8 +965,8 @@ function setGroupFormValues(group = {}) {
   document.getElementById("groupFormAdministradora").value = group.administradora || "";
   document.getElementById("groupFormGrupo").value = group.grupo || "";
   document.getElementById("groupFormTipoBem").value = group.tipo_bem || "";
-  document.getElementById("groupFormCreditoMinimo").value = group.credito_minimo ?? "";
-  document.getElementById("groupFormCreditoMaximo").value = group.credito_maximo ?? "";
+  setMoneyInputValue("groupFormCreditoMinimo", group.credito_minimo);
+  setMoneyInputValue("groupFormCreditoMaximo", group.credito_maximo);
   document.getElementById("groupFormTaxaAdm").value = percentToInputValue(group.taxa_adm);
   document.getElementById("groupFormPrazoTotal").value = group.prazo_total ?? "";
   document.getElementById("groupFormStatus").value = group.status || "Ativo";
@@ -1233,15 +1254,15 @@ function loadClientProfile() {
   }
   setInputValue("clientProfileNome", profile.nome);
   setInputValue("clientProfileConjuge", profile.nome_conjuge);
-  setInputValue("clientProfileCredito", profile.credito_desejado || "");
+  setMoneyInputValue("clientProfileCredito", profile.credito_desejado);
   setInputValue("clientProfilePrazo", profile.prazo_desejado || 3);
-  setInputValue("clientProfileLanceProprio", profile.lance_proprio || "");
-  setInputValue("clientProfileFgtsTitular", profile.fgts_titular || "");
-  setInputValue("clientProfileFgtsConjuge", profile.fgts_conjuge || "");
-  setInputValue("clientProfileRendaTitular", profile.renda_titular || "");
-  setInputValue("clientProfileRendaConjuge", profile.renda_conjuge || "");
-  setInputValue("clientProfileParcelaIdeal", profile.parcela_ideal || profile.parcela_desejada || "");
-  setInputValue("clientProfileParcelaLimite", profile.parcela_limite || "");
+  setMoneyInputValue("clientProfileLanceProprio", profile.lance_proprio);
+  setMoneyInputValue("clientProfileFgtsTitular", profile.fgts_titular);
+  setMoneyInputValue("clientProfileFgtsConjuge", profile.fgts_conjuge);
+  setMoneyInputValue("clientProfileRendaTitular", profile.renda_titular);
+  setMoneyInputValue("clientProfileRendaConjuge", profile.renda_conjuge);
+  setMoneyInputValue("clientProfileParcelaIdeal", profile.parcela_ideal ?? profile.parcela_desejada);
+  setMoneyInputValue("clientProfileParcelaLimite", profile.parcela_limite);
   setInputValue("clientProfileNascimento", profile.data_nascimento);
   setInputValue("clientProfileNascimentoConjuge", profile.data_nascimento_conjuge);
   setInputValue("clientProfileObjetivo", profile.objetivo || "Aquisicao de Imovel");
@@ -2785,6 +2806,25 @@ document.getElementById("pageSizeSelect").addEventListener("change", (event) => 
 });
 
 document.getElementById("exportGroupsCsvBtn").addEventListener("click", exportGroupsCsv);
+
+const moneyInputIds = [
+  "filterCreditoMinimo",
+  "filterCreditoMaximo",
+  "clientProfileCredito",
+  "clientProfileLanceProprio",
+  "clientProfileFgtsTitular",
+  "clientProfileFgtsConjuge",
+  "clientProfileRendaTitular",
+  "clientProfileRendaConjuge",
+  "clientProfileParcelaIdeal",
+  "clientProfileParcelaLimite",
+  "groupFormCreditoMinimo",
+  "groupFormCreditoMaximo",
+];
+
+moneyInputIds.forEach((id) => {
+  document.getElementById(id)?.addEventListener("blur", () => formatMoneyInputById(id));
+});
 
 [
   "clientProfileCredito",
