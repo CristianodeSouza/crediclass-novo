@@ -1482,6 +1482,53 @@ body[data-theme="escuro"] .btn-outline-secondary {
   padding: 0.58rem 0.42rem;
 }
 
+.business-rules-note {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-size: 0.82rem;
+}
+
+.business-rules-table {
+  min-width: 1120px;
+}
+
+.business-rules-table th:nth-child(1) {
+  width: 18%;
+}
+
+.business-rules-table th:nth-child(2) {
+  width: 42%;
+}
+
+.business-rules-table th:nth-child(3) {
+  width: 28%;
+}
+
+.business-rules-table th:nth-child(4) {
+  width: 12%;
+}
+
+.business-rules-table td {
+  vertical-align: top;
+  white-space: normal;
+}
+
+.business-rule-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 16px;
+}
+
+.business-rule-note-input {
+  min-height: 112px;
+  resize: vertical;
+}
+
 .study-layout {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

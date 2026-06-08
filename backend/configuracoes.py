@@ -67,6 +67,7 @@ DEFAULT_CONFIG = {
         "paineis_liberados": True,
         "descricao": "Todos os usuarios podem visualizar todos os dados dos paineis.",
     },
+    "regras_negocio_feedbacks": {},
 }
 
 RUNTIME_DIR = Path(__file__).resolve().parent / "runtime_data"
@@ -115,5 +116,7 @@ def update_configuracoes(payload: dict) -> dict:
         _settings["administradoras_regras"] = payload["administradoras_regras"]
     if "usuarios" in payload and isinstance(payload["usuarios"], list):
         _settings["usuarios"] = payload["usuarios"]
+    if "regras_negocio_feedbacks" in payload and isinstance(payload["regras_negocio_feedbacks"], dict):
+        _settings["regras_negocio_feedbacks"] = payload["regras_negocio_feedbacks"]
     save_config()
     return {"success": True}

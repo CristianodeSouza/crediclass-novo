@@ -88,6 +88,61 @@ const administratorPlanRows = [
   { key: "lance_maximo", label: "Lance máximo:", type: "percent" },
   { key: "prazo_minimo", label: "Prazo mínimo:", type: "number" },
 ];
+const businessRuleStatuses = ["Pendente", "Em revisao", "Revisado", "Corrigir regra"];
+const businessRulesFlow = [
+  {
+    id: "perfil-cliente",
+    etapa: "1. Perfil do Cliente",
+    regras: [
+      "Recebe credito desejado liquido, prazo desejado, objetivo, tipo de bem e estado do bem.",
+      "Soma recursos proprios com FGTS apenas para exibir total disponivel do cliente.",
+      "Soma renda titular e renda conjuge para renda total.",
+      "Calcula Conceito IA pelo prazo: 1 a 3 meses Agressivo; 4 a 6 Moderado; 7 a 12 Conservador; 13 a 24 Super Conservador; acima disso Investidor.",
+      "Data de nascimento ausente gera alerta de idade nao validada, sem aprovar idade automaticamente.",
+    ],
+  },
+  {
+    id: "administradoras",
+    etapa: "2. Administradoras",
+    regras: [
+      "Regras fixas por administradora sao usadas antes da selecao de grupos.",
+      "Credito a contratar = credito desejado / (1 - percentual de lance embutido).",
+      "Lance maximo = ((credito a contratar * percentual de lance embutido) + lance proprio disponivel) / credito a contratar.",
+      "Prazo minimo = (credito a contratar + taxa ADM + fundo reserva - lance total considerado) / parcela limite.",
+      "Nas formulas oficiais F30 e F31 nao entra FGTS; entra o lance proprio disponivel.",
+    ],
+  },
+  {
+    id: "viabilidade-grupos",
+    etapa: "3. Viabilidade de Grupos",
+    regras: [
+      "Busca somente grupos ativos e com tipo de bem compativel.",
+      "Valida faixa do grupo usando credito a contratar, nao o credito liquido desejado.",
+      "Valida prazo restante do grupo contra o prazo minimo calculado pela formula oficial.",
+      "Referencia de lance usa meses com contemplacao registrada no historico.",
+      "Faixas do perfil: Agressivo 50%+; Moderado 40% a 50%; Conservador 30% a 40%; Super Conservador 20% a 30%; Investidor 0% a 20%.",
+    ],
+  },
+  {
+    id: "estrategias",
+    etapa: "4. Estrategias",
+    regras: [
+      "Estrategia recomendada parte do perfil e do grupo selecionado na Viabilidade.",
+      "Alternativas de lance sao comparadas sem alterar os dados originais do cliente.",
+      "A recomendacao deve explicar historico, prazo operacional, lance sugerido e riscos.",
+    ],
+  },
+  {
+    id: "estudo-financeiro",
+    etapa: "5. Estudo Financeiro",
+    regras: [
+      "Estudo herda Perfil do Cliente, grupo selecionado e estrategia escolhida.",
+      "Simulacao financeira usa credito contratado, lance embutido, recurso proprio, taxa ADM, fundo reserva e prazo.",
+      "Campos comerciais permanecem editaveis pelo operador antes de salvar/compartilhar o estudo.",
+      "A analise nao garante contemplacao; serve como referencia operacional.",
+    ],
+  },
+];
 const studyOperatorFields = [
   ["observacoes_comerciais", "Observacoes comerciais", "studyFieldObservacoes"],
   ["comentario_cliente", "Comentario para o cliente", "studyFieldComentario"],
@@ -2049,6 +2104,50 @@ function applyTheme(theme) {
   document.body.dataset.theme = normalized.includes("escuro") ? "escuro" : "claro";
 }
 
+function renderBusinessRules(feedbacks = {}) {
+  const body = document.getElementById("businessRulesBody");
+  if (!body) return;
+  body.innerHTML = businessRulesFlow.map((rule) => {
+    const feedback = feedbacks[rule.id] || {};
+    const status = feedback.status || "Pendente";
+    const options = businessRuleStatuses.map((item) => `<option value="${escapeHtml(item)}" ${item === status ? "selected" : ""}>${escapeHtml(item)}</option>`).join("");
+    return `
+      <tr>
+        <td><strong>${escapeHtml(rule.etapa)}</strong></td>
+        <td>
+          <ul class="business-rule-list">
+            ${rule.regras.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+          </ul>
+        </td>
+        <td>
+          <textarea class="form-control business-rule-note-input" rows="4" data-business-rule-note="${escapeHtml(rule.id)}" placeholder="Descreva aqui o feedback da equipe sobre esta etapa">${escapeHtml(feedback.observacao || "")}</textarea>
+        </td>
+        <td>
+          <select class="form-select" data-business-rule-status="${escapeHtml(rule.id)}">${options}</select>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function collectBusinessRuleFeedbacks() {
+  const result = {};
+  businessRulesFlow.forEach((rule) => {
+    const note = document.querySelector(`[data-business-rule-note="${rule.id}"]`)?.value.trim() || "";
+    const status = document.querySelector(`[data-business-rule-status="${rule.id}"]`)?.value || "Pendente";
+    result[rule.id] = { observacao: note, status };
+  });
+  return result;
+}
+
+async function saveBusinessRuleFeedbacks() {
+  const regrasNegocioFeedbacks = collectBusinessRuleFeedbacks();
+  await apiPut("/configuracoes", { regras_negocio_feedbacks: regrasNegocioFeedbacks });
+  configState.data = { ...(configState.data || {}), regras_negocio_feedbacks: regrasNegocioFeedbacks };
+  showToast("Feedbacks das regras de negocio salvos.", "success");
+  addOperationalLog("Feedbacks das regras de negocio salvos");
+}
+
 function renderConfiguracoes(data) {
   configState.data = data;
   const empresa = data.empresa || {};
@@ -2121,6 +2220,7 @@ function renderConfiguracoes(data) {
   }).join("");
 
   renderAccessPolicy(data.acesso || {});
+  renderBusinessRules(data.regras_negocio_feedbacks || {});
   renderAdministratorRules(data.administradoras_regras || []);
   renderAdministratorPlans();
   document.getElementById("configSystemGrid").innerHTML = [
@@ -2502,6 +2602,7 @@ function collectConfiguracoesPayload() {
       alertar_falha_integracao: getSelectBool("notifyIntegrationFailure"),
     },
     administradoras_regras: configState.data?.administradoras_regras || [],
+    regras_negocio_feedbacks: collectBusinessRuleFeedbacks(),
   };
 }
 
@@ -2917,6 +3018,9 @@ document.getElementById("syncSheetsBtn").addEventListener("click", () => {
 });
 
 document.getElementById("downloadConfigBackupBtn").addEventListener("click", downloadConfigBackup);
+document.getElementById("saveBusinessRulesFeedbackBtn").addEventListener("click", () => {
+  saveBusinessRuleFeedbacks().catch(() => setConfigState("error"));
+});
 
 document.getElementById("newAdministratorRuleBtn").addEventListener("click", clearAdministratorRuleForm);
 document.getElementById("cancelAdministratorRuleBtn").addEventListener("click", clearAdministratorRuleForm);

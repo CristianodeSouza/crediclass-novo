@@ -101,6 +101,20 @@ class ConfiguracoesTest(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertEqual(config["usuarios"], usuarios)
 
+    def test_salvar_configuracoes_atualiza_feedbacks_regras_negocio(self):
+        feedbacks = {
+            "perfil-cliente": {
+                "observacao": "Validar se parcela limite deve ser usada nesta etapa.",
+                "status": "Em revisao",
+            }
+        }
+
+        result = configuracoes_salvar({"regras_negocio_feedbacks": feedbacks})
+        config = configuracoes_obter()
+
+        self.assertTrue(result["success"])
+        self.assertEqual(config["regras_negocio_feedbacks"], feedbacks)
+
     def test_salvar_configuracoes_persiste_json(self):
         original = configuracoes_module.get_configuracoes()
         try:

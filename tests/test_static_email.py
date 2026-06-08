@@ -131,6 +131,25 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function saveAdministratorRule()", app_js)
         self.assertIn("administradoras_regras", app_js)
 
+    def test_configuracoes_possui_regras_de_negocio_com_feedback(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("Regras de Negocio", index_html)
+        self.assertIn('data-bs-target="#configRegrasNegocio"', index_html)
+        self.assertIn('id="businessRulesBody"', index_html)
+        self.assertIn('id="saveBusinessRulesFeedbackBtn"', index_html)
+        self.assertIn("const businessRulesFlow", app_js)
+        self.assertIn("function renderBusinessRules", app_js)
+        self.assertIn("function collectBusinessRuleFeedbacks", app_js)
+        self.assertIn("async function saveBusinessRuleFeedbacks", app_js)
+        self.assertIn("regras_negocio_feedbacks", app_js)
+        for etapa in ["Perfil do Cliente", "Administradoras", "Viabilidade de Grupos", "Estrategias", "Estudo Financeiro"]:
+            self.assertIn(etapa, app_js)
+        self.assertIn("business-rule-note-input", style_css)
+        self.assertIn(".business-rules-table", style_css)
+
     def test_filtros_de_credito_validam_intervalo(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 

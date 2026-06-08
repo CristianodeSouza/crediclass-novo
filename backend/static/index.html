@@ -730,6 +730,7 @@
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configUsuarios" type="button" role="tab">Usuarios</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configAcesso" type="button" role="tab">Acesso</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configNotificacoes" type="button" role="tab">Notificacoes</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configRegrasNegocio" type="button" role="tab">Regras de Negocio</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configSistema" type="button" role="tab">Backup & Logs</button></li>
             </ul>
 
@@ -893,6 +894,34 @@
                     <label><span>Historico mensal atualizado</span><select id="notifyHistoryUpdated" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
                     <label><span>Falhas de integracao</span><select id="notifyIntegrationFailure" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
                   </form>
+                </div>
+              </section>
+
+              <section id="configRegrasNegocio" class="tab-pane fade" role="tabpanel">
+                <div class="content-card">
+                  <div class="table-toolbar">
+                    <div>
+                      <h2>Regras de Negocio</h2>
+                      <p>Auditoria das regras aplicadas em cada etapa do fluxo</p>
+                    </div>
+                    <button id="saveBusinessRulesFeedbackBtn" class="btn btn-primary" type="button">Salvar Feedbacks</button>
+                  </div>
+                  <div class="business-rules-note">
+                    As regras abaixo sao somente leitura. Use observacoes e status para registrar pontos de revisao sem alterar o motor do sistema.
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-hover align-middle viability-table business-rules-table">
+                      <thead>
+                        <tr>
+                          <th>Etapa do Fluxo</th>
+                          <th>Regras Aplicadas</th>
+                          <th>Observacoes da Equipe</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody id="businessRulesBody"></tbody>
+                    </table>
+                  </div>
                 </div>
               </section>
 
