@@ -89,6 +89,20 @@ const administratorPlanRows = [
   { key: "prazo_minimo", label: "Prazo mínimo:", type: "number" },
 ];
 const businessRuleStatuses = ["Pendente", "Em revisao", "Revisado", "Corrigir regra"];
+const administratorPlanRuleHelp = {
+  seguro_obrigatorio_texto: "Usado na etapa de Administradoras para sinalizar se o cliente precisa cumprir regra de seguro obrigatorio antes da escolha de grupos.",
+  idade_maxima: "Usado na validacao de idade da administradora. Se houver idade do titular ou conjuge, o sistema compara com esse limite.",
+  limite_sem_comprovacao_renda: "Usado como referencia de regra da administradora para saber quando a operacao pode exigir comprovacao de renda.",
+  percentual_lance_embutido: "Usado nas formulas oficiais: credito a contratar = credito desejado / (1 - percentual de lance embutido); lance maximo; e prazo minimo.",
+  tipo_lance_embutido: "Usado para indicar como a administradora calcula o lance embutido, por exemplo sobre Credito. Orienta a revisao humana da regra.",
+  aceita_saida_fiscal_texto: "Usado como regra operacional da administradora para validar se o perfil do cliente pode aderir com saida fiscal quando esse ponto for relevante.",
+  taxa_adm: "Usada na formula de prazo minimo e parcela estimada. Taxa ADM em valor = credito a contratar * taxa administrativa.",
+  fundo_reserva: "Usado na formula de prazo minimo e parcela estimada. Fundo de reserva em valor = credito a contratar * fundo reserva.",
+  idade_maxima_ok: "Linha de conferencia da regra de idade. Ajuda o operador a validar se a idade do cliente esta dentro do limite da administradora.",
+  credito_a_ser_contratado: "Campo calculado pela formula oficial F29: credito desejado / (1 - percentual de lance embutido).",
+  lance_maximo: "Campo calculado pela formula oficial F30: ((credito a contratar * percentual de lance embutido) + lance proprio disponivel) / credito a contratar.",
+  prazo_minimo: "Campo calculado pela formula oficial F31: (credito a contratar + taxa ADM + fundo reserva - lance total considerado) / parcela limite.",
+};
 const businessRulesFlow = [
   {
     id: "perfil-cliente",
@@ -2408,6 +2422,42 @@ function recalculateAdministratorPlanComputedCells() {
   });
 }
 
+function renderAdministratorPlanRowLabel(row) {
+  const help = administratorPlanRuleHelp[row.key];
+  if (!help) return escapeHtml(row.label);
+  return `
+    <span class="admin-plan-rule-label">
+      ${escapeHtml(row.label)}
+      <button class="admin-plan-rule-marker" type="button" data-rule-help="${escapeHtml(help)}" aria-label="Explicar uso do campo ${escapeHtml(row.label)}">*</button>
+    </span>
+  `;
+}
+
+function ensureRuleHelpPopover() {
+  let popover = document.getElementById("adminRuleHelpPopover");
+  if (!popover) {
+    popover = document.createElement("div");
+    popover.id = "adminRuleHelpPopover";
+    popover.className = "admin-rule-help-popover d-none";
+    popover.setAttribute("role", "tooltip");
+    document.body.appendChild(popover);
+  }
+  return popover;
+}
+
+function showRuleHelpPopover(target) {
+  const popover = ensureRuleHelpPopover();
+  const rect = target.getBoundingClientRect();
+  popover.textContent = target.dataset.ruleHelp || "";
+  popover.style.left = `${Math.min(rect.left + window.scrollX + 12, window.scrollX + window.innerWidth - 340)}px`;
+  popover.style.top = `${rect.bottom + window.scrollY + 8}px`;
+  popover.classList.remove("d-none");
+}
+
+function hideRuleHelpPopover() {
+  document.getElementById("adminRuleHelpPopover")?.classList.add("d-none");
+}
+
 function renderAdministratorPlans() {
   const kind = activeAdministratorPlanKind();
   const rules = administratorPlanRulesForKind(kind);
@@ -2423,7 +2473,7 @@ function renderAdministratorPlans() {
   `;
   document.getElementById("administratorPlansBody").innerHTML = administratorPlanRows.map((row) => `
     <tr>
-      <th>${escapeHtml(row.label)}</th>
+      <th>${renderAdministratorPlanRowLabel(row)}</th>
       ${rules.map((rule, index) => `
         <td>
           <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" value="${escapeHtml(administratorPlanCellValue(rule, row))}" ${["credito_a_ser_contratado", "lance_maximo", "prazo_minimo"].includes(row.key) ? "readonly" : ""}>
@@ -2849,6 +2899,21 @@ moneyInputIds.forEach((id) => {
 document.getElementById("saveClientProfileBtn").addEventListener("click", () => saveClientProfile());
 document.getElementById("clearClientProfileBtn").addEventListener("click", resetClientProfile);
 document.getElementById("advanceClientProfileBtn").addEventListener("click", advanceClientProfile);
+
+document.getElementById("administratorPlansBody").addEventListener("mouseover", (event) => {
+  const marker = event.target.closest(".admin-plan-rule-marker");
+  if (marker) showRuleHelpPopover(marker);
+});
+document.getElementById("administratorPlansBody").addEventListener("mouseout", (event) => {
+  if (event.target.closest(".admin-plan-rule-marker")) hideRuleHelpPopover();
+});
+document.getElementById("administratorPlansBody").addEventListener("focusin", (event) => {
+  const marker = event.target.closest(".admin-plan-rule-marker");
+  if (marker) showRuleHelpPopover(marker);
+});
+document.getElementById("administratorPlansBody").addEventListener("focusout", (event) => {
+  if (event.target.closest(".admin-plan-rule-marker")) hideRuleHelpPopover();
+});
 
 document.getElementById("prevPageBtn").addEventListener("click", () => {
   if (mapState.page > 1) {

@@ -1410,6 +1410,43 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 800;
 }
 
+.admin-plan-rule-label {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 3px;
+}
+
+.admin-plan-rule-marker {
+  border: 0;
+  padding: 0 2px;
+  background: transparent;
+  color: #dc2626;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: help;
+}
+
+.admin-plan-rule-marker:focus {
+  outline: 2px solid #dc2626;
+  outline-offset: 2px;
+}
+
+.admin-rule-help-popover {
+  position: absolute;
+  z-index: 2000;
+  max-width: 320px;
+  padding: 10px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fff7f7;
+  color: #7f1d1d;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .administrator-plan-table tbody tr:nth-child(3),
 .administrator-plan-table tbody tr:nth-child(4),
 .administrator-plan-table tbody tr:nth-child(5),
