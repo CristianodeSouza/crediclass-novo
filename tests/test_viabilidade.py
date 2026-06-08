@@ -50,13 +50,13 @@ def make_group(**overrides):
         "status": "Ativo",
         "historico": {
             "2026-01": {
-                "maior_lance": 0.32,
-                "menor_lance": 0.24,
+                "maior_lance": 0.42,
+                "menor_lance": 0.32,
                 "qtd_contemplacoes": 5,
             },
             "2026-02": {
-                "maior_lance": 0.34,
-                "menor_lance": 0.25,
+                "maior_lance": 0.44,
+                "menor_lance": 0.35,
                 "qtd_contemplacoes": 4,
             },
         },
@@ -114,10 +114,45 @@ class ViabilidadeTest(unittest.TestCase):
 
         self.assertAlmostEqual(result["credito_a_contratar"], 571428.57, places=2)
         self.assertAlmostEqual(result["lance_embutido_valor"], 171428.57, places=2)
-        self.assertAlmostEqual(result["lance_total"], 321428.57, places=2)
-        self.assertAlmostEqual(result["lance_maximo_percentual"], 0.5625, places=4)
-        self.assertAlmostEqual(result["prazo_minimo"], 56.9, places=2)
+        self.assertAlmostEqual(result["lance_total"], 271428.57, places=2)
+        self.assertAlmostEqual(result["lance_maximo_percentual"], 0.475, places=4)
+        self.assertAlmostEqual(result["prazo_minimo"], 65.24, places=2)
         self.assertTrue(result["elegivel"])
+
+    def test_formulas_oficiais_f29_f30_f31_da_planilha(self):
+        rule = AdministratorRule(
+            administradora="CNP",
+            seguro_obrigatorio=False,
+            idade_maxima=80,
+            limite_sem_comprovacao_renda=None,
+            percentual_lance_embutido=0.50,
+            tipo_lance_embutido="Credito",
+            taxa_adm=0.15,
+            possui_negociacao_taxa="Sim",
+            fundo_reserva=0.05,
+            aceita_saida_fiscal=True,
+            aceita_fgts=True,
+        )
+        payload = make_payload(
+            credito_desejado=450000,
+            lance_proprio=150000,
+            fgts=100000,
+            renda_total=15000,
+            parcela_desejada=4500,
+            parcela_limite=6000,
+            prazo_desejado=3,
+            data_nascimento="1980-01-01",
+            data_nascimento_conjuge="",
+        )
+
+        result = calculate_administrator_feasibility(payload, rule)
+
+        self.assertEqual(result["fgts_utilizado"], 100000)
+        self.assertAlmostEqual(result["credito_a_contratar"], 900000, places=2)
+        self.assertAlmostEqual(result["lance_embutido_valor"], 450000, places=2)
+        self.assertAlmostEqual(result["lance_total"], 600000, places=2)
+        self.assertAlmostEqual(result["lance_maximo_percentual"], 0.666667, places=6)
+        self.assertAlmostEqual(result["prazo_minimo"], 80, places=2)
 
     def test_administrator_feasibility_ordena_elegiveis_por_credito_prazo_e_lance(self):
         result = analyze_administradoras(
@@ -245,13 +280,14 @@ class ViabilidadeTest(unittest.TestCase):
 
         result = analyze_viabilidade(make_payload(), groups)
 
-        self.assertEqual(result["total_grupos_encontrados"], 0)
+        self.assertEqual(result["total_grupos_encontrados"], 1)
+        self.assertEqual(result["total_grupos_compativeis"], 0)
         self.assertFalse(result["cenario_viavel"])
 
     def test_credit_below_minimum_scores_zero_and_is_not_approved(self):
         result = analyze_viabilidade(
             make_payload(credito_desejado=500000),
-            [make_group(credito_minimo=600000)],
+            [make_group(credito_minimo=800000)],
         )
 
         self.assertEqual(result["total_grupos_encontrados"], 1)
@@ -264,10 +300,10 @@ class ViabilidadeTest(unittest.TestCase):
         self.assertTrue(result["cenario_viavel"])
         self.assertEqual(result["total_grupos_compativeis"], 1)
         item = result["melhores_grupos"][0]
-        self.assertEqual(item["lance_sugerido_percentual"], 0.2525)
+        self.assertEqual(item["lance_sugerido_percentual"], 0.3525)
         self.assertAlmostEqual(
             item["lance_sugerido_valor"],
-            item["credito_contratado"] * 0.2525,
+            item["credito_contratado"] * 0.3525,
             places=2,
         )
 
@@ -285,8 +321,9 @@ class ViabilidadeTest(unittest.TestCase):
 
         self.assertAlmostEqual(allowed["melhores_grupos"][0]["credito_contratado"], 714285.71, places=2)
         self.assertAlmostEqual(allowed["melhores_grupos"][0]["lance_embutido_utilizado"], 214285.71, places=2)
-        self.assertEqual(blocked["melhores_grupos"][0]["credito_contratado"], 500000)
-        self.assertEqual(blocked["melhores_grupos"][0]["lance_embutido_utilizado"], 0)
+        self.assertEqual(blocked["total_grupos_encontrados"], 1)
+        self.assertEqual(blocked["melhores_grupos"], [])
+        self.assertFalse(blocked["checklist"]["lance_compativel"])
 
     def test_lance_zero_is_accepted_but_can_make_scenario_unviable(self):
         result = analyze_viabilidade(

@@ -7,6 +7,14 @@ from typing import Any
 
 LANCE_INCREMENT = 0.0025
 
+PROFILE_LANCE_RANGES = {
+    "lance_agressivo": (0.50, None),
+    "lance_moderado": (0.40, 0.50),
+    "lance_conservador": (0.30, 0.40),
+    "lance_super_conservador": (0.20, 0.30),
+    "lance_investidor": (0.0, 0.20),
+}
+
 PROFILE_BY_MONTHS = [
     (3, "Agressivo", "lance_agressivo", "1 a 3 meses"),
     (6, "Moderado", "lance_moderado", "4 a 6 meses"),
@@ -29,11 +37,18 @@ def _history_value(item: Any, field: str) -> Any:
     return getattr(item, field, None)
 
 
-def valid_lower_bids(historico: dict[str, Any], limit: int) -> list[float]:
+def valid_lower_bids(historico: dict[str, Any], limit: int, only_contemplated: bool = False) -> list[float]:
     valid_items = []
     for month, item in (historico or {}).items():
         if not re.fullmatch(r"\d{4}-\d{2}", str(month)):
             continue
+        if only_contemplated:
+            try:
+                contemplated = int(_history_value(item, "qtd_contemplacoes") or 0)
+            except (TypeError, ValueError):
+                contemplated = 0
+            if contemplated <= 0:
+                continue
         value = _history_value(item, "menor_lance")
         if value is None:
             continue
@@ -49,15 +64,15 @@ def valid_lower_bids(historico: dict[str, Any], limit: int) -> list[float]:
 
 
 def second_lowest_reference(historico: dict[str, Any], months: int) -> float | None:
-    values = valid_lower_bids(historico, months)
+    values = valid_lower_bids(historico, months, only_contemplated=True)
     if len(values) < 2:
         return None
     return round(sorted(values)[1] + LANCE_INCREMENT, 6)
 
 
 def aggressive_reference(historico: dict[str, Any]) -> float | None:
-    values = valid_lower_bids(historico, 3)
-    if len(values) < 3:
+    values = valid_lower_bids(historico, 3, only_contemplated=True)
+    if len(values) < 2:
         return None
     return round(max(values) + LANCE_INCREMENT, 6)
 
@@ -81,3 +96,14 @@ def calculate_lance_references(
         "lance_moderado": second_lowest_reference(historico, 6),
         "lance_agressivo": aggressive_reference(historico),
     }
+
+
+def reference_in_profile_range(field: str, value: float | None) -> bool:
+    if value is None:
+        return False
+    minimum, maximum = PROFILE_LANCE_RANGES.get(field, (None, None))
+    if minimum is not None and value < minimum:
+        return False
+    if maximum is not None and value > maximum:
+        return False
+    return True

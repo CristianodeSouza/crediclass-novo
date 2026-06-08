@@ -8,6 +8,7 @@ from typing import Any
 from .lance_reference import (
     calculate_lance_references,
     classify_profile as classify_lance_profile,
+    reference_in_profile_range,
 )
 from .models import ViabilidadeRequest
 
@@ -134,8 +135,6 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             prazo_restante = group.get("prazo_total") or 0
         status = normalize_text(str(group.get("status") or ""))
 
-        if credito_maximo < payload.credito_desejado:
-            continue
         if status != "ativo":
             continue
         if prazo_restante <= 0:
@@ -152,8 +151,9 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
 
         credito_contratado = payload.credito_desejado / (1 - percentual_lance_embutido)
         lance_embutido = credito_contratado * percentual_lance_embutido
-        lance_total = lance_embutido + payload.lance_proprio + fgts_utilizado
-        percentual_lance = lance_total / credito_contratado if credito_contratado else 0
+        lance_total_formula = lance_embutido + payload.lance_proprio
+        lance_total = lance_total_formula
+        percentual_lance = lance_total_formula / credito_contratado if credito_contratado else 0
         credito_disponivel = credito_contratado - lance_embutido
 
         taxa_adm = group.get("taxa_adm") or 0
@@ -170,7 +170,7 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             credito_contratado
             + taxa_administrativa_valor
             + fundo_reserva_valor
-            - lance_total
+            - lance_total_formula
         ) / payload.parcela_desejada
 
         historico = group.get("historico") or {}
@@ -181,13 +181,14 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         )
         lance_referencia = lance_references[profile_field]
         historico_disponivel = lance_referencia is not None
+        lance_na_faixa_perfil = reference_in_profile_range(profile_field, lance_referencia)
 
-        credito_score = 0 if payload.credito_desejado < credito_minimo else 100
+        credito_score = 0 if credito_contratado < credito_minimo or credito_contratado > credito_maximo else 100
         parcela_score = 100 if parcela_estimada <= payload.parcela_desejada else score_ratio(payload.parcela_desejada, parcela_estimada)
-        lance_score = 0 if not historico_disponivel else (100 if percentual_lance >= float(lance_referencia) else score_ratio(percentual_lance, float(lance_referencia)))
-        prazo_score = 100 if prazo_restante >= payload.prazo_desejado else score_ratio(prazo_restante, payload.prazo_desejado)
+        lance_score = 0 if not historico_disponivel or not lance_na_faixa_perfil else (100 if percentual_lance >= float(lance_referencia) else score_ratio(percentual_lance, float(lance_referencia)))
+        prazo_score = 100 if prazo_restante >= prazo_minimo else score_ratio(prazo_restante, prazo_minimo)
         historico_score = 0
-        if lance_referencia is not None:
+        if lance_referencia is not None and lance_na_faixa_perfil:
             historico_score = 70 if percentual_lance >= float(lance_referencia) else score_ratio(percentual_lance, float(lance_referencia)) * 0.7
             historico_score += min(30, int(historico_12m["total_contemplacoes"]) * 2)
 
@@ -202,9 +203,9 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         idade_compativel, idade_alerta = group_age_validation(group, titular_age, spouse_age)
         renda_compativel = parcela_estimada * 3 <= payload.renda_total
         parcela_compativel = parcela_estimada <= payload.parcela_desejada
-        lance_compativel = historico_disponivel and percentual_lance >= float(lance_referencia)
-        prazo_compativel = prazo_restante >= payload.prazo_desejado
-        credito_compativel = credito_minimo <= payload.credito_desejado <= credito_maximo
+        lance_compativel = historico_disponivel and lance_na_faixa_perfil and percentual_lance >= float(lance_referencia)
+        prazo_compativel = prazo_restante >= prazo_minimo
+        credito_compativel = credito_minimo <= credito_contratado <= credito_maximo
         permissoes_compativeis = (fgts_total <= 0 or fgts_permitido) and (
             percentual_lance_embutido <= 0 or lance_embutido_permitido
         )
@@ -214,6 +215,8 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             alertas.append("regras_administradoras_pendentes_analise_humana")
         if not historico_disponivel:
             alertas.append("historico_lance_insuficiente")
+        elif not lance_na_faixa_perfil:
+            alertas.append("lance_historico_fora_do_perfil")
         if idade_alerta:
             alertas.append(idade_alerta)
         if fgts_total > 0 and not fgts_permitido:
@@ -235,10 +238,10 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             ))
 
         motivos = []
-        motivos.append("Credito compativel" if credito_compativel else "Credito fora da faixa do grupo")
+        motivos.append("Credito contratado compativel" if credito_compativel else "Credito contratado fora da faixa do grupo")
         motivos.append("Parcela dentro do limite" if parcela_estimada <= payload.parcela_desejada else "Parcela acima do limite")
-        motivos.append("Lance compativel com o perfil" if lance_compativel else "Lance abaixo do perfil ou sem historico")
-        motivos.append("Prazo compativel" if prazo_restante >= payload.prazo_desejado else "Prazo abaixo do desejado")
+        motivos.append("Lance compativel com o perfil" if lance_compativel else "Lance abaixo do perfil, fora da faixa ou sem historico")
+        motivos.append("Prazo compativel" if prazo_restante >= prazo_minimo else "Prazo restante abaixo do prazo minimo calculado")
         if modo_preliminar:
             motivos.append("Analise preliminar: regras da administradora pendentes de revisao humana")
 
