@@ -147,6 +147,15 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("regras_negocio_feedbacks", app_js)
         for etapa in ["Perfil do Cliente", "Administradoras", "Viabilidade de Grupos", "Estrategias", "Estudo Financeiro"]:
             self.assertIn(etapa, app_js)
+        for exemplo in [
+            "R$ 450.000",
+            "R$ 900.000",
+            "66,6667%",
+            "80 meses",
+            "R$ 100.000 de FGTS",
+            "grupo com 62 meses restantes nao atende",
+        ]:
+            self.assertIn(exemplo, app_js)
         self.assertIn("business-rule-note-input", style_css)
         self.assertIn(".business-rules-table", style_css)
 
