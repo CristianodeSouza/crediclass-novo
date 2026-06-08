@@ -17,8 +17,8 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260608-19", index_html)
-        self.assertIn("/static/js/app.js?v=20260608-29", index_html)
+        self.assertIn("/static/css/style.css?v=20260608-20", index_html)
+        self.assertIn("/static/js/app.js?v=20260608-30", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -95,6 +95,9 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn("Motivo / Alerta", index_html)
         self.assertNotIn("<th>Compativel</th>", index_html)
         self.assertIn("function renderViabilityEmpty(result)", app_js)
+        self.assertIn("function openViabilityAudit(groupId)", app_js)
+        self.assertIn("data-viability-action=\"auditar\"", app_js)
+        self.assertIn("<th>Auditoria</th>", index_html)
         self.assertIn("regras_administradoras_pendentes_analise_humana", app_js)
         self.assertNotIn('id="viabilityProfileSummary"', index_html)
         self.assertNotIn("function renderViabilityProfileSummary()", app_js)
@@ -437,7 +440,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260608-19", index_html)
+        self.assertIn("/static/css/style.css?v=20260608-20", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

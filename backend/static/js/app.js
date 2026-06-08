@@ -181,6 +181,7 @@ let configUserModal = null;
 let configUserMode = "create";
 let configUserIndex = null;
 let configAdministratorRuleIndex = null;
+let viabilityAuditModal = null;
 
 function setLoginError(message) {
   const errorBox = document.getElementById("loginError");
@@ -1377,6 +1378,129 @@ function renderViabilityEmpty(result) {
   empty.textContent = "Nenhum grupo compativel encontrado para este cenario.";
 }
 
+function viabilityAuditStatus(item) {
+  const motivos = item.motivos || [];
+  const alertas = item.alertas || [];
+  const hasFailure = motivos.some((motivo) => /acima|abaixo|fora|sem historico/i.test(motivo));
+  if (alertas.includes("regras_administradoras_pendentes_analise_humana")) return "preliminar";
+  if (hasFailure || alertas.length) return "alerta";
+  return "ok";
+}
+
+function auditStatusLabel(status) {
+  if (status === "ok") return "Conforme";
+  if (status === "preliminar") return "Analise preliminar";
+  return "Revisar";
+}
+
+function auditStatusClass(status) {
+  if (status === "ok") return "audit-ok";
+  if (status === "preliminar") return "audit-warning";
+  return "audit-danger";
+}
+
+function formatAuditToken(value) {
+  return String(value || "").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function auditRow(label, value, status = "ok", detail = "") {
+  return `
+    <tr>
+      <td>${escapeHtml(label)}</td>
+      <td>${escapeHtml(value)}</td>
+      <td><span class="audit-status ${auditStatusClass(status)}">${escapeHtml(auditStatusLabel(status))}</span></td>
+      <td>${escapeHtml(detail || "-")}</td>
+    </tr>
+  `;
+}
+
+function auditList(title, items) {
+  const list = items?.length
+    ? items.map((item) => `<li>${escapeHtml(formatAuditToken(item))}</li>`).join("")
+    : "<li>Nenhum item registrado.</li>";
+  return `
+    <section class="audit-panel">
+      <h3>${escapeHtml(title)}</h3>
+      <ul class="audit-list-compact">${list}</ul>
+    </section>
+  `;
+}
+
+function ensureViabilityAuditModal() {
+  let modal = document.getElementById("viabilityAuditModal");
+  if (!modal) {
+    document.body.insertAdjacentHTML("beforeend", `
+      <div class="modal fade" id="viabilityAuditModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+          <div class="modal-content">
+            <div class="modal-header">
+              <div>
+                <h2 id="viabilityAuditTitle" class="modal-title h5">Auditoria da Viabilidade</h2>
+                <p id="viabilityAuditSubtitle" class="modal-subtitle">Conferencia das regras aplicadas ao grupo</p>
+              </div>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body"><div id="viabilityAuditContent"></div></div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button></div>
+          </div>
+        </div>
+      </div>
+    `);
+    modal = document.getElementById("viabilityAuditModal");
+  }
+  if (!viabilityAuditModal) viabilityAuditModal = new bootstrap.Modal(modal);
+  return viabilityAuditModal;
+}
+
+function openViabilityAudit(groupId) {
+  const item = viabilityState.lastResult?.melhores_grupos?.find((group) => group.grupo_id === groupId);
+  if (!item) {
+    showToast("Execute a Viabilidade antes de auditar o grupo.", "warning");
+    return;
+  }
+  const modal = ensureViabilityAuditModal();
+  const payload = collectViabilityPayload();
+  const status = viabilityAuditStatus(item);
+  const creditoOk = (item.credito_contratado || 0) >= (item.credito_minimo || 0) && (item.credito_contratado || 0) <= (item.credito_maximo || 0);
+  const parcelaReferencia = payload.parcela_limite || payload.parcela_desejada || 0;
+  const parcelaOk = (item.parcela_estimada || 0) <= parcelaReferencia;
+  const prazoOk = (item.prazo || 0) >= (item.prazo_minimo || 0);
+  const hasLanceHistory = item.lance_referencia_percentual !== null && item.lance_referencia_percentual !== undefined;
+  const lanceOk = hasLanceHistory && (item.percentual_lance || 0) >= (item.lance_referencia_percentual || 0);
+
+  document.getElementById("viabilityAuditTitle").textContent = `Auditoria do Grupo ${item.grupo}`;
+  document.getElementById("viabilityAuditSubtitle").textContent = `${item.administradora} - ${item.tipo_bem} - ${auditStatusLabel(status)}`;
+  document.getElementById("viabilityAuditContent").innerHTML = `
+    <div class="audit-summary ${auditStatusClass(status)}">
+      <strong>${escapeHtml(auditStatusLabel(status))}</strong>
+      <span>${status === "preliminar" ? "Este grupo entrou como candidato porque as regras das administradoras ainda exigem revisao humana." : "Conferencia dos criterios calculados para este grupo."}</span>
+    </div>
+    <section class="audit-panel">
+      <h3>Conferencia dos Requisitos</h3>
+      <div class="table-responsive">
+        <table class="table table-hover align-middle audit-table">
+          <thead><tr><th>Criterio</th><th>Resultado</th><th>Status</th><th>Observacao</th></tr></thead>
+          <tbody>
+            ${auditRow("Status do grupo", "Ativo", "ok", "Somente grupos ativos entram na busca.")}
+            ${auditRow("Tipo de bem", item.tipo_bem || "-", "ok", `Perfil solicitou ${payload.tipo_bem || "-"}.`)}
+            ${auditRow("Faixa de credito", `${formatMoney(item.credito_minimo)} ate ${formatMoney(item.credito_maximo)}`, creditoOk ? "ok" : "alerta", `Credito a contratar: ${formatMoney(item.credito_contratado)}.`)}
+            ${auditRow("Prazo", `${item.prazo} meses restantes`, prazoOk ? "ok" : "alerta", `Prazo minimo calculado: ${Number(item.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} meses.`)}
+            ${auditRow("Parcela", formatMoney(item.parcela_estimada), parcelaOk ? "ok" : "alerta", `Parcela de referencia: ${formatMoney(parcelaReferencia)}.`)}
+            ${auditRow("Lance historico", hasLanceHistory ? formatPercent(item.lance_referencia_percentual) : "Sem historico suficiente", lanceOk ? "ok" : "alerta", `Lance maximo calculado do cliente: ${formatPercent(item.percentual_lance)}.`)}
+            ${auditRow("Taxa ADM", formatPercent(item.taxa_adm), "ok", `Valor aplicado: ${formatMoney(item.taxa_administrativa_valor)}.`)}
+            ${auditRow("Fundo reserva", formatPercent(item.fundo_reserva), item.fundo_reserva >= 1 ? "alerta" : "ok", `Valor aplicado: ${formatMoney(item.fundo_reserva_valor)}.`)}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    <div class="audit-grid">
+      ${auditList("Motivos registrados pelo motor", item.motivos || [])}
+      ${auditList("Alertas de conformidade", item.alertas || [])}
+    </div>
+  `;
+  modal.show();
+}
+
 function renderViabilityRanking(items) {
   document.getElementById("viabilityRankingBody").innerHTML = items.map((item) => `
     <tr>
@@ -1392,8 +1516,10 @@ function renderViabilityRanking(items) {
       <td>${formatPercent(item.taxa_adm)}</td>
       <td>${formatPercent(item.fundo_reserva)}</td>
       <td>${formatMoney(item.parcela_estimada)}</td>
+      <td><span class="audit-status ${auditStatusClass(viabilityAuditStatus(item))}">${escapeHtml(auditStatusLabel(viabilityAuditStatus(item)))}</span></td>
       <td>
         <div class="row-actions">
+          <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="auditar" data-group-id="${escapeHtml(item.grupo_id)}">Auditar</button>
           <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver detalhes</button>
           <button class="btn btn-sm btn-outline-secondary" type="button" data-viability-action="estrategias" data-group-id="${escapeHtml(item.grupo_id)}">Selecionar</button>
         </div>
@@ -2991,6 +3117,10 @@ document.getElementById("analyzeViabilityBtn").addEventListener("click", analyze
 document.getElementById("viabilityRankingBody").addEventListener("click", (event) => {
   const button = event.target.closest("[data-viability-action]");
   if (!button) return;
+  if (button.dataset.viabilityAction === "auditar") {
+    openViabilityAudit(button.dataset.groupId);
+    return;
+  }
   if (button.dataset.viabilityAction === "visualizar") {
     openGroupDetails(button.dataset.groupId);
     return;
