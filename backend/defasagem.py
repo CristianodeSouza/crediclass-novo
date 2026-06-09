@@ -54,7 +54,7 @@ def months_between(start_month: str, end_month: str) -> list[str]:
 
 
 def history_month_has_data(item: dict[str, Any]) -> bool:
-    return any(item.get(field) is not None for field in ("maior_lance", "menor_lance", "qtd_contemplacoes"))
+    return all(item.get(field) not in (None, "") for field in ("maior_lance", "menor_lance", "qtd_contemplacoes"))
 
 
 def history_month_updated_fields(item: dict[str, Any]) -> list[str]:

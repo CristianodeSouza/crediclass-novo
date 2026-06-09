@@ -72,6 +72,30 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(report["items"][0]["observacao"], "Atualizar jan a jun")
         self.assertEqual(report["items"][0]["operador"], "larissa")
 
+    def test_defasagem_considera_mes_atualizado_somente_com_tres_campos(self):
+        groups = [
+            {
+                "grupo_id": "1038",
+                "administradora": "Caixa",
+                "grupo": "1038",
+                "tipo_bem": "Imovel",
+                "status": "Ativo",
+                "historico": {
+                    "2026-03": {"maior_lance": 0.71, "menor_lance": 0.70, "qtd_contemplacoes": 4},
+                    "2026-04": {"maior_lance": 0.70, "menor_lance": None, "qtd_contemplacoes": 2},
+                },
+            }
+        ]
+
+        with TemporaryDirectory() as temp_dir:
+            with patch("backend.defasagem.DEFASAGEM_FILE", Path(temp_dir) / "defasagem.json"):
+                report = build_defasagem_report(groups, today=date(2026, 6, 9))
+
+        item = report["items"][0]
+        self.assertEqual(item["ultima_competencia"], "2026-03")
+        self.assertEqual(item["meses_pendentes"], ["2026-04", "2026-05", "2026-06"])
+        self.assertEqual(item["total_meses_defasados"], 3)
+
     def test_grupos_detalhados_usam_cache_e_preservam_copia(self):
         sheets_client.clear_rows_cache()
         row = {
