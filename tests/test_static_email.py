@@ -18,7 +18,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260608-21", index_html)
-        self.assertIn("/static/js/app.js?v=20260609-05", index_html)
+        self.assertIn("/static/js/app.js?v=20260609-06", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -192,6 +192,9 @@ class StaticEmailTest(unittest.TestCase):
             "Moderado (4 a 6 meses)",
             "segundo menor lance + 0,25 ponto percentual",
             "lance fixo cadastrado de 12%",
+            "ultimos 3 meses validos",
+            "Lances ordenados = 41%, 43%, 45%, 48%",
+            "referencia = 25% + 0,25 p.p. = 25,25%",
         ]:
             self.assertIn(exemplo, app_js)
         self.assertIn("business-rule-note-input", style_css)
