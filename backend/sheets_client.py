@@ -29,6 +29,7 @@ _group_row_index: dict[str, int] = {}
 _grupo_detail_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 _cache_lock = threading.RLock()
 _detail_build_lock = threading.Lock()
+_defasagem_warm_lock = threading.Lock()
 
 SUMMARY_FIELDS = [
     "administradora",
@@ -857,6 +858,36 @@ def list_grupos_defasagem() -> list[dict[str, Any]]:
         _grupos_defasagem_cache["items"] = items
         _grupos_defasagem_cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
     return copy.deepcopy(items)
+
+
+def get_cached_grupos_defasagem() -> list[dict[str, Any]] | None:
+    now = time.time()
+    with _cache_lock:
+        items = _grupos_defasagem_cache["items"]
+        if items is not None and now < _grupos_defasagem_cache["expires_at"]:
+            return copy.deepcopy(items)
+    return None
+
+
+def warm_grupos_defasagem_cache_async() -> bool:
+    settings = get_settings()
+    if not settings.google_sheets_id or not settings.google_service_account_json:
+        return False
+    if get_cached_grupos_defasagem() is not None:
+        return False
+    if not _defasagem_warm_lock.acquire(blocking=False):
+        return False
+
+    def warm() -> None:
+        try:
+            list_grupos_defasagem()
+        except Exception:
+            logger.exception("Nao foi possivel aquecer o cache de defasagem")
+        finally:
+            _defasagem_warm_lock.release()
+
+    threading.Thread(target=warm, name="warm-grupos-defasagem-cache", daemon=True).start()
+    return True
 
 
 def list_grupos_detalhe_by_ids(grupo_ids: list[str]) -> list[dict[str, Any]]:

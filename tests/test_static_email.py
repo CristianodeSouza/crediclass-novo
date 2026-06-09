@@ -18,7 +18,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260609-02", index_html)
-        self.assertIn("/static/js/app.js?v=20260609-10", index_html)
+        self.assertIn("/static/js/app.js?v=20260609-11", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -240,6 +240,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("Plano de acao da atualizacao", index_html)
         self.assertIn("async function openDefasagemModal()", app_js)
         self.assertIn('apiGet("/grupos/defasagem")', app_js)
+        self.assertIn("Preparando dados de defasagem da planilha", app_js)
         self.assertIn('apiPut(`/grupos/defasagem/${encodeURIComponent(grupoId)}`', app_js)
         self.assertIn("function renderDefasagemReport(report)", app_js)
         self.assertIn("data-defasagem-check", app_js)

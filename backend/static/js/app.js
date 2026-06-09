@@ -771,6 +771,25 @@ function renderDefasagemReport(report) {
   renderDefasagemRows();
 }
 
+async function loadDefasagemReport(attempt = 0) {
+  const loading = document.getElementById("defasagemLoading");
+  const report = await apiGet("/grupos/defasagem");
+  if (report.preparando) {
+    loading.textContent = attempt === 0
+      ? "Preparando dados de defasagem da planilha..."
+      : `Preparando dados de defasagem da planilha... tentativa ${attempt + 1}`;
+    if (attempt >= 18) {
+      throw new Error("Tempo limite ao preparar a defasagem.");
+    }
+    window.setTimeout(() => {
+      loadDefasagemReport(attempt + 1).catch(() => setDefasagemState("error"));
+    }, 4000);
+    return;
+  }
+  renderDefasagemReport(report);
+  setDefasagemState("ready");
+}
+
 function renderDefasagemRows() {
   const tbody = document.getElementById("defasagemTableBody");
   const items = getFilteredDefasagemItems();
@@ -821,11 +840,10 @@ async function openDefasagemModal() {
     defasagemState.modal = new bootstrap.Modal(document.getElementById("defasagemModal"));
   }
   setDefasagemState("loading");
+  document.getElementById("defasagemLoading").textContent = "Calculando defasagem dos grupos...";
   defasagemState.modal.show();
   try {
-    const report = await apiGet("/grupos/defasagem");
-    renderDefasagemReport(report);
-    setDefasagemState("ready");
+    await loadDefasagemReport();
   } catch (error) {
     setDefasagemState("error");
   }
