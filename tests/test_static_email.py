@@ -17,8 +17,8 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260608-21", index_html)
-        self.assertIn("/static/js/app.js?v=20260609-08", index_html)
+        self.assertIn("/static/css/style.css?v=20260609-01", index_html)
+        self.assertIn("/static/js/app.js?v=20260609-09", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -228,6 +228,23 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('apiPost("/reload", {})', app_js)
         self.assertIn("data.administradoras", app_js)
         self.assertIn("data.total_administradoras", app_js)
+
+    def test_mapa_grupos_possui_gestao_de_defasagem(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn('id="openDefasagemBtn"', index_html)
+        self.assertIn("Gestao de Defasagem", index_html)
+        self.assertIn('id="defasagemModal"', index_html)
+        self.assertIn("Plano de acao da atualizacao", index_html)
+        self.assertIn("async function openDefasagemModal()", app_js)
+        self.assertIn('apiGet("/grupos/defasagem")', app_js)
+        self.assertIn('apiPut(`/grupos/defasagem/${encodeURIComponent(grupoId)}`', app_js)
+        self.assertIn("function renderDefasagemReport(report)", app_js)
+        self.assertIn("data-defasagem-check", app_js)
+        self.assertIn(".defasagem-summary-grid", style_css)
+        self.assertIn(".defasagem-status.status-critical", style_css)
 
     def test_formulario_grupo_nao_exige_campos_obrigatorios(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -483,7 +500,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260608-21", index_html)
+        self.assertIn("/static/css/style.css?v=20260609-01", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

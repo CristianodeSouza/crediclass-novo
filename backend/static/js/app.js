@@ -60,6 +60,11 @@ const historyState = {
   items: [],
 };
 
+const defasagemState = {
+  report: null,
+  modal: null,
+};
+
 const configState = {
   data: null,
 };
@@ -714,6 +719,124 @@ function renderGroupsTable(items) {
       </tr>
     `;
   }).join("");
+}
+
+function setDefasagemState(state) {
+  document.getElementById("defasagemLoading").classList.toggle("d-none", state !== "loading");
+  document.getElementById("defasagemError").classList.toggle("d-none", state !== "error");
+  document.getElementById("defasagemContent").classList.toggle("d-none", state !== "ready");
+}
+
+function defasagemStatusLabel(status) {
+  const labels = {
+    em_dia: "Em dia",
+    atencao: "Atencao",
+    atrasado: "Atrasado",
+    critico: "Critico",
+    marcado_para_conferencia: "Marcado",
+  };
+  return labels[status] || status || "-";
+}
+
+function defasagemStatusClass(status) {
+  if (status === "em_dia") return "status-ok";
+  if (status === "marcado_para_conferencia") return "status-marked";
+  if (status === "critico") return "status-critical";
+  if (status === "atrasado") return "status-late";
+  return "status-warning";
+}
+
+function formatPendingMonths(months = []) {
+  if (!months.length) return "Sem pendencia";
+  if (months.length <= 6) return months.map(escapeHtml).join(", ");
+  return `${months.slice(0, 6).map(escapeHtml).join(", ")} +${months.length - 6}`;
+}
+
+function getFilteredDefasagemItems() {
+  const filter = document.getElementById("defasagemFilter").value;
+  const items = defasagemState.report?.items || [];
+  if (filter === "todos") return items;
+  if (filter === "criticos") return items.filter((item) => item.total_meses_defasados >= 6);
+  if (filter === "concluidos") return items.filter((item) => item.concluido);
+  return items.filter((item) => item.total_meses_defasados > 0 && !item.concluido);
+}
+
+function renderDefasagemReport(report) {
+  defasagemState.report = report;
+  document.getElementById("defasagemSubtitle").textContent = `Competencia atual: ${report.competencia_atual_label}. Atualize primeiro os grupos com maior defasagem.`;
+  document.getElementById("defasagemCompetencia").textContent = report.competencia_atual_label;
+  document.getElementById("defasagemAtrasados").textContent = report.total_atrasados;
+  document.getElementById("defasagemCriticos").textContent = report.total_criticos;
+  document.getElementById("defasagemMaior").textContent = `${report.maior_defasagem_meses} mes(es)`;
+  renderDefasagemRows();
+}
+
+function renderDefasagemRows() {
+  const tbody = document.getElementById("defasagemTableBody");
+  const items = getFilteredDefasagemItems();
+  if (!items.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty-cell">Nenhum grupo encontrado para este filtro.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = items.map((item, index) => {
+    const pendingText = formatPendingMonths(item.meses_pendentes_label);
+    const updatedFields = item.campos_ultima_competencia?.length ? item.campos_ultima_competencia.join(", ") : "-";
+    return `
+      <tr class="${item.concluido ? "defasagem-done" : ""}">
+        <td><strong>${index + 1}</strong></td>
+        <td>
+          <strong>${escapeHtml(item.grupo || item.grupo_id)}</strong>
+          <small>${escapeHtml(item.tipo_bem || "-")}</small>
+        </td>
+        <td>${escapeHtml(item.administradora || "-")}</td>
+        <td>
+          <strong>${escapeHtml(item.ultima_competencia_label || "-")}</strong>
+          <small>${escapeHtml(updatedFields)}</small>
+        </td>
+        <td>
+          <span class="defasagem-status ${defasagemStatusClass(item.status_defasagem)}">${escapeHtml(defasagemStatusLabel(item.status_defasagem))}</span>
+          <small>${item.total_meses_defasados} mes(es)</small>
+        </td>
+        <td class="defasagem-months">${pendingText}</td>
+        <td>
+          <span>${escapeHtml(item.check_atualizado_em || "-")}</span>
+          <small>${escapeHtml(item.operador || "")}</small>
+        </td>
+        <td>
+          <textarea class="form-control defasagem-note" data-defasagem-note="${escapeHtml(item.grupo_id)}" rows="2" placeholder="Observacao da atualizacao">${escapeHtml(item.observacao || "")}</textarea>
+        </td>
+        <td>
+          <label class="defasagem-check">
+            <input type="checkbox" data-defasagem-check="${escapeHtml(item.grupo_id)}" ${item.concluido ? "checked" : ""}>
+            <span>Atualizado</span>
+          </label>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function openDefasagemModal() {
+  if (!defasagemState.modal) {
+    defasagemState.modal = new bootstrap.Modal(document.getElementById("defasagemModal"));
+  }
+  setDefasagemState("loading");
+  defasagemState.modal.show();
+  try {
+    const report = await apiGet("/grupos/defasagem");
+    renderDefasagemReport(report);
+    setDefasagemState("ready");
+  } catch (error) {
+    setDefasagemState("error");
+  }
+}
+
+async function saveDefasagemTask(grupoId, concluido) {
+  const note = document.querySelector(`[data-defasagem-note="${CSS.escape(grupoId)}"]`)?.value || "";
+  await apiPut(`/grupos/defasagem/${encodeURIComponent(grupoId)}`, { concluido, observacao: note });
+  showToast("Plano de atualizacao registrado.", "success");
+  const report = await apiGet("/grupos/defasagem");
+  renderDefasagemReport(report);
 }
 
 function setDetailsState(state) {
@@ -3117,6 +3240,22 @@ document.getElementById("primaryAction").addEventListener("click", () => {
   }
 });
 document.getElementById("reloadMapDataBtn").addEventListener("click", reloadMapData);
+document.getElementById("openDefasagemBtn").addEventListener("click", openDefasagemModal);
+document.getElementById("defasagemFilter").addEventListener("change", renderDefasagemRows);
+document.getElementById("defasagemTableBody").addEventListener("change", (event) => {
+  const grupoId = event.target?.dataset?.defasagemCheck;
+  if (!grupoId) return;
+  saveDefasagemTask(grupoId, event.target.checked).catch(() => {
+    event.target.checked = !event.target.checked;
+    showToast("Nao foi possivel registrar o check da defasagem.", "danger");
+  });
+});
+document.getElementById("defasagemTableBody").addEventListener("focusout", (event) => {
+  const grupoId = event.target?.dataset?.defasagemNote;
+  if (!grupoId) return;
+  const checked = document.querySelector(`[data-defasagem-check="${CSS.escape(grupoId)}"]`)?.checked || false;
+  saveDefasagemTask(grupoId, checked).catch(() => showToast("Nao foi possivel salvar a observacao da defasagem.", "danger"));
+});
 
 document.getElementById("groupFilters").addEventListener("submit", (event) => {
   event.preventDefault();

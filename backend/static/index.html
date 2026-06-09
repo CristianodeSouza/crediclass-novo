@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="/static/favicon.svg?v=1" rel="icon" type="image/svg+xml">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260608-21" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260609-01" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -183,6 +183,7 @@
                 <p id="tableSubtitle">Carregando grupos...</p>
               </div>
               <div class="toolbar-actions">
+                <button id="openDefasagemBtn" class="btn btn-outline-primary" type="button">Gestao de Defasagem</button>
                 <button id="exportGroupsCsvBtn" class="btn btn-outline-secondary" type="button">Exportar Planilha</button>
                 <select id="pageSizeSelect" class="form-select page-size-select" aria-label="Itens por pagina">
                   <option value="10">10 por pagina</option>
@@ -1033,6 +1034,68 @@
       </div>
     </div>
 
+    <div class="modal fade" id="defasagemModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <div>
+              <h2 class="modal-title h5">Gestao de Defasagem dos Grupos</h2>
+              <p id="defasagemSubtitle" class="modal-subtitle">Ranking dos grupos com historico mensal pendente</p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <div id="defasagemLoading" class="table-state">Calculando defasagem dos grupos...</div>
+            <div id="defasagemError" class="table-state table-state-error d-none">Nao foi possivel calcular a defasagem.</div>
+            <div id="defasagemContent" class="d-none">
+              <div class="defasagem-summary-grid" aria-label="Resumo da defasagem">
+                <article><span>Competencia atual</span><strong id="defasagemCompetencia">-</strong></article>
+                <article><span>Grupos atrasados</span><strong id="defasagemAtrasados">0</strong></article>
+                <article><span>Criticos</span><strong id="defasagemCriticos">0</strong></article>
+                <article><span>Maior defasagem</span><strong id="defasagemMaior">0 meses</strong></article>
+              </div>
+              <div class="defasagem-toolbar">
+                <div>
+                  <h3>Plano de acao da atualizacao</h3>
+                  <p>Ordenado dos grupos mais defasados para os menos defasados.</p>
+                </div>
+                <label>
+                  <span>Filtro</span>
+                  <select id="defasagemFilter" class="form-select">
+                    <option value="pendentes">Pendentes</option>
+                    <option value="todos">Todos</option>
+                    <option value="criticos">Criticos</option>
+                    <option value="concluidos">Marcados</option>
+                  </select>
+                </label>
+              </div>
+              <div class="table-responsive defasagem-table-wrap">
+                <table class="table table-hover align-middle defasagem-table">
+                  <thead>
+                    <tr>
+                      <th>Prioridade</th>
+                      <th>Grupo</th>
+                      <th>Administradora</th>
+                      <th>Ultima competencia</th>
+                      <th>Defasagem</th>
+                      <th>Meses pendentes</th>
+                      <th>Ultima atualizacao</th>
+                      <th>Plano da Larissa</th>
+                      <th>Check</th>
+                    </tr>
+                  </thead>
+                  <tbody id="defasagemTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="modal fade" id="groupFormModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-xl group-form-dialog">
         <div class="modal-content">
@@ -1169,6 +1232,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260609-08"></script>
+    <script src="/static/js/app.js?v=20260609-09"></script>
   </body>
 </html>

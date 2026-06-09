@@ -16,6 +16,7 @@ from .administrator_feasibility import analyze_administradoras
 from .administrator_rules import normalize_admin_name, rules_by_administradora
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
+from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote
@@ -197,6 +198,31 @@ def grupos_exportar_planilha():
         media_type="text/csv; charset=utf-8",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@app.get("/api/grupos/defasagem")
+def grupos_defasagem():
+    logger.info("GET /api/grupos/defasagem")
+    try:
+        groups = list_grupos_detalhe()
+        report = build_defasagem_report(groups)
+    except Exception as error:
+        logger.exception("Erro ao calcular defasagem de grupos")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+    return report
+
+
+@app.put("/api/grupos/defasagem/{grupo_id}")
+async def grupos_defasagem_atualizar(grupo_id: str, request: Request):
+    logger.info("PUT /api/grupos/defasagem/%s", grupo_id)
+    payload = await request.json()
+    operador = getattr(request.state, "auth_user", "")
+    try:
+        task = update_defasagem_task(grupo_id, payload, operador=operador)
+    except Exception as error:
+        logger.exception("Erro ao atualizar tarefa de defasagem")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+    return {"success": True, "item": task}
 
 
 @app.get("/api/grupos/{grupo_id}", response_model=GrupoDetalhe)

@@ -1,15 +1,77 @@
 import unittest
+from datetime import date
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from backend.main import grupo_detalhe, grupo_historico_atualizar, grupo_historico_lote_atualizar, grupos, grupos_exportar_planilha, reload_data
 from backend.models import GrupoCreateRequest, GrupoUpdateRequest, HistoricoBatchUpdateRequest, HistoricoUpdateRequest
 from backend import sheets_client
+from backend.defasagem import build_defasagem_report, update_defasagem_task
 from backend.sheets_client import get_grupo as sheets_get_grupo
 from backend.sheets_client import build_historico, clean_text, create_grupo, delete_grupo, format_history_value, parse_credit, payload_to_row_values, row_to_grupo, row_to_grupo_detalhe, update_grupo, update_historico_mensal
 
 
 class MapaGruposTest(unittest.TestCase):
+    def test_defasagem_calcula_meses_pendentes_e_ordena_prioridade(self):
+        groups = [
+            {
+                "grupo_id": "128",
+                "administradora": "Itau",
+                "grupo": "128",
+                "tipo_bem": "Imovel",
+                "status": "Ativo",
+                "historico": {
+                    "2025-12": {"maior_lance": 0.62, "menor_lance": 0.58, "qtd_contemplacoes": 4},
+                    "2026-01": {"maior_lance": None, "menor_lance": None, "qtd_contemplacoes": None},
+                },
+            },
+            {
+                "grupo_id": "1025",
+                "administradora": "Caixa",
+                "grupo": "1025",
+                "tipo_bem": "Imovel",
+                "status": "Ativo",
+                "historico": {
+                    "2026-06": {"maior_lance": 0.52, "menor_lance": 0.5, "qtd_contemplacoes": 2},
+                },
+            },
+        ]
+
+        with TemporaryDirectory() as temp_dir:
+            with patch("backend.defasagem.DEFASAGEM_FILE", Path(temp_dir) / "defasagem.json"):
+                report = build_defasagem_report(groups, today=date(2026, 6, 9))
+
+        self.assertEqual(report["competencia_atual"], "2026-06")
+        self.assertEqual(report["total_grupos"], 2)
+        self.assertEqual(report["total_atrasados"], 1)
+        self.assertEqual(report["total_criticos"], 1)
+        self.assertEqual(report["items"][0]["grupo_id"], "128")
+        self.assertEqual(report["items"][0]["total_meses_defasados"], 6)
+        self.assertEqual(report["items"][0]["meses_pendentes"], ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06"])
+        self.assertEqual(report["items"][0]["campos_ultima_competencia"], ["maior lance", "menor lance", "contemplacoes"])
+
+    def test_defasagem_salva_checklist_operacional(self):
+        with TemporaryDirectory() as temp_dir:
+            with patch("backend.defasagem.DEFASAGEM_FILE", Path(temp_dir) / "defasagem.json"):
+                task = update_defasagem_task("128", {"concluido": True, "observacao": "Atualizar jan a jun"}, operador="larissa")
+                report = build_defasagem_report([
+                    {
+                        "grupo_id": "128",
+                        "administradora": "Itau",
+                        "grupo": "128",
+                        "tipo_bem": "Imovel",
+                        "status": "Ativo",
+                        "historico": {"2025-12": {"maior_lance": 0.62}},
+                    }
+                ], today=date(2026, 6, 9))
+
+        self.assertTrue(task["concluido"])
+        self.assertEqual(report["items"][0]["status_defasagem"], "marcado_para_conferencia")
+        self.assertEqual(report["items"][0]["observacao"], "Atualizar jan a jun")
+        self.assertEqual(report["items"][0]["operador"], "larissa")
+
     def test_grupos_detalhados_usam_cache_e_preservam_copia(self):
         sheets_client.clear_rows_cache()
         row = {
