@@ -18,7 +18,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260608-21", index_html)
-        self.assertIn("/static/js/app.js?v=20260609-06", index_html)
+        self.assertIn("/static/js/app.js?v=20260609-07", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -187,6 +187,8 @@ class StaticEmailTest(unittest.TestCase):
             "77,7778%",
             "63,33 meses",
             "R$ 100.000 de FGTS",
+            "FGTS nao permitido",
+            "a formula usa apenas R$ 150.000",
             "grupo com 62 meses restantes nao atende",
             "Agressivo (1 a 3 meses)",
             "Moderado (4 a 6 meses)",
@@ -199,6 +201,7 @@ class StaticEmailTest(unittest.TestCase):
             self.assertIn(exemplo, app_js)
         self.assertIn("business-rule-note-input", style_css)
         self.assertIn(".business-rules-table", style_css)
+        self.assertNotIn("Soma recursos proprios com FGTS apenas para exibir", app_js)
 
     def test_filtros_de_credito_validam_intervalo(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")

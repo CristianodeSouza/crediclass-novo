@@ -130,7 +130,7 @@ const businessRulesFlow = [
     etapa: "1. Perfil do Cliente",
     regras: [
       "Recebe credito desejado liquido, prazo desejado, objetivo, tipo de bem e estado do bem. Exemplo: cliente quer R$ 450.000 liquidos para aquisicao de imovel pronto em 1 a 3 meses.",
-      "Soma recursos proprios com FGTS apenas para exibir total disponivel do cliente. Exemplo: R$ 150.000 de lance proprio + R$ 100.000 de FGTS = R$ 250.000 exibidos como total disponivel.",
+      "Soma recursos proprios com FGTS para formar o total disponivel do cliente e, quando a administradora permitir FGTS, esse mesmo total entra como lance maximo disponivel nas formulas F30 e F31. Exemplo: R$ 150.000 em dinheiro + R$ 100.000 de FGTS = R$ 250.000 de lance maximo disponivel.",
       "Soma renda titular e renda conjuge para renda total. Exemplo: titular R$ 8.000 + conjuge R$ 7.000 = renda total R$ 15.000.",
       "Calcula Conceito IA pelo prazo. Exemplo: 1 a 3 meses = Agressivo; 4 a 6 = Moderado; 7 a 12 = Conservador; 13 a 24 = Super Conservador; sem urgencia = Investidor.",
       "Data de nascimento valida idade minima de 18 anos na adesao. Exemplo: titular com 17 anos reprova a compatibilidade de idade.",
@@ -144,10 +144,10 @@ const businessRulesFlow = [
     regras: [
       "Regras fixas por administradora sao usadas antes da selecao de grupos. Exemplo: CNP permite 50% de lance embutido, taxa ADM 15% e fundo reserva 5%.",
       "Credito a contratar = credito desejado / (1 - percentual de lance embutido). Exemplo: R$ 450.000 / (1 - 50%) = R$ 900.000.",
-      "Lance maximo disponivel = recursos proprios em dinheiro + FGTS titular + FGTS conjuge. Exemplo: R$ 150.000 em dinheiro + R$ 100.000 de FGTS = R$ 250.000 disponiveis para lance.",
+      "Lance maximo disponivel = recursos proprios em dinheiro + FGTS titular + FGTS conjuge, quando a administradora permitir FGTS. Se a administradora nao permitir FGTS, o sistema usa somente os recursos proprios em dinheiro. Exemplo com FGTS permitido: R$ 150.000 em dinheiro + R$ 100.000 de FGTS = R$ 250.000 disponiveis para lance.",
       "Lance maximo = ((credito a contratar * percentual de lance embutido) + lance maximo disponivel) / credito a contratar. Exemplo: ((R$ 900.000 * 50%) + R$ 250.000) / R$ 900.000 = 77,7778%.",
       "Prazo minimo = (credito a contratar + taxa ADM + fundo reserva - lance total considerado) / parcela limite. Exemplo: (R$ 900.000 + R$ 135.000 + R$ 45.000 - R$ 700.000) / R$ 6.000 = 63,33 meses.",
-      "Nas formulas oficiais F30 e F31 entra o lance maximo disponivel. Exemplo: se houver R$ 150.000 em dinheiro e R$ 100.000 de FGTS permitido, a formula usa R$ 250.000.",
+      "Nas formulas oficiais F30 e F31 entra o lance maximo disponivel. Exemplo com FGTS permitido: R$ 150.000 em dinheiro + R$ 100.000 de FGTS = R$ 250.000 usados na formula. Exemplo com FGTS nao permitido: R$ 150.000 em dinheiro + R$ 100.000 de FGTS informado = a formula usa apenas R$ 150.000.",
     ],
   },
   {
