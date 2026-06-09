@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from pathlib import Path
 
 
@@ -18,7 +18,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260608-21", index_html)
-        self.assertIn("/static/js/app.js?v=20260609-01", index_html)
+        self.assertIn("/static/js/app.js?v=20260609-02", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -60,19 +60,31 @@ class StaticEmailTest(unittest.TestCase):
             "Fundo de reserva",
             "Idade máxima ok?",
             "Crédito a ser contratado:",
+            "Lance embutido (R$):",
+            "Lance proprio usado:",
+            "Lance total considerado:",
             "Lance máximo:",
+            "Taxa Administracao (R$):",
+            "Fundo de reserva (R$):",
             "Prazo mínimo:",
         ]:
             self.assertIn(campo, app_js)
+        self.assertIn("const administratorPlanComputedFields", app_js)
+        self.assertIn('.replace("R$", "").replace("%", "")', app_js)
         self.assertIn("function administratorPlanCreditoContratado(rule)", app_js)
+        self.assertIn('administratorPlanPercent(rule, "percentual_lance_embutido")', app_js)
         self.assertIn("return creditoDesejado / (1 - percentualLanceEmbutido);", app_js)
+        self.assertIn("function administratorPlanLanceEmbutidoValor(rule)", app_js)
+        self.assertIn("function administratorPlanLanceTotalConsiderado(rule)", app_js)
         self.assertIn("function administratorPlanLanceMaximo(rule)", app_js)
-        self.assertIn("((creditoContratado * percentualLanceEmbutido) + lanceProprio) / creditoContratado", app_js)
+        self.assertIn("return lanceTotal === null ? null : lanceTotal / creditoContratado", app_js)
+        self.assertIn("function administratorPlanTaxaAdmValor(rule)", app_js)
+        self.assertIn("function administratorPlanFundoReservaValor(rule)", app_js)
         self.assertIn("function administratorPlanPrazoMinimo(rule)", app_js)
-        self.assertIn("creditoContratado * taxaAdm", app_js)
-        self.assertIn("creditoContratado * fundoReserva", app_js)
-        self.assertIn("- ((creditoContratado * percentualLanceEmbutido) + lanceProprio)", app_js)
-        self.assertIn("[\"credito_a_ser_contratado\", \"lance_maximo\", \"prazo_minimo\"].includes", app_js)
+        self.assertIn("const taxaAdmValor = administratorPlanTaxaAdmValor(rule) || 0;", app_js)
+        self.assertIn("const fundoReservaValor = administratorPlanFundoReservaValor(rule) || 0;", app_js)
+        self.assertIn("- lanceTotal", app_js)
+        self.assertIn("administratorPlanComputedFields.includes", app_js)
         for administradora in ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"]:
             self.assertIn(administradora, app_js)
         self.assertNotIn("administratorTotalDisponivel", index_html)

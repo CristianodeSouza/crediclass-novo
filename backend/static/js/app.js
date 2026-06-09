@@ -85,8 +85,23 @@ const administratorPlanRows = [
   { key: "fundo_reserva", label: "Fundo de reserva", type: "percent" },
   { key: "idade_maxima_ok", label: "Idade máxima ok?", type: "text" },
   { key: "credito_a_ser_contratado", label: "Crédito a ser contratado:", type: "money" },
+  { key: "lance_embutido_valor", label: "Lance embutido (R$):", type: "money" },
+  { key: "lance_proprio_usado", label: "Lance proprio usado:", type: "money" },
+  { key: "lance_total_considerado", label: "Lance total considerado:", type: "money" },
   { key: "lance_maximo", label: "Lance máximo:", type: "percent" },
+  { key: "taxa_administracao_valor", label: "Taxa Administracao (R$):", type: "money" },
+  { key: "fundo_reserva_valor", label: "Fundo de reserva (R$):", type: "money" },
   { key: "prazo_minimo", label: "Prazo mínimo:", type: "number" },
+];
+const administratorPlanComputedFields = [
+  "credito_a_ser_contratado",
+  "lance_embutido_valor",
+  "lance_proprio_usado",
+  "lance_total_considerado",
+  "lance_maximo",
+  "taxa_administracao_valor",
+  "fundo_reserva_valor",
+  "prazo_minimo",
 ];
 const businessRuleStatuses = ["Pendente", "Em revisao", "Revisado", "Corrigir regra"];
 const administratorPlanRuleHelp = {
@@ -100,7 +115,12 @@ const administratorPlanRuleHelp = {
   fundo_reserva: "Usado na formula de prazo minimo e parcela estimada. Fundo de reserva em valor = credito a contratar * fundo reserva.",
   idade_maxima_ok: "Linha de conferencia da regra de idade. Ajuda o operador a validar se a idade do cliente esta dentro do limite da administradora.",
   credito_a_ser_contratado: "Campo calculado pela formula oficial F29: credito desejado / (1 - percentual de lance embutido).",
+  lance_embutido_valor: "Valor calculado do lance embutido: credito a contratar * percentual de lance embutido.",
+  lance_proprio_usado: "Valor do Perfil do Cliente usado nas formulas oficiais como lance maximo disponivel. FGTS nao entra nas formulas F30 e F31.",
+  lance_total_considerado: "Lance total usado nas formulas F30 e F31: lance embutido em R$ + lance proprio disponivel.",
   lance_maximo: "Campo calculado pela formula oficial F30: ((credito a contratar * percentual de lance embutido) + lance proprio disponivel) / credito a contratar.",
+  taxa_administracao_valor: "Valor calculado da taxa administrativa: credito a contratar * taxa administrativa da administradora.",
+  fundo_reserva_valor: "Valor calculado do fundo de reserva: credito a contratar * fundo de reserva da administradora.",
   prazo_minimo: "Campo calculado pela formula oficial F31: (credito a contratar + taxa ADM + fundo reserva - lance total considerado) / parcela limite.",
 };
 const businessRulesFlow = [
@@ -523,7 +543,7 @@ function exportStudiesCsv() {
 }
 
 function parseNumberInput(value) {
-  const text = String(value || "").trim();
+  const text = String(value || "").replace("R$", "").replace("%", "").trim();
   if (!text) return "";
   return text.replace(/\./g, "").replace(",", ".");
 }
@@ -2510,9 +2530,24 @@ function administratorPlanCellValue(rule, row) {
   if (row.key === "credito_a_ser_contratado") {
     return formatAdministratorPlanNumber(administratorPlanCreditoContratado(rule), 2);
   }
+  if (row.key === "lance_embutido_valor") {
+    return formatAdministratorPlanNumber(administratorPlanLanceEmbutidoValor(rule), 2);
+  }
+  if (row.key === "lance_proprio_usado") {
+    return formatAdministratorPlanNumber(currentClientProfileLanceProprio(), 2);
+  }
+  if (row.key === "lance_total_considerado") {
+    return formatAdministratorPlanNumber(administratorPlanLanceTotalConsiderado(rule), 2);
+  }
   if (row.key === "lance_maximo") {
     const lanceMaximo = administratorPlanLanceMaximo(rule);
     return lanceMaximo === null ? "" : formatAdministratorPlanNumber(lanceMaximo * 100, 4);
+  }
+  if (row.key === "taxa_administracao_valor") {
+    return formatAdministratorPlanNumber(administratorPlanTaxaAdmValor(rule), 2);
+  }
+  if (row.key === "fundo_reserva_valor") {
+    return formatAdministratorPlanNumber(administratorPlanFundoReservaValor(rule), 2);
   }
   if (row.key === "prazo_minimo") {
     return formatAdministratorPlanNumber(administratorPlanPrazoMinimo(rule), 0);
@@ -2549,35 +2584,62 @@ function currentClientProfileParcelaLimite() {
     || currentClientProfileNumber("clientProfileParcelaIdeal", "parcela_ideal");
 }
 
+function administratorPlanPercent(rule, key) {
+  const value = rule[key];
+  if (typeof value === "number") return value > 1 ? value / 100 : value;
+  return inputToPercentFromValue(value);
+}
+
 function administratorPlanCreditoContratado(rule) {
   const creditoDesejado = currentClientProfileCredit();
-  const percentualLanceEmbutido = Number(rule.percentual_lance_embutido || 0);
+  const percentualLanceEmbutido = administratorPlanPercent(rule, "percentual_lance_embutido");
   if (!creditoDesejado || percentualLanceEmbutido < 0 || percentualLanceEmbutido >= 1) return null;
   return creditoDesejado / (1 - percentualLanceEmbutido);
+}
+
+function administratorPlanLanceEmbutidoValor(rule) {
+  const creditoContratado = administratorPlanCreditoContratado(rule);
+  if (!creditoContratado) return null;
+  return creditoContratado * administratorPlanPercent(rule, "percentual_lance_embutido");
+}
+
+function administratorPlanLanceTotalConsiderado(rule) {
+  const lanceEmbutido = administratorPlanLanceEmbutidoValor(rule);
+  if (lanceEmbutido === null) return null;
+  return lanceEmbutido + currentClientProfileLanceProprio();
 }
 
 function administratorPlanLanceMaximo(rule) {
   const creditoContratado = administratorPlanCreditoContratado(rule);
   if (!creditoContratado) return null;
-  const percentualLanceEmbutido = Number(rule.percentual_lance_embutido || 0);
-  const lanceProprio = currentClientProfileLanceProprio();
-  return ((creditoContratado * percentualLanceEmbutido) + lanceProprio) / creditoContratado;
+  const lanceTotal = administratorPlanLanceTotalConsiderado(rule);
+  return lanceTotal === null ? null : lanceTotal / creditoContratado;
+}
+
+function administratorPlanTaxaAdmValor(rule) {
+  const creditoContratado = administratorPlanCreditoContratado(rule);
+  if (!creditoContratado) return null;
+  return creditoContratado * administratorPlanPercent(rule, "taxa_adm");
+}
+
+function administratorPlanFundoReservaValor(rule) {
+  const creditoContratado = administratorPlanCreditoContratado(rule);
+  if (!creditoContratado) return null;
+  return creditoContratado * administratorPlanPercent(rule, "fundo_reserva");
 }
 
 function administratorPlanPrazoMinimo(rule) {
   const creditoContratado = administratorPlanCreditoContratado(rule);
-  const lanceMaximo = administratorPlanLanceMaximo(rule);
+  const lanceTotal = administratorPlanLanceTotalConsiderado(rule);
   const parcelaMaxima = currentClientProfileParcelaLimite();
-  if (!creditoContratado || lanceMaximo === null || !parcelaMaxima) return null;
-  const taxaAdm = Number(rule.taxa_adm || 0);
-  const fundoReserva = Number(rule.fundo_reserva || 0);
-  const percentualLanceEmbutido = Number(rule.percentual_lance_embutido || 0);
-  const lanceProprio = currentClientProfileLanceProprio();
+  if (!creditoContratado || lanceTotal === null || !parcelaMaxima) return null;
+  const taxaAdmValor = administratorPlanTaxaAdmValor(rule) || 0;
+  const fundoReservaValor = administratorPlanFundoReservaValor(rule) || 0;
   return (
     creditoContratado
-    + (creditoContratado * taxaAdm)
-    + (creditoContratado * fundoReserva)
-    - ((creditoContratado * percentualLanceEmbutido) + lanceProprio)
+    + taxaAdmValor
+    + fundoReservaValor
+    - lanceTotal
   ) / parcelaMaxima;
 }
 
@@ -2591,7 +2653,8 @@ function formatAdministratorPlanNumber(value, maximumFractionDigits) {
 
 function recalculateAdministratorPlanComputedCells() {
   const currentRules = collectAdministratorPlans();
-  document.querySelectorAll('[data-admin-plan-field="credito_a_ser_contratado"], [data-admin-plan-field="lance_maximo"], [data-admin-plan-field="prazo_minimo"]').forEach((input) => {
+  document.querySelectorAll("[data-admin-plan-field]").forEach((input) => {
+    if (!administratorPlanComputedFields.includes(input.dataset.adminPlanField)) return;
     const index = Number(input.dataset.adminPlanIndex);
     const row = administratorPlanRows.find((item) => item.key === input.dataset.adminPlanField);
     if (!row || !currentRules[index]) return;
@@ -2653,7 +2716,7 @@ function renderAdministratorPlans() {
       <th>${renderAdministratorPlanRowLabel(row)}</th>
       ${rules.map((rule, index) => `
         <td>
-          <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" value="${escapeHtml(administratorPlanCellValue(rule, row))}" ${["credito_a_ser_contratado", "lance_maximo", "prazo_minimo"].includes(row.key) ? "readonly" : ""}>
+          <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" value="${escapeHtml(administratorPlanCellValue(rule, row))}" ${administratorPlanComputedFields.includes(row.key) ? "readonly" : ""}>
         </td>
       `).join("")}
     </tr>
@@ -2691,7 +2754,7 @@ function collectAdministratorPlans() {
     const field = input.dataset.adminPlanField;
     const type = input.dataset.adminPlanType;
     if (!collected[index]) return;
-    if (["credito_a_ser_contratado", "lance_maximo", "prazo_minimo"].includes(field)) return;
+    if (administratorPlanComputedFields.includes(field)) return;
     if (type === "percent") {
       collected[index][field] = inputToPercentFromValue(input.value);
     } else if (type === "money") {
