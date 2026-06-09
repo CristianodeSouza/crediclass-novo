@@ -18,7 +18,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260608-21", index_html)
-        self.assertIn("/static/js/app.js?v=20260609-04", index_html)
+        self.assertIn("/static/js/app.js?v=20260609-05", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -188,6 +188,10 @@ class StaticEmailTest(unittest.TestCase):
             "63,33 meses",
             "R$ 100.000 de FGTS",
             "grupo com 62 meses restantes nao atende",
+            "Agressivo (1 a 3 meses)",
+            "Moderado (4 a 6 meses)",
+            "segundo menor lance + 0,25 ponto percentual",
+            "lance fixo cadastrado de 12%",
         ]:
             self.assertIn(exemplo, app_js)
         self.assertIn("business-rule-note-input", style_css)
