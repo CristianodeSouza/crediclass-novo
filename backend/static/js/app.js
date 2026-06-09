@@ -94,6 +94,7 @@ const administratorPlanRows = [
   { key: "prazo_minimo", label: "Prazo mínimo:", type: "number" },
 ];
 const administratorPlanComputedFields = [
+  "idade_maxima_ok",
   "credito_a_ser_contratado",
   "lance_embutido_valor",
   "lance_proprio_usado",
@@ -113,7 +114,7 @@ const administratorPlanRuleHelp = {
   aceita_saida_fiscal_texto: "Usado como regra operacional da administradora para validar se o perfil do cliente pode aderir com saida fiscal quando esse ponto for relevante.",
   taxa_adm: "Usada na formula de prazo minimo e parcela estimada. Taxa ADM em valor = credito a contratar * taxa administrativa.",
   fundo_reserva: "Usado na formula de prazo minimo e parcela estimada. Fundo de reserva em valor = credito a contratar * fundo reserva.",
-  idade_maxima_ok: "Linha de conferencia da regra de idade. Ajuda o operador a validar se a idade do cliente esta dentro do limite da administradora.",
+  idade_maxima_ok: "Campo calculado com o Perfil do Cliente. Valida idade minima de 18 anos na adesao e confere a idade maxima cadastrada na administradora; a validacao definitiva pelo termino do grupo acontece na Viabilidade Grupos.",
   credito_a_ser_contratado: "Campo calculado pela formula oficial F29: credito desejado / (1 - percentual de lance embutido).",
   lance_embutido_valor: "Valor calculado do lance embutido: credito a contratar * percentual de lance embutido.",
   lance_proprio_usado: "Valor do Perfil do Cliente usado nas formulas oficiais como lance maximo disponivel. FGTS nao entra nas formulas F30 e F31.",
@@ -2527,6 +2528,9 @@ function administratorPlanRulesForKind(kind) {
 
 function administratorPlanCellValue(rule, row) {
   const value = rule[row.key];
+  if (row.key === "idade_maxima_ok") {
+    return administratorPlanAgeValidation(rule);
+  }
   if (row.key === "credito_a_ser_contratado") {
     return formatAdministratorPlanNumber(administratorPlanCreditoContratado(rule), 2);
   }
@@ -2582,6 +2586,40 @@ function currentClientProfileLanceProprio() {
 function currentClientProfileParcelaLimite() {
   return currentClientProfileNumber("clientProfileParcelaLimite", "parcela_limite")
     || currentClientProfileNumber("clientProfileParcelaIdeal", "parcela_ideal");
+}
+
+function currentClientProfileValue(inputId, profileKey) {
+  const activeInput = document.getElementById(inputId);
+  const activeValue = activeInput ? String(activeInput.value || "").trim() : "";
+  if (activeValue) return activeValue;
+  try {
+    const savedProfile = JSON.parse(window.localStorage.getItem(CLIENT_PROFILE_STORAGE_KEY) || "null");
+    return savedProfile?.[profileKey] || "";
+  } catch {
+    return "";
+  }
+}
+
+function calculateAgeFromDateText(dateText) {
+  if (!dateText) return null;
+  const born = new Date(`${dateText}T00:00:00`);
+  if (Number.isNaN(born.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - born.getFullYear();
+  const monthDiff = today.getMonth() - born.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < born.getDate())) age -= 1;
+  return age;
+}
+
+function administratorPlanAgeValidation(rule) {
+  const birthDate = currentClientProfileValue("clientProfileNascimento", "data_nascimento");
+  const age = calculateAgeFromDateText(birthDate);
+  if (age === null) return "Idade nao validada";
+  if (age < 18) return "Nao - menor de 18";
+  const maximumAge = optionalNumber(rule.idade_maxima);
+  if (!maximumAge) return "Sim - sem idade maxima cadastrada";
+  if (age > maximumAge) return "Nao - acima da idade maxima";
+  return "Sim - validar termino no grupo";
 }
 
 function administratorPlanPercent(rule, key) {
@@ -3226,7 +3264,7 @@ document.getElementById("saveAdministratorPlansBtn").addEventListener("click", (
   saveAdministratorPlans().catch(() => setConfigState("error"));
 });
 document.getElementById("administratorPlansTable").addEventListener("input", (event) => {
-  if (["percentual_lance_embutido", "taxa_adm", "fundo_reserva"].includes(event.target?.dataset?.adminPlanField)) {
+  if (["idade_maxima", "percentual_lance_embutido", "taxa_adm", "fundo_reserva"].includes(event.target?.dataset?.adminPlanField)) {
     recalculateAdministratorPlanComputedCells();
   }
 });

@@ -18,7 +18,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260608-21", index_html)
-        self.assertIn("/static/js/app.js?v=20260609-02", index_html)
+        self.assertIn("/static/js/app.js?v=20260609-03", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -70,6 +70,12 @@ class StaticEmailTest(unittest.TestCase):
         ]:
             self.assertIn(campo, app_js)
         self.assertIn("const administratorPlanComputedFields", app_js)
+        self.assertIn('"idade_maxima_ok"', app_js)
+        self.assertIn("function administratorPlanAgeValidation(rule)", app_js)
+        self.assertIn("function calculateAgeFromDateText(dateText)", app_js)
+        self.assertIn('if (age < 18) return "Nao - menor de 18";', app_js)
+        self.assertIn('return "Sim - validar termino no grupo";', app_js)
+        self.assertIn('["idade_maxima", "percentual_lance_embutido", "taxa_adm", "fundo_reserva"].includes', app_js)
         self.assertIn('.replace("R$", "").replace("%", "")', app_js)
         self.assertIn("function administratorPlanCreditoContratado(rule)", app_js)
         self.assertIn('administratorPlanPercent(rule, "percentual_lance_embutido")', app_js)
