@@ -1388,6 +1388,7 @@ function setViabilityState(state) {
 
 function collectViabilityPayload() {
   const profile = collectClientProfile();
+  const parcelaLimite = profile.parcela_limite || profile.parcela_ideal;
   return {
     objetivo: profile.objetivo,
     credito_desejado: profile.credito_desejado,
@@ -1399,9 +1400,9 @@ function collectViabilityPayload() {
     renda_total: profile.renda_total,
     renda_titular: profile.renda_titular,
     renda_conjuge: profile.renda_conjuge,
-    parcela_desejada: profile.parcela_ideal,
+    parcela_desejada: parcelaLimite,
     parcela_ideal: profile.parcela_ideal,
-    parcela_limite: profile.parcela_limite || profile.parcela_ideal,
+    parcela_limite: parcelaLimite,
     data_nascimento: profile.data_nascimento,
     data_nascimento_conjuge: profile.data_nascimento_conjuge,
     tipo_bem: profile.tipo_bem,

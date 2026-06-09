@@ -152,6 +152,7 @@ def group_age_validation(group: dict[str, Any], payload: ViabilidadeRequest, tit
 def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]], modo_preliminar: bool = False) -> dict[str, Any]:
     profile_label, profile_field, operational_range = classify_lance_profile(payload.prazo_desejado)
     fgts_total = client_fgts_total(payload)
+    parcela_limite = float(payload.parcela_limite or payload.parcela_desejada)
     titular_age = calculate_age(payload.data_nascimento)
     spouse_age = calculate_age(payload.data_nascimento_conjuge)
     age_informed = titular_age is not None or spouse_age is not None
@@ -202,7 +203,7 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             + taxa_administrativa_valor
             + fundo_reserva_valor
             - lance_total_formula
-        ) / payload.parcela_desejada
+        ) / parcela_limite
 
         historico = group.get("historico") or {}
         historico_12m = history_last_12_months(historico)
@@ -233,7 +234,7 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
 
         idade_compativel, idade_alerta = group_age_validation(group, payload, titular_age, spouse_age)
         renda_compativel = parcela_estimada * 3 <= payload.renda_total
-        parcela_compativel = parcela_estimada <= payload.parcela_desejada
+        parcela_compativel = parcela_estimada <= parcela_limite
         lance_compativel = historico_disponivel and lance_na_faixa_perfil and percentual_lance >= float(lance_referencia)
         prazo_compativel = prazo_restante >= prazo_minimo
         credito_compativel = credito_minimo <= credito_contratado <= credito_maximo

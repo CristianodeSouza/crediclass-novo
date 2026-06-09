@@ -307,6 +307,37 @@ class ViabilidadeTest(unittest.TestCase):
             places=2,
         )
 
+    def test_viabilidade_usa_parcela_limite_no_prazo_minimo(self):
+        payload = make_payload(
+            credito_desejado=500000,
+            lance_proprio=50000,
+            fgts=0,
+            parcela_desejada=2500,
+            parcela_ideal=2500,
+            parcela_limite=3500,
+            prazo_desejado=12,
+        )
+        group = make_group(
+            credito_minimo=400000,
+            credito_maximo=900000,
+            taxa_adm=0.05,
+            fundo_reserva=0.02,
+            percentual_lance_embutido=0.25,
+            prazo_restante=150,
+            prazo_total=240,
+            historico={
+                "2026-01": {"menor_lance": 0.31, "qtd_contemplacoes": 1},
+                "2026-02": {"menor_lance": 0.32, "qtd_contemplacoes": 1},
+            },
+        )
+
+        result = analyze_viabilidade(payload, [group])
+
+        self.assertEqual(result["total_grupos_compativeis"], 1)
+        item = result["melhores_grupos"][0]
+        self.assertAlmostEqual(item["prazo_minimo"], 141.9, places=2)
+        self.assertTrue(item["grupo_aprovado"])
+
     def test_fgts_is_used_only_when_group_allows_it(self):
         allowed = analyze_viabilidade(make_payload(), [make_group(fgts=True)])
         blocked = analyze_viabilidade(make_payload(), [make_group(fgts=False)])

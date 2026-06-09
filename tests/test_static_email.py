@@ -18,7 +18,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260608-21", index_html)
-        self.assertIn("/static/js/app.js?v=20260609-07", index_html)
+        self.assertIn("/static/js/app.js?v=20260609-08", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -109,6 +109,8 @@ class StaticEmailTest(unittest.TestCase):
 
         self.assertIn("Grupos Compat", index_html)
         self.assertIn("const profile = collectClientProfile();", app_js)
+        self.assertIn("const parcelaLimite = profile.parcela_limite || profile.parcela_ideal;", app_js)
+        self.assertIn("parcela_desejada: parcelaLimite", app_js)
         self.assertIn("Credito a contratar", index_html)
         self.assertNotIn("Lance referencia perfil", index_html)
         self.assertNotIn("Lance maximo cliente", index_html)
