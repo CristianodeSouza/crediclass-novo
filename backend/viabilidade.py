@@ -24,6 +24,12 @@ def classify_profile(prazo_desejado: int) -> tuple[str, str]:
     return label, field
 
 
+def client_fgts_total(payload: ViabilidadeRequest) -> float:
+    if payload.fgts_titular is not None or payload.fgts_conjuge is not None:
+        return float(payload.fgts_titular or 0) + float(payload.fgts_conjuge or 0)
+    return float(payload.fgts or 0)
+
+
 def compatible_tipo_bem(objetivo: str, tipo_bem: str, requested_tipo_bem: str) -> bool:
     wanted = normalize_text(requested_tipo_bem)
     group_type = normalize_text(tipo_bem)
@@ -145,7 +151,7 @@ def group_age_validation(group: dict[str, Any], payload: ViabilidadeRequest, tit
 
 def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]], modo_preliminar: bool = False) -> dict[str, Any]:
     profile_label, profile_field, operational_range = classify_lance_profile(payload.prazo_desejado)
-    fgts_total = payload.fgts
+    fgts_total = client_fgts_total(payload)
     titular_age = calculate_age(payload.data_nascimento)
     spouse_age = calculate_age(payload.data_nascimento_conjuge)
     age_informed = titular_age is not None or spouse_age is not None
@@ -175,7 +181,8 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
 
         credito_contratado = payload.credito_desejado / (1 - percentual_lance_embutido)
         lance_embutido = credito_contratado * percentual_lance_embutido
-        lance_total_formula = lance_embutido + payload.lance_proprio
+        lance_maximo_disponivel = payload.lance_proprio + fgts_utilizado
+        lance_total_formula = lance_embutido + lance_maximo_disponivel
         lance_total = lance_total_formula
         percentual_lance = lance_total_formula / credito_contratado if credito_contratado else 0
         credito_disponivel = credito_contratado - lance_embutido
@@ -284,7 +291,7 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             "credito_disponivel": round(credito_disponivel, 2),
             "lance_embutido_utilizado": round(lance_embutido, 2),
             "fgts_utilizado": round(fgts_utilizado, 2),
-            "lance_proprio_utilizado": round(payload.lance_proprio, 2),
+            "lance_proprio_utilizado": round(lance_maximo_disponivel, 2),
             "lance_total": round(lance_total, 2),
             "percentual_lance": round(percentual_lance, 4),
             "taxa_administrativa_valor": round(taxa_administrativa_valor, 2),

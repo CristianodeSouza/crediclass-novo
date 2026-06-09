@@ -114,9 +114,9 @@ class ViabilidadeTest(unittest.TestCase):
 
         self.assertAlmostEqual(result["credito_a_contratar"], 571428.57, places=2)
         self.assertAlmostEqual(result["lance_embutido_valor"], 171428.57, places=2)
-        self.assertAlmostEqual(result["lance_total"], 271428.57, places=2)
-        self.assertAlmostEqual(result["lance_maximo_percentual"], 0.475, places=4)
-        self.assertAlmostEqual(result["prazo_minimo"], 65.24, places=2)
+        self.assertAlmostEqual(result["lance_total"], 321428.57, places=2)
+        self.assertAlmostEqual(result["lance_maximo_percentual"], 0.5625, places=4)
+        self.assertAlmostEqual(result["prazo_minimo"], 56.9, places=2)
         self.assertTrue(result["elegivel"])
 
     def test_formulas_oficiais_f29_f30_f31_da_planilha(self):
@@ -150,9 +150,9 @@ class ViabilidadeTest(unittest.TestCase):
         self.assertEqual(result["fgts_utilizado"], 100000)
         self.assertAlmostEqual(result["credito_a_contratar"], 900000, places=2)
         self.assertAlmostEqual(result["lance_embutido_valor"], 450000, places=2)
-        self.assertAlmostEqual(result["lance_total"], 600000, places=2)
-        self.assertAlmostEqual(result["lance_maximo_percentual"], 0.666667, places=6)
-        self.assertAlmostEqual(result["prazo_minimo"], 80, places=2)
+        self.assertAlmostEqual(result["lance_total"], 700000, places=2)
+        self.assertAlmostEqual(result["lance_maximo_percentual"], 0.777778, places=6)
+        self.assertAlmostEqual(result["prazo_minimo"], 63.33, places=2)
 
     def test_administrator_feasibility_ordena_elegiveis_por_credito_prazo_e_lance(self):
         result = analyze_administradoras(

@@ -18,7 +18,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260608-21", index_html)
-        self.assertIn("/static/js/app.js?v=20260609-03", index_html)
+        self.assertIn("/static/js/app.js?v=20260609-04", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -61,7 +61,7 @@ class StaticEmailTest(unittest.TestCase):
             "Idade máxima ok?",
             "Crédito a ser contratado:",
             "Lance embutido (R$):",
-            "Lance proprio usado:",
+            "Lance maximo disponivel:",
             "Lance total considerado:",
             "Lance máximo:",
             "Taxa Administracao (R$):",
@@ -81,6 +81,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('administratorPlanPercent(rule, "percentual_lance_embutido")', app_js)
         self.assertIn("return creditoDesejado / (1 - percentualLanceEmbutido);", app_js)
         self.assertIn("function administratorPlanLanceEmbutidoValor(rule)", app_js)
+        self.assertIn("function currentClientProfileFgtsTotal()", app_js)
+        self.assertIn("function currentClientProfileLanceMaximoDisponivel(rule = {})", app_js)
         self.assertIn("function administratorPlanLanceTotalConsiderado(rule)", app_js)
         self.assertIn("function administratorPlanLanceMaximo(rule)", app_js)
         self.assertIn("return lanceTotal === null ? null : lanceTotal / creditoContratado", app_js)
@@ -182,8 +184,8 @@ class StaticEmailTest(unittest.TestCase):
         for exemplo in [
             "R$ 450.000",
             "R$ 900.000",
-            "66,6667%",
-            "80 meses",
+            "77,7778%",
+            "63,33 meses",
             "R$ 100.000 de FGTS",
             "grupo com 62 meses restantes nao atende",
         ]:

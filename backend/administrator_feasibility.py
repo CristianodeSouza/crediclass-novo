@@ -28,6 +28,11 @@ def client_parcela_ideal(payload: ViabilidadeRequest) -> float:
     return float(payload.parcela_ideal or payload.parcela_desejada)
 
 
+def client_lance_maximo_disponivel(payload: ViabilidadeRequest, fgts_permitido: bool = True) -> float:
+    fgts_total = client_fgts_total(payload) if fgts_permitido else 0.0
+    return float(payload.lance_proprio or 0) + fgts_total
+
+
 def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: AdministratorRule) -> dict[str, Any]:
     percentual_lance_embutido = max(0.0, min(float(rule.percentual_lance_embutido or 0), 0.95))
     if not payload.considerar_lance_embutido:
@@ -36,7 +41,7 @@ def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: Admin
     lance_embutido_valor = credito_a_contratar * percentual_lance_embutido
     fgts_total = client_fgts_total(payload)
     fgts_utilizado = fgts_total if rule.aceita_fgts else 0.0
-    lance_proprio = float(payload.lance_proprio or 0)
+    lance_proprio = client_lance_maximo_disponivel(payload, rule.aceita_fgts)
     lance_total = lance_embutido_valor + lance_proprio
     lance_maximo_percentual = lance_total / credito_a_contratar if credito_a_contratar else 0.0
     taxa_adm_valor = credito_a_contratar * float(rule.taxa_adm or 0)

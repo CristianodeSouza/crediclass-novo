@@ -86,7 +86,7 @@ const administratorPlanRows = [
   { key: "idade_maxima_ok", label: "Idade máxima ok?", type: "text" },
   { key: "credito_a_ser_contratado", label: "Crédito a ser contratado:", type: "money" },
   { key: "lance_embutido_valor", label: "Lance embutido (R$):", type: "money" },
-  { key: "lance_proprio_usado", label: "Lance proprio usado:", type: "money" },
+  { key: "lance_proprio_usado", label: "Lance maximo disponivel:", type: "money" },
   { key: "lance_total_considerado", label: "Lance total considerado:", type: "money" },
   { key: "lance_maximo", label: "Lance máximo:", type: "percent" },
   { key: "taxa_administracao_valor", label: "Taxa Administracao (R$):", type: "money" },
@@ -117,9 +117,9 @@ const administratorPlanRuleHelp = {
   idade_maxima_ok: "Campo calculado com o Perfil do Cliente. Valida idade minima de 18 anos na adesao e confere a idade maxima cadastrada na administradora; a validacao definitiva pelo termino do grupo acontece na Viabilidade Grupos.",
   credito_a_ser_contratado: "Campo calculado pela formula oficial F29: credito desejado / (1 - percentual de lance embutido).",
   lance_embutido_valor: "Valor calculado do lance embutido: credito a contratar * percentual de lance embutido.",
-  lance_proprio_usado: "Valor do Perfil do Cliente usado nas formulas oficiais como lance maximo disponivel. FGTS nao entra nas formulas F30 e F31.",
-  lance_total_considerado: "Lance total usado nas formulas F30 e F31: lance embutido em R$ + lance proprio disponivel.",
-  lance_maximo: "Campo calculado pela formula oficial F30: ((credito a contratar * percentual de lance embutido) + lance proprio disponivel) / credito a contratar.",
+  lance_proprio_usado: "Valor usado nas formulas oficiais como lance maximo disponivel: recursos proprios em dinheiro + FGTS titular + FGTS conjuge, quando FGTS for permitido.",
+  lance_total_considerado: "Lance total usado nas formulas F30 e F31: lance embutido em R$ + lance maximo disponivel.",
+  lance_maximo: "Campo calculado pela formula oficial F30: ((credito a contratar * percentual de lance embutido) + lance maximo disponivel) / credito a contratar.",
   taxa_administracao_valor: "Valor calculado da taxa administrativa: credito a contratar * taxa administrativa da administradora.",
   fundo_reserva_valor: "Valor calculado do fundo de reserva: credito a contratar * fundo de reserva da administradora.",
   prazo_minimo: "Campo calculado pela formula oficial F31: (credito a contratar + taxa ADM + fundo reserva - lance total considerado) / parcela limite.",
@@ -144,9 +144,10 @@ const businessRulesFlow = [
     regras: [
       "Regras fixas por administradora sao usadas antes da selecao de grupos. Exemplo: CNP permite 50% de lance embutido, taxa ADM 15% e fundo reserva 5%.",
       "Credito a contratar = credito desejado / (1 - percentual de lance embutido). Exemplo: R$ 450.000 / (1 - 50%) = R$ 900.000.",
-      "Lance maximo = ((credito a contratar * percentual de lance embutido) + lance proprio disponivel) / credito a contratar. Exemplo: ((R$ 900.000 * 50%) + R$ 150.000) / R$ 900.000 = 66,6667%.",
-      "Prazo minimo = (credito a contratar + taxa ADM + fundo reserva - lance total considerado) / parcela limite. Exemplo: (R$ 900.000 + R$ 135.000 + R$ 45.000 - R$ 600.000) / R$ 6.000 = 80 meses.",
-      "Nas formulas oficiais F30 e F31 nao entra FGTS; entra o lance proprio disponivel. Exemplo: mesmo com R$ 100.000 de FGTS informado, a formula usa R$ 150.000 de lance proprio.",
+      "Lance maximo disponivel = recursos proprios em dinheiro + FGTS titular + FGTS conjuge. Exemplo: R$ 150.000 em dinheiro + R$ 100.000 de FGTS = R$ 250.000 disponiveis para lance.",
+      "Lance maximo = ((credito a contratar * percentual de lance embutido) + lance maximo disponivel) / credito a contratar. Exemplo: ((R$ 900.000 * 50%) + R$ 250.000) / R$ 900.000 = 77,7778%.",
+      "Prazo minimo = (credito a contratar + taxa ADM + fundo reserva - lance total considerado) / parcela limite. Exemplo: (R$ 900.000 + R$ 135.000 + R$ 45.000 - R$ 700.000) / R$ 6.000 = 63,33 meses.",
+      "Nas formulas oficiais F30 e F31 entra o lance maximo disponivel. Exemplo: se houver R$ 150.000 em dinheiro e R$ 100.000 de FGTS permitido, a formula usa R$ 250.000.",
     ],
   },
   {
@@ -155,7 +156,7 @@ const businessRulesFlow = [
     regras: [
       "Busca somente grupos ativos e com tipo de bem compativel. Exemplo: cliente quer Imovel, entao grupo de Automovel nao entra na lista.",
       "Valida faixa do grupo usando credito a contratar, nao o credito liquido desejado. Exemplo: se o credito contratado calculado e R$ 900.000, um grupo com credito maximo R$ 800.000 nao serve.",
-      "Valida prazo restante do grupo contra o prazo minimo calculado pela formula oficial. Exemplo: prazo minimo 80 meses; grupo com 62 meses restantes nao atende.",
+      "Valida prazo restante do grupo contra o prazo minimo calculado pela formula oficial. Exemplo: prazo minimo 63,33 meses; grupo com 62 meses restantes nao atende.",
       "Referencia de lance usa meses com contemplacao registrada no historico. Exemplo: se nos ultimos 6 meses apenas 1 mes teve contemplacao, o sistema marca historico insuficiente para perfil Moderado.",
       "Faixas do perfil: Agressivo 50%+; Moderado 40% a 50%; Conservador 30% a 40%; Super Conservador 20% a 30%; Investidor 0% a 20%. Exemplo: perfil Conservador espera referencia entre 30% e 40%.",
     ],
@@ -174,9 +175,9 @@ const businessRulesFlow = [
     etapa: "5. Estudo Financeiro",
     regras: [
       "Estudo herda Perfil do Cliente, grupo selecionado e estrategia escolhida. Exemplo: cliente R$ 450.000, grupo CNP 123 e estrategia Moderada seguem para o estudo.",
-      "Simulacao financeira usa credito contratado, lance embutido, recurso proprio, taxa ADM, fundo reserva e prazo. Exemplo: R$ 900.000 contratado, R$ 450.000 embutido, R$ 150.000 proprio, taxa 15%, fundo 5% e prazo minimo 80 meses.",
+      "Simulacao financeira usa credito contratado, lance embutido, lance maximo disponivel, taxa ADM, fundo reserva e prazo. Exemplo: R$ 900.000 contratado, R$ 450.000 embutido, R$ 250.000 disponiveis, taxa 15%, fundo 5% e prazo minimo 63,33 meses.",
       "Campos comerciais permanecem editaveis pelo operador antes de salvar/compartilhar o estudo. Exemplo: operador pode escrever observacoes comerciais e comentario ao cliente.",
-      "A analise nao garante contemplacao; serve como referencia operacional. Exemplo: mesmo com lance maximo de 66,6667%, o estudo deve informar que a assembleia pode variar.",
+      "A analise nao garante contemplacao; serve como referencia operacional. Exemplo: mesmo com lance maximo de 77,7778%, o estudo deve informar que a assembleia pode variar.",
     ],
   },
 ];
@@ -2538,7 +2539,7 @@ function administratorPlanCellValue(rule, row) {
     return formatAdministratorPlanNumber(administratorPlanLanceEmbutidoValor(rule), 2);
   }
   if (row.key === "lance_proprio_usado") {
-    return formatAdministratorPlanNumber(currentClientProfileLanceProprio(), 2);
+    return formatAdministratorPlanNumber(currentClientProfileLanceMaximoDisponivel(rule), 2);
   }
   if (row.key === "lance_total_considerado") {
     return formatAdministratorPlanNumber(administratorPlanLanceTotalConsiderado(rule), 2);
@@ -2581,6 +2582,16 @@ function currentClientProfileCredit() {
 
 function currentClientProfileLanceProprio() {
   return currentClientProfileNumber("clientProfileLanceProprio", "lance_proprio");
+}
+
+function currentClientProfileFgtsTotal() {
+  return currentClientProfileNumber("clientProfileFgtsTitular", "fgts_titular")
+    + currentClientProfileNumber("clientProfileFgtsConjuge", "fgts_conjuge");
+}
+
+function currentClientProfileLanceMaximoDisponivel(rule = {}) {
+  const fgtsPermitido = rule.aceita_fgts !== false;
+  return currentClientProfileLanceProprio() + (fgtsPermitido ? currentClientProfileFgtsTotal() : 0);
 }
 
 function currentClientProfileParcelaLimite() {
@@ -2644,7 +2655,7 @@ function administratorPlanLanceEmbutidoValor(rule) {
 function administratorPlanLanceTotalConsiderado(rule) {
   const lanceEmbutido = administratorPlanLanceEmbutidoValor(rule);
   if (lanceEmbutido === null) return null;
-  return lanceEmbutido + currentClientProfileLanceProprio();
+  return lanceEmbutido + currentClientProfileLanceMaximoDisponivel(rule);
 }
 
 function administratorPlanLanceMaximo(rule) {
