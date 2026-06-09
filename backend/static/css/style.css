@@ -871,6 +871,20 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.86rem;
 }
 
+.history-year-filter {
+  display: grid;
+  gap: 4px;
+  min-width: 160px;
+  margin: 0;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.history-year-filter .form-select {
+  min-height: 38px;
+}
+
 .history-edit-grid {
   display: grid;
   max-height: min(360px, 38vh);

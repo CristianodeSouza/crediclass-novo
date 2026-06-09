@@ -173,6 +173,8 @@ let currentStudy = null;
 let groupFormModal = null;
 let groupFormMode = "create";
 let groupFormId = null;
+let groupFormHistoryData = {};
+let groupFormOriginalHistoryData = {};
 let currentDetailsGroupId = null;
 let studyDetailsModal = null;
 let currentStudyStrategies = [];
@@ -845,10 +847,16 @@ function historyEditorRow(prefix, month, item = {}) {
   `;
 }
 
+function historyEditorYearFilter(prefix) {
+  const select = document.getElementById(`${prefix}Year`);
+  return select?.value || "";
+}
+
 function renderHistoryEditor(prefix, historico = {}, extraMonths = []) {
   const grid = document.getElementById(`${prefix}Grid`);
   if (!grid) return;
-  const rows = buildHistoryRows(historico, extraMonths);
+  const year = historyEditorYearFilter(prefix);
+  const rows = buildHistoryRows(historico, extraMonths).filter(([month]) => !year || month.startsWith(`${year}-`));
   grid.innerHTML = `
     <div class="history-edit-head">
       <span>Mes</span>
@@ -886,6 +894,45 @@ function collectHistoryBatchPayloads(prefix) {
   if (!grid) return [];
   return [...grid.querySelectorAll(".history-edit-row")]
     .map(collectHistoryRowPayload)
+    .filter(hasMonthlyHistoryMetrics);
+}
+
+function syncGroupFormVisibleHistory() {
+  const grid = document.getElementById("groupFormHistoryGrid");
+  if (!grid) return;
+  grid.querySelectorAll(".history-edit-row").forEach((row) => {
+    const month = row.dataset.historyMonth;
+    if (!month) return;
+    groupFormHistoryData[month] = groupFormHistoryData[month] || {};
+    row.querySelectorAll("[data-history-field]").forEach((input) => {
+      groupFormHistoryData[month][input.dataset.historyField] = normalizeHistoryField(input.dataset.historyField, input.value).value;
+    });
+  });
+}
+
+function collectGroupFormHistoryPayloads() {
+  syncGroupFormVisibleHistory();
+  return Object.entries(groupFormHistoryData)
+    .sort(([monthA], [monthB]) => compareMonthKeys(monthA, monthB))
+    .map(([month, item]) => {
+      const payload = { mes: month };
+      const original = groupFormOriginalHistoryData[month] || {};
+      ["maior_lance", "menor_lance", "qtd_contemplacoes"].forEach((field) => {
+        if (originalHistoryComparable(field, item?.[field]) !== originalHistoryComparable(field, original?.[field])) {
+          payload[field] = item?.[field] ?? null;
+        }
+      });
+      if (
+        item?.maior_lance !== null
+        && item?.maior_lance !== undefined
+        && item?.menor_lance !== null
+        && item?.menor_lance !== undefined
+        && item.menor_lance > item.maior_lance
+      ) {
+        throw new Error(`No mes ${historyMonthLabel(month)}, o menor lance nao pode ser maior que o maior lance.`);
+      }
+      return payload;
+    })
     .filter(hasMonthlyHistoryMetrics);
 }
 
@@ -989,6 +1036,8 @@ function setGroupFormValues(group = {}) {
 }
 
 function setGroupFormHistoryValues(historico) {
+  groupFormHistoryData = JSON.parse(JSON.stringify(historico || {}));
+  groupFormOriginalHistoryData = JSON.parse(JSON.stringify(historico || {}));
   renderHistoryEditor("groupFormHistory", historico || {});
   setGroupFormHistoryState("");
 }
@@ -1067,7 +1116,7 @@ async function saveGroupForm() {
   const payload = collectGroupFormPayload();
   let historyPayloads = [];
   try {
-    historyPayloads = collectHistoryBatchPayloads("groupFormHistory");
+    historyPayloads = collectGroupFormHistoryPayloads();
   } catch (error) {
     setGroupFormHistoryState("error", error.message || "Revise os valores do historico.");
     return;
@@ -2982,6 +3031,11 @@ document.getElementById("pageSizeSelect").addEventListener("change", (event) => 
 });
 
 document.getElementById("exportGroupsCsvBtn").addEventListener("click", exportGroupsCsv);
+
+document.getElementById("groupFormHistoryYear").addEventListener("change", () => {
+  syncGroupFormVisibleHistory();
+  renderHistoryEditor("groupFormHistory", groupFormHistoryData);
+});
 
 const moneyInputIds = [
   "filterCreditoMinimo",
