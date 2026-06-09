@@ -112,7 +112,9 @@ const businessRulesFlow = [
       "Soma recursos proprios com FGTS apenas para exibir total disponivel do cliente. Exemplo: R$ 150.000 de lance proprio + R$ 100.000 de FGTS = R$ 250.000 exibidos como total disponivel.",
       "Soma renda titular e renda conjuge para renda total. Exemplo: titular R$ 8.000 + conjuge R$ 7.000 = renda total R$ 15.000.",
       "Calcula Conceito IA pelo prazo. Exemplo: 1 a 3 meses = Agressivo; 4 a 6 = Moderado; 7 a 12 = Conservador; 13 a 24 = Super Conservador; sem urgencia = Investidor.",
-      "Data de nascimento ausente gera alerta de idade nao validada, sem aprovar idade automaticamente. Exemplo: sem data do titular, o sistema mostra alerta para revisao humana.",
+      "Data de nascimento valida idade minima de 18 anos na adesao. Exemplo: titular com 17 anos reprova a compatibilidade de idade.",
+      "Quando a administradora tiver idade maxima cadastrada, o sistema calcula a idade do cliente na data de termino do grupo (coluna H do Google Sheets). Exemplo: nascido em 07/10/1978 e grupo terminando em 20/05/2060 = 81 anos no termino; com limite 80 anos, o grupo e excluido.",
+      "Se a data de nascimento estiver ausente, o sistema gera alerta de idade nao validada, sem aprovar idade automaticamente. Se a administradora nao tiver idade maxima cadastrada, a validacao de idade no termino nao bloqueia o grupo.",
     ],
   },
   {

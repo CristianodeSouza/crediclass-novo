@@ -107,15 +107,39 @@ def calculate_age(date_text: str) -> int | None:
     return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
 
 
-def group_age_validation(group: dict[str, Any], titular_age: int | None, spouse_age: int | None) -> tuple[bool, str]:
+def calculate_age_at(date_text: str, reference_date_text: str) -> int | None:
+    if not date_text or not reference_date_text:
+        return None
+    try:
+        born = date.fromisoformat(date_text)
+        reference_date = date.fromisoformat(reference_date_text)
+    except ValueError:
+        return None
+    return reference_date.year - born.year - ((reference_date.month, reference_date.day) < (born.month, born.day))
+
+
+def group_age_validation(group: dict[str, Any], payload: ViabilidadeRequest, titular_age: int | None, spouse_age: int | None) -> tuple[bool, str]:
     maximum_age = group.get("idade_maxima")
     informed_ages = [age for age in (titular_age, spouse_age) if age is not None]
     if not informed_ages:
         return False, "idade_nao_validada"
+    if any(age < 18 for age in informed_ages):
+        return False, "idade_minima_incompativel"
     if maximum_age is None:
         return True, "idade_nao_validada"
-    if any(age > int(maximum_age) for age in informed_ages):
-        return False, "idade_incompativel"
+    data_termino = str(group.get("data_termino") or "")
+    ages_at_end = [
+        age
+        for age in (
+            calculate_age_at(payload.data_nascimento, data_termino),
+            calculate_age_at(payload.data_nascimento_conjuge, data_termino),
+        )
+        if age is not None
+    ]
+    if not ages_at_end:
+        return True, "idade_termino_nao_validada"
+    if any(age > int(maximum_age) for age in ages_at_end):
+        return False, "idade_termino_incompativel"
     return True, ""
 
 
@@ -200,7 +224,7 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             + bounded_score(historico_score) * 10
         ) / 100
 
-        idade_compativel, idade_alerta = group_age_validation(group, titular_age, spouse_age)
+        idade_compativel, idade_alerta = group_age_validation(group, payload, titular_age, spouse_age)
         renda_compativel = parcela_estimada * 3 <= payload.renda_total
         parcela_compativel = parcela_estimada <= payload.parcela_desejada
         lance_compativel = historico_disponivel and lance_na_faixa_perfil and percentual_lance >= float(lance_referencia)

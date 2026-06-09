@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .auditoria import list_auditoria, record_auditoria
 from .administrator_feasibility import analyze_administradoras
-from .administrator_rules import normalize_admin_name
+from .administrator_rules import normalize_admin_name, rules_by_administradora
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
@@ -326,6 +326,11 @@ def viabilidade_analisar(payload: ViabilidadeRequest):
             and compatible_tipo_bem(payload.objetivo, str(item.get("tipo_bem") or ""), payload.tipo_bem)
         ]
         groups = list_grupos_detalhe_by_ids(candidate_ids) if candidate_ids else []
+        rules_map = rules_by_administradora(administrator_rules)
+        for group in groups:
+            rule = rules_map.get(normalize_admin_name(str(group.get("administradora") or "")))
+            if rule and rule.idade_maxima is not None and group.get("idade_maxima") is None:
+                group["idade_maxima"] = rule.idade_maxima
         result = analyze_viabilidade(payload, groups, modo_preliminar=modo_preliminar)
         result["total_grupos_analisados"] = len(summary_groups)
         result["total_administradoras_analisadas"] = len(administradoras_viabilidade)

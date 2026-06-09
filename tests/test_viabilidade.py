@@ -401,11 +401,54 @@ class ViabilidadeTest(unittest.TestCase):
     def test_group_age_limit_can_reject_scenario(self):
         result = analyze_viabilidade(
             make_payload(data_nascimento="1940-01-01", data_nascimento_conjuge=""),
-            [make_group(idade_maxima=70)],
+            [make_group(idade_maxima=70, data_termino="2030-01-01")],
         )
 
         self.assertFalse(result["cenario_viavel"])
         self.assertFalse(result["checklist"]["idade_compativel"])
+        self.assertEqual(result["melhores_grupos"], [])
+
+    def test_holder_must_be_at_least_18_at_membership(self):
+        result = analyze_viabilidade(
+            make_payload(data_nascimento="2010-01-01", data_nascimento_conjuge=""),
+            [make_group()],
+        )
+
+        self.assertFalse(result["cenario_viavel"])
+        self.assertFalse(result["checklist"]["idade_compativel"])
+        self.assertEqual(result["melhores_grupos"], [])
+
+    def test_group_end_date_age_limit_rejects_group_when_rule_exists(self):
+        result = analyze_viabilidade(
+            make_payload(data_nascimento="1978-10-07", data_nascimento_conjuge=""),
+            [make_group(idade_maxima=80, data_termino="2060-05-20")],
+        )
+
+        self.assertFalse(result["cenario_viavel"])
+        self.assertFalse(result["checklist"]["idade_compativel"])
+        self.assertEqual(result["melhores_grupos"], [])
+
+    def test_group_end_date_age_limit_is_ignored_when_admin_rule_is_empty(self):
+        result = analyze_viabilidade(
+            make_payload(data_nascimento="1978-10-07", data_nascimento_conjuge=""),
+            [make_group(idade_maxima=None, data_termino="2060-05-20")],
+        )
+
+        self.assertTrue(result["cenario_viavel"])
+        self.assertTrue(result["checklist"]["idade_compativel"])
+        self.assertGreater(len(result["melhores_grupos"]), 0)
+
+    def test_endpoint_applies_administrator_age_limit_to_group_end_date(self):
+        group = make_group(data_termino="2060-05-20")
+        group.pop("idade_maxima", None)
+        with (
+            patch("backend.main.list_grupos", return_value=[group]),
+            patch("backend.main.get_configuracoes", return_value={"administradoras_regras": [make_admin_rule(administradora="Itau", idade_maxima=80)]}),
+            patch("backend.main.list_grupos_detalhe_by_ids", return_value=[group]),
+        ):
+            result = viabilidade_analisar(make_payload(data_nascimento="1978-10-07", data_nascimento_conjuge=""))
+
+        self.assertFalse(result["cenario_viavel"])
         self.assertEqual(result["melhores_grupos"], [])
 
     def test_calculates_installment_and_contract_credit(self):
