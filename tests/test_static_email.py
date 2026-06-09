@@ -18,7 +18,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260609-02", index_html)
-        self.assertIn("/static/js/app.js?v=20260609-11", index_html)
+        self.assertIn("/static/js/app.js?v=20260609-12", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -244,7 +244,9 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('apiPut(`/grupos/defasagem/${encodeURIComponent(grupoId)}`', app_js)
         self.assertIn("function renderDefasagemReport(report)", app_js)
         self.assertIn("data-defasagem-check", app_js)
+        self.assertIn("defasagem-month-card", app_js)
         self.assertIn(".defasagem-summary-grid", style_css)
+        self.assertIn(".defasagem-month-chip", style_css)
         self.assertIn(".defasagem-status.status-critical", style_css)
 
     def test_formulario_grupo_nao_exige_campos_obrigatorios(self):

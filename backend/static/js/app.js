@@ -747,9 +747,24 @@ function defasagemStatusClass(status) {
 }
 
 function formatPendingMonths(months = []) {
-  if (!months.length) return "Sem pendencia";
-  if (months.length <= 6) return months.map(escapeHtml).join(", ");
-  return `${months.slice(0, 6).map(escapeHtml).join(", ")} +${months.length - 6}`;
+  if (!months.length) {
+    return '<span class="defasagem-months-ok">Sem pendencia</span>';
+  }
+  const first = months[0];
+  const last = months[months.length - 1];
+  const visible = months.slice(0, 4);
+  const hiddenCount = months.length - visible.length;
+  const chips = visible.map((month) => `<span class="defasagem-month-chip">${escapeHtml(month)}</span>`).join("");
+  const more = hiddenCount > 0
+    ? `<span class="defasagem-month-more">+ ${hiddenCount} mes(es)</span>`
+    : "";
+  return `
+    <div class="defasagem-month-card" title="${escapeHtml(months.join(", "))}">
+      <strong>${months.length} mes(es) pendente(s)</strong>
+      <small>${escapeHtml(first)} a ${escapeHtml(last)}</small>
+      <div class="defasagem-month-chip-row">${chips}${more}</div>
+    </div>
+  `;
 }
 
 function getFilteredDefasagemItems() {
