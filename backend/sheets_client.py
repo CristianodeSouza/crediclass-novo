@@ -22,6 +22,7 @@ METADATA_CACHE_TTL_SECONDS = 900
 MAX_CREDIT_VALUE = 100_000_000
 _grupos_cache: dict[str, Any] = {"expires_at": 0.0, "items": None}
 _grupos_detalhe_cache: dict[str, Any] = {"expires_at": 0.0, "items": None}
+_grupos_defasagem_cache: dict[str, Any] = {"expires_at": 0.0, "items": None}
 _sheet_rows_cache: dict[str, Any] = {"expires_at": 0.0, "rows": None}
 _sheet_metadata_cache: dict[str, Any] = {"expires_at": 0.0, "headers": None}
 _group_row_index: dict[str, int] = {}
@@ -190,6 +191,8 @@ def clear_rows_cache() -> None:
         _grupos_cache["items"] = None
         _grupos_detalhe_cache["expires_at"] = 0.0
         _grupos_detalhe_cache["items"] = None
+        _grupos_defasagem_cache["expires_at"] = 0.0
+        _grupos_defasagem_cache["items"] = None
         _sheet_rows_cache["expires_at"] = 0.0
         _sheet_rows_cache["rows"] = None
         _sheet_metadata_cache["expires_at"] = 0.0
@@ -785,6 +788,75 @@ def list_grupos_detalhe() -> list[dict[str, Any]]:
             _grupos_detalhe_cache["items"] = items
             _grupos_detalhe_cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
         return copy.deepcopy(items)
+
+
+def read_defasagem_rows() -> list[dict[str, Any]]:
+    headers = read_sheet_headers()
+    if not headers:
+        return []
+
+    selected_headers: list[tuple[str, int]] = []
+    required_fields = ["administradora", "grupo", "tipo_bem", "status"]
+    header_positions = headers_index(headers)
+    for field in required_fields:
+        header = find_header(headers, field)
+        if header is not None:
+            selected_headers.append((header, header_positions[header]))
+
+    for index, header in enumerate(headers):
+        if history_key_from_header(header):
+            selected_headers.append((header, index))
+
+    seen: set[str] = set()
+    unique_headers: list[tuple[str, int]] = []
+    for header, index in selected_headers:
+        if header in seen:
+            continue
+        seen.add(header)
+        unique_headers.append((header, index))
+
+    settings = get_settings()
+    ranges = [
+        f"'{settings.google_sheet_name}'!{column_letter(index)}2:{column_letter(index)}"
+        for _, index in unique_headers
+    ]
+    result = get_service().spreadsheets().values().batchGet(
+        spreadsheetId=settings.google_sheets_id,
+        ranges=ranges,
+    ).execute()
+    columns = [item.get("values", []) for item in result.get("valueRanges", [])]
+    row_count = max((len(column) for column in columns), default=0)
+    rows: list[dict[str, Any]] = []
+
+    for offset in range(row_count):
+        row: dict[str, Any] = {}
+        for (header, _), column in zip(unique_headers, columns):
+            cell = column[offset] if offset < len(column) else []
+            row[header] = cell[0] if cell else ""
+        if any(str(value).strip() for value in row.values()):
+            rows.append(row)
+    return rows
+
+
+def list_grupos_defasagem() -> list[dict[str, Any]]:
+    now = time.time()
+    with _cache_lock:
+        items = _grupos_defasagem_cache["items"]
+        if items is not None and now < _grupos_defasagem_cache["expires_at"]:
+            logger.info("Usando cache de defasagem de grupos")
+            return copy.deepcopy(items)
+
+    rows = read_defasagem_rows()
+    items = []
+    for row in rows:
+        grupo = row_to_grupo(row)
+        grupo["historico"] = build_historico(row)
+        items.append(grupo)
+
+    with _cache_lock:
+        _grupos_defasagem_cache["items"] = items
+        _grupos_defasagem_cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
+    return copy.deepcopy(items)
 
 
 def list_grupos_detalhe_by_ids(grupo_ids: list[str]) -> list[dict[str, Any]]:

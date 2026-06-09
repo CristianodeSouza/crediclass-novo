@@ -19,7 +19,7 @@ from .configuracoes import get_configuracoes, update_configuracoes
 from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
-from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote
+from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_grupo, list_grupos, list_grupos_defasagem, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote
 from .viabilidade import analyze_viabilidade, compatible_tipo_bem, normalize_text
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -204,7 +204,7 @@ def grupos_exportar_planilha():
 def grupos_defasagem():
     logger.info("GET /api/grupos/defasagem")
     try:
-        groups = list_grupos_detalhe()
+        groups = list_grupos_defasagem()
         report = build_defasagem_report(groups)
     except Exception as error:
         logger.exception("Erro ao calcular defasagem de grupos")
