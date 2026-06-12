@@ -18,7 +18,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260609-02", index_html)
-        self.assertIn("/static/js/app.js?v=20260609-12", index_html)
+        self.assertIn("/static/js/app.js?v=20260612-01", index_html)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -358,6 +358,15 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function renderDetailsAudit(group)", app_js)
         self.assertIn("renderDetailsAudit(group)", app_js)
         self.assertIn(".audit-list", style_css)
+
+    def test_modal_ver_grupo_nao_exibe_botao_editar(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        details_modal = index_html.split('id="groupDetailsModal"', 1)[1].split('id="defasagemModal"', 1)[0]
+        self.assertNotIn('id="detailsEditBtn"', details_modal)
+        self.assertNotIn("detailsEditBtn", app_js)
+        self.assertIn('data-map-action="editar"', app_js)
 
     def test_acao_principal_salva_estudo_financeiro(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")

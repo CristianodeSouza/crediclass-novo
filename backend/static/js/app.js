@@ -3422,10 +3422,6 @@ document.getElementById("groupsTableBody").addEventListener("click", (event) => 
   }
 });
 
-document.getElementById("detailsEditBtn").addEventListener("click", () => {
-  if (currentDetailsGroupId) openGroupForm("edit", currentDetailsGroupId);
-});
-
 document.getElementById("groupCrudForm").addEventListener("submit", (event) => {
   event.preventDefault();
   saveGroupForm().catch((error) => {
