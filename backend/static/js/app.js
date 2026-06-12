@@ -382,6 +382,15 @@ function formatMoneyInputValue(value) {
   }).format(number);
 }
 
+function formatDecimalInputValue(value, minimumFractionDigits = 2, maximumFractionDigits = 2) {
+  const number = Number(parseNumberInput(value));
+  if (!Number.isFinite(number)) return "";
+  return new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits,
+    maximumFractionDigits,
+  }).format(number);
+}
+
 function formatMoneyInputById(id) {
   const input = document.getElementById(id);
   if (!input || !String(input.value || "").trim()) return;
@@ -402,8 +411,8 @@ function formatPercent(value) {
 function percentToInputValue(value) {
   if (value === null || value === undefined) return "";
   return new Intl.NumberFormat("pt-BR", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
     useGrouping: false,
   }).format(Number(value) * 100);
 }
@@ -713,8 +722,6 @@ function renderGroupsTable(items) {
           <div class="row-actions">
             <button class="btn btn-sm btn-outline-primary" type="button" data-map-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver</button>
             <button class="btn btn-sm btn-outline-secondary" type="button" data-map-action="editar" data-group-id="${escapeHtml(item.grupo_id)}">Editar</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-map-action="duplicar" data-group-id="${escapeHtml(item.grupo_id)}">Duplicar</button>
-            <button class="btn btn-sm btn-outline-danger" type="button" data-map-action="excluir" data-group-id="${escapeHtml(item.grupo_id)}">Excluir</button>
           </div>
         </td>
       </tr>
@@ -1277,6 +1284,25 @@ function isHistorySheetHeader(header) {
   return hasMonth && hasMetric;
 }
 
+function sheetFieldMaskType(header) {
+  const normalized = normalizeText(header);
+  if (/(%|percent|taxa|media lance|media contemp|lance quitacao|super agressivo|agressivo|moderado|conservador|investidor)/.test(normalized)) {
+    return "percent";
+  }
+  if (/(credito|parcela|valor|preco|saldo|r\$|\(rs\)|limite|venda|categoria)/.test(normalized)) {
+    return "money";
+  }
+  return "";
+}
+
+function formatSheetFieldInputValue(header, value) {
+  if (value === null || value === undefined || String(value).trim() === "") return "";
+  const mask = sheetFieldMaskType(header);
+  if (mask === "percent") return formatDecimalInputValue(value, 2, 2) || String(value);
+  if (mask === "money") return formatMoneyInputValue(value) || String(value);
+  return String(value);
+}
+
 function setGroupFormIdentifierLock(locked) {
   ["groupFormAdministradora", "groupFormGrupo"].forEach((id) => {
     const input = document.getElementById(id);
@@ -1304,7 +1330,7 @@ function renderGroupFormSheetFields(group = {}) {
   grid.innerHTML = fields.map(([header, value]) => `
     <label title="${escapeHtml(header)}">
       <span>${escapeHtml(header)}</span>
-      <input class="form-control" data-sheet-field-header="${escapeHtml(header)}" value="${escapeHtml(value)}">
+      <input class="form-control" data-sheet-field-header="${escapeHtml(header)}" data-sheet-field-mask="${escapeHtml(sheetFieldMaskType(header))}" value="${escapeHtml(formatSheetFieldInputValue(header, value))}">
     </label>
   `).join("");
 }
@@ -3436,6 +3462,19 @@ const moneyInputIds = [
 moneyInputIds.forEach((id) => {
   document.getElementById(id)?.addEventListener("blur", () => formatMoneyInputById(id));
 });
+
+document.getElementById("groupFormModal").addEventListener("blur", (event) => {
+  const sheetInput = event.target.closest("[data-sheet-field-header]");
+  if (sheetInput && String(sheetInput.value || "").trim()) {
+    if (sheetInput.dataset.sheetFieldMask) {
+      sheetInput.value = formatSheetFieldInputValue(sheetInput.dataset.sheetFieldHeader, sheetInput.value);
+    }
+  }
+  const historyInput = event.target.closest("[data-history-field]");
+  if (historyInput && historyInput.dataset.historyField !== "qtd_contemplacoes" && String(historyInput.value || "").trim()) {
+    historyInput.value = formatDecimalInputValue(historyInput.value, 2, 2);
+  }
+}, true);
 
 [
   "clientProfileCredito",

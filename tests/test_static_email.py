@@ -18,7 +18,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260612-01", index_html)
-        self.assertIn("/static/js/app.js?v=20260612-02", index_html)
+        self.assertIn("/static/js/app.js?v=20260612-04", index_html)
 
     def test_modal_edicao_grupo_exibe_campos_da_planilha(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -28,6 +28,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('id="groupFormSheetFieldsGrid"', index_html)
         self.assertIn("function renderGroupFormSheetFields", app_js)
         self.assertIn("function collectGroupFormSheetFieldsPayload", app_js)
+        self.assertIn("function sheetFieldMaskType", app_js)
+        self.assertIn("formatSheetFieldInputValue(header, value)", app_js)
         self.assertIn("campos_planilha: collectGroupFormSheetFieldsPayload()", app_js)
         self.assertIn('if (field === "administradora" || field === "grupo"', app_js)
 
@@ -226,7 +228,8 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
         self.assertIn("function percentToInputValue(value)", app_js)
-        self.assertIn('maximumFractionDigits: 3', app_js)
+        self.assertIn('minimumFractionDigits: 2', app_js)
+        self.assertIn('maximumFractionDigits: 2', app_js)
         self.assertIn("return percentToInputValue(value);", app_js)
 
     def test_mapa_grupos_possui_recarregamento_manual(self):
@@ -378,6 +381,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn('id="detailsEditBtn"', details_modal)
         self.assertNotIn("detailsEditBtn", app_js)
         self.assertIn('data-map-action="editar"', app_js)
+        self.assertNotIn('data-map-action="duplicar"', app_js)
+        self.assertNotIn('data-map-action="excluir"', app_js)
 
     def test_acao_principal_salva_estudo_financeiro(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
