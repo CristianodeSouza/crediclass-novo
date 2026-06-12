@@ -16,6 +16,10 @@ class GrupoResumo(BaseModel):
     primeira_assembleia: str = ""
     ultima_assembleia: str = ""
     status: str = "Ativo"
+    lance_super_conservador: float | None = None
+    lance_conservador: float | None = None
+    lance_moderado: float | None = None
+    lance_agressivo: float | None = None
 
 
 class HistoricoMensal(BaseModel):

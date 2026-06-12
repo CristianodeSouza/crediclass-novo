@@ -182,6 +182,32 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(result["taxa_adm"], 0.2)
         self.assertEqual(result["prazo_total"], 222)
 
+    def test_row_to_grupo_expoe_lances_de_referencia_do_historico(self):
+        row = {
+            "ADM": "Itau Consorcios",
+            "Grupo": "128",
+            "Tipo de Bem": "Imovel",
+            "JAN-26 Menor Lance": "48%",
+            "JAN-26 Qtd Contemplacoes": "3",
+            "FEV-26 Menor Lance": "41%",
+            "FEV-26 Qtd Contemplacoes": "2",
+            "MAR-26 Menor Lance": "43%",
+            "MAR-26 Qtd Contemplacoes": "1",
+            "ABR-26 Menor Lance": "50%",
+            "ABR-26 Qtd Contemplacoes": "2",
+            "MAI-26 Menor Lance": "52%",
+            "MAI-26 Qtd Contemplacoes": "1",
+            "JUN-26 Menor Lance": "",
+            "JUN-26 Qtd Contemplacoes": "",
+        }
+
+        result = row_to_grupo(row)
+
+        self.assertEqual(result["lance_agressivo"], 0.5225)
+        self.assertEqual(result["lance_moderado"], 0.4325)
+        self.assertEqual(result["lance_conservador"], 0.4325)
+        self.assertEqual(result["lance_super_conservador"], 0.4325)
+
     def test_row_to_grupo_accepts_sheet_header_variations(self):
         row = {
             "Consorciadora": "Porto Seguro",

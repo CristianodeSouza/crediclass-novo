@@ -645,21 +645,39 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .group-table {
-  min-width: 1180px;
+  min-width: 1380px;
   margin-bottom: 0;
 }
 
 .group-table th {
   background: var(--table-head);
   color: var(--text);
-  font-size: 0.76rem;
+  font-size: 0.72rem;
+  padding-left: 8px;
+  padding-right: 8px;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .group-table td {
-  font-size: 0.88rem;
+  font-size: 0.82rem;
+  padding-left: 8px;
+  padding-right: 8px;
   white-space: nowrap;
+}
+
+.group-table .lance-profile-header,
+.group-table .lance-profile-cell {
+  text-align: center;
+}
+
+.group-table .lance-profile-header {
+  min-width: 96px;
+}
+
+.group-table .lance-profile-cell {
+  color: var(--primary);
+  font-weight: 800;
 }
 
 .status-badge {

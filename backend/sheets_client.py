@@ -234,6 +234,12 @@ def read_summary_rows(force_reload: bool = False) -> list[dict[str, Any]]:
             continue
         index = header_positions[header]
         selected.append((field, header, index))
+    selected_indexes = {index for _, _, index in selected}
+    for header, index in header_positions.items():
+        if index in selected_indexes or not history_key_from_header(header):
+            continue
+        selected.append(("historico", header, index))
+        selected_indexes.add(index)
 
     validate_required_headers(headers, ["administradora", "grupo", "tipo_bem"])
     settings = get_settings()
@@ -714,6 +720,9 @@ def build_administradora_id(row: dict[str, Any]) -> str:
 
 
 def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
+    from .lance_reference import calculate_lance_references
+
+    lance_references = calculate_lance_references(build_historico(row))
     return {
         "grupo_id": build_grupo_id(row),
         "administradora_id": build_administradora_id(row),
@@ -727,6 +736,10 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "primeira_assembleia": clean_text(get_field(row, "primeira_assembleia")),
         "ultima_assembleia": clean_text(get_field(row, "ultima_assembleia")),
         "status": clean_text(get_field(row, "status") or "Ativo"),
+        "lance_super_conservador": lance_references["lance_super_conservador"],
+        "lance_conservador": lance_references["lance_conservador"],
+        "lance_moderado": lance_references["lance_moderado"],
+        "lance_agressivo": lance_references["lance_agressivo"],
     }
 
 

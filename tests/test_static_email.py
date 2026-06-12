@@ -17,8 +17,8 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260612-02", index_html)
-        self.assertIn("/static/js/app.js?v=20260612-05", index_html)
+        self.assertIn("/static/css/style.css?v=20260612-03", index_html)
+        self.assertIn("/static/js/app.js?v=20260612-06", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -35,6 +35,17 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn("summaryTaxa", app_js)
         self.assertNotIn("summaryUpdated", app_js)
         self.assertIn(".map-summary-strip", style_css)
+
+    def test_mapa_grupos_exibe_colunas_de_lance_por_perfil(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+
+        for header in ["Agressivo", "Moderado", "Conservador", "Super Conservador"]:
+            self.assertIn(f'<th class="lance-profile-header">{header}</th>', index_html)
+        for field in ["lance_agressivo", "lance_moderado", "lance_conservador", "lance_super_conservador"]:
+            self.assertIn(f"formatPercent(item.{field})", app_js)
+        self.assertIn(".lance-profile-cell", style_css)
 
     def test_modal_edicao_grupo_exibe_campos_da_planilha(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -544,7 +555,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260612-02", index_html)
+        self.assertIn("/static/css/style.css?v=20260612-03", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

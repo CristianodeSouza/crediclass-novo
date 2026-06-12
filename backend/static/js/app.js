@@ -706,6 +706,10 @@ function renderGroupsTable(items) {
         <td>${formatMoney(item.credito_minimo)}</td>
         <td>${formatMoney(item.credito_maximo)}</td>
         <td>${formatPercent(item.taxa_adm)}</td>
+        <td class="lance-profile-cell">${formatPercent(item.lance_agressivo)}</td>
+        <td class="lance-profile-cell">${formatPercent(item.lance_moderado)}</td>
+        <td class="lance-profile-cell">${formatPercent(item.lance_conservador)}</td>
+        <td class="lance-profile-cell">${formatPercent(item.lance_super_conservador)}</td>
         <td>${item.prazo_total ?? "-"}</td>
         <td>${escapeHtml(item.primeira_assembleia || "-")}</td>
         <td>${escapeHtml(item.ultima_assembleia || "-")}</td>
