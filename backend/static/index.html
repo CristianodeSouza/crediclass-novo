@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="/static/favicon.svg?v=1" rel="icon" type="image/svg+xml">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260609-02" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260612-01" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -1117,6 +1117,15 @@
                 <label><span>Prazo Total</span><input id="groupFormPrazoTotal" class="form-control" inputmode="numeric"></label>
                 <label><span>Status</span><select id="groupFormStatus" class="form-select"><option value="Ativo">Ativo</option><option value="Excluido">Excluido</option></select></label>
               </div>
+              <div class="group-sheet-fields-section">
+                <div class="table-toolbar">
+                  <div>
+                    <h2>Demais campos da planilha</h2>
+                    <p>Campos da linha oficial do Google Sheets. Administradora e Grupo ficam bloqueados.</p>
+                  </div>
+                </div>
+                <div id="groupFormSheetFieldsGrid" class="group-sheet-fields-grid"></div>
+              </div>
               <div class="history-update-form group-history-form">
                 <div class="table-toolbar">
                   <div>
@@ -1231,6 +1240,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260612-01"></script>
+    <script src="/static/js/app.js?v=20260612-02"></script>
   </body>
 </html>

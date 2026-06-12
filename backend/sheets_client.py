@@ -338,6 +338,14 @@ def headers_index(headers: list[str]) -> dict[str, int]:
     return {str(header): index for index, header in enumerate(headers)}
 
 
+def field_name_for_header(header: str) -> str | None:
+    normalized = normalize_header(header)
+    for field, aliases in FIELD_ALIASES.items():
+        if normalized in {normalize_header(alias) for alias in aliases}:
+            return field
+    return None
+
+
 def column_letter(index: int) -> str:
     number = index + 1
     letters = ""
@@ -383,6 +391,17 @@ def payload_to_row_values(headers: list[str], payload: dict[str, Any], existing:
         if header is None:
             continue
         values[headers_index(headers)[header]] = format_sheet_value(field, value)
+
+    raw_fields = payload.get("campos_planilha")
+    if isinstance(raw_fields, dict):
+        index_by_header = headers_index(headers)
+        for header, value in raw_fields.items():
+            header_name = str(header).strip()
+            if not header_name or header_name not in index_by_header:
+                continue
+            if field_name_for_header(header_name) in {"administradora", "grupo"}:
+                continue
+            values[index_by_header[header_name]] = "" if value is None else str(value)
     return values
 
 
@@ -745,6 +764,7 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
         "regras_especiais": str(get_optional_field(row, "regras_especiais")),
         "cadastrado_por": str(get_optional_field(row, "cadastrado_por")),
         "ultima_atualizacao": str(get_optional_field(row, "ultima_atualizacao")),
+        "campos_planilha": {str(header): "" if value is None else str(value) for header, value in row.items()},
         "historico": historico,
         "auditoria": [],
     })

@@ -208,6 +208,7 @@ let groupFormMode = "create";
 let groupFormId = null;
 let groupFormHistoryData = {};
 let groupFormOriginalHistoryData = {};
+let groupFormSheetFields = {};
 let currentDetailsGroupId = null;
 let studyDetailsModal = null;
 let currentStudyStrategies = [];
@@ -1208,6 +1209,7 @@ function ensureGroupFormModal() {
 }
 
 function setGroupFormValues(group = {}) {
+  setGroupFormIdentifierLock(groupFormMode === "edit");
   document.getElementById("groupFormAdministradora").value = group.administradora || "";
   document.getElementById("groupFormGrupo").value = group.grupo || "";
   document.getElementById("groupFormTipoBem").value = group.tipo_bem || "";
@@ -1216,6 +1218,7 @@ function setGroupFormValues(group = {}) {
   document.getElementById("groupFormTaxaAdm").value = percentToInputValue(group.taxa_adm);
   document.getElementById("groupFormPrazoTotal").value = group.prazo_total ?? "";
   document.getElementById("groupFormStatus").value = group.status || "Ativo";
+  renderGroupFormSheetFields(group);
   setGroupFormHistoryValues(group.historico || {});
 }
 
@@ -1237,6 +1240,92 @@ function findLoadedGroupSummary(groupId) {
   return mapState.items.find((item) => String(item.grupo_id).toUpperCase() === String(groupId).toUpperCase()) || null;
 }
 
+const groupFormFieldAliases = {
+  administradora: ["adm", "administradora", "administradoras", "admin", "consorciadora"],
+  grupo: ["grupo", "numero grupo", "numero do grupo", "codigo grupo", "codigo do grupo"],
+  tipo_bem: ["tipo de bem", "tipo bem", "bem", "segmento"],
+  credito_minimo: ["credito minimo", "menor credito", "credito min", "carta minima", "valor minimo"],
+  credito_maximo: ["credito maximo", "maior credito", "credito max", "carta maxima", "valor maximo"],
+  taxa_adm: ["taxa administracao", "taxa adm", "taxa administrativa", "tx adm"],
+  prazo_total: ["prazo total", "prazo do grupo", "prazo grupo"],
+  status: ["status"],
+};
+
+const groupFormFixedInputs = {
+  tipo_bem: "groupFormTipoBem",
+  credito_minimo: "groupFormCreditoMinimo",
+  credito_maximo: "groupFormCreditoMaximo",
+  taxa_adm: "groupFormTaxaAdm",
+  prazo_total: "groupFormPrazoTotal",
+  status: "groupFormStatus",
+};
+
+function sheetFieldForHeader(header) {
+  const normalized = normalizeText(header).replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
+  for (const [field, aliases] of Object.entries(groupFormFieldAliases)) {
+    if (aliases.some((alias) => normalizeText(alias).replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim() === normalized)) {
+      return field;
+    }
+  }
+  return null;
+}
+
+function isHistorySheetHeader(header) {
+  const normalized = normalizeText(header);
+  const hasMonth = /\b(jan|fev|feb|mar|abr|apr|mai|may|jun|jul|ago|aug|set|sep|out|oct|nov|dez|dec)[\s\-\/]*\d{2,4}\b/.test(normalized);
+  const hasMetric = /(maior|menor|contempla|contemplados|qtd|quantidade)/.test(normalized);
+  return hasMonth && hasMetric;
+}
+
+function setGroupFormIdentifierLock(locked) {
+  ["groupFormAdministradora", "groupFormGrupo"].forEach((id) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.readOnly = locked;
+    input.setAttribute("aria-readonly", locked ? "true" : "false");
+  });
+}
+
+function renderGroupFormSheetFields(group = {}) {
+  groupFormSheetFields = group.campos_planilha || {};
+  const grid = document.getElementById("groupFormSheetFieldsGrid");
+  if (!grid) return;
+
+  const fields = Object.entries(groupFormSheetFields).filter(([header]) => {
+    const mapped = sheetFieldForHeader(header);
+    return !mapped && !isHistorySheetHeader(header);
+  });
+
+  if (!fields.length) {
+    grid.innerHTML = '<div class="group-sheet-fields-empty">Nenhum campo adicional da planilha foi carregado para esta linha.</div>';
+    return;
+  }
+
+  grid.innerHTML = fields.map(([header, value]) => `
+    <label title="${escapeHtml(header)}">
+      <span>${escapeHtml(header)}</span>
+      <input class="form-control" data-sheet-field-header="${escapeHtml(header)}" value="${escapeHtml(value)}">
+    </label>
+  `).join("");
+}
+
+function collectGroupFormSheetFieldsPayload() {
+  const payload = {};
+  Object.keys(groupFormSheetFields || {}).forEach((header) => {
+    const field = sheetFieldForHeader(header);
+    if (field === "administradora" || field === "grupo" || isHistorySheetHeader(header)) return;
+    const fixedInputId = groupFormFixedInputs[field];
+    if (fixedInputId) {
+      const input = document.getElementById(fixedInputId);
+      payload[header] = input ? input.value : "";
+    }
+  });
+  document.querySelectorAll("[data-sheet-field-header]").forEach((input) => {
+    payload[input.dataset.sheetFieldHeader] = input.value;
+  });
+  return payload;
+}
+
 function collectGroupFormPayload() {
   const taxa = optionalNumber(document.getElementById("groupFormTaxaAdm").value);
   return {
@@ -1248,6 +1337,7 @@ function collectGroupFormPayload() {
     taxa_adm: taxa !== null && taxa > 1 ? taxa / 100 : taxa,
     prazo_total: optionalNumber(document.getElementById("groupFormPrazoTotal").value),
     status: document.getElementById("groupFormStatus").value,
+    campos_planilha: collectGroupFormSheetFieldsPayload(),
   };
 }
 

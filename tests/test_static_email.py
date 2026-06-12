@@ -17,8 +17,19 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260609-02", index_html)
-        self.assertIn("/static/js/app.js?v=20260612-01", index_html)
+        self.assertIn("/static/css/style.css?v=20260612-01", index_html)
+        self.assertIn("/static/js/app.js?v=20260612-02", index_html)
+
+    def test_modal_edicao_grupo_exibe_campos_da_planilha(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("Demais campos da planilha", index_html)
+        self.assertIn('id="groupFormSheetFieldsGrid"', index_html)
+        self.assertIn("function renderGroupFormSheetFields", app_js)
+        self.assertIn("function collectGroupFormSheetFieldsPayload", app_js)
+        self.assertIn("campos_planilha: collectGroupFormSheetFieldsPayload()", app_js)
+        self.assertIn('if (field === "administradora" || field === "grupo"', app_js)
 
     def test_dependencias_visuais_sao_servidas_localmente(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -512,7 +523,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260609-02", index_html)
+        self.assertIn("/static/css/style.css?v=20260612-01", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

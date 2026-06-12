@@ -69,6 +69,7 @@ class GrupoDetalhe(GrupoResumo):
     regras_especiais: str = ""
     cadastrado_por: str = ""
     ultima_atualizacao: str = ""
+    campos_planilha: dict[str, Any] = Field(default_factory=dict)
     historico: dict[str, HistoricoMensal] = Field(default_factory=dict)
     auditoria: list[dict[str, Any]] = Field(default_factory=list)
 
@@ -103,6 +104,7 @@ class GrupoUpdateRequest(BaseModel):
     taxa_adm: float | None = Field(default=None, ge=0)
     prazo_total: int | None = Field(default=None, ge=0)
     status: str | None = None
+    campos_planilha: dict[str, Any] | None = None
 
 
 class SuccessResponse(BaseModel):

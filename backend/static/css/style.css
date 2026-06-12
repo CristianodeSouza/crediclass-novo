@@ -1175,6 +1175,55 @@ body[data-theme="escuro"] .btn-outline-secondary {
   min-height: 38px;
 }
 
+.group-sheet-fields-section {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.group-sheet-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 10px;
+  max-height: min(320px, 34vh);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.group-sheet-fields-grid label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  margin: 0;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.group-sheet-fields-grid label span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.group-sheet-fields-grid .form-control[readonly],
+.viability-form .form-control[readonly] {
+  background: #eef3fa;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.group-sheet-fields-empty {
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .history-edit-grid {
   display: grid;
   max-height: min(360px, 38vh);
@@ -1812,6 +1861,18 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .viability-table th,
 .viability-table td {
   padding: 0.58rem 0.42rem;
+}
+
+@media (max-width: 980px) {
+  .group-sheet-fields-grid {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .group-sheet-fields-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .audit-status {

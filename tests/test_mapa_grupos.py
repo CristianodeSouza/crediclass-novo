@@ -528,6 +528,57 @@ class MapaGruposTest(unittest.TestCase):
         self.assertTrue(updated["success"])
         self.assertEqual(deleted["status"], "Excluido")
 
+    def test_update_grupo_accepts_sheet_fields_and_locks_identifiers(self):
+        headers = ["ADM", "Grupo", "Tipo de Bem", "Data Termino", "Observacoes", "Credito Maximo"]
+        values = [headers, ["ITAU", "128", "Imovel", "5/20/2030", "Antiga", "247868,04"]]
+
+        class ExecuteMock:
+            def execute(self):
+                return {}
+
+        class ValuesMock:
+            def __init__(self):
+                self.update_kwargs = None
+
+            def update(self, **kwargs):
+                self.update_kwargs = kwargs
+                return ExecuteMock()
+
+        class SpreadsheetsMock:
+            def __init__(self):
+                self.values_mock = ValuesMock()
+
+            def values(self):
+                return self.values_mock
+
+        class ServiceMock:
+            def __init__(self):
+                self.spreadsheets_mock = SpreadsheetsMock()
+
+            def spreadsheets(self):
+                return self.spreadsheets_mock
+
+        service = ServiceMock()
+        payload = {
+            "campos_planilha": {
+                "ADM": "CAIXA",
+                "Grupo": "999",
+                "Data Termino": "6/20/2031",
+                "Observacoes": "",
+                "Credito Maximo": "",
+            }
+        }
+        with patch("backend.sheets_client.read_sheet_values", return_value=values), patch("backend.sheets_client.get_service", return_value=service):
+            result = update_grupo("128", payload)
+
+        updated_row = service.spreadsheets_mock.values_mock.update_kwargs["body"]["values"][0]
+        self.assertTrue(result["success"])
+        self.assertEqual(updated_row[0], "ITAU")
+        self.assertEqual(updated_row[1], "128")
+        self.assertEqual(updated_row[3], "6/20/2031")
+        self.assertEqual(updated_row[4], "")
+        self.assertEqual(updated_row[5], "")
+
     def test_update_historico_mensal_uses_existing_month_headers(self):
         headers = ["ADM", "Grupo", "Tipo de Bem", "JAN-26 Maior Lance", "JAN-26 Menor Lance", "JAN-26 Qtd"]
         values = [headers, ["Itau", "128", "Imovel", "70", "20", "5"]]
