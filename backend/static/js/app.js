@@ -697,7 +697,6 @@ function renderSummary(items, total, totalAdministradoras = null) {
 function renderGroupsTable(items) {
   const tbody = document.getElementById("groupsTableBody");
   tbody.innerHTML = items.map((item) => {
-    const inactive = String(item.status || "").toLowerCase() === "excluido";
     return `
       <tr>
         <td>${escapeHtml(item.grupo_id)}</td>
@@ -712,8 +711,6 @@ function renderGroupsTable(items) {
         <td class="lance-profile-cell">${formatPercent(item.lance_super_conservador)}</td>
         <td>${item.prazo_total ?? "-"}</td>
         <td>${escapeHtml(item.primeira_assembleia || "-")}</td>
-        <td>${escapeHtml(item.ultima_assembleia || "-")}</td>
-        <td><span class="status-badge ${inactive ? "inactive" : ""}">${escapeHtml(item.status)}</span></td>
         <td>
           <div class="row-actions">
             <button class="btn btn-sm btn-outline-primary" type="button" data-map-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver</button>
