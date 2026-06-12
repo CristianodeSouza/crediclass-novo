@@ -6,7 +6,7 @@
     <title>Crediclass Dashboard V3</title>
     <link href="/static/favicon.svg?v=1" rel="icon" type="image/svg+xml">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260612-01" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260612-02" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -100,31 +100,16 @@
         <section id="toastRegion" class="toast-region" aria-live="polite"></section>
 
         <section id="screen-mapa" class="screen-panel active">
-          <div class="summary-grid" aria-label="Resumo dos grupos">
-            <article class="summary-card">
+          <div class="map-summary-strip" aria-label="Resumo dos grupos carregados">
+            <article class="map-summary-item">
               <span class="summary-label">Total de Grupos</span>
               <strong id="summaryTotal">0</strong>
               <small>Ativos e filtrados</small>
             </article>
-            <article class="summary-card">
+            <article class="map-summary-item">
               <span class="summary-label">Total de Administradoras</span>
               <strong id="summaryAdministradoras">0</strong>
               <small>Na listagem atual</small>
-            </article>
-            <article class="summary-card">
-              <span class="summary-label">Credito Total Disponivel</span>
-              <strong id="summaryCredito">R$ 0,00</strong>
-              <small>Soma do credito maximo</small>
-            </article>
-            <article class="summary-card">
-              <span class="summary-label">Taxa ADM Media</span>
-              <strong id="summaryTaxa">0%</strong>
-              <small>Media dos grupos</small>
-            </article>
-            <article class="summary-card">
-              <span class="summary-label">Ultima Atualizacao</span>
-              <strong id="summaryUpdated">--</strong>
-              <small>Dados carregados</small>
             </article>
           </div>
 
@@ -1240,6 +1225,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260612-04"></script>
+    <script src="/static/js/app.js?v=20260612-05"></script>
   </body>
 </html>

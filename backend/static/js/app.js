@@ -688,18 +688,10 @@ function updateFilterOptions(administradoras = [], tipos = []) {
 
 function renderSummary(items, total, totalAdministradoras = null) {
   const administradoras = new Set(items.map((item) => item.administradora).filter(Boolean));
-  const credito = items.reduce((sum, item) => {
-    const value = Number(item.credito_maximo || 0);
-    return Number.isFinite(value) && value <= 100000000 ? sum + value : sum;
-  }, 0);
-  const taxas = items.map((item) => item.taxa_adm).filter((value) => value !== null && value !== undefined);
-  const taxaMedia = taxas.length ? taxas.reduce((sum, value) => sum + value, 0) / taxas.length : null;
-
-  document.getElementById("summaryTotal").textContent = total;
-  document.getElementById("summaryAdministradoras").textContent = totalAdministradoras ?? administradoras.size;
-  document.getElementById("summaryCredito").textContent = formatMoney(credito);
-  document.getElementById("summaryTaxa").textContent = formatPercent(taxaMedia);
-  document.getElementById("summaryUpdated").textContent = mapState.lastLoadAt || "--";
+  const totalEl = document.getElementById("summaryTotal");
+  const administradorasEl = document.getElementById("summaryAdministradoras");
+  if (totalEl) totalEl.textContent = total;
+  if (administradorasEl) administradorasEl.textContent = totalAdministradoras ?? administradoras.size;
 }
 
 function renderGroupsTable(items) {
