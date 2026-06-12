@@ -645,24 +645,24 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .group-table {
-  min-width: 1380px;
+  min-width: 1120px;
   margin-bottom: 0;
 }
 
 .group-table th {
   background: var(--table-head);
   color: var(--text);
-  font-size: 0.72rem;
-  padding-left: 8px;
-  padding-right: 8px;
+  font-size: 0.68rem;
+  padding-left: 6px;
+  padding-right: 6px;
   text-transform: uppercase;
   white-space: nowrap;
 }
 
 .group-table td {
-  font-size: 0.82rem;
-  padding-left: 8px;
-  padding-right: 8px;
+  font-size: 0.78rem;
+  padding-left: 6px;
+  padding-right: 6px;
   white-space: nowrap;
 }
 
@@ -672,7 +672,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .group-table .lance-profile-header {
-  min-width: 96px;
+  min-width: 64px;
 }
 
 .group-table .lance-profile-cell {
@@ -699,11 +699,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .row-actions {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
 .row-actions .btn {
-  min-width: 34px;
+  min-width: 32px;
+  padding-left: 8px;
+  padding-right: 8px;
 }
 
 .table-state {
