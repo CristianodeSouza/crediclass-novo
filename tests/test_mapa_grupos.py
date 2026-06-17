@@ -145,6 +145,41 @@ class MapaGruposTest(unittest.TestCase):
     def test_row_blocks_agrupa_linhas_proximas(self):
         self.assertEqual(sheets_client.row_blocks([3, 4, 6, 10, 14], max_gap=1), [(3, 6), (10, 10), (14, 14)])
 
+    def test_read_summary_rows_com_historico_usa_intervalo_continuo(self):
+        sheets_client.clear_rows_cache()
+        headers = ["ADM", "Grupo", "Tipo de Bem", "Credito Maximo", "Prazo Total", "JAN-26 Menor Lance", "JAN-26 Qtd"]
+
+        class ExecuteMock:
+            def execute(self):
+                return {"values": [["Itau", "128", "Imovel", "500000", "180", "24", "12"]]}
+
+        class ValuesMock:
+            def get(self, **kwargs):
+                self.get_kwargs = kwargs
+                return ExecuteMock()
+
+        class ServiceMock:
+            def __init__(self):
+                self.values_api = ValuesMock()
+
+            def spreadsheets(self):
+                return self
+
+            def values(self):
+                return self.values_api
+
+        service = ServiceMock()
+        settings = SimpleNamespace(google_sheets_id="sheet-id", google_sheet_name="Grupos")
+        with (
+            patch("backend.sheets_client.read_sheet_headers", return_value=headers),
+            patch("backend.sheets_client.get_service", return_value=service),
+            patch("backend.sheets_client.get_settings", return_value=settings),
+        ):
+            rows = sheets_client.read_summary_rows(include_history=True)
+
+        self.assertEqual(rows[0]["JAN-26 Menor Lance"], "24")
+        self.assertEqual(service.values_api.get_kwargs["range"], "'Grupos'!A2:G")
+
     def test_percentuais_de_historico_nao_gravam_residuos_decimais(self):
         self.assertEqual(format_history_value("maior_lance", 0.56), "56,0")
         self.assertEqual(format_history_value("menor_lance", 0.5256000000000001), "52,56")

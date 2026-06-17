@@ -113,7 +113,7 @@ def reload_data():
     logger.info("POST /api/reload")
     try:
         clear_rows_cache()
-        total = len(list_grupos(include_history=False))
+        total = len(list_grupos(include_history=True))
     except Exception as error:
         logger.exception("Erro ao recarregar dados da planilha")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
@@ -137,7 +137,7 @@ def grupos(
 ):
     logger.info("GET /api/grupos page=%s page_size=%s busca=%s", page, page_size, busca)
     try:
-        items = list_grupos(include_history=False)
+        items = list_grupos(include_history=True)
         warm_grupos_defasagem_cache_async()
     except Exception as error:
         logger.exception("Erro ao listar grupos")

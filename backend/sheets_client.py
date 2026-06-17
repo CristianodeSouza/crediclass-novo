@@ -258,31 +258,52 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
 
     validate_required_headers(headers, ["administradora", "grupo", "tipo_bem"])
     settings = get_settings()
-    ranges = [
-        f"'{settings.google_sheet_name}'!{column_letter(index)}2:{column_letter(index)}"
-        for _, _, index in selected
-    ]
-    result = get_service().spreadsheets().values().batchGet(
-        spreadsheetId=settings.google_sheets_id,
-        ranges=ranges,
-    ).execute()
-    value_ranges = result.get("valueRanges", [])
-    columns = [item.get("values", []) for item in value_ranges]
-    row_count = max((len(column) for column in columns), default=0)
     rows: list[dict[str, Any]] = []
     row_index: dict[str, int] = {}
 
-    for offset in range(row_count):
-        row: dict[str, Any] = {}
-        for (_, header, _), column in zip(selected, columns):
-            cell = column[offset] if offset < len(column) else []
-            row[header] = cell[0] if cell else ""
-        if not any(str(value).strip() for value in row.values()):
-            continue
-        rows.append(row)
-        grupo_id = build_grupo_id(row)
-        if grupo_id:
-            row_index[grupo_id.upper()] = offset + 2
+    if include_history:
+        min_index = min(index for _, _, index in selected)
+        max_index = max(index for _, _, index in selected)
+        result = get_service().spreadsheets().values().get(
+            spreadsheetId=settings.google_sheets_id,
+            range=f"'{settings.google_sheet_name}'!{column_letter(min_index)}2:{column_letter(max_index)}",
+        ).execute()
+        values = result.get("values", [])
+        for offset, row_values in enumerate(values):
+            row: dict[str, Any] = {}
+            for _, header, index in selected:
+                relative_index = index - min_index
+                row[header] = row_values[relative_index] if relative_index < len(row_values) else ""
+            if not any(str(value).strip() for value in row.values()):
+                continue
+            rows.append(row)
+            grupo_id = build_grupo_id(row)
+            if grupo_id:
+                row_index[grupo_id.upper()] = offset + 2
+    else:
+        ranges = [
+            f"'{settings.google_sheet_name}'!{column_letter(index)}2:{column_letter(index)}"
+            for _, _, index in selected
+        ]
+        result = get_service().spreadsheets().values().batchGet(
+            spreadsheetId=settings.google_sheets_id,
+            ranges=ranges,
+        ).execute()
+        value_ranges = result.get("valueRanges", [])
+        columns = [item.get("values", []) for item in value_ranges]
+        row_count = max((len(column) for column in columns), default=0)
+
+        for offset in range(row_count):
+            row: dict[str, Any] = {}
+            for (_, header, _), column in zip(selected, columns):
+                cell = column[offset] if offset < len(column) else []
+                row[header] = cell[0] if cell else ""
+            if not any(str(value).strip() for value in row.values()):
+                continue
+            rows.append(row)
+            grupo_id = build_grupo_id(row)
+            if grupo_id:
+                row_index[grupo_id.upper()] = offset + 2
 
     with _cache_lock:
         _group_row_index.clear()
