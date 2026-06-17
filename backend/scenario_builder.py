@@ -62,7 +62,7 @@ def _candidate_pool_for_admin(
     return list(selected.values())[:limit]
 
 
-def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]], max_cards: int = 3, max_groups_per_admin: int = 18) -> dict[str, Any]:
+def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]], max_cards: int = 3, max_groups_per_admin: int = 10) -> dict[str, Any]:
     profile = strategic_profile_for_months(payload.prazo_desejado)
     fgts_total = client_fgts_total(payload)
     parcela_ideal = float(payload.parcela_ideal or payload.parcela_desejada)

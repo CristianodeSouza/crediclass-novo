@@ -436,7 +436,7 @@ def cenarios_analisar(payload: ViabilidadeRequest):
                     -(item.get("credito_maximo") or 0),
                 ),
             )
-            candidate_ids.extend(item["grupo_id"] for item in ordered[:30])
+            candidate_ids.extend(item["grupo_id"] for item in ordered[:12])
         groups = list_grupos_detalhe_by_ids(candidate_ids) if candidate_ids else []
         result = analyze_scenarios(payload, groups)
         result["total_grupos_base"] = len(summary_groups)
