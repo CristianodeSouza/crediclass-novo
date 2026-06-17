@@ -237,24 +237,16 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function collectBusinessRuleFeedbacks", app_js)
         self.assertIn("async function saveBusinessRuleFeedbacks", app_js)
         self.assertIn("regras_negocio_feedbacks", app_js)
-        for etapa in ["Perfil do Cliente", "Administradoras", "Viabilidade de Grupos", "Estrategias", "Estudo Financeiro"]:
+        for etapa in ["Perfil do Cliente", "Estrategia", "Administradoras", "Cenarios", "Estudo Financeiro"]:
             self.assertIn(etapa, app_js)
         for exemplo in [
-            "R$ 450.000",
-            "R$ 900.000",
-            "77,7778%",
-            "63,33 meses",
-            "R$ 100.000 de FGTS",
-            "FGTS nao permitido",
-            "a formula usa apenas R$ 150.000",
-            "grupo com 62 meses restantes nao atende",
-            "Agressivo (1 a 3 meses)",
-            "Moderado (4 a 6 meses)",
-            "segundo menor lance + 0,25 ponto percentual",
-            "lance fixo cadastrado de 12%",
-            "ultimos 3 meses validos",
-            "Lances ordenados = 41%, 43%, 45%, 48%",
-            "referencia = 25% + 0,25 p.p. = 25,25%",
+            "credito_liquido_desejado",
+            "percentual_lance_embutido",
+            "parcela_total_cenario",
+            "Super Agressivo",
+            "uma ou mais cartas",
+            "FGTS so entra quando permitido",
+            "formulas financeiras ficam centralizadas no backend",
         ]:
             self.assertIn(exemplo, app_js)
         self.assertIn("business-rule-note-input", style_css)

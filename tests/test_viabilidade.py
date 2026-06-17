@@ -234,14 +234,14 @@ class ViabilidadeTest(unittest.TestCase):
 
     def test_classify_profile_all_intervals(self):
         expected = {
-            1: "Agressivo",
-            3: "Agressivo",
-            4: "Moderado",
-            6: "Moderado",
-            7: "Conservador",
-            12: "Conservador",
-            13: "Super Conservador",
-            24: "Super Conservador",
+            1: "Super Agressivo",
+            3: "Super Agressivo",
+            4: "Agressivo",
+            6: "Agressivo",
+            7: "Moderado",
+            12: "Moderado",
+            13: "Conservador",
+            24: "Conservador",
             25: "Investidor",
         }
         for months, profile in expected.items():

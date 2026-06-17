@@ -10,12 +10,20 @@ from backend.main import configuracoes_obter, configuracoes_salvar
 class ConfiguracoesTest(unittest.TestCase):
     def setUp(self):
         self.original_config = configuracoes_module.get_configuracoes()
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.runtime_dir_patcher = patch.object(configuracoes_module, "RUNTIME_DIR", Path(self.temp_dir.name))
+        self.config_file_patcher = patch.object(configuracoes_module, "CONFIG_FILE", Path(self.temp_dir.name) / "configuracoes.json")
+        self.runtime_dir_patcher.start()
+        self.config_file_patcher.start()
         configuracoes_module._settings.clear()
         configuracoes_module._settings.update(configuracoes_module.DEFAULT_CONFIG)
 
     def tearDown(self):
         configuracoes_module._settings.clear()
         configuracoes_module._settings.update(self.original_config)
+        self.config_file_patcher.stop()
+        self.runtime_dir_patcher.stop()
+        self.temp_dir.cleanup()
 
     def test_obter_configuracoes_retorna_empresa_integracoes_e_usuarios(self):
         result = configuracoes_obter()

@@ -2,11 +2,11 @@ import unittest
 
 from backend.lance_reference import (
     LANCE_INCREMENT,
-    aggressive_reference,
     calculate_lance_references,
     classify_profile,
     investor_reference,
     second_lowest_reference,
+    super_aggressive_reference,
     valid_lower_bids,
 )
 
@@ -24,10 +24,10 @@ class LanceReferenceEngineTest(unittest.TestCase):
 
     def test_profiles_follow_official_operational_ranges(self):
         expected = {
-            3: ("Agressivo", "lance_agressivo", "1 a 3 meses"),
-            6: ("Moderado", "lance_moderado", "4 a 6 meses"),
-            12: ("Conservador", "lance_conservador", "7 a 12 meses"),
-            24: ("Super Conservador", "lance_super_conservador", "13 a 24 meses"),
+            3: ("Super Agressivo", "lance_super_agressivo_3m", "Ate 3 meses"),
+            6: ("Agressivo", "lance_agressivo_6m", "Ate 6 meses"),
+            12: ("Moderado", "lance_moderado_12m", "Ate 12 meses"),
+            24: ("Conservador", "lance_conservador_24m", "Ate 24 meses"),
             25: ("Investidor", "lance_investidor", "Sem urgencia"),
         }
         for months, profile in expected.items():
@@ -42,12 +42,12 @@ class LanceReferenceEngineTest(unittest.TestCase):
         self.assertEqual(valid_lower_bids(historico, 6), [0.28, 0.33, 0.40, 0.29, 0.31, 0.35])
         self.assertEqual(second_lowest_reference(historico, 6), 0.2925)
 
-    def test_aggressive_uses_threshold_that_passed_all_last_three_months(self):
-        self.assertEqual(aggressive_reference(history([0.31, 0.29, 0.35])), 0.3525)
+    def test_super_aggressive_uses_highest_lower_bid_from_last_three_months(self):
+        self.assertEqual(super_aggressive_reference(history([0.50, 0.52, 0.49])), 0.5225)
 
     def test_history_shortage_returns_none(self):
         self.assertIsNone(second_lowest_reference(history([0.30]), 12))
-        self.assertIsNone(aggressive_reference(history([0.30])))
+        self.assertIsNone(super_aggressive_reference(history([0.30])))
 
     def test_reference_requires_contemplated_months(self):
         historico = {
@@ -65,10 +65,7 @@ class LanceReferenceEngineTest(unittest.TestCase):
 
     def test_generates_all_official_fields(self):
         result = calculate_lance_references(history([0.31, 0.29, 0.35, 0.30, 0.33, 0.34]), 0.10)
-        self.assertEqual(set(result), {
-            "lance_investidor",
-            "lance_super_conservador",
-            "lance_conservador",
-            "lance_moderado",
-            "lance_agressivo",
-        })
+        self.assertIn("lance_super_agressivo_3m", result)
+        self.assertIn("lance_agressivo_6m", result)
+        self.assertIn("lance_moderado_12m", result)
+        self.assertIn("lance_conservador_24m", result)

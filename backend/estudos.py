@@ -102,6 +102,38 @@ def build_strategy(label: str, percentual: float | None, base: dict, operational
 
 
 def build_financeiro(payload: EstudoRequest, grupo: dict) -> dict:
+    if payload.cenario:
+        cenario = payload.cenario
+        return {
+            "credito": cenario.get("credito_liquido_total"),
+            "credito_original": cenario.get("credito_contratado_total"),
+            "percentual_lance_embutido": (
+                cenario.get("lance_embutido_total", 0) / cenario.get("credito_contratado_total", 1)
+                if cenario.get("credito_contratado_total")
+                else 0
+            ),
+            "lance_embutido": cenario.get("lance_embutido_total", 0),
+            "credito_disponivel": cenario.get("credito_liquido_total", 0),
+            "recurso_proprio": cenario.get("recurso_proprio_total", 0),
+            "fgts_utilizado": cenario.get("fgts_utilizado_total", 0),
+            "percentual_lance_total": cenario.get("percentual_lance_total", 0),
+            "valor_total_lance": cenario.get("lance_total", 0),
+            "parcela_inicial": cenario.get("parcela_total", 0),
+            "renda_minima": cenario.get("renda_minima", 0),
+            "score_cenario": cenario.get("score_cenario", 0),
+            "status_cenario": cenario.get("status", ""),
+            "alertas": cenario.get("alertas", []),
+            "cartas": cenario.get("cartas", []),
+            "parcela_apos_contemplacao": None,
+            "prazo_apos_contemplacao": None,
+            "prazo_operacional": cenario.get("estrategia", ""),
+            "custo_efetivo_total": cenario.get("credito_contratado_total", 0),
+            "seguro_garantia": None,
+            "chance_contemplacao": "Cenario aprovado herdado da viabilidade",
+            "estrategia_recomendada": cenario.get("estrategia", "Cenario financeiro"),
+            "estrategias": [],
+            "historico_12_meses": {},
+        }
     cliente = payload.cliente
     credito_desejado = as_number(cliente.credito_desejado)
     percentual_embutido = as_number(grupo.get("percentual_lance_embutido"))
@@ -130,10 +162,10 @@ def build_financeiro(payload: EstudoRequest, grupo: dict) -> dict:
     }
     estrategias = [
         build_strategy("Investidor", references["lance_investidor"], base, "Sem urgencia"),
-        build_strategy("Super Conservador", references["lance_super_conservador"], base, "13 a 24 meses"),
-        build_strategy("Conservador", references["lance_conservador"], base, "7 a 12 meses"),
-        build_strategy("Moderado", references["lance_moderado"], base, "4 a 6 meses"),
-        build_strategy("Agressivo", references["lance_agressivo"], base, "1 a 3 meses"),
+        build_strategy("Conservador", references["lance_conservador_24m"], base, "Ate 24 meses"),
+        build_strategy("Moderado", references["lance_moderado_12m"], base, "Ate 12 meses"),
+        build_strategy("Agressivo", references["lance_agressivo_6m"], base, "Ate 6 meses"),
+        build_strategy("Super Agressivo", references["lance_super_agressivo_3m"], base, "Ate 3 meses"),
     ]
     return {
         "credito": credito_desejado,
@@ -168,6 +200,7 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None) -> dict:
         "cliente": payload.cliente.model_dump(),
         "grupo_id": payload.grupo_id,
         "grupo": grupo_data,
+        "cenario": payload.cenario,
         "financeiro": financeiro,
         "template_campos": payload.template_campos,
         "estrategia": financeiro["estrategia_recomendada"],

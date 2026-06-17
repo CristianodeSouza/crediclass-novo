@@ -12,9 +12,9 @@ const screens = {
     action: "Salvar Perfil",
   },
   viabilidade: {
-    letter: "D) VIABILIDADE GRUPOS",
-    title: "Viabilidade Grupos",
-    subtitle: "Selecao de grupos apos administradoras elegiveis",
+    letter: "D) VIABILIDADE DE CENARIOS",
+    title: "Viabilidade de Cenarios",
+    subtitle: "Montagem de cenarios com uma ou mais cartas",
     action: "Analisar Viabilidade",
   },
   administradoras: {
@@ -134,59 +134,48 @@ const businessRulesFlow = [
     id: "perfil-cliente",
     etapa: "1. Perfil do Cliente",
     regras: [
-      "Recebe credito desejado liquido, prazo desejado, objetivo, tipo de bem e estado do bem. Exemplo: cliente quer R$ 450.000 liquidos para aquisicao de imovel pronto em 1 a 3 meses.",
-      "Soma recursos proprios com FGTS para formar o total disponivel do cliente e, quando a administradora permitir FGTS, esse mesmo total entra como lance maximo disponivel nas formulas F30 e F31. Exemplo: R$ 150.000 em dinheiro + R$ 100.000 de FGTS = R$ 250.000 de lance maximo disponivel.",
-      "Soma renda titular e renda conjuge para renda total. Exemplo: titular R$ 8.000 + conjuge R$ 7.000 = renda total R$ 15.000.",
-      "Calcula Conceito IA pelo prazo. Exemplo: 1 a 3 meses = Agressivo; 4 a 6 = Moderado; 7 a 12 = Conservador; 13 a 24 = Super Conservador; sem urgencia = Investidor.",
-      "Data de nascimento valida idade minima de 18 anos na adesao. Exemplo: titular com 17 anos reprova a compatibilidade de idade.",
-      "Quando a administradora tiver idade maxima cadastrada, o sistema calcula a idade do cliente na data de termino do grupo (coluna H do Google Sheets). Exemplo: nascido em 07/10/1978 e grupo terminando em 20/05/2060 = 81 anos no termino; com limite 80 anos, o grupo e excluido.",
-      "Se a data de nascimento estiver ausente, o sistema gera alerta de idade nao validada, sem aprovar idade automaticamente. Se a administradora nao tiver idade maxima cadastrada, a validacao de idade no termino nao bloqueia o grupo.",
+      "O sistema recebe credito liquido desejado, prazo desejado, objetivo, tipo de bem, estado do bem, recursos proprios, FGTS, renda e limites de parcela.",
+      "O credito informado e sempre liquido, ou seja, o valor que o cliente precisa receber efetivamente.",
+      "Soma renda titular e renda conjuge para renda total; soma FGTS titular e conjuge para FGTS total.",
+    ],
+  },
+  {
+    id: "estrategia",
+    etapa: "2. Estrategia",
+    regras: [
+      "O backend define o perfil estrategico: ate 3 meses = Super Agressivo; ate 6 meses = Agressivo; ate 12 meses = Moderado; ate 24 meses = Conservador; acima de 24 meses = Investidor.",
+      "A referencia de lance usa somente meses com qtd_contemplacoes maior que zero e menor_lance preenchido acima de zero.",
+      "Todas as referencias recebem acrescimo operacional de 0,25 ponto percentual.",
     ],
   },
   {
     id: "administradoras",
-    etapa: "2. Administradoras",
+    etapa: "3. Administradoras",
     regras: [
-      "Regras fixas por administradora sao usadas antes da selecao de grupos. Exemplo: CNP permite 50% de lance embutido, taxa ADM 15% e fundo reserva 5%.",
-      "Credito a contratar = credito desejado / (1 - percentual de lance embutido). Exemplo: R$ 450.000 / (1 - 50%) = R$ 900.000.",
-      "Lance maximo disponivel = recursos proprios em dinheiro + FGTS titular + FGTS conjuge, quando a administradora permitir FGTS. Se a administradora nao permitir FGTS, o sistema usa somente os recursos proprios em dinheiro. Exemplo com FGTS permitido: R$ 150.000 em dinheiro + R$ 100.000 de FGTS = R$ 250.000 disponiveis para lance.",
-      "Lance maximo = ((credito a contratar * percentual de lance embutido) + lance maximo disponivel) / credito a contratar. Exemplo: ((R$ 900.000 * 50%) + R$ 250.000) / R$ 900.000 = 77,7778%.",
-      "Prazo minimo = (credito a contratar + taxa ADM + fundo reserva - lance total considerado) / parcela limite. Exemplo: (R$ 900.000 + R$ 135.000 + R$ 45.000 - R$ 700.000) / R$ 6.000 = 63,33 meses.",
-      "Nas formulas oficiais F30 e F31 entra o lance maximo disponivel. Exemplo com FGTS permitido: R$ 150.000 em dinheiro + R$ 100.000 de FGTS = R$ 250.000 usados na formula. Exemplo com FGTS nao permitido: R$ 150.000 em dinheiro + R$ 100.000 de FGTS informado = a formula usa apenas R$ 150.000.",
+      "Administradora e tratada como caminho possivel para montagem do estudo, nao como aprovacao final isolada.",
+      "FGTS e lance embutido sao condicionais: FGTS so entra quando permitido; lance embutido so entra quando permitido.",
+      "Taxa administrativa, fundo de reserva, idade, renda, tipo de bem e historico entram no calculo dos cenarios.",
     ],
   },
   {
-    id: "viabilidade-grupos",
-    etapa: "3. Viabilidade de Grupos",
+    id: "cenarios",
+    etapa: "4. Cenarios",
     regras: [
-      "Busca somente grupos ativos e com tipo de bem compativel. Exemplo: cliente quer Imovel, entao grupo de Automovel nao entra na lista.",
-      "Valida faixa do grupo usando credito a contratar, nao o credito liquido desejado. Exemplo: se o credito contratado calculado e R$ 900.000, um grupo com credito maximo R$ 800.000 nao serve.",
-      "Valida prazo restante do grupo contra o prazo minimo calculado pela formula oficial. Exemplo: prazo minimo 63,33 meses; grupo com 62 meses restantes nao atende.",
-      "Referencia de lance usa somente meses com contemplacao registrada no historico. Se nao houver pelo menos 2 meses contemplados dentro da janela do perfil, o sistema marca historico insuficiente. Exemplo: perfil Moderado olha os ultimos 6 meses; se apenas 1 mes teve contemplacao, o grupo nao valida a referencia.",
-      "Agressivo (1 a 3 meses): o sistema pega os menores lances dos ultimos 3 meses com contemplacao, exige pelo menos 2 meses contemplados e usa a maior referencia desse periodo + 0,25 ponto percentual. O resultado precisa ficar em 50% ou mais. Exemplo real: ultimos 3 meses validos = abr/2026 com menor lance 50% e 2 contemplacoes; mai/2026 com menor lance 52% e 1 contemplacao; jun/2026 sem contemplacao, desconsiderado. Maior menor lance valido = 52%; referencia = 52% + 0,25 p.p. = 52,25%; como 52,25% >= 50%, perfil Agressivo atendido.",
-      "Moderado (4 a 6 meses): o sistema pega os menores lances dos ultimos 6 meses com contemplacao, exige pelo menos 2 meses contemplados e usa o segundo menor lance + 0,25 ponto percentual. O resultado precisa ficar entre 40% e 50%. Exemplo real: meses validos = jan/2026 48% com 3 contemplacoes; fev/2026 41% com 2; mar/2026 43% com 1; abr/2026 sem contemplacao, desconsiderado; mai/2026 45% com 2; jun/2026 sem lance, desconsiderado. Lances ordenados = 41%, 43%, 45%, 48%; segundo menor = 43%; referencia = 43% + 0,25 p.p. = 43,25%; como fica entre 40% e 50%, perfil Moderado atendido.",
-      "Conservador (7 a 12 meses): o sistema pega os menores lances dos ultimos 12 meses com contemplacao, exige pelo menos 2 meses contemplados e usa o segundo menor lance + 0,25 ponto percentual. O resultado precisa ficar entre 30% e 40%. Exemplo real: meses validos = jul/2025 38% com 2 contemplacoes; ago/2025 34% com 1; set/2025 31% com 3; out/2025 sem contemplacao, desconsiderado; nov/2025 36% com 2; dez/2025 39% com 1. Lances ordenados = 31%, 34%, 36%, 38%, 39%; segundo menor = 34%; referencia = 34% + 0,25 p.p. = 34,25%; como fica entre 30% e 40%, perfil Conservador atendido.",
-      "Super Conservador (13 a 24 meses): o sistema pega os menores lances dos ultimos 12 meses com contemplacao, exige pelo menos 2 meses contemplados e usa o segundo menor lance + 0,25 ponto percentual. O resultado precisa ficar entre 20% e 30%. Exemplo real: meses validos = jan/2025 29% com 1 contemplacao; mar/2025 22% com 2; abr/2025 25% com 1; jun/2025 27% com 2; meses sem contemplacao ou sem lance sao desconsiderados. Lances ordenados = 22%, 25%, 27%, 29%; segundo menor = 25%; referencia = 25% + 0,25 p.p. = 25,25%; como fica entre 20% e 30%, perfil Super Conservador atendido.",
-      "Investidor (sem urgencia): o sistema usa o lance fixo cadastrado no grupo ou 0 quando nao houver lance fixo. O resultado fica limitado entre 0% e 20%. Exemplo real: grupo tem percentual de lance fixo cadastrado de 12%; referencia = 12%; como 12% fica entre 0% e 20%, perfil Investidor atendido. Se o lance fixo cadastrado for 25%, o sistema limita a referencia a 20%.",
-    ],
-  },
-  {
-    id: "estrategias",
-    etapa: "4. Estrategias",
-    regras: [
-      "Estrategia recomendada parte do perfil e do grupo selecionado na Viabilidade. Exemplo: perfil Moderado prioriza grupos com referencia operacional de 4 a 6 meses.",
-      "Alternativas de lance sao comparadas sem alterar os dados originais do cliente. Exemplo: operador pode comparar Lance Conservador e Lance Moderado mantendo o mesmo credito desejado de R$ 450.000.",
-      "A recomendacao deve explicar historico, prazo operacional, lance sugerido e riscos. Exemplo: informar que o grupo teve 2 contemplacoes em 6 meses, mas que a analise nao garante contemplacao.",
+      "O sistema monta cenarios com uma ou mais cartas de credito, dentro da mesma administradora, podendo usar um ou mais grupos.",
+      "Quando houver lance embutido: credito_contratado = credito_liquido_desejado / (1 - percentual_lance_embutido).",
+      "Credito liquido da carta = credito_contratado - lance_embutido. Credito liquido do cenario = soma dos creditos liquidos das cartas.",
+      "Lance total = lance embutido + recurso proprio utilizado + FGTS utilizado.",
+      "Parcela total do cenario = soma das parcelas de todas as cartas.",
+      "Renda minima necessaria = parcela_total_cenario * 3.",
     ],
   },
   {
     id: "estudo-financeiro",
     etapa: "5. Estudo Financeiro",
     regras: [
-      "Estudo herda Perfil do Cliente, grupo selecionado e estrategia escolhida. Exemplo: cliente R$ 450.000, grupo CNP 123 e estrategia Moderada seguem para o estudo.",
-      "Simulacao financeira usa credito contratado, lance embutido, lance maximo disponivel, taxa ADM, fundo reserva e prazo. Exemplo: R$ 900.000 contratado, R$ 450.000 embutido, R$ 250.000 disponiveis, taxa 15%, fundo 5% e prazo minimo 63,33 meses.",
-      "Campos comerciais permanecem editaveis pelo operador antes de salvar/compartilhar o estudo. Exemplo: operador pode escrever observacoes comerciais e comentario ao cliente.",
-      "A analise nao garante contemplacao; serve como referencia operacional. Exemplo: mesmo com lance maximo de 77,7778%, o estudo deve informar que a assembleia pode variar.",
+      "O estudo financeiro deve nascer de um cenario aprovado e herdar exatamente seus calculos.",
+      "O historico salva a composicao completa: administradora, cartas, grupos, credito contratado, credito liquido, lance, parcela, alertas e score.",
+      "O frontend exibe o calculo retornado pelo backend; as formulas financeiras ficam centralizadas no backend.",
     ],
   },
 ];
@@ -1705,10 +1694,11 @@ function renderViabilityChecklist(checklist) {
 }
 
 function renderViabilitySummary(result) {
-  const items = result.melhores_grupos || [];
-  document.getElementById("viabilityRankingSubtitle").textContent = `${items.length} grupo(s) candidato(s) - perfil ${result.perfil}`;
+  const items = result.cenarios || result.melhores_grupos || [];
+  const profile = result.cliente?.perfil_estrategico || result.perfil || "-";
+  document.getElementById("viabilityRankingSubtitle").textContent = `${items.length} cenario(s) candidato(s) - perfil ${profile}`;
   const scenario = document.getElementById("viabilityScenario");
-  if (scenario) scenario.textContent = `${result.cenario} - perfil ${result.perfil}`;
+  if (scenario) scenario.textContent = `${result.total_cenarios_viaveis || 0} cenario(s) viavel(is) - perfil ${profile}`;
 }
 
 function renderViabilityEmpty(result) {
@@ -1718,7 +1708,7 @@ function renderViabilityEmpty(result) {
     empty.textContent = "Nenhum grupo passou nos filtros basicos do perfil. As regras das administradoras pendentes nao bloquearam a busca.";
     return;
   }
-  empty.textContent = "Nenhum grupo compativel encontrado para este cenario.";
+  empty.textContent = "Nenhum cenario compativel encontrado para este perfil.";
 }
 
 function viabilityAuditStatus(item) {
@@ -1847,24 +1837,24 @@ function openViabilityAudit(groupId) {
 function renderViabilityRanking(items) {
   document.getElementById("viabilityRankingBody").innerHTML = items.map((item) => `
     <tr>
-      <td>${item.ranking}</td>
+      <td>${item.ranking || item.id || "-"}</td>
       <td>${escapeHtml(item.administradora)}</td>
-      <td>${escapeHtml(item.grupo)}</td>
-      <td>${escapeHtml(item.tipo_bem)}</td>
-      <td>${formatMoney(item.credito_minimo)}</td>
-      <td>${formatMoney(item.credito_maximo)}</td>
-      <td>${formatMoney(item.credito_contratado)}</td>
-      <td>${item.prazo} meses</td>
-      <td>${Number(item.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</td>
+      <td>${escapeHtml(item.grupo || (item.cartas || []).map((card) => card.grupo || card.grupo_id).join(" + "))}</td>
+      <td>${escapeHtml(item.tipo_bem || (item.cartas?.[0]?.tipo_bem || "-"))}</td>
+      <td>${item.credito_minimo === undefined ? `${item.quantidade_cartas || 1} carta(s)` : formatMoney(item.credito_minimo)}</td>
+      <td>${item.credito_maximo === undefined ? formatMoney(item.credito_liquido_total) : formatMoney(item.credito_maximo)}</td>
+      <td>${formatMoney(item.credito_contratado || item.credito_contratado_total)}</td>
+      <td>${item.prazo || item.cartas?.[0]?.prazo_restante || "-"} meses</td>
+      <td>${Number(item.prazo_minimo || item.cartas?.[0]?.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</td>
       <td>${formatPercent(item.taxa_adm)}</td>
       <td>${formatPercent(item.fundo_reserva)}</td>
-      <td>${formatMoney(item.parcela_estimada)}</td>
-      <td><span class="audit-status ${auditStatusClass(viabilityAuditStatus(item))}">${escapeHtml(auditStatusLabel(viabilityAuditStatus(item)))}</span></td>
+      <td>${formatMoney(item.parcela_estimada || item.parcela_total)}</td>
+      <td><span class="audit-status ${item.status === "inviavel" ? "audit-danger" : item.alertas?.length ? "audit-warning" : "audit-ok"}">${escapeHtml(item.status || auditStatusLabel(viabilityAuditStatus(item)))}</span></td>
       <td>
         <div class="row-actions">
-          <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="auditar" data-group-id="${escapeHtml(item.grupo_id)}">Auditar</button>
-          <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver detalhes</button>
-          <button class="btn btn-sm btn-outline-secondary" type="button" data-viability-action="estrategias" data-group-id="${escapeHtml(item.grupo_id)}">Selecionar</button>
+          <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="auditar" data-group-id="${escapeHtml(item.grupo_id || item.cartas?.[0]?.grupo_id || "")}">Auditar</button>
+          <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="visualizar" data-group-id="${escapeHtml(item.grupo_id || item.cartas?.[0]?.grupo_id || "")}">Ver detalhes</button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" data-viability-action="estrategias" data-group-id="${escapeHtml(item.grupo_id || item.cartas?.[0]?.grupo_id || "")}" data-scenario-id="${escapeHtml(item.id || "")}">Selecionar</button>
         </div>
       </td>
     </tr>
@@ -1877,16 +1867,17 @@ async function analyzeViability() {
 
   setViabilityState("loading");
   try {
-    const result = await apiPost("/viabilidade/analisar", payload);
+    const result = await apiPost("/cenarios/analisar", payload);
     viabilityState.lastResult = result;
-    renderViabilityChecklist(result.checklist);
+    renderViabilityChecklist(result.checklist || {});
     renderViabilitySummary(result);
-    if (!result.melhores_grupos.length) {
+    const items = result.cenarios || result.melhores_grupos || [];
+    if (!items.length) {
       renderViabilityEmpty(result);
       setViabilityState("empty");
       return;
     }
-    renderViabilityRanking(result.melhores_grupos);
+    renderViabilityRanking(items);
     setViabilityState("ready");
     showToast("Analise de viabilidade concluida.", "success");
   } catch (error) {
@@ -1914,6 +1905,23 @@ function studyField(label, value) {
 }
 
 function computeStudy(payload, viabilityItem, group) {
+  if (viabilityItem?.cartas?.length) {
+    return {
+      creditoContratado: viabilityItem.credito_contratado_total || 0,
+      percentualEmbutido: viabilityItem.credito_contratado_total ? (viabilityItem.lance_embutido_total || 0) / viabilityItem.credito_contratado_total : 0,
+      lanceEmbutido: viabilityItem.lance_embutido_total || 0,
+      lanceProprio: viabilityItem.recurso_proprio_total || 0,
+      fgts: viabilityItem.fgts_utilizado_total || 0,
+      lanceTotal: viabilityItem.lance_total || 0,
+      creditoDisponivel: viabilityItem.credito_liquido_total || 0,
+      prazo: viabilityItem.cartas[0]?.prazo_restante || 0,
+      parcela: viabilityItem.parcela_total || 0,
+      custoTotal: viabilityItem.credito_contratado_total || 0,
+      percentualLanceTotal: viabilityItem.percentual_lance_total || 0,
+      prazoOperacional: viabilityItem.estrategia || "-",
+      lanceReferencia: viabilityItem.cartas[0]?.referencia_lance,
+    };
+  }
   const creditoDesejado = payload.credito_desejado || viabilityItem.credito || 0;
   const percentualEmbutido = group.percentual_lance_embutido || 0;
   const creditoContratado = percentualEmbutido >= 1 ? creditoDesejado : creditoDesejado / (1 - percentualEmbutido);
@@ -2184,7 +2192,7 @@ function activateStudyTemplateTab(tabName) {
 
 async function openFinancialStudy(groupId, viabilityItem) {
   const payload = collectViabilityPayload();
-  currentStudy = { groupId, viabilityItem, payload, group: null, templateCampos: {} };
+  currentStudy = { groupId, viabilityItem, payload, group: null, cenario: viabilityItem?.cartas ? viabilityItem : null, templateCampos: {} };
   activateScreen("estudo");
   setStudyState("loading");
   try {
@@ -2225,6 +2233,7 @@ async function saveCurrentStudy() {
       estado_bem: currentStudy.payload.estado_bem || "",
     },
     grupo_id: currentStudy.groupId,
+    cenario: currentStudy.cenario,
     template_campos: collectStudyOperatorFields(),
   };
   const result = await apiPost("/estudos", payload);
@@ -2622,13 +2631,35 @@ function renderBusinessRules(feedbacks = {}) {
   }).join("");
 }
 
-function collectBusinessRuleFeedbacks() {
+function hasBusinessRuleFeedbackContent(feedbacks = {}) {
+  return Object.values(feedbacks).some((feedback) => {
+    const note = (feedback?.observacao || "").trim();
+    const status = feedback?.status || "Pendente";
+    return note || status !== "Pendente";
+  });
+}
+
+function collectBusinessRuleFeedbacks({ preserveExistingWhenBlank = false } = {}) {
   const result = {};
+  let allControlsRendered = true;
   businessRulesFlow.forEach((rule) => {
-    const note = document.querySelector(`[data-business-rule-note="${rule.id}"]`)?.value.trim() || "";
-    const status = document.querySelector(`[data-business-rule-status="${rule.id}"]`)?.value || "Pendente";
+    const noteInput = document.querySelector(`[data-business-rule-note="${rule.id}"]`);
+    const statusInput = document.querySelector(`[data-business-rule-status="${rule.id}"]`);
+    if (!noteInput || !statusInput) {
+      allControlsRendered = false;
+    }
+    const note = noteInput?.value.trim() || "";
+    const status = statusInput?.value || "Pendente";
     result[rule.id] = { observacao: note, status };
   });
+  const existingFeedbacks = configState.data?.regras_negocio_feedbacks || {};
+  if (
+    preserveExistingWhenBlank &&
+    hasBusinessRuleFeedbackContent(existingFeedbacks) &&
+    (!allControlsRendered || !hasBusinessRuleFeedbackContent(result))
+  ) {
+    return existingFeedbacks;
+  }
   return result;
 }
 
@@ -3220,7 +3251,7 @@ function collectConfiguracoesPayload() {
       alertar_falha_integracao: getSelectBool("notifyIntegrationFailure"),
     },
     administradoras_regras: configState.data?.administradoras_regras || [],
-    regras_negocio_feedbacks: collectBusinessRuleFeedbacks(),
+    regras_negocio_feedbacks: collectBusinessRuleFeedbacks({ preserveExistingWhenBlank: true }),
   };
 }
 
@@ -3588,7 +3619,9 @@ document.getElementById("viabilityRankingBody").addEventListener("click", (event
     openGroupDetails(button.dataset.groupId);
     return;
   }
-  const item = viabilityState.lastResult?.melhores_grupos?.find((group) => group.grupo_id === button.dataset.groupId);
+  const item = button.dataset.scenarioId
+    ? viabilityState.lastResult?.cenarios?.find((scenario) => scenario.id === button.dataset.scenarioId)
+    : viabilityState.lastResult?.melhores_grupos?.find((group) => group.grupo_id === button.dataset.groupId);
   if (!item) {
     showToast("Execute a Viabilidade antes de selecionar o estudo.", "warning");
     return;

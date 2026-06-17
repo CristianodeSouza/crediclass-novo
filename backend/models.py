@@ -20,6 +20,10 @@ class GrupoResumo(BaseModel):
     lance_conservador: float | None = None
     lance_moderado: float | None = None
     lance_agressivo: float | None = None
+    lance_super_agressivo_3m: float | None = None
+    lance_agressivo_6m: float | None = None
+    lance_moderado_12m: float | None = None
+    lance_conservador_24m: float | None = None
 
 
 class HistoricoMensal(BaseModel):
@@ -63,6 +67,10 @@ class GrupoDetalhe(GrupoResumo):
     lance_conservador: float | None = None
     lance_moderado: float | None = None
     lance_agressivo: float | None = None
+    lance_super_agressivo_3m: float | None = None
+    lance_agressivo_6m: float | None = None
+    lance_moderado_12m: float | None = None
+    lance_conservador_24m: float | None = None
     parcela_reduzida: str = ""
     percentual_parcela_reduzida: float | None = None
     idade_maxima: int | None = None
@@ -413,6 +421,7 @@ class EstudoCliente(BaseModel):
 class EstudoRequest(BaseModel):
     cliente: EstudoCliente
     grupo_id: str
+    cenario: dict[str, Any] | None = None
     template_campos: dict[str, str] = Field(default_factory=dict)
 
 

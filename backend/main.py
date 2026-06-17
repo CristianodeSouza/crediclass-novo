@@ -19,6 +19,7 @@ from .configuracoes import get_configuracoes, update_configuracoes
 from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
+from .scenario_builder import analyze_scenarios
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
 from .viabilidade import analyze_viabilidade, compatible_tipo_bem, normalize_text
 
@@ -405,6 +406,30 @@ def viabilidade_administradoras(payload: ViabilidadeRequest):
         "total_elegiveis": len([item for item in items if item["elegivel"]]),
         "items": items,
     }
+
+
+@app.post("/api/cenarios/analisar")
+def cenarios_analisar(payload: ViabilidadeRequest):
+    logger.info(
+        "POST /api/cenarios/analisar credito_liquido=%s prazo=%s",
+        payload.credito_desejado,
+        payload.prazo_desejado,
+    )
+    try:
+        summary_groups = list_grupos()
+        candidate_ids = [
+            item["grupo_id"]
+            for item in summary_groups
+            if normalize_text(str(item.get("status") or "")) == "ativo"
+            and compatible_tipo_bem(payload.objetivo, str(item.get("tipo_bem") or ""), payload.tipo_bem)
+        ]
+        groups = list_grupos_detalhe_by_ids(candidate_ids) if candidate_ids else []
+        result = analyze_scenarios(payload, groups)
+        result["total_grupos_base"] = len(summary_groups)
+    except Exception as error:
+        logger.exception("Erro ao montar cenarios")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+    return result
 
 
 @app.post("/api/auth/login")

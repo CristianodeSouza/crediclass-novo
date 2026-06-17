@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import datetime
 import json
 from pathlib import Path
 
@@ -98,6 +99,14 @@ def load_config() -> dict:
 
 def save_config() -> None:
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
+    if CONFIG_FILE.exists():
+        backups_dir = RUNTIME_DIR / "backups"
+        backups_dir.mkdir(parents=True, exist_ok=True)
+        backup_name = f"configuracoes-{datetime.now().strftime('%Y%m%d-%H%M%S-%f')}.json"
+        try:
+            (backups_dir / backup_name).write_text(CONFIG_FILE.read_text(encoding="utf-8"), encoding="utf-8")
+        except OSError:
+            pass
     CONFIG_FILE.write_text(json.dumps(_settings, ensure_ascii=False, indent=2), encoding="utf-8")
 
 

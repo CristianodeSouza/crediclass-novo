@@ -744,6 +744,10 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "lance_conservador": lance_references["lance_conservador"],
         "lance_moderado": lance_references["lance_moderado"],
         "lance_agressivo": lance_references["lance_agressivo"],
+        "lance_super_agressivo_3m": lance_references["lance_super_agressivo_3m"],
+        "lance_agressivo_6m": lance_references["lance_agressivo_6m"],
+        "lance_moderado_12m": lance_references["lance_moderado_12m"],
+        "lance_conservador_24m": lance_references["lance_conservador_24m"],
     }
 
 
