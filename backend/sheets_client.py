@@ -20,7 +20,10 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 CACHE_TTL_SECONDS = 300
 METADATA_CACHE_TTL_SECONDS = 900
 MAX_CREDIT_VALUE = 100_000_000
-_grupos_cache: dict[str, Any] = {"expires_at": 0.0, "items": None}
+_grupos_cache: dict[str, Any] = {
+    "with_history": {"expires_at": 0.0, "items": None},
+    "light": {"expires_at": 0.0, "items": None},
+}
 _grupos_detalhe_cache: dict[str, Any] = {"expires_at": 0.0, "items": None}
 _grupos_defasagem_cache: dict[str, Any] = {"expires_at": 0.0, "items": None}
 _sheet_rows_cache: dict[str, Any] = {"expires_at": 0.0, "rows": None}
@@ -198,8 +201,9 @@ def get_service():
 
 def clear_rows_cache() -> None:
     with _cache_lock:
-        _grupos_cache["expires_at"] = 0.0
-        _grupos_cache["items"] = None
+        for cache in _grupos_cache.values():
+            cache["expires_at"] = 0.0
+            cache["items"] = None
         _grupos_detalhe_cache["expires_at"] = 0.0
         _grupos_detalhe_cache["items"] = None
         _grupos_defasagem_cache["expires_at"] = 0.0
@@ -231,7 +235,7 @@ def read_sheet_headers(force_reload: bool = False) -> list[str]:
         return list(headers)
 
 
-def read_summary_rows(force_reload: bool = False) -> list[dict[str, Any]]:
+def read_summary_rows(force_reload: bool = False, include_history: bool = True) -> list[dict[str, Any]]:
     headers = read_sheet_headers(force_reload=force_reload)
     if not headers:
         return []
@@ -245,11 +249,12 @@ def read_summary_rows(force_reload: bool = False) -> list[dict[str, Any]]:
         index = header_positions[header]
         selected.append((field, header, index))
     selected_indexes = {index for _, _, index in selected}
-    for header, index in header_positions.items():
-        if index in selected_indexes or not history_key_from_header(header):
-            continue
-        selected.append(("historico", header, index))
-        selected_indexes.add(index)
+    if include_history:
+        for header, index in header_positions.items():
+            if index in selected_indexes or not history_key_from_header(header):
+                continue
+            selected.append(("historico", header, index))
+            selected_indexes.add(index)
 
     validate_required_headers(headers, ["administradora", "grupo", "tipo_bem"])
     settings = get_settings()
@@ -808,17 +813,21 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
     return detalhe
 
 
-def list_grupos() -> list[dict[str, Any]]:
+def list_grupos(include_history: bool = True) -> list[dict[str, Any]]:
     now = time.time()
+    cache_key = "with_history" if include_history else "light"
     with _cache_lock:
-        if _grupos_cache["items"] is not None and now < _grupos_cache["expires_at"]:
-            logger.info("Usando cache de grupos")
-            return list(_grupos_cache["items"])
+        cache = _grupos_cache[cache_key]
+        if cache["items"] is not None and now < cache["expires_at"]:
+            logger.info("Usando cache de grupos (%s)", cache_key)
+            return list(cache["items"])
 
-        items = [row_to_grupo(row) for row in read_summary_rows()]
-        _grupos_cache["items"] = items
-        _grupos_cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
-        return list(items)
+    items = [row_to_grupo(row) for row in read_summary_rows(include_history=include_history)]
+    with _cache_lock:
+        cache = _grupos_cache[cache_key]
+        cache["items"] = items
+        cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
+    return list(items)
 
 
 def list_grupos_detalhe() -> list[dict[str, Any]]:
