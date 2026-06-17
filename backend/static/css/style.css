@@ -242,7 +242,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   display: flex;
   flex-direction: column;
   width: 248px;
-  padding: 18px 14px;
+  padding: 16px 14px;
   background: linear-gradient(180deg, var(--sidebar), #031020);
   color: #fff;
 }
@@ -250,22 +250,23 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .brand {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 42px;
+  gap: 10px;
+  margin-bottom: 34px;
 }
 
 .brand-mark {
   display: grid;
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   place-items: center;
   border-radius: 8px;
   background: var(--primary);
+  font-size: 0.84rem;
   font-weight: 800;
 }
 
 .brand-name {
-  font-size: 1.12rem;
+  font-size: 1rem;
   font-weight: 800;
 }
 
@@ -273,25 +274,25 @@ body[data-theme="escuro"] .btn-outline-secondary {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
   min-height: 0;
 }
 
 .nav-section {
   display: grid;
-  gap: 8px;
+  gap: 7px;
 }
 
 .nav-section-admin {
   margin-top: auto;
-  padding-top: 18px;
+  padding-top: 14px;
   border-top: 1px solid rgba(255, 255, 255, 0.14);
 }
 
 .nav-section-title {
-  padding: 0 12px 2px;
+  padding: 0 10px 2px;
   color: rgba(203, 213, 225, 0.72);
-  font-size: 0.68rem;
+  font-size: 0.58rem;
   font-weight: 800;
   text-transform: uppercase;
 }
@@ -300,13 +301,14 @@ body[data-theme="escuro"] .btn-outline-secondary {
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: 46px;
-  gap: 12px;
-  padding: 0 12px;
+  min-height: 38px;
+  gap: 10px;
+  padding: 0 10px;
   border: 0;
   border-radius: 8px;
   background: transparent;
   color: #e5edf7;
+  font-size: 0.78rem;
   font-weight: 600;
   text-align: left;
 }
@@ -319,21 +321,22 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .nav-icon {
   display: grid;
-  width: 28px;
-  height: 24px;
+  width: 24px;
+  height: 22px;
+  flex: 0 0 24px;
   place-items: center;
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 6px;
-  font-size: 0.68rem;
+  font-size: 0.58rem;
   font-weight: 800;
 }
 
 .user-card {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 9px;
   margin-top: auto;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.06);
@@ -341,23 +344,25 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .user-avatar {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   place-items: center;
   border-radius: 999px;
   background: #e5edf7;
   color: var(--sidebar);
+  font-size: 0.82rem;
   font-weight: 800;
 }
 
 .user-name {
+  font-size: 0.82rem;
   font-weight: 700;
   line-height: 1.1;
 }
 
 .user-role {
   color: #cbd5e1;
-  font-size: 0.82rem;
+  font-size: 0.72rem;
 }
 
 .user-arrow {
