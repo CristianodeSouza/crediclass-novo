@@ -188,12 +188,14 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn('id="clearViabilityBtn"', index_html)
         self.assertNotIn('id="viabilityChecklist"', index_html)
 
-    def test_tela_perfil_cliente_existe_apos_mapa(self):
+    def test_tela_perfil_cliente_fica_no_fluxo_antes_do_mapa(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertLess(index_html.index('data-screen="mapa"'), index_html.index('data-screen="perfil"'))
+        self.assertLess(index_html.index('data-screen="perfil"'), index_html.index('data-screen="mapa"'))
+        self.assertIn("Fluxo do Estudo", index_html)
+        self.assertIn("Administrativo", index_html)
         self.assertIn('id="screen-perfil"', index_html)
         self.assertIn("Perfil do Cliente", index_html)
         self.assertIn("clientProfileCredito", index_html)

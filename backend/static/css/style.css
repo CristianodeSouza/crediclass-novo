@@ -270,8 +270,30 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .nav-menu {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+}
+
+.nav-section {
   display: grid;
   gap: 8px;
+}
+
+.nav-section-admin {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.nav-section-title {
+  padding: 0 12px 2px;
+  color: rgba(203, 213, 225, 0.72);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .nav-menu .nav-item {

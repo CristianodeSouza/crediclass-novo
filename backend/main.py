@@ -417,12 +417,26 @@ def cenarios_analisar(payload: ViabilidadeRequest):
     )
     try:
         summary_groups = list_grupos()
-        candidate_ids = [
-            item["grupo_id"]
+        summary_candidates = [
+            item
             for item in summary_groups
             if normalize_text(str(item.get("status") or "")) == "ativo"
             and compatible_tipo_bem(payload.objetivo, str(item.get("tipo_bem") or ""), payload.tipo_bem)
+            and (item.get("credito_maximo") or 0) >= payload.credito_desejado / 3
         ]
+        grouped_candidates: dict[str, list[dict]] = {}
+        for item in summary_candidates:
+            grouped_candidates.setdefault(str(item.get("administradora") or ""), []).append(item)
+        candidate_ids = []
+        for items in grouped_candidates.values():
+            ordered = sorted(
+                items,
+                key=lambda item: (
+                    abs((item.get("credito_maximo") or 0) - payload.credito_desejado),
+                    -(item.get("credito_maximo") or 0),
+                ),
+            )
+            candidate_ids.extend(item["grupo_id"] for item in ordered[:30])
         groups = list_grupos_detalhe_by_ids(candidate_ids) if candidate_ids else []
         result = analyze_scenarios(payload, groups)
         result["total_grupos_base"] = len(summary_groups)

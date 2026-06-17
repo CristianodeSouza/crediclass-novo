@@ -45,7 +45,24 @@ def _scenario_status(alertas: list[str], parcela_compativel: bool, renda_compati
     return "viavel_com_alertas" if alertas else "viavel"
 
 
-def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]], max_cards: int = 3) -> dict[str, Any]:
+def _candidate_pool_for_admin(
+    groups: list[dict[str, Any]],
+    target: float,
+    considerar_lance_embutido: bool,
+    limit: int,
+) -> list[dict[str, Any]]:
+    selected: dict[str, dict[str, Any]] = {}
+    liquid_max = [(group, _max_liquid(group, considerar_lance_embutido)) for group in groups]
+    for divisor in (1, 2, 3):
+        chunk = target / divisor
+        for group, _ in sorted(liquid_max, key=lambda item: abs(item[1] - chunk))[:limit]:
+            selected[str(group.get("grupo_id") or id(group))] = group
+    for group, _ in sorted(liquid_max, key=lambda item: item[1], reverse=True)[:limit]:
+        selected[str(group.get("grupo_id") or id(group))] = group
+    return list(selected.values())[:limit]
+
+
+def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]], max_cards: int = 3, max_groups_per_admin: int = 18) -> dict[str, Any]:
     profile = strategic_profile_for_months(payload.prazo_desejado)
     fgts_total = client_fgts_total(payload)
     parcela_ideal = float(payload.parcela_ideal or payload.parcela_desejada)
@@ -68,9 +85,17 @@ def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]],
 
     scenarios: list[dict[str, Any]] = []
     counter = 1
-    for administradora, admin_groups in by_admin.items():
+    for administradora, raw_admin_groups in by_admin.items():
+        admin_groups = _candidate_pool_for_admin(
+            raw_admin_groups,
+            payload.credito_desejado,
+            payload.considerar_lance_embutido,
+            max_groups_per_admin,
+        )
         for quantity in range(1, min(max_cards, len(admin_groups)) + 1):
             for combo in combinations(admin_groups, quantity):
+                if sum(_max_liquid(group, payload.considerar_lance_embutido) for group in combo) < payload.credito_desejado:
+                    continue
                 allocations = _allocate_liquid(payload.credito_desejado, combo, payload.considerar_lance_embutido)
                 if allocations is None:
                     continue
