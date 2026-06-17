@@ -328,6 +328,14 @@ function notifyWhen(key, message, type = "success") {
   if (isNotificationEnabled(key)) showToast(message, type);
 }
 
+function withTimeout(promise, timeoutMs, message) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
+}
+
 function activateScreen(screenName) {
   const meta = screens[screenName];
   if (!meta) return;
@@ -1495,10 +1503,10 @@ function updateViabilityTotals() {
 
 function clientProfileConcept(months) {
   const prazo = Number(months || 0);
-  if (prazo <= 3) return "Agressivo";
-  if (prazo <= 6) return "Moderado";
-  if (prazo <= 12) return "Conservador";
-  if (prazo <= 24) return "Super Conservador";
+  if (prazo <= 3) return "Super Agressivo";
+  if (prazo <= 6) return "Agressivo";
+  if (prazo <= 12) return "Moderado";
+  if (prazo <= 24) return "Conservador";
   return "Investidor";
 }
 
@@ -1867,7 +1875,11 @@ async function analyzeViability() {
 
   setViabilityState("loading");
   try {
-    const result = await apiPost("/cenarios/analisar", payload);
+    const result = await withTimeout(
+      apiPost("/cenarios/analisar", payload),
+      30000,
+      "A analise de cenarios demorou mais que o esperado. Tente novamente."
+    );
     viabilityState.lastResult = result;
     renderViabilityChecklist(result.checklist || {});
     renderViabilitySummary(result);
@@ -1882,6 +1894,7 @@ async function analyzeViability() {
     showToast("Analise de viabilidade concluida.", "success");
   } catch (error) {
     setViabilityState("error");
+    showToast(error.message || "Nao foi possivel analisar os cenarios.", "danger");
   }
 }
 
