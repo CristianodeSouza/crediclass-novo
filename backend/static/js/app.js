@@ -1777,7 +1777,7 @@ function ensureViabilityAuditModal() {
             <div class="modal-header">
               <div>
                 <h2 id="viabilityAuditTitle" class="modal-title h5">Auditoria da Viabilidade</h2>
-                <p id="viabilityAuditSubtitle" class="modal-subtitle">Conferencia das regras aplicadas ao grupo</p>
+                <p id="viabilityAuditSubtitle" class="modal-subtitle">Conferencia das regras aplicadas ao cenario</p>
               </div>
               <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
             </div>
@@ -1793,28 +1793,50 @@ function ensureViabilityAuditModal() {
   return viabilityAuditModal;
 }
 
-function openViabilityAudit(groupId) {
-  const item = viabilityState.lastResult?.melhores_grupos?.find((group) => group.grupo_id === groupId);
+function findViabilityItem(groupId, scenarioId) {
+  if (scenarioId) {
+    const scenario = viabilityState.lastResult?.cenarios?.find((item) => item.id === scenarioId);
+    if (scenario) return scenario;
+  }
+  return viabilityState.lastResult?.melhores_grupos?.find((group) => group.grupo_id === groupId);
+}
+
+function openViabilityAudit(groupId, scenarioId = "") {
+  const item = findViabilityItem(groupId, scenarioId);
   if (!item) {
-    showToast("Execute a Viabilidade antes de auditar o grupo.", "warning");
+    showToast("Execute a Viabilidade antes de auditar o cenario.", "warning");
     return;
   }
   const modal = ensureViabilityAuditModal();
   const payload = collectViabilityPayload();
   const status = viabilityAuditStatus(item);
-  const creditoOk = (item.credito_contratado || 0) >= (item.credito_minimo || 0) && (item.credito_contratado || 0) <= (item.credito_maximo || 0);
+  const isScenario = Array.isArray(item.cartas) && item.cartas.length > 0;
+  const cartas = item.cartas || [];
+  const composicao = item.grupo || cartas.map((card) => card.grupo || card.grupo_id).filter(Boolean).join(" + ") || "-";
+  const creditoContratado = item.credito_contratado || item.credito_contratado_total || 0;
+  const creditoLiquido = item.credito_liquido_total || item.credito || creditoContratado || 0;
+  const creditoReferencia = payload.credito_desejado || 0;
+  const creditoOk = isScenario
+    ? creditoLiquido >= creditoReferencia
+    : creditoContratado >= (item.credito_minimo || 0) && creditoContratado <= (item.credito_maximo || 0);
   const parcelaReferencia = payload.parcela_limite || payload.parcela_desejada || 0;
-  const parcelaOk = (item.parcela_estimada || 0) <= parcelaReferencia;
-  const prazoOk = (item.prazo || 0) >= (item.prazo_minimo || 0);
+  const parcela = item.parcela_estimada || item.parcela_total || 0;
+  const parcelaOk = parcela <= parcelaReferencia;
+  const prazo = item.prazo || cartas[0]?.prazo_restante || 0;
+  const prazoMinimo = item.prazo_minimo || cartas[0]?.prazo_minimo || 0;
+  const prazoOk = prazo >= prazoMinimo;
   const hasLanceHistory = item.lance_referencia_percentual !== null && item.lance_referencia_percentual !== undefined;
   const lanceOk = hasLanceHistory && (item.percentual_lance || 0) >= (item.lance_referencia_percentual || 0);
+  const title = isScenario ? `Auditoria do Cenario ${item.ranking || item.id || composicao}` : `Auditoria do Grupo ${item.grupo}`;
+  const taxaAdm = item.taxa_adm || cartas[0]?.taxa_adm || 0;
+  const fundoReserva = item.fundo_reserva || cartas[0]?.fundo_reserva || 0;
 
-  document.getElementById("viabilityAuditTitle").textContent = `Auditoria do Grupo ${item.grupo}`;
+  document.getElementById("viabilityAuditTitle").textContent = title;
   document.getElementById("viabilityAuditSubtitle").textContent = `${item.administradora} - ${item.tipo_bem} - ${auditStatusLabel(status)}`;
   document.getElementById("viabilityAuditContent").innerHTML = `
     <div class="audit-summary ${auditStatusClass(status)}">
       <strong>${escapeHtml(auditStatusLabel(status))}</strong>
-      <span>${status === "preliminar" ? "Este grupo entrou como candidato porque as regras das administradoras ainda exigem revisao humana." : "Conferencia dos criterios calculados para este grupo."}</span>
+      <span>${status === "preliminar" ? "Este cenario entrou como candidato porque as regras das administradoras ainda exigem revisao humana." : "Conferencia dos criterios calculados para este cenario."}</span>
     </div>
     <section class="audit-panel">
       <h3>Conferencia dos Requisitos</h3>
@@ -1822,14 +1844,14 @@ function openViabilityAudit(groupId) {
         <table class="table table-hover align-middle audit-table">
           <thead><tr><th>Criterio</th><th>Resultado</th><th>Status</th><th>Observacao</th></tr></thead>
           <tbody>
-            ${auditRow("Status do grupo", "Ativo", "ok", "Somente grupos ativos entram na busca.")}
+            ${auditRow(isScenario ? "Composicao" : "Status do grupo", isScenario ? composicao : "Ativo", "ok", isScenario ? `${cartas.length || 1} carta(s) dentro da mesma administradora.` : "Somente grupos ativos entram na busca.")}
             ${auditRow("Tipo de bem", item.tipo_bem || "-", "ok", `Perfil solicitou ${payload.tipo_bem || "-"}.`)}
-            ${auditRow("Faixa de credito", `${formatMoney(item.credito_minimo)} ate ${formatMoney(item.credito_maximo)}`, creditoOk ? "ok" : "alerta", `Credito a contratar: ${formatMoney(item.credito_contratado)}.`)}
-            ${auditRow("Prazo", `${item.prazo} meses restantes`, prazoOk ? "ok" : "alerta", `Prazo minimo calculado: ${Number(item.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} meses.`)}
-            ${auditRow("Parcela", formatMoney(item.parcela_estimada), parcelaOk ? "ok" : "alerta", `Parcela de referencia: ${formatMoney(parcelaReferencia)}.`)}
+            ${auditRow(isScenario ? "Credito liquido" : "Faixa de credito", isScenario ? formatMoney(creditoLiquido) : `${formatMoney(item.credito_minimo)} ate ${formatMoney(item.credito_maximo)}`, creditoOk ? "ok" : "alerta", isScenario ? `Credito desejado: ${formatMoney(creditoReferencia)}. Credito contratado: ${formatMoney(creditoContratado)}.` : `Credito a contratar: ${formatMoney(creditoContratado)}.`)}
+            ${auditRow("Prazo", `${prazo} meses restantes`, prazoOk ? "ok" : "alerta", `Prazo minimo calculado: ${Number(prazoMinimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} meses.`)}
+            ${auditRow("Parcela", formatMoney(parcela), parcelaOk ? "ok" : "alerta", `Parcela de referencia: ${formatMoney(parcelaReferencia)}.`)}
             ${auditRow("Lance historico", hasLanceHistory ? formatPercent(item.lance_referencia_percentual) : "Sem historico suficiente", lanceOk ? "ok" : "alerta", `Lance maximo calculado do cliente: ${formatPercent(item.percentual_lance)}.`)}
-            ${auditRow("Taxa ADM", formatPercent(item.taxa_adm), "ok", `Valor aplicado: ${formatMoney(item.taxa_administrativa_valor)}.`)}
-            ${auditRow("Fundo reserva", formatPercent(item.fundo_reserva), item.fundo_reserva >= 1 ? "alerta" : "ok", `Valor aplicado: ${formatMoney(item.fundo_reserva_valor)}.`)}
+            ${auditRow("Taxa ADM", formatPercent(taxaAdm), "ok", `Valor aplicado: ${formatMoney(item.taxa_administrativa_valor)}.`)}
+            ${auditRow("Fundo reserva", formatPercent(fundoReserva), fundoReserva >= 1 ? "alerta" : "ok", `Valor aplicado: ${formatMoney(item.fundo_reserva_valor)}.`)}
           </tbody>
         </table>
       </div>
@@ -1860,7 +1882,7 @@ function renderViabilityRanking(items) {
       <td><span class="audit-status ${item.status === "inviavel" ? "audit-danger" : item.alertas?.length ? "audit-warning" : "audit-ok"}">${escapeHtml(item.status || auditStatusLabel(viabilityAuditStatus(item)))}</span></td>
       <td>
         <div class="row-actions">
-          <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="auditar" data-group-id="${escapeHtml(item.grupo_id || item.cartas?.[0]?.grupo_id || "")}">Auditar</button>
+          <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="auditar" data-group-id="${escapeHtml(item.grupo_id || item.cartas?.[0]?.grupo_id || "")}" data-scenario-id="${escapeHtml(item.id || "")}">Auditar</button>
           <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="visualizar" data-group-id="${escapeHtml(item.grupo_id || item.cartas?.[0]?.grupo_id || "")}">Ver detalhes</button>
           <button class="btn btn-sm btn-outline-secondary" type="button" data-viability-action="estrategias" data-group-id="${escapeHtml(item.grupo_id || item.cartas?.[0]?.grupo_id || "")}" data-scenario-id="${escapeHtml(item.id || "")}">Selecionar</button>
         </div>
@@ -2228,7 +2250,7 @@ async function openFinancialStudy(groupId, viabilityItem) {
 
 async function saveCurrentStudy() {
   if (!currentStudy) {
-    showToast("Selecione um grupo na Viabilidade antes de salvar.", "warning");
+    showToast("Selecione um cenario na Viabilidade antes de salvar.", "warning");
     return null;
   }
   const payload = {
@@ -2278,7 +2300,7 @@ async function exportStudyPdf(studyId) {
 
 async function ensureCurrentStudySaved() {
   if (!currentStudy) {
-    showToast("Selecione um grupo na Viabilidade antes de compartilhar.", "warning");
+    showToast("Selecione um cenario na Viabilidade antes de compartilhar.", "warning");
     return null;
   }
   if (currentStudy.savedStudyId) return currentStudy.savedStudyId;
@@ -3625,7 +3647,7 @@ document.getElementById("viabilityRankingBody").addEventListener("click", (event
   const button = event.target.closest("[data-viability-action]");
   if (!button) return;
   if (button.dataset.viabilityAction === "auditar") {
-    openViabilityAudit(button.dataset.groupId);
+    openViabilityAudit(button.dataset.groupId, button.dataset.scenarioId);
     return;
   }
   if (button.dataset.viabilityAction === "visualizar") {

@@ -351,45 +351,45 @@
           <div class="content-card viability-groups-intro">
             <div class="table-toolbar">
               <div>
-                <h2>Grupos Compatíveis</h2>
-                <p>Selecao de grupos compativeis com o perfil salvo</p>
+                <h2>Cenarios Compativeis</h2>
+                <p>Composicao de cartas e grupos para o perfil salvo</p>
               </div>
               <div class="toolbar-actions">
                 <button class="btn btn-outline-secondary" type="button" data-screen-jump="perfil">Editar Perfil</button>
-                <button id="analyzeViabilityBtn" class="btn btn-primary" type="button">Analisar Grupos</button>
+                <button id="analyzeViabilityBtn" class="btn btn-primary" type="button">Analisar Cenarios</button>
               </div>
             </div>
           </div>
 
-          <div id="viabilityLoading" class="table-state d-none">Analisando grupos...</div>
-          <div id="viabilityError" class="table-state table-state-error d-none">Nao foi possivel analisar a viabilidade.</div>
-          <div id="viabilityEmpty" class="table-state d-none">Nenhum grupo compativel encontrado para este cenario.</div>
+          <div id="viabilityLoading" class="table-state d-none">Analisando cenarios...</div>
+          <div id="viabilityError" class="table-state table-state-error d-none">Nao foi possivel analisar os cenarios.</div>
+          <div id="viabilityEmpty" class="table-state d-none">Nenhum cenario compativel encontrado para este perfil.</div>
 
           <div id="viabilityResults" class="d-none">
             <div class="content-card">
               <div class="table-toolbar">
                 <div>
-                  <h2>Grupos Compatíveis</h2>
-                  <p id="viabilityRankingSubtitle">Resultado dos grupos candidatos para analise</p>
+                  <h2>Cenarios Compativeis</h2>
+                  <p id="viabilityRankingSubtitle">Resultado dos cenarios candidatos para analise</p>
                 </div>
               </div>
               <div class="table-responsive">
                 <table class="table table-hover align-middle viability-table">
                   <thead>
                     <tr>
-                      <th>Ranking</th>
+                      <th>Cenario</th>
                       <th>Administradora</th>
-                      <th>Grupo</th>
+                      <th>Composicao</th>
                       <th>Tipo de Bem</th>
-                      <th>Credito minimo</th>
-                      <th>Credito maximo</th>
-                      <th>Credito a contratar</th>
+                      <th>Cartas</th>
+                      <th>Credito liquido</th>
+                      <th>Credito contratado</th>
                       <th>Prazo restante</th>
                       <th>Prazo minimo</th>
                       <th>Taxa ADM</th>
                       <th>Fundo reserva</th>
-                      <th>Parcela Estimada</th>
-                      <th>Auditoria</th>
+                      <th>Parcela total</th>
+                      <th>Status</th>
                       <th>Acoes</th>
                     </tr>
                   </thead>
@@ -404,7 +404,7 @@
           <div id="studyEmpty" class="placeholder-card">
             <div class="state-badge">Aguardando selecao</div>
             <h2>Estudo Financeiro</h2>
-            <p>Selecione um grupo no ranking da Viabilidade para montar o estudo financeiro.</p>
+            <p>Selecione um cenario na Viabilidade para montar o estudo financeiro.</p>
           </div>
 
           <div id="studyLoading" class="table-state d-none">Carregando estudo financeiro...</div>
