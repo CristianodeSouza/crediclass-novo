@@ -230,6 +230,21 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(result["credito_maximo"], 800000)
         self.assertEqual(result["taxa_adm"], 0.18)
 
+    def test_row_to_grupo_accepts_id_grupo_header(self):
+        row = {
+            "ADM": "Embracon",
+            "ID Grupo": "1025",
+            "Tipo de Bem": "Imovel",
+            "Credito Minimo": "150.000,00",
+            "Credito Maximo": "900.000,00",
+        }
+
+        result = row_to_grupo(row)
+
+        self.assertEqual(result["grupo_id"], "1025")
+        self.assertEqual(result["grupo"], "1025")
+        self.assertEqual(result["administradora"], "Embracon")
+
     def test_text_and_credit_sanitization(self):
         self.assertEqual(clean_text("ImÃ³vel"), "Imóvel")
         self.assertIsNone(parse_credit("33.066.216.206.100.000,00"))
