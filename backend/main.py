@@ -427,7 +427,7 @@ def cenarios_analisar(payload: ViabilidadeRequest):
         grouped_candidates: dict[str, list[dict]] = {}
         for item in summary_candidates:
             grouped_candidates.setdefault(str(item.get("administradora") or ""), []).append(item)
-        candidate_ids = []
+        scenario_candidates = []
         for items in grouped_candidates.values():
             ordered = sorted(
                 items,
@@ -436,9 +436,8 @@ def cenarios_analisar(payload: ViabilidadeRequest):
                     -(item.get("credito_maximo") or 0),
                 ),
             )
-            candidate_ids.extend(item["grupo_id"] for item in ordered[:12])
-        groups = list_grupos_detalhe_by_ids(candidate_ids) if candidate_ids else []
-        result = analyze_scenarios(payload, groups)
+            scenario_candidates.extend(ordered[:12])
+        result = analyze_scenarios(payload, scenario_candidates)
         result["total_grupos_base"] = len(summary_groups)
     except Exception as error:
         logger.exception("Erro ao montar cenarios")

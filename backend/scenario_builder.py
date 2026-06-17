@@ -45,6 +45,25 @@ def _scenario_status(alertas: list[str], parcela_compativel: bool, renda_compati
     return "viavel_com_alertas" if alertas else "viavel"
 
 
+def _reference_from_group(group: dict[str, Any], profile_field: str) -> float | None:
+    historico = group.get("historico") or {}
+    if historico:
+        references = calculate_lance_references(historico, group.get("percentual_lance_fixo"))
+        return references.get(profile_field)
+    aliases = {
+        "lance_super_agressivo_3m": ["lance_super_agressivo_3m", "lance_agressivo"],
+        "lance_agressivo_6m": ["lance_agressivo_6m", "lance_moderado"],
+        "lance_moderado_12m": ["lance_moderado_12m", "lance_conservador"],
+        "lance_conservador_24m": ["lance_conservador_24m", "lance_super_conservador"],
+        "lance_investidor": ["lance_investidor"],
+    }
+    for field in aliases.get(profile_field, [profile_field]):
+        value = group.get(field)
+        if value is not None:
+            return as_float(value)
+    return None
+
+
 def _candidate_pool_for_admin(
     groups: list[dict[str, Any]],
     target: float,
@@ -112,8 +131,7 @@ def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]],
                         parcela_limite,
                         payload.considerar_lance_embutido,
                     )
-                    references = calculate_lance_references(group.get("historico") or {}, group.get("percentual_lance_fixo"))
-                    lance_ref = references.get(profile["campo_lance"])
+                    lance_ref = _reference_from_group(group, profile["campo_lance"])
                     card["referencia_lance"] = lance_ref
                     card["perfil"] = profile["perfil"]
                     card["historico_lance_insuficiente"] = lance_ref is None
