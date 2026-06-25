@@ -836,6 +836,35 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 700;
 }
 
+.client-preliminary-audit {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+.client-preliminary-audit h4 {
+  margin: 0;
+  color: #174c9a;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.client-preliminary-audit ol {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.client-preliminary-audit li {
+  color: #111827;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
 .client-profile-actions {
   display: flex;
   justify-content: flex-end;

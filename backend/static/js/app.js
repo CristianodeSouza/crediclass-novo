@@ -1863,6 +1863,17 @@ function renderPreliminaryRows(rows) {
   `).join("");
 }
 
+function renderPreliminaryAuditTrail(title, steps) {
+  return `
+    <section class="client-preliminary-audit">
+      <h4>${escapeHtml(title)}</h4>
+      <ol>
+        ${steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}
+      </ol>
+    </section>
+  `;
+}
+
 function renderClientPreliminaryAnalysis(analysis) {
   const target = document.getElementById("clientPreliminaryAnalysis");
   if (!target) return;
@@ -1885,6 +1896,14 @@ function renderClientPreliminaryAnalysis(analysis) {
           ["Total Lance RP", formatMoney(pj.totalLanceRP)],
           ["Maior idade (seguro)", pj.maiorIdade],
         ])}
+        ${renderPreliminaryAuditTrail("Demonstrativo logico do calculo", [
+          `O objetivo selecionado foi ${pj.objetivo || "-"} e o credito desejado informado foi ${formatMoney(pj.credito)}.`,
+          `A parcela desejada considerada veio do campo Parcela maxima desejada: ${formatMoney(pj.parcelaDesejada)}.`,
+          `O faturamento mensal da empresa informado foi ${formatMoney(pj.totalRendaPJ)}. Aplicando 30%, a parcela maxima PJ ficou em ${formatMoney(pj.parcelaMaximaPJ)}.`,
+          `A renda total dos socios informada foi ${formatMoney(pj.totalRendaSocio)}. Aplicando 30%, a parcela maxima dos socios PF ficou em ${formatMoney(pj.parcelaMaximaSocioPF)}.`,
+          `O lance maximo com recurso proprio informado foi ${formatMoney(pj.totalLanceRP)} e foi usado como Total Lance RP.`,
+          `A validacao de idade retornou: ${pj.maiorIdade}.`,
+        ])}
       </article>
     `;
     return;
@@ -1903,6 +1922,15 @@ function renderClientPreliminaryAnalysis(analysis) {
         ["Total Lance RP", formatMoney(pf.totalLanceRP)],
         ["Total Lance FGTS + RP", formatMoney(pf.totalLanceFGTSRP), formatPercent(pf.percentualCobertura), "sem embutido"],
         ["Maior idade (seguro)", pf.maiorIdade],
+      ])}
+      ${renderPreliminaryAuditTrail("Demonstrativo logico do calculo", [
+        `O objetivo selecionado foi ${pf.objetivo || "-"} e o credito desejado informado foi ${formatMoney(pf.credito)}.`,
+        `A renda total dos participantes foi somada em ${formatMoney(pf.totalRenda)}. Aplicando 30%, a parcela maxima ficou em ${formatMoney(pf.parcelaMaxima)}.`,
+        `A parcela desejada considerada veio do campo Parcela maxima desejada: ${formatMoney(pf.parcelaDesejada)}.`,
+        `O Total Lance FGTS foi a soma dos lances FGTS dos participantes: ${formatMoney(pf.totalLanceFGTS)}, equivalente a ${formatPercent(pf.percentualFGTS)} do credito desejado.`,
+        `O Total Lance RP veio do campo Lance maximo com recurso proprio: ${formatMoney(pf.totalLanceRP)}.`,
+        `Somando FGTS + recurso proprio, o total disponivel para lance ficou em ${formatMoney(pf.totalLanceFGTSRP)}, equivalente a ${formatPercent(pf.percentualCobertura)} do credito desejado.`,
+        `A validacao de idade retornou: ${pf.maiorIdade}.`,
       ])}
     </article>
   `;
