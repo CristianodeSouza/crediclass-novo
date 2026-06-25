@@ -460,6 +460,23 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn('tipo_bem: "Imovel"', app_js)
         self.assertIn("payload.lance_proprio < 0", app_js)
 
+    def test_perfil_cliente_suporta_titulares_pf_pj(self):
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        for label in [
+            "Pessoa fisica individual",
+            "Pessoa fisica com conjuge",
+            "Dois titulares / grupo familiar",
+            "Pessoa juridica",
+        ]:
+            self.assertIn(label, index_html)
+        self.assertIn("CLIENT_PJ_SOCIOS_LIMIT = 5", app_js)
+        self.assertIn("renderClientProfileTitulares", app_js)
+        self.assertIn("summarizeClientTitulares", app_js)
+        self.assertIn("titulares: profile.titulares", app_js)
+        self.assertIn("titulares: currentStudy.payload.titulares", app_js)
+
     def test_estudo_financeiro_exibe_metricas_historico_12_meses(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")

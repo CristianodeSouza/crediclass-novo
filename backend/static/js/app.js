@@ -84,6 +84,19 @@ const CLIENT_OBJECTIVE_RULES = {
   "Investidor - Vender carta contemplada (ganhar agil)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Indefinido" },
   "Investidor - Carta de credito aposentadoria (alavancagem, rendimento e flexibilidade)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Indefinido" },
 };
+const CLIENT_CONTRACTING_MODES = {
+  pf_individual: { label: "Pessoa fisica individual", pfCount: 1 },
+  pf_conjuge: { label: "Pessoa fisica com conjuge", pfCount: 2 },
+  pf_grupo: { label: "Dois titulares / grupo familiar", pfCount: 4 },
+  pj: { label: "Pessoa juridica", pfCount: 0 },
+};
+const CLIENT_PF_ROLES = [
+  { papel: "titular_1", label: "Pessoa titular" },
+  { papel: "conjuge_1", label: "Conjuge" },
+  { papel: "titular_2", label: "2 titular" },
+  { papel: "conjuge_2", label: "Conjuge 2" },
+];
+const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const authState = { user: null };
 let appBootstrapped = false;
 const administratorPlanDefaultNames = ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"];
@@ -1526,12 +1539,217 @@ function clientObjectiveRule(objective) {
   return CLIENT_OBJECTIVE_RULES[objective] || CLIENT_OBJECTIVE_RULES["Contemplar - urgente - 3 meses"];
 }
 
+function emptyPessoaFisica(index) {
+  const role = CLIENT_PF_ROLES[index] || CLIENT_PF_ROLES[0];
+  return {
+    papel: role.papel,
+    nome: "",
+    nascimento: "",
+    lance_fgts: 0,
+    renda: 0,
+  };
+}
+
+function emptyPessoaJuridica() {
+  return {
+    empresa: {
+      nome: "",
+      data_constituicao: "",
+      faturamento_mensal: 0,
+      tipo: "",
+    },
+    socios: Array.from({ length: CLIENT_PJ_SOCIOS_LIMIT }, (_, index) => ({
+      papel: index === 0 ? "socio_administrador" : `socio_${index + 1}`,
+      nome: "",
+      nascimento: "",
+      renda: 0,
+    })),
+  };
+}
+
+function normalizeClientTitulares(profile = {}) {
+  const tipo = profile.tipo_contratacao || profile.titulares?.tipo_contratacao || "pf_individual";
+  const mode = CLIENT_CONTRACTING_MODES[tipo] ? tipo : "pf_individual";
+  const pessoasFisicas = Array.from({ length: 4 }, (_, index) => ({
+    ...emptyPessoaFisica(index),
+    ...(profile.titulares?.pessoas_fisicas?.[index] || {}),
+  }));
+  if (!profile.titulares?.pessoas_fisicas?.length) {
+    pessoasFisicas[0] = {
+      ...pessoasFisicas[0],
+      nome: profile.nome || "",
+      nascimento: profile.data_nascimento || "",
+      lance_fgts: Number(profile.fgts_titular || profile.fgts || 0),
+      renda: Number(profile.renda_titular || profile.renda_total || 0),
+    };
+    pessoasFisicas[1] = {
+      ...pessoasFisicas[1],
+      nome: profile.nome_conjuge || "",
+      nascimento: profile.data_nascimento_conjuge || "",
+      lance_fgts: Number(profile.fgts_conjuge || 0),
+      renda: Number(profile.renda_conjuge || 0),
+    };
+  }
+  const pessoaJuridica = {
+    ...emptyPessoaJuridica(),
+    ...(profile.titulares?.pessoa_juridica || {}),
+  };
+  pessoaJuridica.empresa = {
+    ...emptyPessoaJuridica().empresa,
+    ...(profile.titulares?.pessoa_juridica?.empresa || {}),
+  };
+  pessoaJuridica.socios = Array.from({ length: CLIENT_PJ_SOCIOS_LIMIT }, (_, index) => ({
+    ...emptyPessoaJuridica().socios[index],
+    ...(profile.titulares?.pessoa_juridica?.socios?.[index] || {}),
+  }));
+  return {
+    tipo_contratacao: mode,
+    pessoas_fisicas: pessoasFisicas,
+    pessoa_juridica: pessoaJuridica,
+  };
+}
+
+function profileHolderInput(field, value = "", label = "", options = {}) {
+  const inputClass = options.wide ? "profile-holder-wide" : "";
+  const type = options.type || "text";
+  const moneyAttr = options.money ? ' data-money="true" inputmode="decimal"' : "";
+  return `
+    <label class="${inputClass}">
+      <span>${escapeHtml(label)}</span>
+      <input class="form-control" data-holder-field="${escapeHtml(field)}" type="${type}" value="${escapeHtml(value ?? "")}"${moneyAttr}>
+    </label>
+  `;
+}
+
+function renderPessoaFisicaCard(person, index) {
+  const role = CLIENT_PF_ROLES[index] || CLIENT_PF_ROLES[0];
+  return `
+    <article class="profile-holder-card">
+      <h4>${escapeHtml(role.label)}</h4>
+      ${profileHolderInput(`pessoas_fisicas.${index}.nome`, person.nome, "Nome", { wide: true })}
+      ${profileHolderInput(`pessoas_fisicas.${index}.nascimento`, person.nascimento, "Nascimento", { type: "date" })}
+      ${profileHolderInput(`pessoas_fisicas.${index}.lance_fgts`, formatMoneyInputValue(person.lance_fgts || ""), "Lance FGTS", { money: true })}
+      ${profileHolderInput(`pessoas_fisicas.${index}.renda`, formatMoneyInputValue(person.renda || ""), "Renda", { money: true })}
+    </article>
+  `;
+}
+
+function renderPessoaJuridicaCards(data) {
+  const empresa = data.pessoa_juridica.empresa;
+  const socios = data.pessoa_juridica.socios;
+  return `
+    <article class="profile-holder-card">
+      <h4>Empresa titular</h4>
+      ${profileHolderInput("pessoa_juridica.empresa.nome", empresa.nome, "Nome", { wide: true })}
+      ${profileHolderInput("pessoa_juridica.empresa.data_constituicao", empresa.data_constituicao, "Data constituicao", { type: "date" })}
+      ${profileHolderInput("pessoa_juridica.empresa.faturamento_mensal", formatMoneyInputValue(empresa.faturamento_mensal || ""), "Faturamento mensal", { money: true })}
+      ${profileHolderInput("pessoa_juridica.empresa.tipo", empresa.tipo, "Tipo", { wide: true })}
+    </article>
+    ${socios.map((socio, index) => `
+      <article class="profile-holder-card">
+        <h4>${index === 0 ? "Socio administrador" : `Socio ${index + 1}`}</h4>
+        ${profileHolderInput(`pessoa_juridica.socios.${index}.nome`, socio.nome, "Nome", { wide: true })}
+        ${profileHolderInput(`pessoa_juridica.socios.${index}.nascimento`, socio.nascimento, "Nascimento", { type: "date" })}
+        ${profileHolderInput(`pessoa_juridica.socios.${index}.renda`, formatMoneyInputValue(socio.renda || ""), "Renda", { money: true })}
+      </article>
+    `).join("")}
+  `;
+}
+
+function renderClientProfileTitulares(profile = {}) {
+  const data = normalizeClientTitulares(profile);
+  const grid = document.getElementById("clientProfileTitularesGrid");
+  if (!grid) return;
+  const selector = document.getElementById("clientProfileTipoContratacao");
+  if (selector) selector.value = data.tipo_contratacao;
+  if (data.tipo_contratacao === "pj") {
+    grid.innerHTML = renderPessoaJuridicaCards(data);
+    return;
+  }
+  const count = CLIENT_CONTRACTING_MODES[data.tipo_contratacao]?.pfCount || 1;
+  grid.innerHTML = data.pessoas_fisicas.slice(0, count).map(renderPessoaFisicaCard).join("");
+}
+
+function setNestedValue(target, path, value) {
+  const parts = path.split(".");
+  let cursor = target;
+  for (let index = 0; index < parts.length - 1; index += 1) {
+    const part = parts[index];
+    const next = parts[index + 1];
+    if (cursor[part] === undefined) cursor[part] = Number.isInteger(Number(next)) ? [] : {};
+    cursor = cursor[part];
+  }
+  cursor[parts[parts.length - 1]] = value;
+}
+
+function collectClientTitularesFromForm() {
+  const tipo = document.getElementById("clientProfileTipoContratacao")?.value || "pf_individual";
+  const data = normalizeClientTitulares({ tipo_contratacao: tipo });
+  document.querySelectorAll("[data-holder-field]").forEach((input) => {
+    const field = input.dataset.holderField;
+    const value = input.dataset.money ? toNumber(input.value) : String(input.value || "").trim();
+    setNestedValue(data, field, value);
+  });
+  data.tipo_contratacao = tipo;
+  return data;
+}
+
+function summarizeClientTitulares(titulares) {
+  if (titulares.tipo_contratacao === "pj") {
+    const empresa = titulares.pessoa_juridica.empresa;
+    const socios = titulares.pessoa_juridica.socios.filter((socio) => socio.nome || socio.nascimento || Number(socio.renda || 0) > 0);
+    const rendaSocios = socios.reduce((sum, socio) => sum + Number(socio.renda || 0), 0);
+    const faturamento = Number(empresa.faturamento_mensal || 0);
+    return {
+      nome: empresa.nome || "Empresa titular",
+      nome_conjuge: "",
+      data_nascimento: socios[0]?.nascimento || "",
+      data_nascimento_conjuge: "",
+      fgts_titular: 0,
+      fgts_conjuge: 0,
+      fgts: 0,
+      renda_titular: faturamento + rendaSocios,
+      renda_conjuge: 0,
+      renda_total: faturamento + rendaSocios,
+      resumo_label: empresa.nome || "Pessoa juridica",
+      titulares_count: socios.length + (empresa.nome ? 1 : 0),
+    };
+  }
+  const pessoas = titulares.pessoas_fisicas.filter((person) => person.nome || person.nascimento || Number(person.lance_fgts || 0) > 0 || Number(person.renda || 0) > 0);
+  const fgts = pessoas.reduce((sum, person) => sum + Number(person.lance_fgts || 0), 0);
+  const renda = pessoas.reduce((sum, person) => sum + Number(person.renda || 0), 0);
+  return {
+    nome: pessoas[0]?.nome || "",
+    nome_conjuge: pessoas[1]?.nome || "",
+    data_nascimento: pessoas[0]?.nascimento || "",
+    data_nascimento_conjuge: pessoas[1]?.nascimento || "",
+    fgts_titular: fgts,
+    fgts_conjuge: 0,
+    fgts,
+    renda_titular: renda,
+    renda_conjuge: 0,
+    renda_total: renda,
+    resumo_label: pessoas.map((person) => person.nome).filter(Boolean).join(" + ") || "Pessoa fisica",
+    titulares_count: pessoas.length,
+  };
+}
+
 function updateClientProfileTotals() {
-  const fgts = toNumber(document.getElementById("clientProfileFgtsTitular").value) + toNumber(document.getElementById("clientProfileFgtsConjuge").value);
+  const titulares = collectClientTitularesFromForm();
+  const holderSummary = summarizeClientTitulares(titulares);
+  const fgts = holderSummary.fgts;
   const lance = toNumber(document.getElementById("clientProfileLanceProprio").value);
-  const renda = toNumber(document.getElementById("clientProfileRendaTitular").value) + toNumber(document.getElementById("clientProfileRendaConjuge").value);
+  const renda = holderSummary.renda_total;
   const objectiveRule = clientObjectiveRule(document.getElementById("clientProfileObjetivo").value);
   const conceito = objectiveRule.conceito || clientProfileConcept(objectiveRule.prazo);
+  document.getElementById("clientProfileNome").value = holderSummary.nome;
+  document.getElementById("clientProfileConjuge").value = holderSummary.nome_conjuge;
+  document.getElementById("clientProfileNascimento").value = holderSummary.data_nascimento;
+  document.getElementById("clientProfileNascimentoConjuge").value = holderSummary.data_nascimento_conjuge;
+  document.getElementById("clientProfileFgtsTitular").value = holderSummary.fgts_titular;
+  document.getElementById("clientProfileFgtsConjuge").value = holderSummary.fgts_conjuge;
+  document.getElementById("clientProfileRendaTitular").value = holderSummary.renda_titular;
+  document.getElementById("clientProfileRendaConjuge").value = holderSummary.renda_conjuge;
   document.getElementById("clientProfilePrazo").value = objectiveRule.prazo;
   document.getElementById("clientProfileTipoBem").value = objectiveRule.tipoBem || "Imovel";
   document.getElementById("clientProfileEstadoBem").value = objectiveRule.estadoBem || "Pronto";
@@ -1540,30 +1758,33 @@ function updateClientProfileTotals() {
   document.getElementById("clientProfileTotalDisponivel").value = formatMoney(lance + fgts);
   document.getElementById("clientProfileRendaTotal").value = formatMoney(renda);
   document.getElementById("clientProfileConceito").value = conceito;
-  renderClientProfileSummary({ fgts, lance, renda, conceito });
-  return { fgts, lance, renda, conceito };
+  renderClientProfileSummary({ fgts, lance, renda, conceito, holderSummary, titulares });
+  return { fgts, lance, renda, conceito, holderSummary, titulares };
 }
 
 function collectClientProfile() {
   const totals = updateClientProfileTotals();
+  const summary = totals.holderSummary;
   return {
-    nome: document.getElementById("clientProfileNome").value.trim(),
-    nome_conjuge: document.getElementById("clientProfileConjuge").value.trim(),
+    tipo_contratacao: totals.titulares.tipo_contratacao,
+    titulares: totals.titulares,
+    nome: summary.nome,
+    nome_conjuge: summary.nome_conjuge,
     credito_desejado: toNumber(document.getElementById("clientProfileCredito").value),
     prazo_desejado: Number(document.getElementById("clientProfilePrazo").value),
     conceito_ia: totals.conceito,
     lance_proprio: toNumber(document.getElementById("clientProfileLanceProprio").value),
-    fgts_titular: toNumber(document.getElementById("clientProfileFgtsTitular").value),
-    fgts_conjuge: toNumber(document.getElementById("clientProfileFgtsConjuge").value),
+    fgts_titular: summary.fgts_titular,
+    fgts_conjuge: summary.fgts_conjuge,
     fgts: totals.fgts,
-    renda_titular: toNumber(document.getElementById("clientProfileRendaTitular").value),
-    renda_conjuge: toNumber(document.getElementById("clientProfileRendaConjuge").value),
+    renda_titular: summary.renda_titular,
+    renda_conjuge: summary.renda_conjuge,
     renda_total: totals.renda,
     parcela_ideal: toNumber(document.getElementById("clientProfileParcelaIdeal").value),
     parcela_limite: toNumber(document.getElementById("clientProfileParcelaLimite").value) || toNumber(document.getElementById("clientProfileParcelaIdeal").value),
     parcela_desejada: toNumber(document.getElementById("clientProfileParcelaIdeal").value),
-    data_nascimento: document.getElementById("clientProfileNascimento").value,
-    data_nascimento_conjuge: document.getElementById("clientProfileNascimentoConjuge").value,
+    data_nascimento: summary.data_nascimento,
+    data_nascimento_conjuge: summary.data_nascimento_conjuge,
     objetivo: document.getElementById("clientProfileObjetivo").value,
     tipo_bem: document.getElementById("clientProfileTipoBem").value,
     estado_bem: document.getElementById("clientProfileEstadoBem").value,
@@ -1572,7 +1793,10 @@ function collectClientProfile() {
 
 function renderClientProfileSummary(totals = null) {
   const current = totals || updateClientProfileTotals();
+  const contractingMode = CLIENT_CONTRACTING_MODES[current.titulares?.tipo_contratacao]?.label || "-";
   document.getElementById("clientProfileSummary").innerHTML = [
+    ["Contratacao", contractingMode],
+    ["Titular(es)", current.holderSummary?.resumo_label || "-"],
     ["Conceito IA", current.conceito],
     ["Credito desejado", formatMoney(toNumber(document.getElementById("clientProfileCredito").value))],
     ["Parcela maxima", formatMoney(toNumber(document.getElementById("clientProfileParcelaIdeal").value))],
@@ -1623,20 +1847,14 @@ function loadClientProfile() {
     profile = null;
   }
   if (!profile) {
+    renderClientProfileTitulares({ tipo_contratacao: "pf_individual" });
     updateClientProfileTotals();
     return;
   }
-  setInputValue("clientProfileNome", profile.nome);
-  setInputValue("clientProfileConjuge", profile.nome_conjuge);
+  renderClientProfileTitulares(profile);
   setMoneyInputValue("clientProfileCredito", profile.credito_desejado);
   setMoneyInputValue("clientProfileLanceProprio", profile.lance_proprio);
-  setMoneyInputValue("clientProfileFgtsTitular", profile.fgts_titular);
-  setMoneyInputValue("clientProfileFgtsConjuge", profile.fgts_conjuge);
-  setMoneyInputValue("clientProfileRendaTitular", profile.renda_titular);
-  setMoneyInputValue("clientProfileRendaConjuge", profile.renda_conjuge);
   setMoneyInputValue("clientProfileParcelaIdeal", profile.parcela_ideal ?? profile.parcela_desejada);
-  setInputValue("clientProfileNascimento", profile.data_nascimento);
-  setInputValue("clientProfileNascimentoConjuge", profile.data_nascimento_conjuge);
   const objective = CLIENT_OBJECTIVE_RULES[profile.objetivo] ? profile.objetivo : "Contemplar - urgente - 3 meses";
   setInputValue("clientProfileObjetivo", objective);
   updateClientProfileTotals();
@@ -1646,6 +1864,7 @@ function loadClientProfile() {
 function resetClientProfile() {
   document.getElementById("clientProfileForm").reset();
   window.localStorage.removeItem(CLIENT_PROFILE_STORAGE_KEY);
+  renderClientProfileTitulares({ tipo_contratacao: "pf_individual" });
   updateClientProfileTotals();
   showToast("Perfil do cliente limpo.", "success");
 }
@@ -1682,6 +1901,10 @@ function collectViabilityPayload() {
     parcela_desejada: parcelaLimite,
     parcela_ideal: profile.parcela_ideal,
     parcela_limite: parcelaLimite,
+    tipo_contratacao: profile.tipo_contratacao,
+    titulares: profile.titulares,
+    nome: profile.nome,
+    nome_conjuge: profile.nome_conjuge,
     data_nascimento: profile.data_nascimento,
     data_nascimento_conjuge: profile.data_nascimento_conjuge,
     tipo_bem: profile.tipo_bem,
@@ -2272,7 +2495,10 @@ async function saveCurrentStudy() {
   }
   const payload = {
     cliente: {
-      nome: "Cliente em estudo",
+      nome: currentStudy.payload.nome || "Cliente em estudo",
+      nome_conjuge: currentStudy.payload.nome_conjuge || "",
+      tipo_contratacao: currentStudy.payload.tipo_contratacao,
+      titulares: currentStudy.payload.titulares,
       credito_desejado: currentStudy.payload.credito_desejado,
       objetivo: currentStudy.payload.objetivo,
       prazo_desejado: currentStudy.payload.prazo_desejado,
@@ -3525,10 +3751,6 @@ const moneyInputIds = [
   "filterCreditoMaximo",
   "clientProfileCredito",
   "clientProfileLanceProprio",
-  "clientProfileFgtsTitular",
-  "clientProfileFgtsConjuge",
-  "clientProfileRendaTitular",
-  "clientProfileRendaConjuge",
   "clientProfileParcelaIdeal",
   "clientProfileParcelaLimite",
   "groupFormCreditoMinimo",
@@ -3555,10 +3777,6 @@ document.getElementById("groupFormModal").addEventListener("blur", (event) => {
 [
   "clientProfileCredito",
   "clientProfileLanceProprio",
-  "clientProfileFgtsTitular",
-  "clientProfileFgtsConjuge",
-  "clientProfileRendaTitular",
-  "clientProfileRendaConjuge",
   "clientProfileParcelaIdeal",
   "clientProfileParcelaLimite",
 ].forEach((id) => {
@@ -3571,6 +3789,28 @@ document.getElementById("groupFormModal").addEventListener("blur", (event) => {
 ["clientProfilePrazo", "clientProfileObjetivo", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
   document.getElementById(id).addEventListener("change", updateClientProfileTotals);
 });
+
+document.getElementById("clientProfileTipoContratacao").addEventListener("change", (event) => {
+  const current = collectClientTitularesFromForm();
+  current.tipo_contratacao = event.target.value;
+  renderClientProfileTitulares(current);
+  updateClientProfileTotals();
+  recalculateAdministratorPlanComputedCells();
+});
+
+document.getElementById("clientProfileForm").addEventListener("input", (event) => {
+  if (!event.target.matches("[data-holder-field]")) return;
+  updateClientProfileTotals();
+  recalculateAdministratorPlanComputedCells();
+});
+
+document.getElementById("clientProfileForm").addEventListener("blur", (event) => {
+  if (event.target.matches("[data-holder-field][data-money]")) {
+    event.target.value = formatMoneyInputValue(event.target.value);
+    updateClientProfileTotals();
+    recalculateAdministratorPlanComputedCells();
+  }
+}, true);
 
 document.getElementById("saveClientProfileBtn").addEventListener("click", () => saveClientProfile());
 document.getElementById("clearClientProfileBtn").addEventListener("click", resetClientProfile);

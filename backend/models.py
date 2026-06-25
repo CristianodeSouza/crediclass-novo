@@ -406,6 +406,9 @@ class ViabilidadeResponse(BaseModel):
 
 class EstudoCliente(BaseModel):
     nome: str = ""
+    nome_conjuge: str = ""
+    tipo_contratacao: str = ""
+    titulares: dict[str, Any] = Field(default_factory=dict)
     credito_desejado: float = Field(gt=0)
     objetivo: str = ""
     prazo_desejado: int | None = Field(default=None, gt=0)

@@ -242,10 +242,24 @@
               <form id="clientProfileForm" class="client-profile-form">
                 <div class="client-profile-section">
                   <h3>Identificacao</h3>
-                  <label><span>Nome do Cliente</span><input id="clientProfileNome" class="form-control" placeholder="Nome do cliente"></label>
-                  <label><span>Nome do Conjuge</span><input id="clientProfileConjuge" class="form-control" placeholder="Nome do conjuge"></label>
-                  <label><span>Data Nascimento Titular</span><input id="clientProfileNascimento" class="form-control" type="date"></label>
-                  <label><span>Data Nascimento Conjuge</span><input id="clientProfileNascimentoConjuge" class="form-control" type="date"></label>
+                  <label class="profile-contracting-field">
+                    <span>Tipo de contratacao</span>
+                    <select id="clientProfileTipoContratacao" class="form-select">
+                      <option value="pf_individual">Pessoa fisica individual</option>
+                      <option value="pf_conjuge">Pessoa fisica com conjuge</option>
+                      <option value="pf_grupo">Dois titulares / grupo familiar</option>
+                      <option value="pj">Pessoa juridica</option>
+                    </select>
+                  </label>
+                  <div id="clientProfileTitularesGrid" class="profile-holder-grid"></div>
+                  <input id="clientProfileNome" type="hidden">
+                  <input id="clientProfileConjuge" type="hidden">
+                  <input id="clientProfileNascimento" type="hidden">
+                  <input id="clientProfileNascimentoConjuge" type="hidden">
+                  <input id="clientProfileFgtsTitular" type="hidden">
+                  <input id="clientProfileFgtsConjuge" type="hidden">
+                  <input id="clientProfileRendaTitular" type="hidden">
+                  <input id="clientProfileRendaConjuge" type="hidden">
                 </div>
 
                 <div class="client-profile-section">
@@ -277,12 +291,8 @@
 
                 <div class="client-profile-section">
                   <h3>Capacidade Financeira</h3>
-                  <label><span>FGTS Titular</span><input id="clientProfileFgtsTitular" class="form-control" inputmode="decimal"></label>
-                  <label><span>FGTS Conjuge</span><input id="clientProfileFgtsConjuge" class="form-control" inputmode="decimal"></label>
                   <label><span>Total FGTS</span><input id="clientProfileFgtsTotal" class="form-control client-calculated" readonly></label>
                   <label><span>Total Disponivel Cliente + FGTS</span><input id="clientProfileTotalDisponivel" class="form-control client-calculated client-success" readonly></label>
-                  <label><span>Renda Titular</span><input id="clientProfileRendaTitular" class="form-control" inputmode="decimal"></label>
-                  <label><span>Renda Conjuge</span><input id="clientProfileRendaConjuge" class="form-control" inputmode="decimal"></label>
                   <label><span>Renda Total</span><input id="clientProfileRendaTotal" class="form-control client-calculated" readonly></label>
                 </div>
               </form>
