@@ -91,9 +91,9 @@ const CLIENT_CONTRACTING_MODES = {
   pj: { label: "Pessoa juridica", pfCount: 0 },
 };
 const CLIENT_PF_ROLES = [
-  { papel: "titular_1", label: "Pessoa titular" },
-  { papel: "conjuge_1", label: "Conjuge" },
-  { papel: "titular_2", label: "2 titular" },
+  { papel: "titular_1", label: "Titular 1" },
+  { papel: "conjuge_1", label: "Conjuge 1" },
+  { papel: "titular_2", label: "Titular 2" },
   { papel: "conjuge_2", label: "Conjuge 2" },
 ];
 const CLIENT_PJ_SOCIOS_LIMIT = 5;
