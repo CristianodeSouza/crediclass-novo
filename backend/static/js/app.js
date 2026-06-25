@@ -1787,15 +1787,15 @@ function preliminaryDecision(ok) {
 function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
   const objetivo = document.getElementById("clientProfileObjetivo").value;
   const credito = toNumber(document.getElementById("clientProfileCredito").value);
-  const prazo = Number(document.getElementById("clientProfilePrazo").value) || 1;
-  const parcelaDesejada = prazo > 0 ? credito / prazo : 0;
+  const parcelaDesejada = toNumber(document.getElementById("clientProfileParcelaIdeal").value);
+  const lanceProprio = toNumber(document.getElementById("clientProfileLanceProprio").value);
   const pessoasAtivas = (titulares.pessoas_fisicas || []).filter((person) => (
     person.nome || person.nascimento || Number(person.lance_fgts || 0) > 0 || Number(person.renda || 0) > 0
   ));
   const pfRenda = pessoasAtivas.reduce((sum, person) => sum + Number(person.renda || 0), 0);
   const pfFgts = pessoasAtivas.reduce((sum, person) => sum + Number(person.lance_fgts || 0), 0);
   const pfParcelaMaxima = pfRenda * 0.3;
-  const pfTotalLanceRP = pfParcelaMaxima * prazo;
+  const pfTotalLanceRP = lanceProprio;
   const pfCobertura = pfFgts + pfTotalLanceRP;
   const pfLinha1Ok = parcelaDesejada <= pfParcelaMaxima && parcelaDesejada > 0;
   const pfLinha2Ok = credito > 0 && pfCobertura >= credito;
@@ -1809,7 +1809,7 @@ function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
   const pjComprometimento = pjFaturamento * 0.3;
   const pjParcelaMaximaSocioPF = pjRendaSocio * 0.3;
   const pjParcelaMaxima = Math.max(pjComprometimento, pjParcelaMaximaSocioPF);
-  const pjTotalLanceRP = pjParcelaMaxima * prazo;
+  const pjTotalLanceRP = lanceProprio;
   const pjLinha1Ok = parcelaDesejada <= pjParcelaMaxima && parcelaDesejada > 0;
   const pjLinha2Ok = credito > 0 && pjTotalLanceRP >= credito;
   const pjAge = preliminaryAgeSummary(sociosAtivos);
@@ -1825,6 +1825,7 @@ function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
       totalLanceFGTS: pfFgts,
       totalLanceRP: pfTotalLanceRP,
       totalLanceFGTSRP: pfCobertura,
+      percentualFGTS: credito > 0 ? pfFgts / credito : 0,
       percentualCobertura: credito > 0 ? pfCobertura / credito : 0,
       decisaoLinha1: preliminaryDecision(pfLinha1Ok),
       decisaoLinha2: preliminaryDecision(pfLinha2Ok),
@@ -1866,8 +1867,33 @@ function renderClientPreliminaryAnalysis(analysis) {
   const pf = analysis.pessoaFisica;
   const pj = analysis.pessoaJuridica;
   const activeType = analysis.tipoContratacao === "pj" ? "pj" : "pf";
+  if (activeType === "pj") {
+    target.innerHTML = `
+      <article class="client-preliminary-card active">
+        <header>Pessoa Juridica</header>
+        ${renderPreliminaryRows([
+          ["Objetivo do consorcio", pj.objetivo || "-"],
+          ["Credito desejado", formatMoney(pj.credito)],
+          ["Total Renda PJ", formatMoney(pj.totalRendaPJ)],
+          ["Total Renda Socio", formatMoney(pj.totalRendaSocio)],
+          ["Comprometimento maximo", formatMoney(pj.comprometimentoMaximo)],
+          ["Parcela Desejada", formatMoney(pj.parcelaDesejada)],
+          ["Parcela maxima PJ", formatMoney(pj.parcelaMaximaPJ)],
+          ["Parcela maxima Socio PF", formatMoney(pj.parcelaMaximaSocioPF)],
+          ["Total Lance RP", formatMoney(pj.totalLanceRP)],
+          ["Cobertura PJ", formatPercent(pj.percentualCoberturaPJ)],
+          ["Cobertura Socio", formatPercent(pj.percentualCoberturaSocio)],
+          ["Linha 1", pj.decisaoLinha1, pj.decisaoLinha1 === "sem embudo" ? "ok" : "alert"],
+          ["Linha 2", pj.decisaoLinha2, pj.decisaoLinha2 === "sem embudo" ? "ok" : "alert"],
+          ["Maior idade (seguro)", pj.maiorIdade, pj.maiorIdade.includes("confirmada") ? "ok" : "alert"],
+          ["Resultado", pj.resultado, pj.resultado === "sem embudo" ? "ok" : "alert"],
+        ])}
+      </article>
+    `;
+    return;
+  }
   target.innerHTML = `
-    <article class="client-preliminary-card${activeType === "pf" ? " active" : ""}">
+    <article class="client-preliminary-card active">
       <header>Pessoa Fisica</header>
       ${renderPreliminaryRows([
         ["Objetivo do consorcio", pf.objetivo || "-"],
@@ -1877,33 +1903,14 @@ function renderClientPreliminaryAnalysis(analysis) {
         ["Parcela Maxima", formatMoney(pf.parcelaMaxima)],
         ["Parcela Desejada", formatMoney(pf.parcelaDesejada)],
         ["Total Lance FGTS", formatMoney(pf.totalLanceFGTS)],
+        ["% Lance FGTS", formatPercent(pf.percentualFGTS)],
         ["Total Lance RP", formatMoney(pf.totalLanceRP)],
         ["Total Lance FGTS + RP", formatMoney(pf.totalLanceFGTSRP)],
-        ["Cobertura", formatPercent(pf.percentualCobertura)],
+        ["% Lance FGTS + RP", formatPercent(pf.percentualCobertura)],
         ["Linha 1", pf.decisaoLinha1, pf.decisaoLinha1 === "sem embudo" ? "ok" : "alert"],
         ["Linha 2", pf.decisaoLinha2, pf.decisaoLinha2 === "sem embudo" ? "ok" : "alert"],
         ["Maior idade (seguro)", pf.maiorIdade, pf.maiorIdade.includes("confirmada") ? "ok" : "alert"],
         ["Resultado", pf.resultado, pf.resultado === "sem embudo" ? "ok" : "alert"],
-      ])}
-    </article>
-    <article class="client-preliminary-card${activeType === "pj" ? " active" : ""}">
-      <header>Pessoa Juridica</header>
-      ${renderPreliminaryRows([
-        ["Objetivo do consorcio", pj.objetivo || "-"],
-        ["Credito desejado", formatMoney(pj.credito)],
-        ["Total Renda PJ", formatMoney(pj.totalRendaPJ)],
-        ["Total Renda Socio", formatMoney(pj.totalRendaSocio)],
-        ["Comprometimento maximo", formatMoney(pj.comprometimentoMaximo)],
-        ["Parcela Desejada", formatMoney(pj.parcelaDesejada)],
-        ["Parcela maxima PJ", formatMoney(pj.parcelaMaximaPJ)],
-        ["Parcela maxima Socio PF", formatMoney(pj.parcelaMaximaSocioPF)],
-        ["Total Lance RP", formatMoney(pj.totalLanceRP)],
-        ["Cobertura PJ", formatPercent(pj.percentualCoberturaPJ)],
-        ["Cobertura Socio", formatPercent(pj.percentualCoberturaSocio)],
-        ["Linha 1", pj.decisaoLinha1, pj.decisaoLinha1 === "sem embudo" ? "ok" : "alert"],
-        ["Linha 2", pj.decisaoLinha2, pj.decisaoLinha2 === "sem embudo" ? "ok" : "alert"],
-        ["Maior idade (seguro)", pj.maiorIdade, pj.maiorIdade.includes("confirmada") ? "ok" : "alert"],
-        ["Resultado", pj.resultado, pj.resultado === "sem embudo" ? "ok" : "alert"],
       ])}
     </article>
   `;
