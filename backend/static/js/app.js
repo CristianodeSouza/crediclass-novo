@@ -321,6 +321,7 @@ async function initializeDashboardData() {
   });
   loadMapaGrupos();
   loadClientProfile();
+  ensureClientProfileHoldersRendered();
   updateViabilityTotals();
   openSharedStudyFromUrl().catch(() => showToast("Nao foi possivel abrir o estudo compartilhado.", "danger"));
 }
@@ -1668,6 +1669,14 @@ function renderClientProfileTitulares(profile = {}) {
   }
   const count = CLIENT_CONTRACTING_MODES[data.tipo_contratacao]?.pfCount || 1;
   grid.innerHTML = data.pessoas_fisicas.slice(0, count).map(renderPessoaFisicaCard).join("");
+}
+
+function ensureClientProfileHoldersRendered() {
+  const grid = document.getElementById("clientProfileTitularesGrid");
+  if (!grid || grid.children.length) return;
+  renderClientProfileTitulares({
+    tipo_contratacao: document.getElementById("clientProfileTipoContratacao")?.value || "pf_individual",
+  });
 }
 
 function setNestedValue(target, path, value) {
