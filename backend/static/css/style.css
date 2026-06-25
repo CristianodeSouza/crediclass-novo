@@ -2045,6 +2045,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
   min-height: 520px;
 }
 
+.administrator-plans-card.content-card {
+  padding: 10px;
+}
+
 .administrator-plan-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -2069,25 +2073,27 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .administrator-plan-help {
-  margin-bottom: 12px;
-  padding: 10px 12px;
+  margin-bottom: 8px;
+  padding: 7px 9px;
   border: 1px solid rgba(230, 126, 34, 0.32);
   border-radius: 8px;
   background: var(--primary-soft);
   color: var(--brand-bronze-dark);
-  font-size: 0.86rem;
+  font-size: 0.72rem;
 }
 
 .administrator-plan-wrap {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
+  overflow-x: hidden;
 }
 
 .administrator-plan-table {
   width: 100%;
-  min-width: 1760px;
+  min-width: 0;
   border-collapse: collapse;
+  table-layout: fixed;
 }
 
 .administrator-plan-table th,
@@ -2098,35 +2104,37 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .administrator-plan-table thead th {
-  height: 30px;
+  height: 22px;
   background: var(--brand-navy);
   color: #fff;
-  font-size: 0.68rem;
+  font-size: 0.52rem;
   text-align: center;
   text-transform: uppercase;
 }
 
 .administrator-plan-table tbody th {
-  width: 210px;
-  padding: 5px 8px;
+  padding: 2px 4px;
   background: var(--surface-soft);
   color: var(--text);
-  font-size: 0.68rem;
+  font-size: 0.52rem;
   font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .administrator-plan-table .admin-plan-main-title th {
   background: #bfbfbf;
   color: #111827;
-  font-size: 0.74rem;
+  font-size: 0.58rem;
   font-weight: 900;
 }
 
 .administrator-plan-table .admin-plan-subtitle th {
-  height: 28px;
+  height: 20px;
   background: #e5e5e5;
   color: #111827;
-  font-size: 0.64rem;
+  font-size: 0.48rem;
   font-weight: 800;
   text-transform: none;
 }
@@ -2135,7 +2143,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .administrator-plan-table .admin-plan-section-row th {
   background: var(--brand-navy);
   color: #fff;
-  font-size: 0.66rem;
+  font-size: 0.5rem;
 }
 
 .administrator-plan-table .admin-plan-yellow {
@@ -2144,25 +2152,27 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .admin-plan-group-cell {
-  width: 130px !important;
+  width: 56px !important;
   background: #fff !important;
   color: #111827 !important;
   text-align: center;
   vertical-align: middle !important;
+  font-size: 0.5rem !important;
 }
 
 .admin-plan-rule-label {
   display: inline-flex;
   align-items: flex-start;
-  gap: 3px;
+  gap: 1px;
+  max-width: 100%;
 }
 
 .admin-plan-rule-marker {
   border: 0;
-  padding: 0 2px;
+  padding: 0 1px;
   background: transparent;
   color: #dc2626;
-  font-size: 1rem;
+  font-size: 0.64rem;
   font-weight: 900;
   line-height: 1;
   cursor: help;
@@ -2209,14 +2219,14 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .administrator-plan-section-row th {
-  height: 30px;
+  height: 22px;
 }
 
 .administrator-plan-scenario-head th {
-  height: 28px;
+  height: 20px;
   background: #e5e5e5 !important;
   color: #111827 !important;
-  font-size: 0.64rem !important;
+  font-size: 0.48rem !important;
   font-weight: 900;
   text-transform: none !important;
 }
@@ -2224,14 +2234,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .admin-plan-admin-input,
 .admin-plan-cell {
   width: 100%;
-  min-width: 92px;
-  height: 28px;
+  min-width: 0;
+  height: 22px;
+  padding: 0 2px;
   border: 0;
   background: transparent;
   color: var(--text);
-  font-size: 0.68rem;
+  font-size: 0.5rem;
   font-weight: 700;
   text-align: center;
+  line-height: 1.05;
 }
 
 .admin-plan-cell[readonly] {
