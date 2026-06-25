@@ -1853,10 +1853,12 @@ function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
 }
 
 function renderPreliminaryRows(rows) {
-  return rows.map(([label, value, status]) => `
-    <div class="client-preliminary-row${status ? ` ${status}` : ""}">
+  return rows.map(([label, value, percent = "", status = ""]) => `
+    <div class="client-preliminary-row">
       <span>${escapeHtml(label)}</span>
       <strong>${escapeHtml(value)}</strong>
+      <em>${escapeHtml(percent)}</em>
+      <small>${escapeHtml(status)}</small>
     </div>
   `).join("");
 }
@@ -1876,17 +1878,12 @@ function renderClientPreliminaryAnalysis(analysis) {
           ["Credito desejado", formatMoney(pj.credito)],
           ["Total Renda PJ", formatMoney(pj.totalRendaPJ)],
           ["Total Renda Socio", formatMoney(pj.totalRendaSocio)],
-          ["Comprometimento maximo", formatMoney(pj.comprometimentoMaximo)],
+          ["Comprometimento maximo", formatPercent(0.3)],
           ["Parcela Desejada", formatMoney(pj.parcelaDesejada)],
           ["Parcela maxima PJ", formatMoney(pj.parcelaMaximaPJ)],
           ["Parcela maxima Socio PF", formatMoney(pj.parcelaMaximaSocioPF)],
           ["Total Lance RP", formatMoney(pj.totalLanceRP)],
-          ["Cobertura PJ", formatPercent(pj.percentualCoberturaPJ)],
-          ["Cobertura Socio", formatPercent(pj.percentualCoberturaSocio)],
-          ["Linha 1", pj.decisaoLinha1, pj.decisaoLinha1 === "sem embudo" ? "ok" : "alert"],
-          ["Linha 2", pj.decisaoLinha2, pj.decisaoLinha2 === "sem embudo" ? "ok" : "alert"],
-          ["Maior idade (seguro)", pj.maiorIdade, pj.maiorIdade.includes("confirmada") ? "ok" : "alert"],
-          ["Resultado", pj.resultado, pj.resultado === "sem embudo" ? "ok" : "alert"],
+          ["Maior idade (seguro)", pj.maiorIdade],
         ])}
       </article>
     `;
@@ -1899,18 +1896,13 @@ function renderClientPreliminaryAnalysis(analysis) {
         ["Objetivo do consorcio", pf.objetivo || "-"],
         ["Credito desejado", formatMoney(pf.credito)],
         ["Total Renda", formatMoney(pf.totalRenda)],
-        ["Comprometimento maximo", formatMoney(pf.comprometimentoMaximo)],
+        ["Comprometimento maximo", formatPercent(0.3)],
         ["Parcela Maxima", formatMoney(pf.parcelaMaxima)],
         ["Parcela Desejada", formatMoney(pf.parcelaDesejada)],
-        ["Total Lance FGTS", formatMoney(pf.totalLanceFGTS)],
-        ["% Lance FGTS", formatPercent(pf.percentualFGTS)],
+        ["Total Lance FGTS", formatMoney(pf.totalLanceFGTS), formatPercent(pf.percentualFGTS), "sem embutido"],
         ["Total Lance RP", formatMoney(pf.totalLanceRP)],
-        ["Total Lance FGTS + RP", formatMoney(pf.totalLanceFGTSRP)],
-        ["% Lance FGTS + RP", formatPercent(pf.percentualCobertura)],
-        ["Linha 1", pf.decisaoLinha1, pf.decisaoLinha1 === "sem embudo" ? "ok" : "alert"],
-        ["Linha 2", pf.decisaoLinha2, pf.decisaoLinha2 === "sem embudo" ? "ok" : "alert"],
-        ["Maior idade (seguro)", pf.maiorIdade, pf.maiorIdade.includes("confirmada") ? "ok" : "alert"],
-        ["Resultado", pf.resultado, pf.resultado === "sem embudo" ? "ok" : "alert"],
+        ["Total Lance FGTS + RP", formatMoney(pf.totalLanceFGTSRP), formatPercent(pf.percentualCobertura), "sem embutido"],
+        ["Maior idade (seguro)", pf.maiorIdade],
       ])}
     </article>
   `;
