@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260625-13", index_html)
+        self.assertIn("/static/css/style.css?v=20260625-14", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260625-13", index_html)
+        self.assertIn("/static/js/app.js?v=20260625-14", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -102,9 +102,17 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("antiga aba isolada de administradoras", index_html)
         self.assertIn('data-admin-plan-kind="Imovel"', index_html)
         self.assertIn('data-admin-plan-kind="Automovel"', index_html)
+        self.assertIn('id="administratorPlansCols"', index_html)
         self.assertIn('id="administratorPlansBody"', index_html)
+        self.assertIn('id="administratorPlanAudit"', index_html)
         self.assertIn("function renderAdministratorPlans()", app_js)
         self.assertIn("function saveAdministratorPlans()", app_js)
+        self.assertIn("function renderAdministratorPlanColgroup(rules)", app_js)
+        self.assertIn("function renderAdministratorPlanAudit(rules)", app_js)
+        self.assertIn("Demonstrativo logico do calculo", app_js)
+        self.assertIn("width: 82px", app_js)
+        self.assertIn("width: 150px", app_js)
+        self.assertIn("width: 46px", app_js)
         self.assertIn("mapState.administradoras", app_js)
         for campo in [
             "1) CALCULADORA DE GRUPOS",
@@ -630,7 +638,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260625-13", index_html)
+        self.assertIn("/static/css/style.css?v=20260625-14", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

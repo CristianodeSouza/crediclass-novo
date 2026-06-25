@@ -3594,6 +3594,7 @@ function recalculateAdministratorPlanComputedCells() {
       input.value = administratorPlanCellValue(currentRules[index], row);
     }
   });
+  renderAdministratorPlanAudit(administratorPlanRulesForKind(activeAdministratorPlanKind()));
 }
 
 function administratorPlanRowGroupCell(row, previousRow, rowspan) {
@@ -3652,6 +3653,51 @@ function renderAdministratorPlanScenarioRows(rules) {
   }).join("");
 }
 
+function renderAdministratorPlanColgroup(rules) {
+  const target = document.getElementById("administratorPlansCols");
+  if (!target) return;
+  target.innerHTML = `
+    <col class="admin-plan-col-group" style="width: 82px">
+    <col class="admin-plan-col-label" style="width: 150px">
+    ${rules.map(() => `
+      <col class="admin-plan-col-admin" style="width: 46px">
+      <col class="admin-plan-col-admin" style="width: 46px">
+    `).join("")}
+  `;
+}
+
+function renderAdministratorPlanAudit(rules) {
+  const target = document.getElementById("administratorPlanAudit");
+  if (!target) return;
+  if (!rules.length) {
+    target.innerHTML = "";
+    return;
+  }
+  const rule = rules[0];
+  const administradora = rule.administradora || "primeira administradora";
+  const creditoDesejado = currentClientProfileCredit();
+  const percentualEmbutido = administratorPlanPercent(rule, "percentual_lance_embutido");
+  const creditoSemEmbutido = administratorPlanCreditoContratado(rule, false);
+  const creditoComEmbutido = administratorPlanCreditoContratado(rule, true);
+  const recursoProprio = administratorPlanRecursoProprioUsado();
+  const fgts = administratorPlanFgtsUsado(rule);
+  const lanceSemEmbutido = administratorPlanLanceTotalConsiderado(rule, false);
+  const lanceComEmbutido = administratorPlanLanceTotalConsiderado(rule, true);
+  const saldoSemEmbutido = administratorPlanSaldoDevedor(rule, false);
+  const saldoComEmbutido = administratorPlanSaldoDevedor(rule, true);
+  const parcelaDesejada = currentClientProfileParcelaDesejada();
+  const parcelaLimite = currentClientProfileParcelaLimite();
+  target.innerHTML = renderPreliminaryAuditTrail("Demonstrativo logico do calculo", [
+    `A calculadora usa o credito desejado do perfil do cliente: ${formatMoney(creditoDesejado)}.`,
+    `Para ${administradora}, o lance embutido cadastrado e ${formatPercent(percentualEmbutido)}. Sem embutido, o credito contratado fica em ${formatMoney(creditoSemEmbutido)}; com embutido, fica em ${formatMoney(creditoComEmbutido)}.`,
+    `O recurso proprio considerado foi ${formatMoney(recursoProprio)} e o FGTS permitido para esta administradora foi ${formatMoney(fgts)}.`,
+    `No cenario sem embutido, o lance total ficou em ${formatMoney(lanceSemEmbutido)}. No cenario com embutido, o lance total ficou em ${formatMoney(lanceComEmbutido)}.`,
+    `O saldo devedor/categoria soma credito contratado, taxa de administracao e fundo de reserva. Resultado: ${formatMoney(saldoSemEmbutido)} sem embutido e ${formatMoney(saldoComEmbutido)} com embutido.`,
+    `O prazo minimo de investimento divide o saldo devedor pela parcela desejada (${formatMoney(parcelaDesejada)}) e pelo limite de renda (${formatMoney(parcelaLimite)}).`,
+    `O prazo minimo de contemplacao desconta o lance total do saldo devedor e depois divide pela parcela desejada ou pelo limite de renda.`,
+  ]).replace("client-preliminary-audit", "client-preliminary-audit administrator-plan-audit");
+}
+
 function renderAdministratorPlanRowLabel(row) {
   const help = administratorPlanRuleHelp[row.key];
   if (!help) return escapeHtml(row.label);
@@ -3692,6 +3738,7 @@ function renderAdministratorPlans() {
   const kind = activeAdministratorPlanKind();
   const rules = administratorPlanRulesForKind(kind);
   const totalColumns = 2 + (rules.length * 2);
+  renderAdministratorPlanColgroup(rules);
   document.getElementById("administratorPlansHead").innerHTML = `
     <tr class="admin-plan-main-title">
       <th colspan="${totalColumns}">1) CALCULADORA DE GRUPOS</th>
@@ -3726,6 +3773,7 @@ function renderAdministratorPlans() {
     </tr>
     ${renderAdministratorPlanScenarioRows(rules)}
   `;
+  renderAdministratorPlanAudit(rules);
 }
 
 function addAdministratorPlanColumn() {
