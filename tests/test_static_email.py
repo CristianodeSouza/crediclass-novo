@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260625-11", index_html)
+        self.assertIn("/static/css/style.css?v=20260625-12", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260625-11", index_html)
+        self.assertIn("/static/js/app.js?v=20260625-12", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -107,51 +107,63 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function saveAdministratorPlans()", app_js)
         self.assertIn("mapState.administradoras", app_js)
         for campo in [
-            "Data de cadastro do produto",
-            "Responsável pelo cadastro do produto",
-            "Tem Seguro obrigatório?",
-            "Qual é a idade máxima (seguro obrigatório)",
-            "Limite adesão sem comprovação de renda",
-            "% de lance embutido",
-            "Calculo do lance embutido",
-            "Tem furo no grupo",
-            "Aceita adesão de clientes com saída fiscal?",
-            "Taxa Administração",
-            "Tem negociação de Taxa?",
-            "Fundo de reserva",
-            "Idade máxima ok?",
-            "Crédito a ser contratado:",
-            "Lance embutido (R$):",
-            "Lance maximo disponivel:",
-            "Lance total considerado:",
-            "Lance máximo:",
-            "Taxa Administracao (R$):",
-            "Fundo de reserva (R$):",
-            "Prazo mínimo:",
+            "1) CALCULADORA DE GRUPOS",
+            "CENARIOS CALCULO",
+            "Sem Embutido",
+            "Com Embutido",
+            "Tipo de bem",
+            "Prazo remanescente",
+            "Lance Embutido",
+            "Calculo do Lance Embutido",
+            "Calculo do Percentual de Lance",
+            "Permite amortizar o lance na parcela?",
+            "Permite participar do lance fixo e livre?",
+            "Possui Parcela Reduzida?",
+            "Possui Lance Fixo?",
+            "Taxa Administracao (total)",
+            "Taxa Administracao (ao ano)",
+            "Possui Taxa de Adesao?",
+            "Fundo de reserva (total)",
+            "Fundo de reserva (ao ano)",
+            "Seg. obrigatorio?",
+            "Idade maxima seguro",
+            "Aliquota seguro mensal sobre saldo devedor",
+            "Calculo A - Credito a ser contratado:",
+            "Saldo devedor / categoria",
+            "Calculo B - Lance Maximo Cliente:",
+            "Lance Total:",
+            "Recurso Proprio:",
+            "FGTS:",
+            "Embutido:",
+            "Parcela Inicial - Desejada",
+            "Parcela Inicial - Limite Renda",
+            "Parcela Apos Lance - Desejada",
+            "Parcela Apos Lance - Limite Renda",
         ]:
             self.assertIn(campo, app_js)
         self.assertIn("const administratorPlanComputedFields", app_js)
         self.assertIn('"idade_maxima_ok"', app_js)
+        self.assertIn("const administratorPlanScenarioRows", app_js)
         self.assertIn("function administratorPlanAgeValidation(rule)", app_js)
         self.assertIn("function calculateAgeFromDateText(dateText)", app_js)
         self.assertIn('if (age < 18) return "Nao - menor de 18";', app_js)
         self.assertIn('return "Sim - validar termino no grupo";', app_js)
         self.assertIn('["idade_maxima", "percentual_lance_embutido", "taxa_adm", "fundo_reserva"].includes', app_js)
         self.assertIn('.replace("R$", "").replace("%", "")', app_js)
-        self.assertIn("function administratorPlanCreditoContratado(rule)", app_js)
+        self.assertIn("function administratorPlanCreditoContratado(rule, useEmbedded = true)", app_js)
         self.assertIn('administratorPlanPercent(rule, "percentual_lance_embutido")', app_js)
         self.assertIn("return creditoDesejado / (1 - percentualLanceEmbutido);", app_js)
-        self.assertIn("function administratorPlanLanceEmbutidoValor(rule)", app_js)
+        self.assertIn("function administratorPlanLanceEmbutidoValor(rule, useEmbedded = true)", app_js)
         self.assertIn("function currentClientProfileFgtsTotal()", app_js)
         self.assertIn("function currentClientProfileLanceMaximoDisponivel(rule = {})", app_js)
-        self.assertIn("function administratorPlanLanceTotalConsiderado(rule)", app_js)
-        self.assertIn("function administratorPlanLanceMaximo(rule)", app_js)
+        self.assertIn("function administratorPlanLanceTotalConsiderado(rule, useEmbedded = true)", app_js)
+        self.assertIn("function administratorPlanLanceMaximo(rule, useEmbedded = true)", app_js)
         self.assertIn("return lanceTotal === null ? null : lanceTotal / creditoContratado", app_js)
-        self.assertIn("function administratorPlanTaxaAdmValor(rule)", app_js)
-        self.assertIn("function administratorPlanFundoReservaValor(rule)", app_js)
-        self.assertIn("function administratorPlanPrazoMinimo(rule)", app_js)
-        self.assertIn("const taxaAdmValor = administratorPlanTaxaAdmValor(rule) || 0;", app_js)
-        self.assertIn("const fundoReservaValor = administratorPlanFundoReservaValor(rule) || 0;", app_js)
+        self.assertIn("function administratorPlanTaxaAdmValor(rule, useEmbedded = true)", app_js)
+        self.assertIn("function administratorPlanFundoReservaValor(rule, useEmbedded = true)", app_js)
+        self.assertIn("function administratorPlanSaldoDevedor(rule, useEmbedded = true)", app_js)
+        self.assertIn("function administratorPlanPrazoMinimo(rule, useEmbedded = true, options = {})", app_js)
+        self.assertIn("function administratorPlanScenarioCellValue(rule, row, useEmbedded)", app_js)
         self.assertIn("- lanceTotal", app_js)
         self.assertIn("administratorPlanComputedFields.includes", app_js)
         for administradora in ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"]:
@@ -618,7 +630,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260625-11", index_html)
+        self.assertIn("/static/css/style.css?v=20260625-12", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

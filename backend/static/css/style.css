@@ -2086,7 +2086,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .administrator-plan-table {
   width: 100%;
-  min-width: 1080px;
+  min-width: 1760px;
   border-collapse: collapse;
 }
 
@@ -2098,21 +2098,57 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .administrator-plan-table thead th {
-  height: 42px;
+  height: 30px;
   background: var(--brand-navy);
   color: #fff;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   text-align: center;
   text-transform: uppercase;
 }
 
 .administrator-plan-table tbody th {
-  width: 270px;
-  padding: 8px 10px;
+  width: 210px;
+  padding: 5px 8px;
   background: var(--surface-soft);
   color: var(--text);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 800;
+}
+
+.administrator-plan-table .admin-plan-main-title th {
+  background: #bfbfbf;
+  color: #111827;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.administrator-plan-table .admin-plan-subtitle th {
+  height: 28px;
+  background: #e5e5e5;
+  color: #111827;
+  font-size: 0.64rem;
+  font-weight: 800;
+  text-transform: none;
+}
+
+.administrator-plan-table .admin-plan-admin-row th,
+.administrator-plan-table .admin-plan-section-row th {
+  background: var(--brand-navy);
+  color: #fff;
+  font-size: 0.66rem;
+}
+
+.administrator-plan-table .admin-plan-yellow {
+  background: #ffff00 !important;
+  color: #111827 !important;
+}
+
+.admin-plan-group-cell {
+  width: 130px !important;
+  background: #fff !important;
+  color: #111827 !important;
+  text-align: center;
+  vertical-align: middle !important;
 }
 
 .admin-plan-rule-label {
@@ -2152,31 +2188,55 @@ body[data-theme="escuro"] .btn-outline-secondary {
   line-height: 1.4;
 }
 
-.administrator-plan-table tbody tr:nth-child(3),
-.administrator-plan-table tbody tr:nth-child(4),
-.administrator-plan-table tbody tr:nth-child(5),
-.administrator-plan-table tbody tr:nth-child(6),
-.administrator-plan-table tbody tr:nth-child(7),
-.administrator-plan-table tbody tr:nth-child(13) {
+.administrator-plan-register-row:nth-child(odd),
+.administrator-plan-scenario-row:nth-child(odd) {
+  background: #f5f5f5;
+}
+
+.administrator-plan-register-row td,
+.administrator-plan-scenario-row td {
+  background: #fff;
+}
+
+.administrator-plan-register-row:nth-child(3),
+.administrator-plan-register-row:nth-child(4),
+.administrator-plan-register-row:nth-child(5),
+.administrator-plan-register-row:nth-child(6),
+.administrator-plan-register-row:nth-child(7),
+.administrator-plan-register-row:nth-child(8),
+.administrator-plan-register-row:nth-child(9) {
   background: #fff7a3;
+}
+
+.administrator-plan-section-row th {
+  height: 30px;
+}
+
+.administrator-plan-scenario-head th {
+  height: 28px;
+  background: #e5e5e5 !important;
+  color: #111827 !important;
+  font-size: 0.64rem !important;
+  font-weight: 900;
+  text-transform: none !important;
 }
 
 .admin-plan-admin-input,
 .admin-plan-cell {
   width: 100%;
-  min-width: 118px;
-  height: 34px;
+  min-width: 92px;
+  height: 28px;
   border: 0;
   background: transparent;
   color: var(--text);
-  font-size: 0.82rem;
+  font-size: 0.68rem;
   font-weight: 700;
   text-align: center;
 }
 
 .admin-plan-cell[readonly] {
-  background: var(--surface);
-  color: var(--primary);
+  background: #fffef0;
+  color: #111827;
 }
 
 .administrator-plan-table thead .admin-plan-admin-input {

@@ -101,38 +101,55 @@ const authState = { user: null };
 let appBootstrapped = false;
 const administratorPlanDefaultNames = ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"];
 const administratorPlanRows = [
-  { key: "data_cadastro_produto", label: "Data de cadastro do produto", type: "date" },
-  { key: "responsavel_cadastro_produto", label: "Responsável pelo cadastro do produto", type: "text" },
-  { key: "seguro_obrigatorio_texto", label: "Tem Seguro obrigatório?", type: "text" },
-  { key: "idade_maxima", label: "Qual é a idade máxima (seguro obrigatório)", type: "text" },
-  { key: "limite_sem_comprovacao_renda", label: "Limite adesão sem comprovação de renda", type: "money" },
-  { key: "percentual_lance_embutido", label: "% de lance embutido", type: "percent" },
-  { key: "tipo_lance_embutido", label: "Calculo do lance embutido", type: "text" },
-  { key: "tem_furo_no_grupo", label: "Tem furo no grupo", type: "percent" },
-  { key: "aceita_saida_fiscal_texto", label: "Aceita adesão de clientes com saída fiscal?", type: "text" },
-  { key: "taxa_adm", label: "Taxa Administração", type: "percent" },
-  { key: "possui_negociacao_taxa", label: "Tem negociação de Taxa?", type: "text" },
-  { key: "fundo_reserva", label: "Fundo de reserva", type: "percent" },
-  { key: "idade_maxima_ok", label: "Idade máxima ok?", type: "text" },
-  { key: "credito_a_ser_contratado", label: "Crédito a ser contratado:", type: "money" },
-  { key: "lance_embutido_valor", label: "Lance embutido (R$):", type: "money" },
-  { key: "lance_proprio_usado", label: "Lance maximo disponivel:", type: "money" },
-  { key: "lance_total_considerado", label: "Lance total considerado:", type: "money" },
-  { key: "lance_maximo", label: "Lance máximo:", type: "percent" },
-  { key: "taxa_administracao_valor", label: "Taxa Administracao (R$):", type: "money" },
-  { key: "fundo_reserva_valor", label: "Fundo de reserva (R$):", type: "money" },
-  { key: "prazo_minimo", label: "Prazo mínimo:", type: "number" },
+  { key: "tipo_bem_calculadora", label: "Tipo de bem", type: "text", group: "Eficiencia" },
+  { key: "prazo_remanescente", label: "Prazo remanescente", type: "number", group: "Eficiencia" },
+  { key: "percentual_lance_embutido", label: "Lance Embutido", type: "percent", group: "Beneficios" },
+  { key: "tipo_lance_embutido", label: "Calculo do Lance Embutido", type: "text", group: "Beneficios" },
+  { key: "calculo_percentual_lance", label: "Calculo do Percentual de Lance", type: "text", group: "Beneficios" },
+  { key: "permite_amortizar_lance_texto", label: "Permite amortizar o lance na parcela?", type: "text", group: "Beneficios" },
+  { key: "permite_lance_fixo_livre_texto", label: "Permite participar do lance fixo e livre?", type: "text", group: "Beneficios" },
+  { key: "possui_parcela_reduzida_texto", label: "Possui Parcela Reduzida?", type: "text", group: "Beneficios" },
+  { key: "possui_lance_fixo_texto", label: "Possui Lance Fixo?", type: "text", group: "Beneficios" },
+  { key: "taxa_adm", label: "Taxa Administracao (total)", type: "percent", group: "Taxas" },
+  { key: "taxa_adm_ano", label: "Taxa Administracao (ao ano)", type: "percent", group: "Taxas" },
+  { key: "possui_taxa_adesao_texto", label: "Possui Taxa de Adesao?", type: "text", group: "Taxas" },
+  { key: "fundo_reserva", label: "Fundo de reserva (total)", type: "percent", group: "Taxas" },
+  { key: "fundo_reserva_ano", label: "Fundo de reserva (ao ano)", type: "percent", group: "Taxas" },
+  { key: "seguro_obrigatorio_texto", label: "Seg. obrigatorio?", type: "text", group: "Seguro Obrigatorio" },
+  { key: "idade_maxima", label: "Idade maxima seguro", type: "text", group: "Seguro Obrigatorio" },
+  { key: "aliquota_seguro_saldo_devedor", label: "Aliquota seguro mensal sobre saldo devedor", type: "percent", group: "Seguro Obrigatorio" },
+];
+const administratorPlanScenarioRows = [
+  { key: "credito_a_ser_contratado", label: "Calculo A - Credito a ser contratado:", type: "money" },
+  { key: "saldo_devedor_categoria", label: "Saldo devedor / categoria", type: "money" },
+  { key: "lance_maximo", label: "Calculo B - Lance Maximo Cliente:", type: "percent" },
+  { key: "lance_total_considerado", label: "Lance Total:", type: "money" },
+  { key: "recurso_proprio_usado", label: "Recurso Proprio:", type: "money" },
+  { key: "fgts_usado", label: "FGTS:", type: "money" },
+  { key: "lance_embutido_valor", label: "Embutido:", type: "money" },
+  { key: "prazo_minimo_investidor_desejada", label: "Parcela Inicial - Desejada", type: "number", group: "Calculo C - Prazo minimo grupos / Se - Investidor" },
+  { key: "prazo_minimo_investidor_renda", label: "Parcela Inicial - Limite Renda", type: "number", group: "Calculo C - Prazo minimo grupos / Se - Investidor" },
+  { key: "prazo_minimo_contemplacao_desejada", label: "Parcela Apos Lance - Desejada", type: "number", group: "Se - Contemplacao" },
+  { key: "prazo_minimo_contemplacao_renda", label: "Parcela Apos Lance - Limite Renda", type: "number", group: "Se - Contemplacao" },
 ];
 const administratorPlanComputedFields = [
+  "tipo_bem_calculadora",
   "idade_maxima_ok",
   "credito_a_ser_contratado",
+  "saldo_devedor_categoria",
   "lance_embutido_valor",
+  "recurso_proprio_usado",
+  "fgts_usado",
   "lance_proprio_usado",
   "lance_total_considerado",
   "lance_maximo",
   "taxa_administracao_valor",
   "fundo_reserva_valor",
   "prazo_minimo",
+  "prazo_minimo_investidor_desejada",
+  "prazo_minimo_investidor_renda",
+  "prazo_minimo_contemplacao_desejada",
+  "prazo_minimo_contemplacao_renda",
 ];
 const businessRuleStatuses = ["Pendente", "Em revisao", "Revisado", "Corrigir regra"];
 const administratorPlanRuleHelp = {
@@ -3293,33 +3310,36 @@ function administratorPlanRulesForKind(kind) {
 
 function administratorPlanCellValue(rule, row) {
   const value = rule[row.key];
+  if (row.key === "tipo_bem_calculadora") {
+    return activeAdministratorPlanKind();
+  }
   if (row.key === "idade_maxima_ok") {
     return administratorPlanAgeValidation(rule);
   }
   if (row.key === "credito_a_ser_contratado") {
-    return formatAdministratorPlanNumber(administratorPlanCreditoContratado(rule), 2);
+    return formatAdministratorPlanNumber(administratorPlanCreditoContratado(rule, true), 2);
   }
   if (row.key === "lance_embutido_valor") {
-    return formatAdministratorPlanNumber(administratorPlanLanceEmbutidoValor(rule), 2);
+    return formatAdministratorPlanNumber(administratorPlanLanceEmbutidoValor(rule, true), 2);
   }
   if (row.key === "lance_proprio_usado") {
     return formatAdministratorPlanNumber(currentClientProfileLanceMaximoDisponivel(rule), 2);
   }
   if (row.key === "lance_total_considerado") {
-    return formatAdministratorPlanNumber(administratorPlanLanceTotalConsiderado(rule), 2);
+    return formatAdministratorPlanNumber(administratorPlanLanceTotalConsiderado(rule, true), 2);
   }
   if (row.key === "lance_maximo") {
-    const lanceMaximo = administratorPlanLanceMaximo(rule);
+    const lanceMaximo = administratorPlanLanceMaximo(rule, true);
     return lanceMaximo === null ? "" : formatAdministratorPlanNumber(lanceMaximo * 100, 4);
   }
   if (row.key === "taxa_administracao_valor") {
-    return formatAdministratorPlanNumber(administratorPlanTaxaAdmValor(rule), 2);
+    return formatAdministratorPlanNumber(administratorPlanTaxaAdmValor(rule, true), 2);
   }
   if (row.key === "fundo_reserva_valor") {
-    return formatAdministratorPlanNumber(administratorPlanFundoReservaValor(rule), 2);
+    return formatAdministratorPlanNumber(administratorPlanFundoReservaValor(rule, true), 2);
   }
   if (row.key === "prazo_minimo") {
-    return formatAdministratorPlanNumber(administratorPlanPrazoMinimo(rule), 0);
+    return formatAdministratorPlanNumber(administratorPlanLegacyPrazoMinimo(rule), 0);
   }
   if (row.type === "percent") return percentToInput(value);
   if (row.type === "money") return value ?? "";
@@ -3363,6 +3383,11 @@ function currentClientProfileParcelaLimite() {
     || currentClientProfileNumber("clientProfileParcelaIdeal", "parcela_ideal");
 }
 
+function currentClientProfileParcelaDesejada() {
+  return currentClientProfileNumber("clientProfileParcelaIdeal", "parcela_ideal")
+    || currentClientProfileParcelaLimite();
+}
+
 function currentClientProfileValue(inputId, profileKey) {
   const activeInput = document.getElementById(inputId);
   const activeValue = activeInput ? String(activeInput.value || "").trim() : "";
@@ -3403,51 +3428,139 @@ function administratorPlanPercent(rule, key) {
   return inputToPercentFromValue(value);
 }
 
-function administratorPlanCreditoContratado(rule) {
+function administratorPlanCreditoContratado(rule, useEmbedded = true) {
   const creditoDesejado = currentClientProfileCredit();
   const percentualLanceEmbutido = administratorPlanPercent(rule, "percentual_lance_embutido");
-  if (!creditoDesejado || percentualLanceEmbutido < 0 || percentualLanceEmbutido >= 1) return null;
+  if (!creditoDesejado) return null;
+  if (!useEmbedded) return creditoDesejado;
+  if (percentualLanceEmbutido < 0 || percentualLanceEmbutido >= 1) return null;
   return creditoDesejado / (1 - percentualLanceEmbutido);
 }
 
-function administratorPlanLanceEmbutidoValor(rule) {
-  const creditoContratado = administratorPlanCreditoContratado(rule);
+function administratorPlanLanceEmbutidoValor(rule, useEmbedded = true) {
+  if (!useEmbedded) return 0;
+  const creditoContratado = administratorPlanCreditoContratado(rule, true);
   if (!creditoContratado) return null;
   return creditoContratado * administratorPlanPercent(rule, "percentual_lance_embutido");
 }
 
-function administratorPlanLanceTotalConsiderado(rule) {
-  const lanceEmbutido = administratorPlanLanceEmbutidoValor(rule);
-  if (lanceEmbutido === null) return null;
-  return lanceEmbutido + currentClientProfileLanceMaximoDisponivel(rule);
+function administratorPlanRecursoProprioUsado() {
+  return currentClientProfileLanceProprio();
 }
 
-function administratorPlanLanceMaximo(rule) {
-  const creditoContratado = administratorPlanCreditoContratado(rule);
+function administratorPlanFgtsUsado(rule) {
+  return rule.aceita_fgts !== false ? currentClientProfileFgtsTotal() : 0;
+}
+
+function administratorPlanLanceTotalConsiderado(rule, useEmbedded = true) {
+  const lanceEmbutido = administratorPlanLanceEmbutidoValor(rule, useEmbedded);
+  if (lanceEmbutido === null) return null;
+  return lanceEmbutido + administratorPlanRecursoProprioUsado() + administratorPlanFgtsUsado(rule);
+}
+
+function administratorPlanLanceMaximo(rule, useEmbedded = true) {
+  const creditoContratado = administratorPlanCreditoContratado(rule, useEmbedded);
   if (!creditoContratado) return null;
-  const lanceTotal = administratorPlanLanceTotalConsiderado(rule);
+  const lanceTotal = administratorPlanLanceTotalConsiderado(rule, useEmbedded);
   return lanceTotal === null ? null : lanceTotal / creditoContratado;
 }
 
-function administratorPlanTaxaAdmValor(rule) {
-  const creditoContratado = administratorPlanCreditoContratado(rule);
+function administratorPlanTaxaAdmValor(rule, useEmbedded = true) {
+  const creditoContratado = administratorPlanCreditoContratado(rule, useEmbedded);
   if (!creditoContratado) return null;
   return creditoContratado * administratorPlanPercent(rule, "taxa_adm");
 }
 
-function administratorPlanFundoReservaValor(rule) {
-  const creditoContratado = administratorPlanCreditoContratado(rule);
+function administratorPlanFundoReservaValor(rule, useEmbedded = true) {
+  const creditoContratado = administratorPlanCreditoContratado(rule, useEmbedded);
   if (!creditoContratado) return null;
   return creditoContratado * administratorPlanPercent(rule, "fundo_reserva");
 }
 
-function administratorPlanPrazoMinimo(rule) {
-  const creditoContratado = administratorPlanCreditoContratado(rule);
-  const lanceTotal = administratorPlanLanceTotalConsiderado(rule);
+function administratorPlanSaldoDevedor(rule, useEmbedded = true) {
+  const creditoContratado = administratorPlanCreditoContratado(rule, useEmbedded);
+  if (!creditoContratado) return null;
+  return creditoContratado
+    + (administratorPlanTaxaAdmValor(rule, useEmbedded) || 0)
+    + (administratorPlanFundoReservaValor(rule, useEmbedded) || 0);
+}
+
+function administratorPlanPrazoMinimo(rule, useEmbedded = true, options = {}) {
+  const saldoDevedor = administratorPlanSaldoDevedor(rule, useEmbedded);
+  const parcelaMaxima = options.parcela || currentClientProfileParcelaLimite();
+  if (!saldoDevedor || !parcelaMaxima) return null;
+  const lanceTotal = options.deductLance ? administratorPlanLanceTotalConsiderado(rule, useEmbedded) : 0;
+  if (lanceTotal === null) return null;
+  return Math.max(saldoDevedor - lanceTotal, 0) / parcelaMaxima;
+}
+
+function administratorPlanScenarioValue(rule, key, useEmbedded) {
+  if (key === "credito_a_ser_contratado") {
+    return administratorPlanCreditoContratado(rule, useEmbedded);
+  }
+  if (key === "saldo_devedor_categoria") {
+    return administratorPlanSaldoDevedor(rule, useEmbedded);
+  }
+  if (key === "lance_maximo") {
+    return administratorPlanLanceMaximo(rule, useEmbedded);
+  }
+  if (key === "lance_total_considerado") {
+    return administratorPlanLanceTotalConsiderado(rule, useEmbedded);
+  }
+  if (key === "recurso_proprio_usado") {
+    return administratorPlanRecursoProprioUsado();
+  }
+  if (key === "fgts_usado") {
+    return administratorPlanFgtsUsado(rule);
+  }
+  if (key === "lance_embutido_valor") {
+    return administratorPlanLanceEmbutidoValor(rule, useEmbedded);
+  }
+  if (key === "prazo_minimo_investidor_desejada") {
+    return administratorPlanPrazoMinimo(rule, useEmbedded, {
+      parcela: currentClientProfileParcelaDesejada(),
+      deductLance: false,
+    });
+  }
+  if (key === "prazo_minimo_investidor_renda") {
+    return administratorPlanPrazoMinimo(rule, useEmbedded, {
+      parcela: currentClientProfileParcelaLimite(),
+      deductLance: false,
+    });
+  }
+  if (key === "prazo_minimo_contemplacao_desejada") {
+    return administratorPlanPrazoMinimo(rule, useEmbedded, {
+      parcela: currentClientProfileParcelaDesejada(),
+      deductLance: true,
+    });
+  }
+  if (key === "prazo_minimo_contemplacao_renda") {
+    return administratorPlanPrazoMinimo(rule, useEmbedded, {
+      parcela: currentClientProfileParcelaLimite(),
+      deductLance: true,
+    });
+  }
+  return null;
+}
+
+function administratorPlanScenarioCellValue(rule, row, useEmbedded) {
+  const value = administratorPlanScenarioValue(rule, row.key, useEmbedded);
+  if (row.type === "percent") {
+    return value === null ? "" : formatAdministratorPlanNumber(value * 100, 2);
+  }
+  if (row.type === "number") {
+    return formatAdministratorPlanNumber(value, 0);
+  }
+  return formatAdministratorPlanNumber(value, 2);
+}
+
+function administratorPlanLegacyPrazoMinimo(rule) {
+  const creditoContratado = administratorPlanCreditoContratado(rule, true);
+  const lanceTotal = administratorPlanLanceTotalConsiderado(rule, true);
   const parcelaMaxima = currentClientProfileParcelaLimite();
   if (!creditoContratado || lanceTotal === null || !parcelaMaxima) return null;
-  const taxaAdmValor = administratorPlanTaxaAdmValor(rule) || 0;
-  const fundoReservaValor = administratorPlanFundoReservaValor(rule) || 0;
+  const taxaAdmValor = administratorPlanTaxaAdmValor(rule, true) || 0;
+  const fundoReservaValor = administratorPlanFundoReservaValor(rule, true) || 0;
   return (
     creditoContratado
     + taxaAdmValor
@@ -3469,10 +3582,74 @@ function recalculateAdministratorPlanComputedCells() {
   document.querySelectorAll("[data-admin-plan-field]").forEach((input) => {
     if (!administratorPlanComputedFields.includes(input.dataset.adminPlanField)) return;
     const index = Number(input.dataset.adminPlanIndex);
-    const row = administratorPlanRows.find((item) => item.key === input.dataset.adminPlanField);
+    const row = [...administratorPlanRows, ...administratorPlanScenarioRows].find((item) => item.key === input.dataset.adminPlanField);
     if (!row || !currentRules[index]) return;
-    input.value = administratorPlanCellValue(currentRules[index], row);
+    if (input.dataset.adminPlanScenario) {
+      input.value = administratorPlanScenarioCellValue(
+        currentRules[index],
+        row,
+        input.dataset.adminPlanScenario === "com_embutido",
+      );
+    } else {
+      input.value = administratorPlanCellValue(currentRules[index], row);
+    }
   });
+}
+
+function administratorPlanRowGroupCell(row, previousRow, rowspan) {
+  if (!row.group) return '<th class="admin-plan-group-cell"></th>';
+  if (previousRow?.group === row.group) return "";
+  return `<th class="admin-plan-group-cell" rowspan="${rowspan}">${escapeHtml(row.group)}</th>`;
+}
+
+function administratorPlanGroupRowspan(rows, rowIndex) {
+  const group = rows[rowIndex].group;
+  if (!group) return 1;
+  let total = 0;
+  for (let index = rowIndex; index < rows.length; index += 1) {
+    if (rows[index].group !== group) break;
+    total += 1;
+  }
+  return total;
+}
+
+function renderAdministratorPlanRegisterRows(rules) {
+  return administratorPlanRows.map((row, rowIndex) => {
+    const previousRow = administratorPlanRows[rowIndex - 1];
+    const rowspan = administratorPlanGroupRowspan(administratorPlanRows, rowIndex);
+    return `
+      <tr class="admin-plan-register-row">
+        ${administratorPlanRowGroupCell(row, previousRow, rowspan)}
+        <th>${renderAdministratorPlanRowLabel(row)}</th>
+        ${rules.map((rule, index) => `
+          <td colspan="2">
+            <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" value="${escapeHtml(administratorPlanCellValue(rule, row))}" ${administratorPlanComputedFields.includes(row.key) ? "readonly" : ""}>
+          </td>
+        `).join("")}
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderAdministratorPlanScenarioRows(rules) {
+  return administratorPlanScenarioRows.map((row, rowIndex) => {
+    const previousRow = administratorPlanScenarioRows[rowIndex - 1];
+    const rowspan = administratorPlanGroupRowspan(administratorPlanScenarioRows, rowIndex);
+    return `
+      <tr class="admin-plan-scenario-row">
+        ${administratorPlanRowGroupCell(row, previousRow, rowspan)}
+        <th>${renderAdministratorPlanRowLabel(row)}</th>
+        ${rules.map((rule, index) => `
+          <td>
+            <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" data-admin-plan-scenario="sem_embutido" value="${escapeHtml(administratorPlanScenarioCellValue(rule, row, false))}" readonly>
+          </td>
+          <td>
+            <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" data-admin-plan-scenario="com_embutido" value="${escapeHtml(administratorPlanScenarioCellValue(rule, row, true))}" readonly>
+          </td>
+        `).join("")}
+      </tr>
+    `;
+  }).join("");
 }
 
 function renderAdministratorPlanRowLabel(row) {
@@ -3514,26 +3691,41 @@ function hideRuleHelpPopover() {
 function renderAdministratorPlans() {
   const kind = activeAdministratorPlanKind();
   const rules = administratorPlanRulesForKind(kind);
+  const totalColumns = 2 + (rules.length * 2);
   document.getElementById("administratorPlansHead").innerHTML = `
-    <tr>
-      <th>Calculadora de Grupos por Administradora</th>
+    <tr class="admin-plan-main-title">
+      <th colspan="${totalColumns}">1) CALCULADORA DE GRUPOS</th>
+    </tr>
+    <tr class="admin-plan-subtitle">
+      <th colspan="${totalColumns}">(Calculo: CREDITO CONTRATADO COM EMBUTIDO, LANCE LIVRE MAXIMO DO CLIENTE POR ADM, COM E SEM EMBUTIDO, PRAZOS MINIMOS GRUPOS PARA ENCAIXE PARCELA MAXIMA DESEJADA E RENDA)</th>
+    </tr>
+    <tr class="admin-plan-admin-row">
+      <th class="admin-plan-yellow">CADASTRAR</th>
+      <th>Administradora</th>
       ${rules.map((rule, index) => `
-        <th>
+        <th colspan="2">
           <input class="admin-plan-admin-input" data-admin-plan-admin="${index}" value="${escapeHtml(rule.administradora || "")}" aria-label="Administradora ${index + 1}">
         </th>
       `).join("")}
     </tr>
   `;
-  document.getElementById("administratorPlansBody").innerHTML = administratorPlanRows.map((row) => `
-    <tr>
-      <th>${renderAdministratorPlanRowLabel(row)}</th>
-      ${rules.map((rule, index) => `
-        <td>
-          <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" value="${escapeHtml(administratorPlanCellValue(rule, row))}" ${administratorPlanComputedFields.includes(row.key) ? "readonly" : ""}>
-        </td>
+  document.getElementById("administratorPlansBody").innerHTML = `
+    ${renderAdministratorPlanRegisterRows(rules)}
+    <tr class="admin-plan-section-row">
+      <th class="admin-plan-yellow">CADASTRAR</th>
+      <th>CENARIOS CALCULO</th>
+      ${rules.map((rule) => `<th colspan="2">${escapeHtml(rule.administradora || "Administradora")}</th>`).join("")}
+    </tr>
+    <tr class="admin-plan-scenario-head">
+      <th></th>
+      <th></th>
+      ${rules.map(() => `
+        <th>Sem Embutido</th>
+        <th>Com Embutido</th>
       `).join("")}
     </tr>
-  `).join("");
+    ${renderAdministratorPlanScenarioRows(rules)}
+  `;
 }
 
 function addAdministratorPlanColumn() {
