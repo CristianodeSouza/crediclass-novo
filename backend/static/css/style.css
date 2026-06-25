@@ -641,6 +641,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.9rem;
 }
 
+.client-profile-section .profile-objective-field {
+  grid-column: 1 / -1;
+}
+
 .client-calculated {
   color: var(--primary);
   font-weight: 800;

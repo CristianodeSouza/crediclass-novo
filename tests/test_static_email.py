@@ -444,13 +444,17 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
         for label in [
-            "1 a 3 meses",
-            "4 a 6 meses",
-            "7 a 12 meses",
-            "13 a 24 meses",
+            "Contemplar - urgente - 3 meses",
+            "Contemplar - rapido - 6 meses",
+            "Contemplar - moderado - 12 meses",
+            "Contemplar - conservador - 24 meses",
+            "Contemplar - investidor - 36 meses",
         ]:
             self.assertIn(label, index_html)
+        self.assertIn("Parcela maxima desejada", index_html)
+        self.assertIn("Lance maximo com recurso proprio", index_html)
         self.assertIn("function clientProfileConcept(months)", app_js)
+        self.assertIn("CLIENT_OBJECTIVE_RULES", app_js)
         self.assertIn('id="clientProfileTipoBem"', index_html)
         self.assertIn("tipo_bem: profile.tipo_bem", app_js)
         self.assertNotIn('tipo_bem: "Imovel"', app_js)

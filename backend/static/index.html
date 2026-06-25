@@ -251,52 +251,32 @@
                 <div class="client-profile-section">
                   <h3>Credito e Objetivo</h3>
                   <label><span>Credito Desejado Liquido</span><input id="clientProfileCredito" class="form-control" inputmode="decimal"></label>
-                  <label>
-                    <span>Prazo Desejado</span>
-                    <select id="clientProfilePrazo" class="form-select">
-                      <option value="3">1 a 3 meses</option>
-                      <option value="6">4 a 6 meses</option>
-                      <option value="12">7 a 12 meses</option>
-                      <option value="24">13 a 24 meses</option>
-                      <option value="36">Sem urgencia</option>
-                    </select>
-                  </label>
-                  <label><span>Conceito IA</span><input id="clientProfileConceito" class="form-control" readonly></label>
-                  <label>
-                    <span>Objetivo do Credito</span>
+                  <label><span>Parcela maxima desejada</span><input id="clientProfileParcelaIdeal" class="form-control" inputmode="decimal"></label>
+                  <label><span>Lance maximo com recurso proprio</span><input id="clientProfileLanceProprio" class="form-control" inputmode="decimal"></label>
+                  <label class="profile-objective-field">
+                    <span>Objetivo do consorcio</span>
                     <select id="clientProfileObjetivo" class="form-select">
-                      <option value="Aquisicao de Imovel">Aquisicao</option>
-                      <option value="Quitacao de Financiamento">Quitacao</option>
-                      <option value="Construcao">Construcao</option>
-                      <option value="Reforma">Reforma</option>
-                      <option value="Investimento">Investimento</option>
+                      <option value="Contemplar - urgente - 3 meses">Contemplar - urgente - 3 meses</option>
+                      <option value="Contemplar - rapido - 6 meses">Contemplar - rapido - 6 meses</option>
+                      <option value="Contemplar - moderado - 12 meses">Contemplar - moderado - 12 meses</option>
+                      <option value="Contemplar - conservador - 24 meses">Contemplar - conservador - 24 meses</option>
+                      <option value="Contemplar - investidor - 36 meses">Contemplar - investidor - 36 meses</option>
+                      <option value="Investidor - Adquirir imovel e alugar (pagar parcelas com aluguel)">Investidor - Adquirir imovel e alugar (pagar parcelas com aluguel)</option>
+                      <option value="Investidor - Adquirir terreno, construir e alugar (pagar parcelas com aluguel)">Investidor - Adquirir terreno, construir e alugar (pagar parcelas com aluguel)</option>
+                      <option value="Investidor - Adquirir terreno, construir e vender (ganhar lucro)">Investidor - Adquirir terreno, construir e vender (ganhar lucro)</option>
+                      <option value="Investidor - Vender carta contemplada (ganhar agil)">Investidor - Vender carta contemplada (ganhar agil)</option>
+                      <option value="Investidor - Carta de credito aposentadoria (alavancagem, rendimento e flexibilidade)">Investidor - Carta de credito aposentadoria (alavancagem, rendimento e flexibilidade)</option>
                     </select>
                   </label>
-                  <label>
-                    <span>Tipo de Bem</span>
-                    <select id="clientProfileTipoBem" class="form-select">
-                      <option value="Imovel">Imovel</option>
-                      <option value="Veiculo">Veiculo</option>
-                      <option value="Servicos">Servicos</option>
-                      <option value="Pesados">Pesados</option>
-                      <option value="Outros">Outros</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span>Estado do Bem</span>
-                    <select id="clientProfileEstadoBem" class="form-select">
-                      <option value="Pronto">Pronto</option>
-                      <option value="Na Planta">Na Planta</option>
-                      <option value="Terreno">Terreno</option>
-                      <option value="Construcao">Construcao</option>
-                      <option value="Indefinido">Indefinido</option>
-                    </select>
-                  </label>
+                  <input id="clientProfilePrazo" type="hidden" value="3">
+                  <input id="clientProfileConceito" type="hidden" value="Super Agressivo">
+                  <input id="clientProfileTipoBem" type="hidden" value="Imovel">
+                  <input id="clientProfileEstadoBem" type="hidden" value="Pronto">
+                  <input id="clientProfileParcelaLimite" type="hidden">
                 </div>
 
                 <div class="client-profile-section">
                   <h3>Capacidade Financeira</h3>
-                  <label><span>Recursos Proprios para Lance</span><input id="clientProfileLanceProprio" class="form-control" inputmode="decimal"></label>
                   <label><span>FGTS Titular</span><input id="clientProfileFgtsTitular" class="form-control" inputmode="decimal"></label>
                   <label><span>FGTS Conjuge</span><input id="clientProfileFgtsConjuge" class="form-control" inputmode="decimal"></label>
                   <label><span>Total FGTS</span><input id="clientProfileFgtsTotal" class="form-control client-calculated" readonly></label>
@@ -304,8 +284,6 @@
                   <label><span>Renda Titular</span><input id="clientProfileRendaTitular" class="form-control" inputmode="decimal"></label>
                   <label><span>Renda Conjuge</span><input id="clientProfileRendaConjuge" class="form-control" inputmode="decimal"></label>
                   <label><span>Renda Total</span><input id="clientProfileRendaTotal" class="form-control client-calculated" readonly></label>
-                  <label><span>Parcela Ideal</span><input id="clientProfileParcelaIdeal" class="form-control" inputmode="decimal"></label>
-                  <label><span>Parcela Limite</span><input id="clientProfileParcelaLimite" class="form-control" inputmode="decimal"></label>
                 </div>
               </form>
             </div>

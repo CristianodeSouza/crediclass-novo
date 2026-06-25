@@ -72,6 +72,18 @@ const configState = {
 const operationalLogs = [];
 const HISTORY_START_MONTH = "2024-01";
 const CLIENT_PROFILE_STORAGE_KEY = "crediclass.clientProfile.v1";
+const CLIENT_OBJECTIVE_RULES = {
+  "Contemplar - urgente - 3 meses": { prazo: 3, conceito: "Super Agressivo", tipoBem: "Imovel", estadoBem: "Pronto" },
+  "Contemplar - rapido - 6 meses": { prazo: 6, conceito: "Agressivo", tipoBem: "Imovel", estadoBem: "Pronto" },
+  "Contemplar - moderado - 12 meses": { prazo: 12, conceito: "Moderado", tipoBem: "Imovel", estadoBem: "Pronto" },
+  "Contemplar - conservador - 24 meses": { prazo: 24, conceito: "Conservador", tipoBem: "Imovel", estadoBem: "Pronto" },
+  "Contemplar - investidor - 36 meses": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Pronto" },
+  "Investidor - Adquirir imovel e alugar (pagar parcelas com aluguel)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Pronto" },
+  "Investidor - Adquirir terreno, construir e alugar (pagar parcelas com aluguel)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Construcao" },
+  "Investidor - Adquirir terreno, construir e vender (ganhar lucro)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Construcao" },
+  "Investidor - Vender carta contemplada (ganhar agil)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Indefinido" },
+  "Investidor - Carta de credito aposentadoria (alavancagem, rendimento e flexibilidade)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Indefinido" },
+};
 const authState = { user: null };
 let appBootstrapped = false;
 const administratorPlanDefaultNames = ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"];
@@ -1510,11 +1522,20 @@ function clientProfileConcept(months) {
   return "Investidor";
 }
 
+function clientObjectiveRule(objective) {
+  return CLIENT_OBJECTIVE_RULES[objective] || CLIENT_OBJECTIVE_RULES["Contemplar - urgente - 3 meses"];
+}
+
 function updateClientProfileTotals() {
   const fgts = toNumber(document.getElementById("clientProfileFgtsTitular").value) + toNumber(document.getElementById("clientProfileFgtsConjuge").value);
   const lance = toNumber(document.getElementById("clientProfileLanceProprio").value);
   const renda = toNumber(document.getElementById("clientProfileRendaTitular").value) + toNumber(document.getElementById("clientProfileRendaConjuge").value);
-  const conceito = clientProfileConcept(document.getElementById("clientProfilePrazo").value);
+  const objectiveRule = clientObjectiveRule(document.getElementById("clientProfileObjetivo").value);
+  const conceito = objectiveRule.conceito || clientProfileConcept(objectiveRule.prazo);
+  document.getElementById("clientProfilePrazo").value = objectiveRule.prazo;
+  document.getElementById("clientProfileTipoBem").value = objectiveRule.tipoBem || "Imovel";
+  document.getElementById("clientProfileEstadoBem").value = objectiveRule.estadoBem || "Pronto";
+  document.getElementById("clientProfileParcelaLimite").value = document.getElementById("clientProfileParcelaIdeal").value;
   document.getElementById("clientProfileFgtsTotal").value = formatMoney(fgts);
   document.getElementById("clientProfileTotalDisponivel").value = formatMoney(lance + fgts);
   document.getElementById("clientProfileRendaTotal").value = formatMoney(renda);
@@ -1539,7 +1560,7 @@ function collectClientProfile() {
     renda_conjuge: toNumber(document.getElementById("clientProfileRendaConjuge").value),
     renda_total: totals.renda,
     parcela_ideal: toNumber(document.getElementById("clientProfileParcelaIdeal").value),
-    parcela_limite: toNumber(document.getElementById("clientProfileParcelaLimite").value),
+    parcela_limite: toNumber(document.getElementById("clientProfileParcelaLimite").value) || toNumber(document.getElementById("clientProfileParcelaIdeal").value),
     parcela_desejada: toNumber(document.getElementById("clientProfileParcelaIdeal").value),
     data_nascimento: document.getElementById("clientProfileNascimento").value,
     data_nascimento_conjuge: document.getElementById("clientProfileNascimentoConjuge").value,
@@ -1554,11 +1575,10 @@ function renderClientProfileSummary(totals = null) {
   document.getElementById("clientProfileSummary").innerHTML = [
     ["Conceito IA", current.conceito],
     ["Credito desejado", formatMoney(toNumber(document.getElementById("clientProfileCredito").value))],
+    ["Parcela maxima", formatMoney(toNumber(document.getElementById("clientProfileParcelaIdeal").value))],
     ["Recursos proprios", formatMoney(current.lance)],
     ["FGTS total", formatMoney(current.fgts)],
     ["Renda total", formatMoney(current.renda)],
-    ["Parcela ideal", formatMoney(toNumber(document.getElementById("clientProfileParcelaIdeal").value))],
-    ["Parcela limite", formatMoney(toNumber(document.getElementById("clientProfileParcelaLimite").value))],
   ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
 }
 
@@ -1609,19 +1629,16 @@ function loadClientProfile() {
   setInputValue("clientProfileNome", profile.nome);
   setInputValue("clientProfileConjuge", profile.nome_conjuge);
   setMoneyInputValue("clientProfileCredito", profile.credito_desejado);
-  setInputValue("clientProfilePrazo", profile.prazo_desejado || 3);
   setMoneyInputValue("clientProfileLanceProprio", profile.lance_proprio);
   setMoneyInputValue("clientProfileFgtsTitular", profile.fgts_titular);
   setMoneyInputValue("clientProfileFgtsConjuge", profile.fgts_conjuge);
   setMoneyInputValue("clientProfileRendaTitular", profile.renda_titular);
   setMoneyInputValue("clientProfileRendaConjuge", profile.renda_conjuge);
   setMoneyInputValue("clientProfileParcelaIdeal", profile.parcela_ideal ?? profile.parcela_desejada);
-  setMoneyInputValue("clientProfileParcelaLimite", profile.parcela_limite);
   setInputValue("clientProfileNascimento", profile.data_nascimento);
   setInputValue("clientProfileNascimentoConjuge", profile.data_nascimento_conjuge);
-  setInputValue("clientProfileObjetivo", profile.objetivo || "Aquisicao de Imovel");
-  setInputValue("clientProfileTipoBem", profile.tipo_bem || "Imovel");
-  setInputValue("clientProfileEstadoBem", profile.estado_bem || "Pronto");
+  const objective = CLIENT_OBJECTIVE_RULES[profile.objetivo] ? profile.objetivo : "Contemplar - urgente - 3 meses";
+  setInputValue("clientProfileObjetivo", objective);
   updateClientProfileTotals();
   applyClientProfileToFlow(collectClientProfile());
 }
