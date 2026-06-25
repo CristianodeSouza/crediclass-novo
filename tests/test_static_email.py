@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260625-04", index_html)
+        self.assertIn("/static/css/style.css?v=20260625-05", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260625-04", index_html)
+        self.assertIn("/static/js/app.js?v=20260625-05", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -475,6 +475,8 @@ class StaticEmailTest(unittest.TestCase):
         ]:
             self.assertIn(label, index_html)
         self.assertIn("CLIENT_PJ_SOCIOS_LIMIT = 5", app_js)
+        self.assertIn('cnpj: ""', app_js)
+        self.assertIn('profileHolderInput("pessoa_juridica.empresa.cnpj", empresa.cnpj, "CNPJ")', app_js)
         self.assertIn("renderClientProfileTitulares", app_js)
         self.assertIn("summarizeClientTitulares", app_js)
         self.assertIn("titulares: profile.titulares", app_js)
@@ -592,7 +594,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260625-04", index_html)
+        self.assertIn("/static/css/style.css?v=20260625-05", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

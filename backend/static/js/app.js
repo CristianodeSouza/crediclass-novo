@@ -1555,6 +1555,7 @@ function emptyPessoaJuridica() {
   return {
     empresa: {
       nome: "",
+      cnpj: "",
       data_constituicao: "",
       faturamento_mensal: 0,
       tipo: "",
@@ -1644,6 +1645,7 @@ function renderPessoaJuridicaCards(data) {
       <header>Empresa titular</header>
       <div class="profile-holder-fields">
         ${profileHolderInput("pessoa_juridica.empresa.nome", empresa.nome, "Nome")}
+        ${profileHolderInput("pessoa_juridica.empresa.cnpj", empresa.cnpj, "CNPJ")}
         ${profileHolderInput("pessoa_juridica.empresa.data_constituicao", empresa.data_constituicao, "Data constituicao", { type: "date" })}
         ${profileHolderInput("pessoa_juridica.empresa.faturamento_mensal", formatMoneyInputValue(empresa.faturamento_mensal || ""), "Faturamento mensal", { money: true })}
         ${profileHolderInput("pessoa_juridica.empresa.tipo", empresa.tipo, "Tipo")}
