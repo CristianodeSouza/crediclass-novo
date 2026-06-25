@@ -1784,7 +1784,6 @@ function updateClientProfileTotals() {
   document.getElementById("clientProfileTotalDisponivel").value = formatMoney(lance + fgts);
   document.getElementById("clientProfileRendaTotal").value = formatMoney(renda);
   document.getElementById("clientProfileConceito").value = conceito;
-  renderClientProfileSummary({ fgts, lance, renda, conceito, holderSummary, titulares });
   return { fgts, lance, renda, conceito, holderSummary, titulares };
 }
 
@@ -1815,21 +1814,6 @@ function collectClientProfile() {
     tipo_bem: document.getElementById("clientProfileTipoBem").value,
     estado_bem: document.getElementById("clientProfileEstadoBem").value,
   };
-}
-
-function renderClientProfileSummary(totals = null) {
-  const current = totals || updateClientProfileTotals();
-  const contractingMode = CLIENT_CONTRACTING_MODES[current.titulares?.tipo_contratacao]?.label || "-";
-  document.getElementById("clientProfileSummary").innerHTML = [
-    ["Contratacao", contractingMode],
-    ["Titular(es)", current.holderSummary?.resumo_label || "-"],
-    ["Conceito IA", current.conceito],
-    ["Credito desejado", formatMoney(toNumber(document.getElementById("clientProfileCredito").value))],
-    ["Parcela maxima", formatMoney(toNumber(document.getElementById("clientProfileParcelaIdeal").value))],
-    ["Recursos proprios", formatMoney(current.lance)],
-    ["FGTS total", formatMoney(current.fgts)],
-    ["Renda total", formatMoney(current.renda)],
-  ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
 }
 
 function applyClientProfileToFlow(profile) {

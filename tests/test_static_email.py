@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260625-03", index_html)
+        self.assertIn("/static/css/style.css?v=20260625-04", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260625-03", index_html)
+        self.assertIn("/static/js/app.js?v=20260625-04", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -204,8 +204,11 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("clientProfileCredito", index_html)
         self.assertIn("clientProfileTotalDisponivel", index_html)
         self.assertIn("clientProfileConceito", index_html)
+        self.assertNotIn("Resumo do Perfil", index_html)
+        self.assertNotIn("clientProfileSummary", index_html)
         self.assertIn("function saveClientProfile", app_js)
         self.assertIn("function applyClientProfileToFlow", app_js)
+        self.assertNotIn("function renderClientProfileSummary", app_js)
         self.assertIn("function formatMoneyInputValue(value)", app_js)
         self.assertIn("const moneyInputIds", app_js)
         self.assertIn(".client-profile-layout", style_css)
@@ -589,7 +592,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260625-03", index_html)
+        self.assertIn("/static/css/style.css?v=20260625-04", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)
