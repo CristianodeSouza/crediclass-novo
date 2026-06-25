@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260625-10" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260625-11" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -55,7 +55,7 @@
             </button>
             <button class="nav-item" type="button" data-screen="viabilidade">
               <span class="nav-icon">VC</span>
-              <span>Viabilidade de Cenarios</span>
+              <span>Selecao de Grupos</span>
             </button>
             <button class="nav-item" type="button" data-screen="estudo">
               <span class="nav-icon">EF</span>
@@ -69,10 +69,6 @@
 
           <div class="nav-section nav-section-admin">
             <span class="nav-section-title">Administrativo</span>
-            <button class="nav-item" type="button" data-screen="administradoras">
-              <span class="nav-icon">AD</span>
-              <span>Administradoras</span>
-            </button>
             <button class="nav-item active" type="button" data-screen="mapa">
               <span class="nav-icon">MG</span>
               <span>Mapa de Grupos</span>
@@ -300,23 +296,50 @@
                   <div id="clientPreliminaryAnalysis" class="client-preliminary-grid"></div>
                 </div>
                 <div class="client-profile-actions">
-                  <button id="advanceClientProfileBtn" class="btn btn-primary" type="button">Avancar para Administradoras</button>
+                  <button id="advanceClientProfileBtn" class="btn btn-primary" type="button">Avancar para Selecao de Grupos</button>
                 </div>
               </form>
             </div>
           </div>
         </section>
 
-        <section id="screen-administradoras" class="screen-panel">
+        <section id="screen-viabilidade" class="screen-panel">
+          <div class="content-card viability-groups-intro">
+            <div class="table-toolbar">
+              <div>
+                <h2>4 - Selecao 10 Melhores Grupos</h2>
+                <p>Fluxo da planilha: objetivo, filtros de contemplacao ou investimento, calculadora por administradora e ranking final.</p>
+              </div>
+              <div class="toolbar-actions">
+                <button class="btn btn-outline-secondary" type="button" data-screen-jump="perfil">Editar Perfil</button>
+                <button id="analyzeViabilityBtn" class="btn btn-primary" type="button">Selecionar Grupos</button>
+              </div>
+            </div>
+            <div class="selection-flow-grid" aria-label="Sequencia logica da selecao de grupos">
+              <article>
+                <strong>Se - Contemplacao</strong>
+                <span>Filtra 20 melhores por urgencia, lance maximo, parcela desejada e limite de renda.</span>
+              </article>
+              <article>
+                <strong>Se - Investimento</strong>
+                <span>Classifica pelos beneficios do grupo: taxas, prazo, lance embutido, lance fixo e historico.</span>
+              </article>
+              <article>
+                <strong>Resultado</strong>
+                <span>Entrega Top 10 para estudo e permite selecionar credito/carta para o estudo financeiro.</span>
+              </article>
+            </div>
+          </div>
+
           <div class="content-card administrator-plans-card">
             <div class="table-toolbar">
               <div>
-                <h2>2 - Planos Administradoras</h2>
-                <p>Parametros por administradora separados por tipo de bem</p>
+                <h2>Calculadora de Grupos por Administradora</h2>
+                <p>Parametros fixos da planilha usados na selecao: lance embutido, taxa, fundo, seguro, idade e prazo minimo.</p>
               </div>
               <div class="toolbar-actions">
                 <button id="addAdministratorPlanBtn" class="btn btn-outline-secondary" type="button">Adicionar Administradora</button>
-                <button id="saveAdministratorPlansBtn" class="btn btn-primary" type="button">Salvar Administradoras</button>
+                <button id="saveAdministratorPlansBtn" class="btn btn-primary" type="button">Salvar Parametros</button>
               </div>
             </div>
 
@@ -326,7 +349,7 @@
             </div>
 
             <div class="administrator-plan-help">
-              Linhas representam os parametros da planilha. Colunas representam administradoras. Campos textuais como verificar, sob consulta e promocao devem ser preservados para revisao humana.
+              Esta tabela substitui a antiga aba isolada de administradoras. Ela fica dentro da selecao de grupos porque seus parametros alimentam os filtros e calculos da etapa 4 da planilha.
             </div>
 
             <div class="table-responsive administrator-plan-wrap">
@@ -337,39 +360,23 @@
             </div>
           </div>
 
-        </section>
-
-        <section id="screen-viabilidade" class="screen-panel">
-          <div class="content-card viability-groups-intro">
-            <div class="table-toolbar">
-              <div>
-                <h2>Cenarios Compativeis</h2>
-                <p>Composicao de cartas e grupos para o perfil salvo</p>
-              </div>
-              <div class="toolbar-actions">
-                <button class="btn btn-outline-secondary" type="button" data-screen-jump="perfil">Editar Perfil</button>
-                <button id="analyzeViabilityBtn" class="btn btn-primary" type="button">Analisar Cenarios</button>
-              </div>
-            </div>
-          </div>
-
-          <div id="viabilityLoading" class="table-state d-none">Analisando cenarios...</div>
-          <div id="viabilityError" class="table-state table-state-error d-none">Nao foi possivel analisar os cenarios.</div>
-          <div id="viabilityEmpty" class="table-state d-none">Nenhum cenario compativel encontrado para este perfil.</div>
+          <div id="viabilityLoading" class="table-state d-none">Selecionando grupos...</div>
+          <div id="viabilityError" class="table-state table-state-error d-none">Nao foi possivel selecionar os grupos.</div>
+          <div id="viabilityEmpty" class="table-state d-none">Nenhum grupo compativel encontrado para este perfil.</div>
 
           <div id="viabilityResults" class="d-none">
             <div class="content-card">
               <div class="table-toolbar">
                 <div>
-                  <h2>Cenarios Compativeis</h2>
-                  <p id="viabilityRankingSubtitle">Resultado dos cenarios candidatos para analise</p>
+                  <h2>Ranking dos Grupos Selecionados</h2>
+                  <p id="viabilityRankingSubtitle">Resultado dos filtros da etapa 4 para analise e escolha do credito</p>
                 </div>
               </div>
               <div class="table-responsive">
                 <table class="table table-hover align-middle viability-table">
                   <thead>
                     <tr>
-                      <th>Cenario</th>
+                      <th>Ranking</th>
                       <th>Administradora</th>
                       <th>Composicao</th>
                       <th>Tipo de Bem</th>
@@ -396,7 +403,7 @@
           <div id="studyEmpty" class="placeholder-card">
             <div class="state-badge">Aguardando selecao</div>
             <h2>Estudo Financeiro</h2>
-            <p>Selecione um cenario na Viabilidade para montar o estudo financeiro.</p>
+            <p>Selecione um grupo na Selecao de Grupos para montar o estudo financeiro.</p>
           </div>
 
           <div id="studyLoading" class="table-state d-none">Carregando estudo financeiro...</div>
@@ -409,7 +416,7 @@
                 <p>Template pre-preenchido</p>
               </div>
               <div class="study-v4-toolbar-actions">
-                <button id="studyChangeGroupBtn" class="btn btn-outline-secondary" type="button">Voltar para Viabilidade</button>
+                <button id="studyChangeGroupBtn" class="btn btn-outline-secondary" type="button">Voltar para Selecao de Grupos</button>
                 <button id="studyViewStrategyBtn" class="btn btn-outline-secondary" type="button">Ver Estrategia</button>
                 <button id="studyHistoryShortcutBtn" class="btn btn-outline-secondary" type="button">Historico de Estudos</button>
                 <button id="studySaveBtn" class="btn btn-primary" type="button">Salvar</button>
@@ -1226,6 +1233,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260625-10"></script>
+    <script src="/static/js/app.js?v=20260625-11"></script>
   </body>
 </html>

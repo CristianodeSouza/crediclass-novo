@@ -870,6 +870,34 @@ body[data-theme="escuro"] .btn-outline-secondary {
   justify-content: flex-end;
 }
 
+.selection-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.selection-flow-grid article {
+  display: grid;
+  gap: 4px;
+  min-height: 86px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.selection-flow-grid strong {
+  color: #174c9a;
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.selection-flow-grid span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
 .table-toolbar,
 .pagination-row {
   display: flex;

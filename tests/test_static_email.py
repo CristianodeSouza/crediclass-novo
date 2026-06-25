@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260625-10", index_html)
+        self.assertIn("/static/css/style.css?v=20260625-11", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260625-10", index_html)
+        self.assertIn("/static/js/app.js?v=20260625-11", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -90,14 +90,16 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn("cdn.jsdelivr.net", index_html)
         self.assertIn(".d-none", style_css)
 
-    def test_tela_administradoras_existe_no_menu(self):
+    def test_calculadora_administradoras_fica_na_selecao_de_grupos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn('data-screen="administradoras"', index_html)
-        self.assertIn('id="screen-administradoras"', index_html)
-        self.assertIn("Administradoras", index_html)
-        self.assertIn("2 - Planos Administradoras", index_html)
+        self.assertNotIn('data-screen="administradoras"', index_html)
+        self.assertNotIn('id="screen-administradoras"', index_html)
+        self.assertIn("Selecao de Grupos", index_html)
+        self.assertIn("4 - Selecao 10 Melhores Grupos", index_html)
+        self.assertIn("Calculadora de Grupos por Administradora", index_html)
+        self.assertIn("antiga aba isolada de administradoras", index_html)
         self.assertIn('data-admin-plan-kind="Imovel"', index_html)
         self.assertIn('data-admin-plan-kind="Automovel"', index_html)
         self.assertIn('id="administratorPlansBody"', index_html)
@@ -158,6 +160,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn("administratorUsarFgts", index_html)
         self.assertNotIn('id="exportAdministratorsCsvBtn"', index_html)
         self.assertNotIn('id="advanceToGroupsBtn"', index_html)
+        self.assertIn('if (screenName === "viabilidade") loadConfiguracoes();', app_js)
         self.assertNotIn('apiPost("/viabilidade/administradoras"', app_js)
         self.assertNotIn("function exportAdministratorsCsv()", app_js)
         self.assertNotIn("function syncAdministratorInterviewToGroups()", app_js)
@@ -166,7 +169,10 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn("Cenarios Compativeis", index_html)
+        self.assertIn("Ranking dos Grupos Selecionados", index_html)
+        self.assertIn("Selecionar Grupos", index_html)
+        self.assertIn("Se - Contemplacao", index_html)
+        self.assertIn("Se - Investimento", index_html)
         self.assertIn("const profile = collectClientProfile();", app_js)
         self.assertIn("const parcelaLimite = profile.parcela_limite || profile.parcela_ideal;", app_js)
         self.assertIn("parcela_desejada: parcelaLimite", app_js)
@@ -263,14 +269,14 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function collectBusinessRuleFeedbacks", app_js)
         self.assertIn("async function saveBusinessRuleFeedbacks", app_js)
         self.assertIn("regras_negocio_feedbacks", app_js)
-        for etapa in ["Perfil do Cliente", "Estrategia", "Administradoras", "Cenarios", "Estudo Financeiro"]:
+        for etapa in ["Perfil do Cliente", "Estrategia", "Calculadora de Grupos por Administradora", "Selecao de Grupos", "Estudo Financeiro"]:
             self.assertIn(etapa, app_js)
         for exemplo in [
             "credito_liquido_desejado",
             "percentual_lance_embutido",
             "parcela_total_cenario",
             "Super Agressivo",
-            "uma ou mais cartas",
+            "cartas candidatas",
             "FGTS so entra quando permitido",
             "formulas financeiras ficam centralizadas no backend",
         ]:
@@ -612,7 +618,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260625-10", index_html)
+        self.assertIn("/static/css/style.css?v=20260625-11", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

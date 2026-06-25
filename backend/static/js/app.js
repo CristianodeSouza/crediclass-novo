@@ -12,16 +12,16 @@ const screens = {
     action: "Salvar Perfil",
   },
   viabilidade: {
-    letter: "D) VIABILIDADE DE CENARIOS",
-    title: "Viabilidade de Cenarios",
-    subtitle: "Montagem de cenarios com uma ou mais cartas",
-    action: "Analisar Viabilidade",
+    letter: "C) SELECAO DE GRUPOS",
+    title: "Selecao de Grupos",
+    subtitle: "Etapa 4 da planilha: filtros, calculadora por administradora e ranking dos melhores grupos",
+    action: "Selecionar Grupos",
   },
   administradoras: {
-    letter: "C) ADMINISTRADORAS",
-    title: "Administradoras",
-    subtitle: "Planos por administradora para imoveis e automoveis",
-    action: "Salvar Administradoras",
+    letter: "C) SELECAO DE GRUPOS",
+    title: "Selecao de Grupos",
+    subtitle: "Parametros por administradora integrados a selecao de grupos",
+    action: "Salvar Parametros",
   },
   estudo: {
     letter: "E) ESTUDO FINANCEIRO",
@@ -175,20 +175,20 @@ const businessRulesFlow = [
   },
   {
     id: "administradoras",
-    etapa: "3. Administradoras",
+    etapa: "3. Calculadora de Grupos por Administradora",
     regras: [
-      "Administradora e tratada como caminho possivel para montagem do estudo, nao como aprovacao final isolada.",
+      "Os parametros por administradora deixam de ser uma etapa isolada e passam a alimentar a selecao de grupos.",
       "FGTS e lance embutido sao condicionais: FGTS so entra quando permitido; lance embutido so entra quando permitido.",
-      "Taxa administrativa, fundo de reserva, idade, renda, tipo de bem e historico entram no calculo dos cenarios.",
+      "Taxa administrativa, fundo de reserva, idade, renda, tipo de bem e historico entram na selecao dos melhores grupos.",
     ],
   },
   {
     id: "cenarios",
-    etapa: "4. Cenarios",
+    etapa: "4. Selecao de Grupos",
     regras: [
-      "O sistema monta cenarios com uma ou mais cartas de credito, dentro da mesma administradora, podendo usar um ou mais grupos.",
+      "O sistema seleciona grupos conforme o objetivo do consorcio, usando filtros de contemplacao ou beneficios de investimento.",
       "Quando houver lance embutido: credito_contratado = credito_liquido_desejado / (1 - percentual_lance_embutido).",
-      "Credito liquido da carta = credito_contratado - lance_embutido. Credito liquido do cenario = soma dos creditos liquidos das cartas.",
+      "Credito liquido da carta = credito_contratado - lance_embutido. O ranking da selecao usa os creditos liquidos das cartas candidatas.",
       "Lance total = lance embutido + recurso proprio utilizado + FGTS utilizado.",
       "Parcela total do cenario = soma das parcelas de todas as cartas.",
       "Renda minima necessaria = parcela_total_cenario * 3.",
@@ -383,9 +383,7 @@ function activateScreen(screenName) {
   if (screenName === "historico") {
     loadHistoryStudies();
   }
-  if (screenName === "administradoras") {
-    loadConfiguracoes();
-  }
+  if (screenName === "viabilidade") loadConfiguracoes();
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
@@ -1486,7 +1484,7 @@ async function loadMapaGrupos() {
     renderSummary(data.items, data.total, data.total_administradoras);
     renderGroupsTable(data.items);
     renderPagination();
-    if (document.getElementById("screen-administradoras")?.classList.contains("active") && configState.data) {
+    if (document.getElementById("screen-viabilidade")?.classList.contains("active") && configState.data) {
       renderAdministratorPlans();
     }
     document.getElementById("tableSubtitle").textContent = `${data.total} grupo(s) encontrado(s)`;
@@ -2058,7 +2056,7 @@ function resetClientProfile() {
 
 function advanceClientProfile() {
   saveClientProfile({ silent: true });
-  activateScreen("administradoras");
+  activateScreen("viabilidade");
 }
 
 function setViabilityState(state) {
@@ -2068,7 +2066,7 @@ function setViabilityState(state) {
   document.getElementById("viabilityResults").classList.toggle("d-none", !["ready", "empty"].includes(state));
   const button = document.getElementById("analyzeViabilityBtn");
   button.disabled = state === "loading";
-  button.textContent = state === "loading" ? "Analisando..." : "Analisar Viabilidade";
+  button.textContent = state === "loading" ? "Selecionando..." : "Selecionar Grupos";
 }
 
 function collectViabilityPayload() {
@@ -3518,7 +3516,7 @@ function renderAdministratorPlans() {
   const rules = administratorPlanRulesForKind(kind);
   document.getElementById("administratorPlansHead").innerHTML = `
     <tr>
-      <th>2 - Planos Administradoras</th>
+      <th>Calculadora de Grupos por Administradora</th>
       ${rules.map((rule, index) => `
         <th>
           <input class="admin-plan-admin-input" data-admin-plan-admin="${index}" value="${escapeHtml(rule.administradora || "")}" aria-label="Administradora ${index + 1}">
@@ -3850,10 +3848,6 @@ document.querySelectorAll("[data-screen-jump]").forEach((button) => {
 document.getElementById("primaryAction").addEventListener("click", () => {
   if (document.getElementById("screen-perfil").classList.contains("active")) {
     saveClientProfile();
-    return;
-  }
-  if (document.getElementById("screen-administradoras").classList.contains("active")) {
-    saveAdministratorPlans().catch(() => setConfigState("error"));
     return;
   }
   if (document.getElementById("screen-viabilidade").classList.contains("active")) {
