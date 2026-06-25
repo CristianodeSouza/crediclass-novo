@@ -1611,11 +1611,10 @@ function normalizeClientTitulares(profile = {}) {
 }
 
 function profileHolderInput(field, value = "", label = "", options = {}) {
-  const inputClass = options.wide ? "profile-holder-wide" : "";
   const type = options.type || "text";
   const moneyAttr = options.money ? ' data-money="true" inputmode="decimal"' : "";
   return `
-    <label class="${inputClass}">
+    <label>
       <span>${escapeHtml(label)}</span>
       <input class="form-control" data-holder-field="${escapeHtml(field)}" type="${type}" value="${escapeHtml(value ?? "")}"${moneyAttr}>
     </label>
@@ -1625,12 +1624,14 @@ function profileHolderInput(field, value = "", label = "", options = {}) {
 function renderPessoaFisicaCard(person, index) {
   const role = CLIENT_PF_ROLES[index] || CLIENT_PF_ROLES[0];
   return `
-    <article class="profile-holder-card">
-      <h4>${escapeHtml(role.label)}</h4>
-      ${profileHolderInput(`pessoas_fisicas.${index}.nome`, person.nome, "Nome", { wide: true })}
-      ${profileHolderInput(`pessoas_fisicas.${index}.nascimento`, person.nascimento, "Nascimento", { type: "date" })}
-      ${profileHolderInput(`pessoas_fisicas.${index}.lance_fgts`, formatMoneyInputValue(person.lance_fgts || ""), "Lance FGTS", { money: true })}
-      ${profileHolderInput(`pessoas_fisicas.${index}.renda`, formatMoneyInputValue(person.renda || ""), "Renda", { money: true })}
+    <article class="profile-holder-table">
+      <header>${escapeHtml(role.label)}</header>
+      <div class="profile-holder-fields">
+        ${profileHolderInput(`pessoas_fisicas.${index}.nome`, person.nome, "Nome")}
+        ${profileHolderInput(`pessoas_fisicas.${index}.nascimento`, person.nascimento, "Nascimento", { type: "date" })}
+        ${profileHolderInput(`pessoas_fisicas.${index}.lance_fgts`, formatMoneyInputValue(person.lance_fgts || ""), "Lance FGTS", { money: true })}
+        ${profileHolderInput(`pessoas_fisicas.${index}.renda`, formatMoneyInputValue(person.renda || ""), "Renda", { money: true })}
+      </div>
     </article>
   `;
 }
@@ -1639,19 +1640,23 @@ function renderPessoaJuridicaCards(data) {
   const empresa = data.pessoa_juridica.empresa;
   const socios = data.pessoa_juridica.socios;
   return `
-    <article class="profile-holder-card">
-      <h4>Empresa titular</h4>
-      ${profileHolderInput("pessoa_juridica.empresa.nome", empresa.nome, "Nome", { wide: true })}
-      ${profileHolderInput("pessoa_juridica.empresa.data_constituicao", empresa.data_constituicao, "Data constituicao", { type: "date" })}
-      ${profileHolderInput("pessoa_juridica.empresa.faturamento_mensal", formatMoneyInputValue(empresa.faturamento_mensal || ""), "Faturamento mensal", { money: true })}
-      ${profileHolderInput("pessoa_juridica.empresa.tipo", empresa.tipo, "Tipo", { wide: true })}
+    <article class="profile-holder-table">
+      <header>Empresa titular</header>
+      <div class="profile-holder-fields">
+        ${profileHolderInput("pessoa_juridica.empresa.nome", empresa.nome, "Nome")}
+        ${profileHolderInput("pessoa_juridica.empresa.data_constituicao", empresa.data_constituicao, "Data constituicao", { type: "date" })}
+        ${profileHolderInput("pessoa_juridica.empresa.faturamento_mensal", formatMoneyInputValue(empresa.faturamento_mensal || ""), "Faturamento mensal", { money: true })}
+        ${profileHolderInput("pessoa_juridica.empresa.tipo", empresa.tipo, "Tipo")}
+      </div>
     </article>
     ${socios.map((socio, index) => `
-      <article class="profile-holder-card">
-        <h4>${index === 0 ? "Socio administrador" : `Socio ${index + 1}`}</h4>
-        ${profileHolderInput(`pessoa_juridica.socios.${index}.nome`, socio.nome, "Nome", { wide: true })}
-        ${profileHolderInput(`pessoa_juridica.socios.${index}.nascimento`, socio.nascimento, "Nascimento", { type: "date" })}
-        ${profileHolderInput(`pessoa_juridica.socios.${index}.renda`, formatMoneyInputValue(socio.renda || ""), "Renda", { money: true })}
+      <article class="profile-holder-table">
+        <header>${index === 0 ? "Socio administrador" : `Socio ${index + 1}`}</header>
+        <div class="profile-holder-fields">
+          ${profileHolderInput(`pessoa_juridica.socios.${index}.nome`, socio.nome, "Nome")}
+          ${profileHolderInput(`pessoa_juridica.socios.${index}.nascimento`, socio.nascimento, "Nascimento", { type: "date" })}
+          ${profileHolderInput(`pessoa_juridica.socios.${index}.renda`, formatMoneyInputValue(socio.renda || ""), "Renda", { money: true })}
+        </div>
       </article>
     `).join("")}
   `;
@@ -1664,11 +1669,23 @@ function renderClientProfileTitulares(profile = {}) {
   const selector = document.getElementById("clientProfileTipoContratacao");
   if (selector) selector.value = data.tipo_contratacao;
   if (data.tipo_contratacao === "pj") {
-    grid.innerHTML = renderPessoaJuridicaCards(data);
+    grid.innerHTML = `
+      <div class="profile-holder-title">Dados da empresa e socios</div>
+      <div class="profile-holder-group">
+        <div class="profile-holder-band">pessoa juridica</div>
+        <div class="profile-holder-list">${renderPessoaJuridicaCards(data)}</div>
+      </div>
+    `;
     return;
   }
   const count = CLIENT_CONTRACTING_MODES[data.tipo_contratacao]?.pfCount || 1;
-  grid.innerHTML = data.pessoas_fisicas.slice(0, count).map(renderPessoaFisicaCard).join("");
+  grid.innerHTML = `
+    <div class="profile-holder-title">Dados das pessoas</div>
+    <div class="profile-holder-group">
+      <div class="profile-holder-band">pessoa fisica</div>
+      <div class="profile-holder-list">${data.pessoas_fisicas.slice(0, count).map(renderPessoaFisicaCard).join("")}</div>
+    </div>
+  `;
 }
 
 function ensureClientProfileHoldersRendered() {
