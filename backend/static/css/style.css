@@ -1902,17 +1902,20 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .selection-funnel-summary article {
   display: grid;
+  place-items: center;
   gap: 3px;
   padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: #fffef7;
+  text-align: center;
 }
 
 .selection-funnel-summary span {
   color: var(--muted);
   font-size: 0.68rem;
   font-weight: 800;
+  line-height: 1.2;
 }
 
 .selection-funnel-summary strong {
@@ -1989,12 +1992,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
   background: var(--brand-navy);
   color: #fff;
   font-size: 0.72rem;
+  text-align: center;
   text-transform: uppercase;
+  vertical-align: middle;
 }
 
 .administrator-eligibility-table td {
   font-size: 0.76rem;
-  vertical-align: top;
+  text-align: center;
+  vertical-align: middle;
 }
 
 .eligibility-status {
@@ -2026,10 +2032,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .eligibility-detail-list {
   display: grid;
+  justify-items: center;
   gap: 3px;
   margin: 0;
   padding: 0;
   list-style: none;
+  text-align: center;
 }
 
 .eligibility-detail-list li {
@@ -2041,10 +2049,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .eligibility-check {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 22px;
   font-size: 0.72rem;
   font-weight: 900;
   line-height: 1.1;
+  text-align: center;
 }
 
 .eligibility-check-ok {
@@ -2277,11 +2287,14 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .phase-two-summary article {
+  display: grid;
+  place-items: center;
   min-height: 72px;
   padding: 9px 10px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: #fffef7;
+  text-align: center;
 }
 
 .phase-two-summary span,
@@ -2291,6 +2304,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.72rem;
   font-weight: 800;
   line-height: 1.15;
+  text-align: center;
 }
 
 .phase-two-summary strong {
@@ -2300,6 +2314,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 1rem;
   font-weight: 900;
   line-height: 1.05;
+  text-align: center;
 }
 
 .administrator-plan-tabs {
@@ -2354,6 +2369,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .administrator-plan-table td {
   border: 1px solid var(--border);
   padding: 0;
+  text-align: center;
   vertical-align: middle;
 }
 
@@ -2374,6 +2390,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.72rem;
   font-weight: 800;
   line-height: 1.12;
+  text-align: center;
   white-space: normal;
   overflow-wrap: normal;
   word-break: normal;
@@ -2544,12 +2561,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
   background: var(--table-head);
   color: var(--text);
   font-size: 0.68rem;
+  text-align: center;
   text-transform: uppercase;
+  vertical-align: middle;
   white-space: nowrap;
 }
 
 .viability-table td {
   font-size: 0.8rem;
+  text-align: center;
+  vertical-align: middle;
   white-space: nowrap;
 }
 
