@@ -401,7 +401,9 @@ function activateScreen(screenName) {
   document.getElementById("screenLetter").textContent = meta.letter;
   document.getElementById("screenTitle").textContent = meta.title;
   document.getElementById("screenSubtitle").textContent = meta.subtitle;
-  document.getElementById("primaryAction").textContent = meta.action;
+  const primaryAction = document.getElementById("primaryAction");
+  primaryAction.textContent = meta.action;
+  primaryAction.classList.toggle("d-none", screenName === "viabilidade");
   document.getElementById("reloadMapDataBtn").classList.toggle("d-none", screenName !== "mapa");
 
   if (screenName === "historico") {
@@ -2199,6 +2201,7 @@ function setViabilityState(state) {
   document.getElementById("viabilityEmpty").classList.toggle("d-none", state !== "empty");
   document.getElementById("viabilityResults").classList.toggle("d-none", state !== "ready");
   const button = document.getElementById("analyzeViabilityBtn");
+  if (!button) return;
   button.disabled = state === "loading";
   button.textContent = state === "loading" ? "Selecionando..." : "Selecionar Grupos";
 }
@@ -4473,8 +4476,8 @@ document.querySelectorAll("[data-admin-plan-kind]").forEach((button) => {
     renderAdministratorPlans();
   });
 });
-document.getElementById("addAdministratorPlanBtn").addEventListener("click", addAdministratorPlanColumn);
-document.getElementById("saveAdministratorPlansBtn").addEventListener("click", () => {
+document.getElementById("addAdministratorPlanBtn")?.addEventListener("click", addAdministratorPlanColumn);
+document.getElementById("saveAdministratorPlansBtn")?.addEventListener("click", () => {
   saveAdministratorPlans().catch(() => setConfigState("error"));
 });
 document.getElementById("administratorPlansTable").addEventListener("input", (event) => {
@@ -4483,7 +4486,7 @@ document.getElementById("administratorPlansTable").addEventListener("input", (ev
   }
 });
 
-document.getElementById("analyzeViabilityBtn").addEventListener("click", analyzeViability);
+document.getElementById("analyzeViabilityBtn")?.addEventListener("click", analyzeViability);
 
 document.getElementById("viabilityRankingBody").addEventListener("click", (event) => {
   const button = event.target.closest("[data-viability-action]");
