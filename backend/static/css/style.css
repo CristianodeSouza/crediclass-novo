@@ -2306,12 +2306,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
-  overflow-x: hidden;
+  overflow-x: auto;
 }
 
 .administrator-plan-table {
-  width: auto;
-  min-width: 0;
+  width: 100%;
+  min-width: 880px;
   border-collapse: collapse;
   table-layout: fixed;
 }

@@ -4022,11 +4022,13 @@ function renderAdministratorPlanScenarioRows(rules) {
 function renderAdministratorPlanColgroup(rules) {
   const target = document.getElementById("administratorPlansCols");
   if (!target) return;
+  const labelColumnWidth = "150px";
+  const scenarioColumnWidth = rules.length ? `calc((100% - ${labelColumnWidth}) / ${rules.length * 2})` : "80px";
   target.innerHTML = `
-    <col class="admin-plan-col-label" style="width: 128px">
+    <col class="admin-plan-col-label" style="width: ${labelColumnWidth}">
     ${rules.map(() => `
-      <col class="admin-plan-col-admin" style="width: 40px">
-      <col class="admin-plan-col-admin" style="width: 40px">
+      <col class="admin-plan-col-admin" style="width: ${scenarioColumnWidth}">
+      <col class="admin-plan-col-admin" style="width: ${scenarioColumnWidth}">
     `).join("")}
   `;
 }
