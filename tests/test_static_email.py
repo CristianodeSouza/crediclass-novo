@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260625-14", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-01", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260625-14", index_html)
+        self.assertIn("/static/js/app.js?v=20260626-01", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -245,6 +245,15 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('preliminaryDecision(pfLinha1Ok && pfLinha2Ok && pfAge.ok)', app_js)
         self.assertIn("Total Lance FGTS + RP", app_js)
         self.assertIn("sem embutido", app_js)
+        self.assertNotIn("sem embudo", app_js)
+        self.assertNotIn("sim embudo", app_js)
+        self.assertIn("Total Renda PJ + Socio", app_js)
+        self.assertIn("Cenario 1 - CNPJ com renda PJ", app_js)
+        self.assertIn("Cenario 2 - CNPJ com PJ + socio", app_js)
+        self.assertIn("Cenario 3 - CPF do socio", app_js)
+        self.assertIn("pjRendaComSocio = pjFaturamento + pjRendaSocio", app_js)
+        self.assertIn("pjParcelaMaximaComSocio = pjRendaComSocio * 0.3", app_js)
+        self.assertIn("pjLinhaCnpjOk || pjLinhaComSocioOk || (pjLinhaCpfSocioOk && pjAge.ok)", app_js)
         self.assertNotIn('["Resultado", pf.resultado', app_js)
         self.assertNotIn('["Linha 1", pf.decisaoLinha1', app_js)
         self.assertIn(".client-preliminary-grid", style_css)
@@ -638,7 +647,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260625-14", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-01", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

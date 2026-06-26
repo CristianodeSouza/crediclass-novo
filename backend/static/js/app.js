@@ -1796,7 +1796,7 @@ function preliminaryAgeSummary(people) {
 }
 
 function preliminaryDecision(ok) {
-  return ok ? "sem embudo" : "sim embudo";
+  return ok ? "sem embutido" : "sim embutido";
 }
 
 function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
@@ -1821,11 +1821,14 @@ function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
   ));
   const pjFaturamento = Number(empresa.faturamento_mensal || 0);
   const pjRendaSocio = sociosAtivos.reduce((sum, socio) => sum + Number(socio.renda || 0), 0);
+  const pjRendaComSocio = pjFaturamento + pjRendaSocio;
   const pjComprometimento = pjFaturamento * 0.3;
   const pjParcelaMaximaSocioPF = pjRendaSocio * 0.3;
-  const pjParcelaMaxima = Math.max(pjComprometimento, pjParcelaMaximaSocioPF);
+  const pjParcelaMaximaComSocio = pjRendaComSocio * 0.3;
   const pjTotalLanceRP = lanceProprio;
-  const pjLinha1Ok = parcelaDesejada <= pjParcelaMaxima && parcelaDesejada > 0;
+  const pjLinhaCnpjOk = parcelaDesejada <= pjComprometimento && parcelaDesejada > 0;
+  const pjLinhaComSocioOk = parcelaDesejada <= pjParcelaMaximaComSocio && parcelaDesejada > 0;
+  const pjLinhaCpfSocioOk = parcelaDesejada <= pjParcelaMaximaSocioPF && parcelaDesejada > 0;
   const pjLinha2Ok = credito > 0 && pjTotalLanceRP >= credito;
   const pjAge = preliminaryAgeSummary(sociosAtivos);
   return {
@@ -1852,17 +1855,21 @@ function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
       credito,
       totalRendaPJ: pjFaturamento,
       totalRendaSocio: pjRendaSocio,
+      totalRendaPJComSocio: pjRendaComSocio,
       comprometimentoMaximo: pjComprometimento,
       parcelaDesejada,
       parcelaMaximaPJ: pjComprometimento,
+      parcelaMaximaPJComSocio: pjParcelaMaximaComSocio,
       parcelaMaximaSocioPF: pjParcelaMaximaSocioPF,
       totalLanceRP: pjTotalLanceRP,
       percentualCoberturaPJ: credito > 0 ? pjFaturamento / credito : 0,
       percentualCoberturaSocio: credito > 0 ? pjRendaSocio / credito : 0,
-      decisaoLinha1: preliminaryDecision(pjLinha1Ok),
+      cnpjSomente: preliminaryDecision(pjLinhaCnpjOk),
+      cnpjComSocio: preliminaryDecision(pjLinhaComSocioOk),
+      cpfSocio: preliminaryDecision(pjLinhaCpfSocioOk && pjAge.ok),
       decisaoLinha2: preliminaryDecision(pjLinha2Ok),
       maiorIdade: pjAge.label,
-      resultado: preliminaryDecision(pjLinha1Ok && pjLinha2Ok && pjAge.ok),
+      resultado: preliminaryDecision((pjLinhaCnpjOk || pjLinhaComSocioOk || (pjLinhaCpfSocioOk && pjAge.ok)) && pjLinha2Ok),
     },
   };
 }
@@ -1904,18 +1911,21 @@ function renderClientPreliminaryAnalysis(analysis) {
           ["Credito desejado", formatMoney(pj.credito)],
           ["Total Renda PJ", formatMoney(pj.totalRendaPJ)],
           ["Total Renda Socio", formatMoney(pj.totalRendaSocio)],
+          ["Total Renda PJ + Socio", formatMoney(pj.totalRendaPJComSocio)],
           ["Comprometimento maximo", formatPercent(0.3)],
           ["Parcela Desejada", formatMoney(pj.parcelaDesejada)],
-          ["Parcela maxima PJ", formatMoney(pj.parcelaMaximaPJ)],
-          ["Parcela maxima Socio PF", formatMoney(pj.parcelaMaximaSocioPF)],
+          ["Cenario 1 - CNPJ com renda PJ", formatMoney(pj.parcelaMaximaPJ), "", pj.cnpjSomente],
+          ["Cenario 2 - CNPJ com PJ + socio", formatMoney(pj.parcelaMaximaPJComSocio), "", pj.cnpjComSocio],
+          ["Cenario 3 - CPF do socio", formatMoney(pj.parcelaMaximaSocioPF), "", pj.cpfSocio],
           ["Total Lance RP", formatMoney(pj.totalLanceRP)],
           ["Maior idade (seguro)", pj.maiorIdade],
         ])}
         ${renderPreliminaryAuditTrail("Demonstrativo logico do calculo", [
           `O objetivo selecionado foi ${pj.objetivo || "-"} e o credito desejado informado foi ${formatMoney(pj.credito)}.`,
           `A parcela desejada considerada veio do campo Parcela maxima desejada: ${formatMoney(pj.parcelaDesejada)}.`,
-          `O faturamento mensal da empresa informado foi ${formatMoney(pj.totalRendaPJ)}. Aplicando 30%, a parcela maxima PJ ficou em ${formatMoney(pj.parcelaMaximaPJ)}.`,
-          `A renda total dos socios informada foi ${formatMoney(pj.totalRendaSocio)}. Aplicando 30%, a parcela maxima dos socios PF ficou em ${formatMoney(pj.parcelaMaximaSocioPF)}.`,
+          `Cenario 1: avaliacao do consorcio no CNPJ usando somente a renda da PJ. Faturamento ${formatMoney(pj.totalRendaPJ)} x 30% = ${formatMoney(pj.parcelaMaximaPJ)}.`,
+          `Cenario 2: se a renda da PJ sozinha nao aprovar, o sistema soma PJ + socio. ${formatMoney(pj.totalRendaPJ)} + ${formatMoney(pj.totalRendaSocio)} = ${formatMoney(pj.totalRendaPJComSocio)}; 30% = ${formatMoney(pj.parcelaMaximaPJComSocio)}.`,
+          `Cenario 3: se a administradora nao aprovar consorcio para o CNPJ, o sistema avalia o CPF do socio. Renda socios ${formatMoney(pj.totalRendaSocio)} x 30% = ${formatMoney(pj.parcelaMaximaSocioPF)}.`,
           `O lance maximo com recurso proprio informado foi ${formatMoney(pj.totalLanceRP)} e foi usado como Total Lance RP.`,
           `A validacao de idade retornou: ${pj.maiorIdade}.`,
         ])}
