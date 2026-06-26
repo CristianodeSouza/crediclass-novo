@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260626-04", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-05", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260626-04", index_html)
+        self.assertIn("/static/js/app.js?v=20260626-05", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -101,6 +101,10 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("Fase 1 - Calculadora de Grupos", index_html)
         self.assertIn("Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance", index_html)
         self.assertIn("Adicionar cartas de credito", index_html)
+        self.assertIn("Calculo: credito contratado com embutido", index_html)
+        self.assertIn("A selecao usa prazo remanescente, compatibilidade com menor lance", index_html)
+        self.assertNotIn('class="selection-flow-grid"', index_html)
+        self.assertNotIn('class="phase-two-help"', index_html)
         self.assertIn('id="viabilityPhase2Idle"', index_html)
         self.assertIn('class="content-card phase-two-card"', index_html)
         self.assertIn('data-admin-plan-kind="Imovel"', index_html)
@@ -113,15 +117,16 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function renderAdministratorPlanColgroup(rules)", app_js)
         self.assertIn("function renderAdministratorPlanAudit(rules)", app_js)
         self.assertIn("Demonstrativo logico do calculo", app_js)
-        self.assertIn("width: 82px", app_js)
+        self.assertNotIn("admin-plan-col-group", app_js)
+        self.assertNotIn("admin-plan-group-cell", app_js)
         self.assertIn("width: 150px", app_js)
-        self.assertIn("width: 46px", app_js)
+        self.assertIn("width: 40px", app_js)
         self.assertIn("mapState.administradoras", app_js)
         for campo in [
             "ETAPA 4 - FASE 1 - CALCULADORA DE GRUPOS",
             "CENARIOS CALCULO",
-            "Sem Embutido",
-            "Com Embutido",
+            "Sem Emb.",
+            "Com Emb.",
             "Tipo de bem",
             "Prazo remanescente",
             "Lance Embutido",
@@ -668,7 +673,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260626-04", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-05", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

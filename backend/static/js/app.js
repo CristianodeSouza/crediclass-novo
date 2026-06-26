@@ -2267,7 +2267,7 @@ function renderViabilitySummary(result) {
   const fluxo = etapa4.fluxo === "investimento" ? "Investimento" : "Contemplacao";
   const stageLabel = etapa4.conceito || etapa4.estrategia || profile;
   const stageCount = etapa4.total_pos_filtro_1 ?? result.total_grupos_pos_filtro_1 ?? "-";
-  document.getElementById("viabilityRankingSubtitle").textContent = `Adicionar cartas de credito por grupo. ${items.length} cenario(s) candidato(s) - fluxo ${fluxo}: ${stageLabel}. Filtro 1 manteve ${stageCount} grupo(s).`;
+  document.getElementById("viabilityRankingSubtitle").textContent = `Adicionar cartas de credito por grupo. Selecao por prazo remanescente e compatibilidade com menor lance. ${items.length} cenario(s) candidato(s) - fluxo ${fluxo}: ${stageLabel}. Filtro 1 manteve ${stageCount} grupo(s).`;
   const scenario = document.getElementById("viabilityScenario");
   if (scenario) scenario.textContent = `${result.total_cenarios_viaveis || 0} cenario(s) viavel(is) - perfil ${profile}`;
 }
@@ -3747,30 +3747,9 @@ function recalculateAdministratorPlanComputedCells() {
   renderAdministratorPlanAudit(administratorPlanRulesForKind(activeAdministratorPlanKind()));
 }
 
-function administratorPlanRowGroupCell(row, previousRow, rowspan) {
-  if (!row.group) return '<th class="admin-plan-group-cell"></th>';
-  if (previousRow?.group === row.group) return "";
-  return `<th class="admin-plan-group-cell" rowspan="${rowspan}">${escapeHtml(row.group)}</th>`;
-}
-
-function administratorPlanGroupRowspan(rows, rowIndex) {
-  const group = rows[rowIndex].group;
-  if (!group) return 1;
-  let total = 0;
-  for (let index = rowIndex; index < rows.length; index += 1) {
-    if (rows[index].group !== group) break;
-    total += 1;
-  }
-  return total;
-}
-
 function renderAdministratorPlanRegisterRows(rules) {
-  return administratorPlanRows.map((row, rowIndex) => {
-    const previousRow = administratorPlanRows[rowIndex - 1];
-    const rowspan = administratorPlanGroupRowspan(administratorPlanRows, rowIndex);
-    return `
+  return administratorPlanRows.map((row) => `
       <tr class="admin-plan-register-row">
-        ${administratorPlanRowGroupCell(row, previousRow, rowspan)}
         <th>${renderAdministratorPlanRowLabel(row)}</th>
         ${rules.map((rule, index) => `
           <td colspan="2">
@@ -3778,18 +3757,13 @@ function renderAdministratorPlanRegisterRows(rules) {
           </td>
         `).join("")}
       </tr>
-    `;
-  }).join("");
+    `).join("");
 }
 
 function renderAdministratorPlanScenarioRows(rules) {
   const visibleRows = visibleAdministratorPlanScenarioRows();
-  return visibleRows.map((row, rowIndex) => {
-    const previousRow = visibleRows[rowIndex - 1];
-    const rowspan = administratorPlanGroupRowspan(visibleRows, rowIndex);
-    return `
+  return visibleRows.map((row) => `
       <tr class="admin-plan-scenario-row">
-        ${administratorPlanRowGroupCell(row, previousRow, rowspan)}
         <th>${renderAdministratorPlanRowLabel(row)}</th>
         ${rules.map((rule, index) => `
           <td>
@@ -3800,19 +3774,17 @@ function renderAdministratorPlanScenarioRows(rules) {
           </td>
         `).join("")}
       </tr>
-    `;
-  }).join("");
+    `).join("");
 }
 
 function renderAdministratorPlanColgroup(rules) {
   const target = document.getElementById("administratorPlansCols");
   if (!target) return;
   target.innerHTML = `
-    <col class="admin-plan-col-group" style="width: 82px">
     <col class="admin-plan-col-label" style="width: 150px">
     ${rules.map(() => `
-      <col class="admin-plan-col-admin" style="width: 46px">
-      <col class="admin-plan-col-admin" style="width: 46px">
+      <col class="admin-plan-col-admin" style="width: 40px">
+      <col class="admin-plan-col-admin" style="width: 40px">
     `).join("")}
   `;
 }
@@ -3892,7 +3864,7 @@ function hideRuleHelpPopover() {
 function renderAdministratorPlans() {
   const kind = activeAdministratorPlanKind();
   const rules = administratorPlanRulesForKind(kind);
-  const totalColumns = 2 + (rules.length * 2);
+  const totalColumns = 1 + (rules.length * 2);
   renderAdministratorPlanColgroup(rules);
   document.getElementById("administratorPlansHead").innerHTML = `
     <tr class="admin-plan-main-title">
@@ -3902,7 +3874,6 @@ function renderAdministratorPlans() {
       <th colspan="${totalColumns}">(Calculo: CREDITO CONTRATADO COM EMBUTIDO, LANCE LIVRE MAXIMO DO CLIENTE POR ADM, COM E SEM EMBUTIDO, PRAZOS MINIMOS GRUPOS PARA ENCAIXE PARCELA MAXIMA DESEJADA E RENDA)</th>
     </tr>
     <tr class="admin-plan-admin-row">
-      <th class="admin-plan-yellow">CADASTRAR</th>
       <th>Administradora</th>
       ${rules.map((rule, index) => `
         <th colspan="2">
@@ -3914,16 +3885,14 @@ function renderAdministratorPlans() {
   document.getElementById("administratorPlansBody").innerHTML = `
     ${renderAdministratorPlanRegisterRows(rules)}
     <tr class="admin-plan-section-row">
-      <th class="admin-plan-yellow">CADASTRAR</th>
       <th>CENARIOS CALCULO</th>
       ${rules.map((rule) => `<th colspan="2">${escapeHtml(rule.administradora || "Administradora")}</th>`).join("")}
     </tr>
     <tr class="admin-plan-scenario-head">
       <th></th>
-      <th></th>
       ${rules.map(() => `
-        <th>Sem Embutido</th>
-        <th>Com Embutido</th>
+        <th title="Sem Embutido">Sem Emb.</th>
+        <th title="Com Embutido">Com Emb.</th>
       `).join("")}
     </tr>
     ${renderAdministratorPlanScenarioRows(rules)}

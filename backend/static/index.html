@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260626-04" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260626-05" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -308,26 +308,12 @@
             <div class="table-toolbar">
               <div>
                 <h2>ETAPA 4 - Calculadora de Grupos</h2>
-                <p>Duas fases: primeiro calcula credito, lance e prazos por administradora; depois seleciona os melhores grupos por prazo remanescente e compatibilidade de menor lance.</p>
+                <p>Fase 1 calcula os parametros por administradora. Fase 2 seleciona os melhores grupos e permite adicionar cartas de credito por grupo.</p>
               </div>
               <div class="toolbar-actions">
                 <button class="btn btn-outline-secondary" type="button" data-screen-jump="perfil">Editar Perfil</button>
                 <button id="analyzeViabilityBtn" class="btn btn-primary" type="button">Selecionar Grupos</button>
               </div>
-            </div>
-            <div class="selection-flow-grid" aria-label="Sequencia logica da selecao de grupos">
-              <article>
-                <strong>Fase 1 - Calculadora de Grupos</strong>
-                <span>Calcula credito contratado com embutido, lance livre maximo por administradora e prazos minimos com e sem embutido.</span>
-              </article>
-              <article>
-                <strong>Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance</strong>
-                <span>Seleciona por prazo remanescente, compatibilidade com menor lance e filtros de contemplacao ou investimento.</span>
-              </article>
-              <article>
-                <strong>Adicionar cartas de credito</strong>
-                <span>Permite selecionar credito por grupo para montar os cenarios e seguir para o estudo financeiro.</span>
-              </article>
             </div>
           </div>
 
@@ -335,7 +321,7 @@
             <div class="table-toolbar">
               <div>
                 <h2>Fase 1 - Calculadora de Grupos</h2>
-                <p>Calculo: credito contratado com embutido, lance livre maximo do cliente por administradora, com e sem embutido, e prazos minimos para encaixe da parcela maxima desejada e renda.</p>
+                <p>Calculo: credito contratado com embutido, lance livre maximo do cliente por administradora, com e sem embutido, e prazos minimos dos grupos para encaixe da parcela maxima desejada e renda.</p>
               </div>
               <div class="toolbar-actions">
                 <button id="addAdministratorPlanBtn" class="btn btn-outline-secondary" type="button">Adicionar Administradora</button>
@@ -366,12 +352,9 @@
             <div class="table-toolbar">
               <div>
                 <h2>Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance</h2>
-                <p id="viabilityRankingSubtitle">Adicionar cartas de credito por grupo. Clique em Selecionar Grupos para aplicar os filtros da Fase 2 e montar o ranking.</p>
+                <p id="viabilityRankingSubtitle">Adicionar cartas de credito por grupo. A selecao usa prazo remanescente, compatibilidade com menor lance e o objetivo definido no Perfil do Cliente.</p>
               </div>
               <div class="phase-two-badge">FASE 2</div>
-            </div>
-            <div class="phase-two-help">
-              Esta fase usa os resultados da Fase 1 para reduzir os grupos, ordenar por prazo remanescente, conferir compatibilidade com menor lance e permitir adicionar cartas de credito por grupo ao estudo.
             </div>
             <div id="viabilityPhase2Idle" class="table-state">Aguardando selecao dos melhores grupos.</div>
             <div id="viabilityLoading" class="table-state d-none">Selecionando grupos...</div>
@@ -1248,6 +1231,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260626-04"></script>
+    <script src="/static/js/app.js?v=20260626-05"></script>
   </body>
 </html>

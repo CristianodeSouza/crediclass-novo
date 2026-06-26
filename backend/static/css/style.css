@@ -870,34 +870,6 @@ body[data-theme="escuro"] .btn-outline-secondary {
   justify-content: flex-end;
 }
 
-.selection-flow-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.selection-flow-grid article {
-  display: grid;
-  gap: 4px;
-  min-height: 86px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-soft);
-}
-
-.selection-flow-grid strong {
-  color: #174c9a;
-  font-size: 0.86rem;
-  font-weight: 900;
-}
-
-.selection-flow-grid span {
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.35;
-}
-
 .table-toolbar,
 .pagination-row {
   display: flex;
@@ -2063,17 +2035,6 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 900;
 }
 
-.phase-two-help {
-  margin-bottom: 8px;
-  padding: 8px 10px;
-  border: 1px solid rgba(23, 76, 154, 0.22);
-  border-radius: 8px;
-  background: rgba(23, 76, 154, 0.06);
-  color: #174c9a;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
 .administrator-plan-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -2129,21 +2090,22 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .administrator-plan-table thead th {
-  height: 22px;
+  height: 18px;
   background: var(--brand-navy);
   color: #fff;
-  font-size: 0.52rem;
+  font-size: 0.45rem;
   text-align: center;
   text-transform: uppercase;
+  line-height: 1;
 }
 
 .administrator-plan-table tbody th {
-  padding: 2px 4px;
+  padding: 1px 3px;
   background: var(--surface-soft);
   color: var(--text);
-  font-size: 0.52rem;
+  font-size: 0.45rem;
   font-weight: 800;
-  line-height: 1.15;
+  line-height: 1.08;
   overflow-wrap: anywhere;
   word-break: normal;
 }
@@ -2151,15 +2113,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .administrator-plan-table .admin-plan-main-title th {
   background: #bfbfbf;
   color: #111827;
-  font-size: 0.58rem;
+  font-size: 0.52rem;
   font-weight: 900;
 }
 
 .administrator-plan-table .admin-plan-subtitle th {
-  height: 20px;
+  height: 18px;
   background: #e5e5e5;
   color: #111827;
-  font-size: 0.48rem;
+  font-size: 0.42rem;
   font-weight: 800;
   text-transform: none;
 }
@@ -2168,21 +2130,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .administrator-plan-table .admin-plan-section-row th {
   background: var(--brand-navy);
   color: #fff;
-  font-size: 0.5rem;
+  font-size: 0.44rem;
 }
 
 .administrator-plan-table .admin-plan-yellow {
   background: #ffff00 !important;
   color: #111827 !important;
-}
-
-.admin-plan-group-cell {
-  width: 82px !important;
-  background: #fff !important;
-  color: #111827 !important;
-  text-align: center;
-  vertical-align: middle !important;
-  font-size: 0.5rem !important;
 }
 
 .administrator-plan-audit {
@@ -2252,31 +2205,33 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .administrator-plan-section-row th {
-  height: 22px;
+  height: 18px;
 }
 
 .administrator-plan-scenario-head th {
-  height: 20px;
+  height: 18px;
   background: #e5e5e5 !important;
   color: #111827 !important;
-  font-size: 0.48rem !important;
+  font-size: 0.42rem !important;
   font-weight: 900;
   text-transform: none !important;
+  line-height: 1 !important;
 }
 
 .admin-plan-admin-input,
 .admin-plan-cell {
   width: 100%;
   min-width: 0;
-  height: 22px;
-  padding: 0 2px;
+  height: 18px;
+  padding: 0 1px;
   border: 0;
   background: transparent;
   color: var(--text);
-  font-size: 0.5rem;
+  font-size: 0.42rem;
   font-weight: 700;
   text-align: center;
-  line-height: 1.05;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .admin-plan-cell[readonly] {
