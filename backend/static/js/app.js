@@ -12,14 +12,14 @@ const screens = {
     action: "Salvar Perfil",
   },
   viabilidade: {
-    letter: "C) CALCULADORA DE GRUPOS",
-    title: "Calculadora de Grupos",
-    subtitle: "Etapa 4 da planilha: fase 1 calculadora de grupos e fase 2 selecao dos melhores grupos",
+    letter: "C) MOTOR INTELIGENTE DE SELECAO",
+    title: "Motor Inteligente de Selecao",
+    subtitle: "Elegibilidade, calculo, compatibilidade, ranking e Top 10 grupos",
     action: "Selecionar Grupos",
   },
   administradoras: {
-    letter: "C) CALCULADORA DE GRUPOS",
-    title: "Calculadora de Grupos",
+    letter: "C) MOTOR INTELIGENTE DE SELECAO",
+    title: "Motor Inteligente de Selecao",
     subtitle: "Parametros por administradora integrados a selecao de grupos",
     action: "Salvar Parametros",
   },
@@ -55,6 +55,7 @@ const mapState = {
 const viabilityState = {
   lastResult: null,
   administratorEligibility: [],
+  funnelSummary: null,
 };
 
 const historyState = {
@@ -2276,6 +2277,26 @@ function renderViabilitySummary(result) {
   document.getElementById("viabilityRankingSubtitle").textContent = `Adicionar cartas de credito por grupo. Selecao por prazo remanescente e compatibilidade com menor lance. ${items.length} cenario(s) candidato(s) - fluxo ${fluxo}: ${stageLabel}. Filtro 1 manteve ${stageCount} grupo(s).`;
   const scenario = document.getElementById("viabilityScenario");
   if (scenario) scenario.textContent = `${result.total_cenarios_viaveis || 0} cenario(s) viavel(is) - perfil ${profile}`;
+  viabilityState.funnelSummary = {
+    ...(viabilityState.funnelSummary || {}),
+    totalAdministradoras: result.total_administradoras_analisadas || viabilityState.funnelSummary?.totalAdministradoras,
+    elegiveis: result.total_administradoras_elegiveis || viabilityState.funnelSummary?.elegiveis,
+    eliminadas: Math.max((result.total_administradoras_analisadas || 0) - (result.total_administradoras_elegiveis || 0), 0),
+    gruposAtivos: result.total_grupos_base || result.total_grupos_analisados || "-",
+    gruposCompativeis: result.total_grupos_pos_filtro_1 || result.total_grupos_compativeis || "-",
+    top10: Math.min(items.length, 10),
+  };
+  renderSelectionFunnelSummary(viabilityState.funnelSummary);
+  setPipelineStatus({
+    perfil: "ok",
+    analise: "ok",
+    elegibilidade: "ok",
+    calculo: "ok",
+    compatibilidade: items.length ? "ok" : "processing",
+    ranking: items.length ? "ok" : "pending",
+    top10: items.length ? "ok" : "pending",
+    estudo: "pending",
+  });
 }
 
 function renderViabilityEmpty(result) {
@@ -3468,6 +3489,64 @@ function eligibilityList(items, fallback = "Sem restricoes") {
   return `<ul class="eligibility-detail-list">${values.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
+function eligibilityCheck(ok, positive = "OK", negative = "Revisar") {
+  return ok
+    ? `<span class="eligibility-check eligibility-check-ok">✓ ${escapeHtml(positive)}</span>`
+    : `<span class="eligibility-check eligibility-check-danger">× ${escapeHtml(negative)}</span>`;
+}
+
+function eligibilityRuleCell(item, key) {
+  if (key === "credito") {
+    return eligibilityCheck(item.limite_sem_comprovacao_compativel !== false, "OK", "Credito acima do limite");
+  }
+  if (key === "idade") {
+    return item.alertas?.includes("idade_nao_validada")
+      ? `<span class="eligibility-check eligibility-check-warning">△ Idade nao validada</span>`
+      : eligibilityCheck(item.idade_compativel !== false, "OK", "Idade fora do limite");
+  }
+  if (key === "fgts") {
+    return eligibilityCheck(item.fgts_permitido !== false, "OK", "Nao aceita FGTS");
+  }
+  if (key === "pj") {
+    if (item.cenarios_pj_disponiveis?.length) {
+      return `<span class="eligibility-check eligibility-check-ok">✓ ${escapeHtml(item.cenarios_pj_disponiveis.join(", "))}</span>`;
+    }
+    const blocked = item.motivos_reprovacao?.some((motivo) => normalizeText(motivo).includes("nao aceita pj"));
+    return eligibilityCheck(!blocked, "OK", "Nao aceita PJ");
+  }
+  if (key === "embutido") {
+    return eligibilityCheck(item.lance_embutido_permitido !== false, "OK", "Sem embutido");
+  }
+  return eligibilityCheck(true);
+}
+
+function setPipelineStatus(statuses = {}) {
+  document.querySelectorAll("[data-pipeline-step]").forEach((step) => {
+    const status = statuses[step.dataset.pipelineStep] || "pending";
+    step.classList.toggle("pipeline-ok", status === "ok");
+    step.classList.toggle("pipeline-processing", status === "processing");
+    step.classList.toggle("pipeline-pending", status === "pending");
+    const small = step.querySelector("small");
+    if (small) small.textContent = status === "ok" ? "OK" : status === "processing" ? "Processando" : "Aguardando";
+  });
+}
+
+function renderSelectionFunnelSummary(summary = {}) {
+  const target = document.getElementById("selectionFunnelSummary");
+  if (!target) return;
+  const values = [
+    ["Administradoras cadastradas", summary.totalAdministradoras ?? "-"],
+    ["Elegiveis", summary.elegiveis ?? "-"],
+    ["Eliminadas", summary.eliminadas ?? "-"],
+    ["Grupos ativos", summary.gruposAtivos ?? "-"],
+    ["Compativeis", summary.gruposCompativeis ?? "-"],
+    ["Top 10", summary.top10 ?? "-"],
+  ];
+  target.innerHTML = values.map(([label, value]) => `
+    <article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>
+  `).join("");
+}
+
 function administratorEligibilityItemsForDisplay() {
   return viabilityState.administratorEligibility || [];
 }
@@ -3487,23 +3566,53 @@ function administratorPlanDisplayRulesForKind(kind) {
 
 function renderAdministratorEligibility(items = administratorEligibilityItemsForDisplay()) {
   const body = document.getElementById("administratorEligibilityBody");
+  const eliminatedBody = document.getElementById("administratorEliminatedBody");
+  const eliminatedDetails = document.getElementById("administratorEliminatedDetails");
+  const eliminatedCount = document.getElementById("administratorEliminatedCount");
+  const eligibleList = document.getElementById("eligibleAdministratorsList");
   const empty = document.getElementById("administratorEligibilityEmpty");
   const wrap = document.getElementById("administratorEligibilityTableWrap");
   const summary = document.getElementById("administratorEligibilitySummary");
   if (!body || !empty || !wrap || !summary) return;
 
   const total = items.length;
-  const eligible = items.filter((item) => item.elegivel).length;
+  const eligibleItems = items.filter((item) => item.elegivel);
+  const eliminatedItems = items.filter((item) => !item.elegivel);
+  const eligible = eligibleItems.length;
   summary.textContent = total ? `${eligible} de ${total} podem seguir` : "Aguardando perfil";
   empty.classList.toggle("d-none", total > 0);
   wrap.classList.toggle("d-none", total === 0);
+  if (eliminatedDetails) eliminatedDetails.classList.toggle("d-none", eliminatedItems.length === 0);
+  if (eliminatedCount) eliminatedCount.textContent = String(eliminatedItems.length);
+  if (eligibleList) {
+    eligibleList.innerHTML = eligibleItems.length
+      ? `<strong>Administradoras elegiveis:</strong>${eligibleItems.map((item) => `<span>✓ ${escapeHtml(item.administradora)}</span>`).join("")}`
+      : "Nenhuma administradora elegivel para a calculadora.";
+  }
+  renderSelectionFunnelSummary({
+    ...(viabilityState.funnelSummary || {}),
+    totalAdministradoras: total || viabilityState.funnelSummary?.totalAdministradoras,
+    elegiveis: eligible || viabilityState.funnelSummary?.elegiveis,
+    eliminadas: eliminatedItems.length || viabilityState.funnelSummary?.eliminadas,
+  });
+  setPipelineStatus({
+    perfil: "ok",
+    analise: "ok",
+    elegibilidade: total ? "ok" : "pending",
+    calculo: total ? "processing" : "pending",
+    compatibilidade: "pending",
+    ranking: "pending",
+    top10: "pending",
+    estudo: "pending",
+  });
   if (!total) {
     body.innerHTML = "";
+    if (eliminatedBody) eliminatedBody.innerHTML = "";
     empty.textContent = "Salve ou avance o Perfil do Cliente para calcular a elegibilidade.";
     return;
   }
 
-  body.innerHTML = items.map((item) => {
+  body.innerHTML = eligibleItems.map((item) => {
     const motivos = [
       ...(item.motivos_reprovacao || []),
       ...(item.alertas || []),
@@ -3513,13 +3622,27 @@ function renderAdministratorEligibility(items = administratorEligibilityItemsFor
       <tr>
         <td><strong>${escapeHtml(item.administradora || "-")}</strong></td>
         <td><span class="eligibility-status ${eligibilityStatusClass(item.status, item.elegivel)}">${escapeHtml(status)}</span></td>
-        <td>${eligibilityList(motivos, "Sem alertas")}</td>
+        <td>${eligibilityRuleCell(item, "credito")}</td>
+        <td>${eligibilityRuleCell(item, "idade")}</td>
+        <td>${eligibilityRuleCell(item, "fgts")}</td>
+        <td>${eligibilityRuleCell(item, "pj")}</td>
+        <td>${eligibilityRuleCell(item, "embutido")}</td>
+        <td>${eligibilityList(motivos, "Elegivel sem restricoes")}</td>
         <td>${eligibilityList(item.restricoes || [], "Sem restricoes")}</td>
-        <td>${eligibilityList(item.cenarios_pj_disponiveis || [], "-")}</td>
         <td><strong>${item.elegivel ? "Sim" : "Nao"}</strong></td>
       </tr>
     `;
   }).join("");
+  if (eliminatedBody) {
+    eliminatedBody.innerHTML = eliminatedItems.map((item) => `
+      <tr>
+        <td><strong>${escapeHtml(item.administradora || "-")}</strong></td>
+        <td><span class="eligibility-status eligibility-status-danger">${escapeHtml(eligibilityStatusLabel(item))}</span></td>
+        <td>${eligibilityList([...(item.motivos_reprovacao || []), ...(item.alertas || [])], "Reprovada")}</td>
+        <td>${eligibilityList(item.cenarios_pj_disponiveis || [], "-")}</td>
+      </tr>
+    `).join("");
+  }
 }
 
 async function refreshAdministratorEligibility({ silent = true } = {}) {
@@ -3533,6 +3656,12 @@ async function refreshAdministratorEligibility({ silent = true } = {}) {
   try {
     const result = await apiPost("/viabilidade/administradoras", payload);
     viabilityState.administratorEligibility = result.items || [];
+    viabilityState.funnelSummary = {
+      ...(viabilityState.funnelSummary || {}),
+      totalAdministradoras: result.total || viabilityState.administratorEligibility.length,
+      elegiveis: result.total_elegiveis || viabilityState.administratorEligibility.filter((item) => item.elegivel).length,
+      eliminadas: (result.total || viabilityState.administratorEligibility.length) - (result.total_elegiveis || 0),
+    };
     renderAdministratorEligibility(viabilityState.administratorEligibility);
     renderAdministratorPlans();
     return viabilityState.administratorEligibility;
@@ -4507,6 +4636,12 @@ document.getElementById("clientProfileForm").addEventListener("blur", (event) =>
 document.getElementById("saveClientProfileBtn").addEventListener("click", () => saveClientProfile());
 document.getElementById("clearClientProfileBtn").addEventListener("click", resetClientProfile);
 document.getElementById("advanceClientProfileBtn").addEventListener("click", advanceClientProfile);
+
+document.querySelector("[data-open-admin-rules]")?.addEventListener("click", () => {
+  activateScreen("configuracoes");
+  const tabButton = document.querySelector('[data-bs-target="#configAdministradoras"]');
+  if (tabButton && window.bootstrap) bootstrap.Tab.getOrCreateInstance(tabButton).show();
+});
 
 document.getElementById("administratorPlansBody").addEventListener("mouseover", (event) => {
   const marker = event.target.closest(".admin-plan-rule-marker");

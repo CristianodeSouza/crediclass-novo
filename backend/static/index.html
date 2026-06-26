@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260626-08" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260626-09" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -55,7 +55,7 @@
             </button>
             <button class="nav-item" type="button" data-screen="viabilidade">
               <span class="nav-icon">VC</span>
-              <span>Calculadora de Grupos</span>
+              <span>Motor Inteligente de Selecao</span>
             </button>
             <button class="nav-item" type="button" data-screen="estudo">
               <span class="nav-icon">EF</span>
@@ -307,19 +307,19 @@
           <div class="content-card viability-groups-intro">
             <div class="table-toolbar">
               <div>
-                <h2>ETAPA 4 - Calculadora de Grupos</h2>
+                <h2>Motor Inteligente de Selecao</h2>
                 <p>O funil parte do perfil financeiro, valida administradoras, calcula grupos, mede compatibilidade, ranqueia e leva o Top 10 para o estudo financeiro.</p>
               </div>
             </div>
-            <div class="funnel-flow" aria-label="Fluxo do funil Crediclass">
-              <span>Cliente</span>
-              <span>Perfil Financeiro</span>
-              <span>Motor de Elegibilidade<br><small>Administradoras</small></span>
-              <span>Motor de Calculo<br><small>Grupos</small></span>
-              <span>Motor de Compatibilidade</span>
-              <span>Motor de Ranking</span>
-              <span>Top 10 Grupos</span>
-              <span>Estudo Financeiro</span>
+            <div id="selectionPipeline" class="funnel-flow" aria-label="Pipeline de processamento Crediclass">
+              <span data-pipeline-step="perfil">Perfil<br><small>OK</small></span>
+              <span data-pipeline-step="analise">Analise Financeira<br><small>OK</small></span>
+              <span data-pipeline-step="elegibilidade">Elegibilidade<br><small>Aguardando</small></span>
+              <span data-pipeline-step="calculo">Calculo dos Grupos<br><small>Aguardando</small></span>
+              <span data-pipeline-step="compatibilidade">Compatibilidade<br><small>Aguardando</small></span>
+              <span data-pipeline-step="ranking">Ranking Inteligente<br><small>Aguardando</small></span>
+              <span data-pipeline-step="top10">Top 10 Grupos<br><small>Aguardando</small></span>
+              <span data-pipeline-step="estudo">Estudo Financeiro<br><small>Proxima etapa</small></span>
             </div>
           </div>
 
@@ -331,6 +331,14 @@
               </div>
               <span id="administratorEligibilitySummary" class="eligibility-summary-pill">Aguardando perfil</span>
             </div>
+            <div id="selectionFunnelSummary" class="selection-funnel-summary">
+              <article><span>Administradoras cadastradas</span><strong>-</strong></article>
+              <article><span>Elegiveis</span><strong>-</strong></article>
+              <article><span>Eliminadas</span><strong>-</strong></article>
+              <article><span>Grupos ativos</span><strong>-</strong></article>
+              <article><span>Compativeis</span><strong>-</strong></article>
+              <article><span>Top 10</span><strong>-</strong></article>
+            </div>
             <div id="administratorEligibilityEmpty" class="table-state">Salve ou avance o Perfil do Cliente para calcular a elegibilidade.</div>
             <div id="administratorEligibilityTableWrap" class="table-responsive d-none">
               <table class="table table-hover align-middle administrator-eligibility-table">
@@ -338,24 +346,47 @@
                   <tr>
                     <th>Administradora</th>
                     <th>Status</th>
-                    <th>Motivos / alertas</th>
-                    <th>Restricoes</th>
-                    <th>Cenarios PJ</th>
-                    <th>Pode seguir?</th>
+                    <th>Credito</th>
+                    <th>Idade</th>
+                    <th>FGTS</th>
+                    <th>PJ</th>
+                    <th>Embutido</th>
+                    <th>Resultado</th>
+                    <th>Observacao</th>
+                    <th>Segue?</th>
                   </tr>
                 </thead>
                 <tbody id="administratorEligibilityBody"></tbody>
               </table>
+            </div>
+            <details id="administratorEliminatedDetails" class="administrator-eliminated-details d-none">
+              <summary>Administradoras eliminadas (<span id="administratorEliminatedCount">0</span>)</summary>
+              <table class="table table-hover align-middle administrator-eligibility-table administrator-eliminated-table">
+                <thead>
+                  <tr>
+                    <th>Administradora</th>
+                    <th>Status</th>
+                    <th>Motivo</th>
+                    <th>Cenarios PJ</th>
+                  </tr>
+                </thead>
+                <tbody id="administratorEliminatedBody"></tbody>
+              </table>
+            </details>
+            <div class="administrator-rule-shortcut">
+              <span>As regras usadas neste motor sao cadastradas em Configuracoes &gt; Regras Administradoras.</span>
+              <button class="btn btn-sm btn-outline-primary" type="button" data-open-admin-rules>Abrir cadastro de administradoras</button>
             </div>
           </div>
 
           <div class="content-card administrator-plans-card">
             <div class="table-toolbar">
               <div>
-                <h2>Motor de Calculo - Calculadora de Grupos</h2>
+                <h2>Calculo dos Grupos</h2>
                 <p>Calculo: credito contratado com embutido, lance livre maximo do cliente por administradora, com e sem embutido, e prazos minimos dos grupos para encaixe da parcela maxima desejada e renda.</p>
               </div>
             </div>
+            <div id="eligibleAdministratorsList" class="eligible-administrator-list">Aguardando motor de elegibilidade.</div>
 
             <div class="administrator-plan-tabs" role="tablist" aria-label="Tipo de bem dos planos">
               <button class="active" type="button" data-admin-plan-kind="Imovel">Imoveis</button>
@@ -738,7 +769,7 @@
             <ul class="nav nav-tabs details-tabs" role="tablist">
               <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#configGeral" type="button" role="tab">Geral</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configFinanceiro" type="button" role="tab">Parametros Financeiros</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configAdministradoras" type="button" role="tab">Planos Administradoras</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configAdministradoras" type="button" role="tab">Regras Administradoras</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configIntegracoes" type="button" role="tab">Integracoes</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configUsuarios" type="button" role="tab">Usuarios</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configAcesso" type="button" role="tab">Acesso</button></li>
@@ -795,8 +826,8 @@
                 <div class="content-card">
                   <div class="table-toolbar">
                     <div>
-                      <h2>Planos Administradoras</h2>
-                      <p>Dados fixos por administradora usados antes da selecao dos grupos</p>
+                      <h2>Regras Administradoras</h2>
+                      <p>Cadastro dos parametros usados pelo Motor de Elegibilidade e pelo Calculo dos Grupos</p>
                     </div>
                     <button id="newAdministratorRuleBtn" class="btn btn-outline-primary" type="button">Nova Administradora</button>
                   </div>
@@ -828,7 +859,7 @@
                 <div class="content-card">
                   <div class="table-toolbar">
                     <div>
-                      <h2>Administradoras Cadastradas</h2>
+                      <h2>Administradoras Cadastradas para Elegibilidade</h2>
                       <p id="administratorRulesSubtitle">Nenhuma administradora cadastrada</p>
                     </div>
                   </div>
@@ -1259,6 +1290,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260626-08"></script>
+    <script src="/static/js/app.js?v=20260626-09"></script>
   </body>
 </html>
