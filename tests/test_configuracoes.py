@@ -33,6 +33,8 @@ class ConfiguracoesTest(unittest.TestCase):
         self.assertIn("alertar_sincronizacao", result["notificacoes"])
         self.assertEqual(len(result["usuarios"]), 2)
         self.assertTrue(result["acesso"]["paineis_liberados"])
+        self.assertGreaterEqual(len(result["administradoras_regras"]), 10)
+        self.assertIn("CNP", {item["administradora"] for item in result["administradoras_regras"]})
 
     def test_salvar_configuracoes_atualiza_empresa(self):
         result = configuracoes_salvar({"empresa": {"nome": "Crediclass Teste"}})
@@ -148,6 +150,20 @@ class ConfiguracoesTest(unittest.TestCase):
 
         self.assertNotIn("permissoes", loaded)
         self.assertTrue(loaded["acesso"]["paineis_liberados"])
+
+    def test_carregar_configuracoes_usa_regras_padrao_quando_runtime_tem_lista_vazia(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            runtime_dir = Path(temp_dir)
+            config_file = runtime_dir / "configuracoes.json"
+            runtime_dir.mkdir(parents=True, exist_ok=True)
+            config_file.write_text('{"administradoras_regras": []}', encoding="utf-8")
+            with patch.object(configuracoes_module, "RUNTIME_DIR", runtime_dir), patch.object(configuracoes_module, "CONFIG_FILE", config_file):
+                loaded = configuracoes_module.load_config()
+
+        administradoras = {item["administradora"] for item in loaded["administradoras_regras"]}
+        self.assertGreaterEqual(len(administradoras), 10)
+        self.assertIn("CNP", administradoras)
+        self.assertIn("EMBRACON", administradoras)
 
 
 if __name__ == "__main__":
