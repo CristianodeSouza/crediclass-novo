@@ -20,6 +20,11 @@ class AdministratorRule:
     aceita_pj: bool = True
     permite_composicao_pj_socios: bool = True
     permite_cpf_socio: bool = True
+    status_operacional: str = "Ativo"
+    data_cadastro_produto: str = ""
+    responsavel_produto: str = ""
+    aceita_adesao_clientes_texto: str = ""
+    limite_sem_comprovacao_renda_texto: str = ""
     observacoes_operacionais: str = ""
 
 
@@ -81,6 +86,11 @@ def rule_from_config(data: dict) -> AdministratorRule | None:
         aceita_pj=bool(data.get("aceita_pj", True)),
         permite_composicao_pj_socios=bool(data.get("permite_composicao_pj_socios", True)),
         permite_cpf_socio=bool(data.get("permite_cpf_socio", True)),
+        status_operacional=str(data.get("status_operacional") or "Ativo"),
+        data_cadastro_produto=str(data.get("data_cadastro_produto") or ""),
+        responsavel_produto=str(data.get("responsavel_produto") or ""),
+        aceita_adesao_clientes_texto=str(data.get("aceita_adesao_clientes_texto") or ""),
+        limite_sem_comprovacao_renda_texto=str(data.get("limite_sem_comprovacao_renda_texto") or ""),
         observacoes_operacionais=str(data.get("observacoes_operacionais") or ""),
     )
 

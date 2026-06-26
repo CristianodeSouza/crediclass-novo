@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260626-09" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260626-10" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -833,12 +833,17 @@
                   </div>
                   <form id="administratorRulesForm" class="viability-form administrator-rules-form">
                     <label><span>Administradora</span><input id="adminRuleAdministradora" class="form-control" placeholder="CNP, ITAU, CAOA, PORTO"></label>
+                    <label><span>Status do produto</span><select id="adminRuleStatusProduto" class="form-select"><option value="Ativo">Ativo</option><option value="INATIVO">INATIVO</option><option value="Verificar">Verificar</option></select></label>
+                    <label><span>Data cadastro produto</span><input id="adminRuleDataProduto" class="form-control" type="date"></label>
+                    <label><span>Responsavel produto</span><input id="adminRuleResponsavelProduto" class="form-control" placeholder="Joyce"></label>
                     <label><span>Seguro obrigatorio?</span><select id="adminRuleSeguro" class="form-select"><option value="false">Nao</option><option value="true">Sim</option></select></label>
                     <label><span>Idade maxima</span><input id="adminRuleIdadeMaxima" class="form-control" inputmode="numeric"></label>
                     <label><span>Limite sem comprovacao de renda</span><input id="adminRuleLimiteRenda" class="form-control" inputmode="decimal"></label>
+                    <label><span>Texto do limite sem comprovacao</span><input id="adminRuleLimiteRendaTexto" class="form-control" placeholder="Sob consulta, Nao, Verificar"></label>
                     <label><span>% Lance embutido</span><input id="adminRuleLanceEmbutido" class="form-control" inputmode="decimal"></label>
                     <label><span>Calculo lance embutido</span><select id="adminRuleTipoLance" class="form-select"><option value="Credito">Credito</option><option value="Carta">Carta</option><option value="Sem lance embutido">Sem lance embutido</option></select></label>
                     <label><span>Aceita saida fiscal?</span><select id="adminRuleSaidaFiscal" class="form-select"><option value="false">Nao</option><option value="true">Sim</option></select></label>
+                    <label><span>Aceita adesao de clientes?</span><input id="adminRuleAceitaAdesao" class="form-control" placeholder="Sim, Nao, Verificar"></label>
                     <label><span>Taxa ADM</span><input id="adminRuleTaxaAdm" class="form-control" inputmode="decimal"></label>
                     <label><span>Negociacao de taxa</span><input id="adminRuleNegociacao" class="form-control" placeholder="Nao, Tem promocao, Flexibilidade"></label>
                     <label><span>Fundo de reserva</span><input id="adminRuleFundoReserva" class="form-control" inputmode="decimal"></label>
@@ -868,9 +873,13 @@
                       <thead>
                         <tr>
                           <th>Administradora</th>
+                          <th>Status</th>
+                          <th>Cadastro</th>
+                          <th>Responsavel</th>
                           <th>Seguro</th>
                           <th>Idade maxima</th>
                           <th>Limite renda</th>
+                          <th>Adesao</th>
                           <th>Lance embutido</th>
                           <th>Saida fiscal</th>
                           <th>Taxa ADM</th>
@@ -1290,6 +1299,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260626-09"></script>
+    <script src="/static/js/app.js?v=20260626-10"></script>
   </body>
 </html>

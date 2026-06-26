@@ -3409,9 +3409,13 @@ function renderAdministratorRules(rules) {
   document.getElementById("administratorRulesBody").innerHTML = rules.map((rule, index) => `
     <tr>
       <td>${escapeHtml(rule.administradora || "-")}</td>
+      <td>${escapeHtml(rule.status_operacional || "Ativo")}</td>
+      <td>${escapeHtml(rule.data_cadastro_produto || "-")}</td>
+      <td>${escapeHtml(rule.responsavel_produto || "-")}</td>
       <td>${rule.seguro_obrigatorio ? "Sim" : "Nao"}</td>
       <td>${rule.idade_maxima || "-"}</td>
-      <td>${formatMoney(rule.limite_sem_comprovacao_renda)}</td>
+      <td>${rule.limite_sem_comprovacao_renda_texto ? escapeHtml(rule.limite_sem_comprovacao_renda_texto) : formatMoney(rule.limite_sem_comprovacao_renda)}</td>
+      <td>${escapeHtml(rule.aceita_adesao_clientes_texto || "-")}</td>
       <td>${formatPercent(rule.percentual_lance_embutido || 0)}</td>
       <td>${rule.aceita_saida_fiscal ? "Sim" : "Nao"}</td>
       <td>${formatPercent(rule.taxa_adm || 0)}</td>
@@ -3467,6 +3471,11 @@ function administratorPlanRulesForKind(kind) {
       permite_cpf_socio_texto: "Sim",
       percentual_comprometimento_pj: DEFAULT_PJ_COMMITMENT_PERCENT,
       percentual_comprometimento_cpf: DEFAULT_CPF_COMMITMENT_PERCENT,
+      status_operacional: "Ativo",
+      data_cadastro_produto: "",
+      responsavel_produto: "",
+      aceita_adesao_clientes_texto: "",
+      limite_sem_comprovacao_renda_texto: "",
       ...(savedRule || {}),
     };
   });
@@ -4212,6 +4221,7 @@ async function saveAdministratorPlans() {
 function clearAdministratorRuleForm() {
   configAdministratorRuleIndex = null;
   document.getElementById("administratorRulesForm").reset();
+  document.getElementById("adminRuleStatusProduto").value = "Ativo";
   document.getElementById("adminRuleAceitaFgts").value = "true";
   document.getElementById("adminRuleAceitaPJ").value = "true";
   document.getElementById("adminRuleComposicaoPJSocios").value = "true";
@@ -4227,14 +4237,19 @@ function collectAdministratorRuleForm() {
   const permiteCpfSocio = getSelectBool("adminRuleCpfSocio");
   return {
     administradora: document.getElementById("adminRuleAdministradora").value.trim(),
+    status_operacional: document.getElementById("adminRuleStatusProduto").value,
+    data_cadastro_produto: document.getElementById("adminRuleDataProduto").value,
+    responsavel_produto: document.getElementById("adminRuleResponsavelProduto").value.trim(),
     seguro_obrigatorio: getSelectBool("adminRuleSeguro"),
     idade_maxima: adminRuleNumber(document.getElementById("adminRuleIdadeMaxima").value) || null,
     limite_sem_comprovacao_renda: optionalNumber(document.getElementById("adminRuleLimiteRenda").value),
+    limite_sem_comprovacao_renda_texto: document.getElementById("adminRuleLimiteRendaTexto").value.trim(),
     percentual_lance_embutido: inputToPercent("adminRuleLanceEmbutido"),
     tipo_lance_embutido: document.getElementById("adminRuleTipoLance").value,
     taxa_adm: inputToPercent("adminRuleTaxaAdm"),
     possui_negociacao_taxa: document.getElementById("adminRuleNegociacao").value.trim(),
     fundo_reserva: inputToPercent("adminRuleFundoReserva"),
+    aceita_adesao_clientes_texto: document.getElementById("adminRuleAceitaAdesao").value.trim(),
     aceita_saida_fiscal: getSelectBool("adminRuleSaidaFiscal"),
     aceita_fgts: getSelectBool("adminRuleAceitaFgts"),
     aceita_pj: aceitaPJ,
@@ -4252,15 +4267,20 @@ function collectAdministratorRuleForm() {
 function fillAdministratorRuleForm(rule, index) {
   configAdministratorRuleIndex = index;
   setInputValue("adminRuleAdministradora", rule.administradora);
+  setInputValue("adminRuleStatusProduto", rule.status_operacional || "Ativo");
+  setInputValue("adminRuleDataProduto", rule.data_cadastro_produto);
+  setInputValue("adminRuleResponsavelProduto", rule.responsavel_produto);
   setSelectBool("adminRuleSeguro", rule.seguro_obrigatorio);
   setInputValue("adminRuleIdadeMaxima", rule.idade_maxima);
   setInputValue("adminRuleLimiteRenda", rule.limite_sem_comprovacao_renda);
+  setInputValue("adminRuleLimiteRendaTexto", rule.limite_sem_comprovacao_renda_texto);
   setInputValue("adminRuleLanceEmbutido", percentToInput(rule.percentual_lance_embutido));
   setInputValue("adminRuleTipoLance", rule.tipo_lance_embutido || "Credito");
   setSelectBool("adminRuleSaidaFiscal", rule.aceita_saida_fiscal);
   setInputValue("adminRuleTaxaAdm", percentToInput(rule.taxa_adm));
   setInputValue("adminRuleNegociacao", rule.possui_negociacao_taxa);
   setInputValue("adminRuleFundoReserva", percentToInput(rule.fundo_reserva));
+  setInputValue("adminRuleAceitaAdesao", rule.aceita_adesao_clientes_texto);
   setSelectBool("adminRuleAceitaFgts", rule.aceita_fgts !== false);
   setSelectBool("adminRuleAceitaPJ", rule.aceita_pj !== false);
   setSelectBool("adminRuleComposicaoPJSocios", rule.permite_composicao_pj_socios !== false);

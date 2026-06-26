@@ -38,6 +38,8 @@ def client_lance_maximo_disponivel(payload: ViabilidadeRequest, fgts_permitido: 
 
 
 def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: AdministratorRule) -> dict[str, Any]:
+    status_operacional = str(rule.status_operacional or "Ativo").strip()
+    produto_ativo = status_operacional.upper() != "INATIVO"
     percentual_lance_embutido = max(0.0, min(float(rule.percentual_lance_embutido or 0), 0.95))
     if not payload.considerar_lance_embutido:
         percentual_lance_embutido = 0.0
@@ -92,6 +94,9 @@ def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: Admin
     alertas: list[str] = []
     motivos_reprovacao: list[str] = []
     restricoes: list[str] = []
+    if not produto_ativo:
+        alertas.append("produto_inativo")
+        motivos_reprovacao.append("Produto da administradora marcado como inativo.")
     if not tipo_contratacao_compativel:
         motivos_reprovacao.append("Administradora nao aceita PJ, composicao com socios ou analise por CPF dos socios.")
     if not informed_ages:
@@ -118,6 +123,7 @@ def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: Admin
         alertas.append("seguro_obrigatorio")
 
     elegivel = all((
+        produto_ativo,
         tipo_contratacao_compativel,
         idade_compativel,
         renda_compativel,
@@ -129,6 +135,12 @@ def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: Admin
     return {
         "administradora": rule.administradora,
         "status": status,
+        "status_operacional": status_operacional,
+        "produto_ativo": produto_ativo,
+        "data_cadastro_produto": rule.data_cadastro_produto,
+        "responsavel_produto": rule.responsavel_produto,
+        "aceita_adesao_clientes_texto": rule.aceita_adesao_clientes_texto,
+        "limite_sem_comprovacao_renda_texto": rule.limite_sem_comprovacao_renda_texto,
         "seguro_obrigatorio": rule.seguro_obrigatorio,
         "idade_maxima": rule.idade_maxima,
         "limite_sem_comprovacao_renda": rule.limite_sem_comprovacao_renda,
@@ -155,6 +167,11 @@ def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: Admin
         "restricoes": restricoes,
         "cenarios_pj_disponiveis": cenarios_pj_disponiveis if is_pj else [],
         "regras_aplicaveis": {
+            "status_operacional": status_operacional,
+            "produto_ativo": produto_ativo,
+            "data_cadastro_produto": rule.data_cadastro_produto,
+            "responsavel_produto": rule.responsavel_produto,
+            "aceita_adesao_clientes_texto": rule.aceita_adesao_clientes_texto,
             "aceita_fgts": rule.aceita_fgts,
             "permite_lance_embutido": lance_embutido_permitido,
             "percentual_lance_embutido": round(percentual_lance_embutido if lance_embutido_permitido else 0.0, 6),
@@ -172,6 +189,11 @@ def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: Admin
 def administrator_rule_has_operational_data(rule: AdministratorRule) -> bool:
     """Retorna true somente quando a regra tem dados reais para bloquear administradora."""
     return any((
+        bool(str(rule.status_operacional or "").strip() and str(rule.status_operacional).strip().upper() != "ATIVO"),
+        bool(str(rule.data_cadastro_produto or "").strip()),
+        bool(str(rule.responsavel_produto or "").strip()),
+        bool(str(rule.aceita_adesao_clientes_texto or "").strip()),
+        bool(str(rule.limite_sem_comprovacao_renda_texto or "").strip()),
         float(rule.percentual_lance_embutido or 0) > 0,
         float(rule.taxa_adm or 0) > 0,
         float(rule.fundo_reserva or 0) > 0,

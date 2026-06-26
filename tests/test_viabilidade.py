@@ -183,14 +183,33 @@ class ViabilidadeTest(unittest.TestCase):
 
         self.assertEqual(result, [])
 
+    def test_administrator_feasibility_reprova_produto_inativo(self):
+        result = analyze_administradoras(
+            make_payload(),
+            ["EMBRACON"],
+            [make_admin_rule(administradora="EMBRACON", status_operacional="INATIVO")],
+        )
+
+        self.assertEqual(len(result), 1)
+        self.assertFalse(result[0]["elegivel"])
+        self.assertEqual(result[0]["status"], "REPROVADA")
+        self.assertEqual(result[0]["status_operacional"], "INATIVO")
+        self.assertIn("produto_inativo", result[0]["alertas"])
+        self.assertIn("Produto da administradora marcado como inativo.", result[0]["motivos_reprovacao"])
+
     def test_administrator_rule_normaliza_campos_vazios_e_percentuais_humanos(self):
         rule = rule_from_config(
             make_admin_rule(
                 idade_maxima="",
                 limite_sem_comprovacao_renda="R$ 3.000.000,00",
+                limite_sem_comprovacao_renda_texto="Sob consulta",
                 percentual_lance_embutido="30%",
                 taxa_adm="20",
                 fundo_reserva="3%",
+                status_operacional="Verificar",
+                data_cadastro_produto="2026-02-03",
+                responsavel_produto="Joyce",
+                aceita_adesao_clientes_texto="Sim, consultar regras",
             )
         )
 
@@ -200,6 +219,11 @@ class ViabilidadeTest(unittest.TestCase):
         self.assertEqual(rule.percentual_lance_embutido, 0.30)
         self.assertEqual(rule.taxa_adm, 0.20)
         self.assertEqual(rule.fundo_reserva, 0.03)
+        self.assertEqual(rule.status_operacional, "Verificar")
+        self.assertEqual(rule.data_cadastro_produto, "2026-02-03")
+        self.assertEqual(rule.responsavel_produto, "Joyce")
+        self.assertEqual(rule.limite_sem_comprovacao_renda_texto, "Sob consulta")
+        self.assertEqual(rule.aceita_adesao_clientes_texto, "Sim, consultar regras")
 
     def test_administrator_feasibility_pode_desconsiderar_lance_embutido(self):
         rule = AdministratorRule(
