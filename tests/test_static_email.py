@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260626-03", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-04", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260626-03", index_html)
+        self.assertIn("/static/js/app.js?v=20260626-04", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -99,8 +99,10 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("Calculadora de Grupos", index_html)
         self.assertIn("ETAPA 4 - Calculadora de Grupos", index_html)
         self.assertIn("Fase 1 - Calculadora de Grupos", index_html)
-        self.assertIn("Fase 2 - Selecao dos Melhores Grupos", index_html)
+        self.assertIn("Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance", index_html)
         self.assertIn("Adicionar cartas de credito", index_html)
+        self.assertIn('id="viabilityPhase2Idle"', index_html)
+        self.assertIn('class="content-card phase-two-card"', index_html)
         self.assertIn('data-admin-plan-kind="Imovel"', index_html)
         self.assertIn('data-admin-plan-kind="Automovel"', index_html)
         self.assertIn('id="administratorPlansCols"', index_html)
@@ -173,6 +175,11 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function administratorPlanSaldoDevedor(rule, useEmbedded = true)", app_js)
         self.assertIn("function administratorPlanPrazoMinimo(rule, useEmbedded = true, options = {})", app_js)
         self.assertIn("function administratorPlanScenarioCellValue(rule, row, useEmbedded)", app_js)
+        self.assertIn("function currentClientObjectiveFlow()", app_js)
+        self.assertIn("function visibleAdministratorPlanScenarioRows()", app_js)
+        self.assertIn('row.key.includes("_investidor_")', app_js)
+        self.assertIn('row.key.includes("_contemplacao_")', app_js)
+        self.assertIn('if (id === "clientProfileObjetivo") renderAdministratorPlans();', app_js)
         self.assertIn("- lanceTotal", app_js)
         self.assertIn("administratorPlanComputedFields.includes", app_js)
         for administradora in ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"]:
@@ -190,10 +197,13 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn("Fase 2 - Selecao dos Melhores Grupos", index_html)
+        self.assertIn("Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance", index_html)
         self.assertIn("Selecionar Grupos", index_html)
         self.assertIn("Fase 1 - Calculadora de Grupos", index_html)
         self.assertIn("Adicionar cartas de credito", index_html)
+        self.assertIn("Aguardando selecao dos melhores grupos", index_html)
+        self.assertIn('state !== "idle"', app_js)
+        self.assertIn('state !== "ready"', app_js)
         self.assertIn("fluxo ${fluxo}", app_js)
         self.assertIn("Filtro 1 manteve", app_js)
         self.assertIn("const profile = collectClientProfile();", app_js)
@@ -309,7 +319,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function collectBusinessRuleFeedbacks", app_js)
         self.assertIn("async function saveBusinessRuleFeedbacks", app_js)
         self.assertIn("regras_negocio_feedbacks", app_js)
-        for etapa in ["Perfil do Cliente", "Estrategia", "Fase 1 - Calculadora de Grupos", "Fase 2 - Selecao dos Melhores Grupos", "Estudo Financeiro"]:
+        for etapa in ["Perfil do Cliente", "Estrategia", "Fase 1 - Calculadora de Grupos", "Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance", "Estudo Financeiro"]:
             self.assertIn(etapa, app_js)
         for exemplo in [
             "credito_liquido_desejado",
@@ -658,7 +668,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260626-03", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-04", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

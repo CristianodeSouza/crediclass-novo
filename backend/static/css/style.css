@@ -2049,6 +2049,31 @@ body[data-theme="escuro"] .btn-outline-secondary {
   padding: 10px;
 }
 
+.phase-two-card.content-card {
+  padding: 10px;
+  border-color: rgba(23, 76, 154, 0.22);
+}
+
+.phase-two-badge {
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--brand-navy);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.phase-two-help {
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(23, 76, 154, 0.22);
+  border-radius: 8px;
+  background: rgba(23, 76, 154, 0.06);
+  color: #174c9a;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .administrator-plan-tabs {
   display: flex;
   flex-wrap: wrap;

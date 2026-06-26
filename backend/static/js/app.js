@@ -208,7 +208,7 @@ const businessRulesFlow = [
   },
   {
     id: "cenarios",
-    etapa: "4. Fase 2 - Selecao dos Melhores Grupos",
+    etapa: "4. Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance",
     regras: [
       "O sistema seleciona grupos conforme o objetivo do consorcio, usando filtros de contemplacao ou beneficios de investimento.",
       "Quando houver lance embutido: credito_contratado = credito_liquido_desejado / (1 - percentual_lance_embutido).",
@@ -2193,10 +2193,11 @@ function advanceClientProfile() {
 }
 
 function setViabilityState(state) {
+  document.getElementById("viabilityPhase2Idle").classList.toggle("d-none", state !== "idle");
   document.getElementById("viabilityLoading").classList.toggle("d-none", state !== "loading");
   document.getElementById("viabilityError").classList.toggle("d-none", state !== "error");
   document.getElementById("viabilityEmpty").classList.toggle("d-none", state !== "empty");
-  document.getElementById("viabilityResults").classList.toggle("d-none", !["ready", "empty"].includes(state));
+  document.getElementById("viabilityResults").classList.toggle("d-none", state !== "ready");
   const button = document.getElementById("analyzeViabilityBtn");
   button.disabled = state === "loading";
   button.textContent = state === "loading" ? "Selecionando..." : "Selecionar Grupos";
@@ -2266,7 +2267,7 @@ function renderViabilitySummary(result) {
   const fluxo = etapa4.fluxo === "investimento" ? "Investimento" : "Contemplacao";
   const stageLabel = etapa4.conceito || etapa4.estrategia || profile;
   const stageCount = etapa4.total_pos_filtro_1 ?? result.total_grupos_pos_filtro_1 ?? "-";
-  document.getElementById("viabilityRankingSubtitle").textContent = `${items.length} cenario(s) candidato(s) - fluxo ${fluxo}: ${stageLabel}. Filtro 1 manteve ${stageCount} grupo(s).`;
+  document.getElementById("viabilityRankingSubtitle").textContent = `Adicionar cartas de credito por grupo. ${items.length} cenario(s) candidato(s) - fluxo ${fluxo}: ${stageLabel}. Filtro 1 manteve ${stageCount} grupo(s).`;
   const scenario = document.getElementById("viabilityScenario");
   if (scenario) scenario.textContent = `${result.total_cenarios_viaveis || 0} cenario(s) viavel(is) - perfil ${profile}`;
 }
@@ -3677,6 +3678,20 @@ function administratorPlanScenarioValue(rule, key, useEmbedded) {
   return null;
 }
 
+function currentClientObjectiveFlow() {
+  const objective = document.getElementById("clientProfileObjetivo")?.value || "";
+  return normalizeText(objective).startsWith("investidor") ? "investimento" : "contemplacao";
+}
+
+function visibleAdministratorPlanScenarioRows() {
+  const flow = currentClientObjectiveFlow();
+  return administratorPlanScenarioRows.filter((row) => {
+    if (row.key.includes("_investidor_")) return flow === "investimento";
+    if (row.key.includes("_contemplacao_")) return flow === "contemplacao";
+    return true;
+  });
+}
+
 function administratorPlanScenarioCellValue(rule, row, useEmbedded) {
   const value = administratorPlanScenarioValue(rule, row.key, useEmbedded);
   if (row.type === "percent") {
@@ -3713,10 +3728,11 @@ function formatAdministratorPlanNumber(value, maximumFractionDigits) {
 
 function recalculateAdministratorPlanComputedCells() {
   const currentRules = collectAdministratorPlans();
+  const visibleScenarioRows = visibleAdministratorPlanScenarioRows();
   document.querySelectorAll("[data-admin-plan-field]").forEach((input) => {
     if (!administratorPlanComputedFields.includes(input.dataset.adminPlanField)) return;
     const index = Number(input.dataset.adminPlanIndex);
-    const row = [...administratorPlanRows, ...administratorPlanScenarioRows].find((item) => item.key === input.dataset.adminPlanField);
+    const row = [...administratorPlanRows, ...visibleScenarioRows].find((item) => item.key === input.dataset.adminPlanField);
     if (!row || !currentRules[index]) return;
     if (input.dataset.adminPlanScenario) {
       input.value = administratorPlanScenarioCellValue(
@@ -3767,9 +3783,10 @@ function renderAdministratorPlanRegisterRows(rules) {
 }
 
 function renderAdministratorPlanScenarioRows(rules) {
-  return administratorPlanScenarioRows.map((row, rowIndex) => {
-    const previousRow = administratorPlanScenarioRows[rowIndex - 1];
-    const rowspan = administratorPlanGroupRowspan(administratorPlanScenarioRows, rowIndex);
+  const visibleRows = visibleAdministratorPlanScenarioRows();
+  return visibleRows.map((row, rowIndex) => {
+    const previousRow = visibleRows[rowIndex - 1];
+    const rowspan = administratorPlanGroupRowspan(visibleRows, rowIndex);
     return `
       <tr class="admin-plan-scenario-row">
         ${administratorPlanRowGroupCell(row, previousRow, rowspan)}
@@ -3821,14 +3838,18 @@ function renderAdministratorPlanAudit(rules) {
   const saldoComEmbutido = administratorPlanSaldoDevedor(rule, true);
   const parcelaDesejada = currentClientProfileParcelaDesejada();
   const parcelaLimite = currentClientProfileParcelaLimite();
+  const flow = currentClientObjectiveFlow();
+  const prazoStep = flow === "investimento"
+    ? `O prazo minimo de investimento divide o saldo devedor pela parcela desejada (${formatMoney(parcelaDesejada)}) e pelo limite de renda (${formatMoney(parcelaLimite)}).`
+    : `O prazo minimo de contemplacao desconta o lance total do saldo devedor e depois divide pela parcela desejada (${formatMoney(parcelaDesejada)}) ou pelo limite de renda (${formatMoney(parcelaLimite)}).`;
   target.innerHTML = renderPreliminaryAuditTrail("Demonstrativo logico do calculo", [
     `A calculadora usa o credito desejado do perfil do cliente: ${formatMoney(creditoDesejado)}.`,
     `Para ${administradora}, o lance embutido cadastrado e ${formatPercent(percentualEmbutido)}. Sem embutido, o credito contratado fica em ${formatMoney(creditoSemEmbutido)}; com embutido, fica em ${formatMoney(creditoComEmbutido)}.`,
     `O recurso proprio considerado foi ${formatMoney(recursoProprio)} e o FGTS permitido para esta administradora foi ${formatMoney(fgts)}.`,
     `No cenario sem embutido, o lance total ficou em ${formatMoney(lanceSemEmbutido)}. No cenario com embutido, o lance total ficou em ${formatMoney(lanceComEmbutido)}.`,
     `O saldo devedor/categoria soma credito contratado, taxa de administracao e fundo de reserva. Resultado: ${formatMoney(saldoSemEmbutido)} sem embutido e ${formatMoney(saldoComEmbutido)} com embutido.`,
-    `O prazo minimo de investimento divide o saldo devedor pela parcela desejada (${formatMoney(parcelaDesejada)}) e pelo limite de renda (${formatMoney(parcelaLimite)}).`,
-    `O prazo minimo de contemplacao desconta o lance total do saldo devedor e depois divide pela parcela desejada ou pelo limite de renda.`,
+    `O perfil selecionado no cadastro do cliente definiu o fluxo da Fase 1 como ${flow === "investimento" ? "Investidor" : "Contemplacao"}.`,
+    prazoStep,
   ]).replace("client-preliminary-audit", "client-preliminary-audit administrator-plan-audit");
 }
 
@@ -4379,7 +4400,10 @@ document.getElementById("groupFormModal").addEventListener("blur", (event) => {
 });
 
 ["clientProfilePrazo", "clientProfileObjetivo", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
-  document.getElementById(id).addEventListener("change", updateClientProfileTotals);
+  document.getElementById(id).addEventListener("change", () => {
+    updateClientProfileTotals();
+    if (id === "clientProfileObjetivo") renderAdministratorPlans();
+  });
 });
 
 document.getElementById("clientProfileTipoContratacao").addEventListener("change", (event) => {

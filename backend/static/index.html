@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260626-03" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260626-04" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -321,7 +321,7 @@
                 <span>Calcula credito contratado com embutido, lance livre maximo por administradora e prazos minimos com e sem embutido.</span>
               </article>
               <article>
-                <strong>Fase 2 - Selecao dos Melhores Grupos</strong>
+                <strong>Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance</strong>
                 <span>Seleciona por prazo remanescente, compatibilidade com menor lance e filtros de contemplacao ou investimento.</span>
               </article>
               <article>
@@ -362,18 +362,23 @@
             <div id="administratorPlanAudit"></div>
           </div>
 
-          <div id="viabilityLoading" class="table-state d-none">Selecionando grupos...</div>
-          <div id="viabilityError" class="table-state table-state-error d-none">Nao foi possivel selecionar os grupos.</div>
-          <div id="viabilityEmpty" class="table-state d-none">Nenhum grupo compativel encontrado para este perfil.</div>
-
-          <div id="viabilityResults" class="d-none">
-            <div class="content-card">
-              <div class="table-toolbar">
-                <div>
-                  <h2>Fase 2 - Selecao dos Melhores Grupos</h2>
-                  <p id="viabilityRankingSubtitle">Melhores grupos por prazo remanescente e compatibilidade com menor lance. Use Selecionar para adicionar cartas de credito por grupo.</p>
-                </div>
+          <div class="content-card phase-two-card">
+            <div class="table-toolbar">
+              <div>
+                <h2>Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance</h2>
+                <p id="viabilityRankingSubtitle">Adicionar cartas de credito por grupo. Clique em Selecionar Grupos para aplicar os filtros da Fase 2 e montar o ranking.</p>
               </div>
+              <div class="phase-two-badge">FASE 2</div>
+            </div>
+            <div class="phase-two-help">
+              Esta fase usa os resultados da Fase 1 para reduzir os grupos, ordenar por prazo remanescente, conferir compatibilidade com menor lance e permitir adicionar cartas de credito por grupo ao estudo.
+            </div>
+            <div id="viabilityPhase2Idle" class="table-state">Aguardando selecao dos melhores grupos.</div>
+            <div id="viabilityLoading" class="table-state d-none">Selecionando grupos...</div>
+            <div id="viabilityError" class="table-state table-state-error d-none">Nao foi possivel selecionar os grupos.</div>
+            <div id="viabilityEmpty" class="table-state d-none">Nenhum grupo compativel encontrado para este perfil.</div>
+
+            <div id="viabilityResults" class="d-none">
               <div class="table-responsive">
                 <table class="table table-hover align-middle viability-table">
                   <thead>
@@ -1243,6 +1248,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260626-03"></script>
+    <script src="/static/js/app.js?v=20260626-04"></script>
   </body>
 </html>
