@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260626-02", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-03", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260626-02", index_html)
+        self.assertIn("/static/js/app.js?v=20260626-03", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -96,10 +96,11 @@ class StaticEmailTest(unittest.TestCase):
 
         self.assertNotIn('data-screen="administradoras"', index_html)
         self.assertNotIn('id="screen-administradoras"', index_html)
-        self.assertIn("Selecao de Grupos", index_html)
-        self.assertIn("4 - Selecao 10 Melhores Grupos", index_html)
-        self.assertIn("Calculadora de Grupos por Administradora", index_html)
-        self.assertIn("antiga aba isolada de administradoras", index_html)
+        self.assertIn("Calculadora de Grupos", index_html)
+        self.assertIn("ETAPA 4 - Calculadora de Grupos", index_html)
+        self.assertIn("Fase 1 - Calculadora de Grupos", index_html)
+        self.assertIn("Fase 2 - Selecao dos Melhores Grupos", index_html)
+        self.assertIn("Adicionar cartas de credito", index_html)
         self.assertIn('data-admin-plan-kind="Imovel"', index_html)
         self.assertIn('data-admin-plan-kind="Automovel"', index_html)
         self.assertIn('id="administratorPlansCols"', index_html)
@@ -115,7 +116,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("width: 46px", app_js)
         self.assertIn("mapState.administradoras", app_js)
         for campo in [
-            "1) CALCULADORA DE GRUPOS",
+            "ETAPA 4 - FASE 1 - CALCULADORA DE GRUPOS",
             "CENARIOS CALCULO",
             "Sem Embutido",
             "Com Embutido",
@@ -189,10 +190,12 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn("Ranking dos Grupos Selecionados", index_html)
+        self.assertIn("Fase 2 - Selecao dos Melhores Grupos", index_html)
         self.assertIn("Selecionar Grupos", index_html)
-        self.assertIn("Se - Contemplacao", index_html)
-        self.assertIn("Se - Investimento", index_html)
+        self.assertIn("Fase 1 - Calculadora de Grupos", index_html)
+        self.assertIn("Adicionar cartas de credito", index_html)
+        self.assertIn("fluxo ${fluxo}", app_js)
+        self.assertIn("Filtro 1 manteve", app_js)
         self.assertIn("const profile = collectClientProfile();", app_js)
         self.assertIn("const parcelaLimite = profile.parcela_limite || profile.parcela_ideal;", app_js)
         self.assertIn("parcela_desejada: parcelaLimite", app_js)
@@ -306,7 +309,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function collectBusinessRuleFeedbacks", app_js)
         self.assertIn("async function saveBusinessRuleFeedbacks", app_js)
         self.assertIn("regras_negocio_feedbacks", app_js)
-        for etapa in ["Perfil do Cliente", "Estrategia", "Calculadora de Grupos por Administradora", "Selecao de Grupos", "Estudo Financeiro"]:
+        for etapa in ["Perfil do Cliente", "Estrategia", "Fase 1 - Calculadora de Grupos", "Fase 2 - Selecao dos Melhores Grupos", "Estudo Financeiro"]:
             self.assertIn(etapa, app_js)
         for exemplo in [
             "credito_liquido_desejado",
@@ -655,7 +658,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260626-02", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-03", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

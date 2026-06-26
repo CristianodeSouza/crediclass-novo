@@ -12,14 +12,14 @@ const screens = {
     action: "Salvar Perfil",
   },
   viabilidade: {
-    letter: "C) SELECAO DE GRUPOS",
-    title: "Selecao de Grupos",
-    subtitle: "Etapa 4 da planilha: filtros, calculadora por administradora e ranking dos melhores grupos",
+    letter: "C) CALCULADORA DE GRUPOS",
+    title: "Calculadora de Grupos",
+    subtitle: "Etapa 4 da planilha: fase 1 calculadora de grupos e fase 2 selecao dos melhores grupos",
     action: "Selecionar Grupos",
   },
   administradoras: {
-    letter: "C) SELECAO DE GRUPOS",
-    title: "Selecao de Grupos",
+    letter: "C) CALCULADORA DE GRUPOS",
+    title: "Calculadora de Grupos",
     subtitle: "Parametros por administradora integrados a selecao de grupos",
     action: "Salvar Parametros",
   },
@@ -199,7 +199,7 @@ const businessRulesFlow = [
   },
   {
     id: "administradoras",
-    etapa: "3. Calculadora de Grupos por Administradora",
+    etapa: "4. Fase 1 - Calculadora de Grupos",
     regras: [
       "Os parametros por administradora deixam de ser uma etapa isolada e passam a alimentar a selecao de grupos.",
       "FGTS e lance embutido sao condicionais: FGTS so entra quando permitido; lance embutido so entra quando permitido.",
@@ -208,7 +208,7 @@ const businessRulesFlow = [
   },
   {
     id: "cenarios",
-    etapa: "4. Selecao de Grupos",
+    etapa: "4. Fase 2 - Selecao dos Melhores Grupos",
     regras: [
       "O sistema seleciona grupos conforme o objetivo do consorcio, usando filtros de contemplacao ou beneficios de investimento.",
       "Quando houver lance embutido: credito_contratado = credito_liquido_desejado / (1 - percentual_lance_embutido).",
@@ -2262,7 +2262,11 @@ function renderViabilityChecklist(checklist) {
 function renderViabilitySummary(result) {
   const items = result.cenarios || result.melhores_grupos || [];
   const profile = result.cliente?.perfil_estrategico || result.perfil || "-";
-  document.getElementById("viabilityRankingSubtitle").textContent = `${items.length} cenario(s) candidato(s) - perfil ${profile}`;
+  const etapa4 = result.etapa4 || {};
+  const fluxo = etapa4.fluxo === "investimento" ? "Investimento" : "Contemplacao";
+  const stageLabel = etapa4.conceito || etapa4.estrategia || profile;
+  const stageCount = etapa4.total_pos_filtro_1 ?? result.total_grupos_pos_filtro_1 ?? "-";
+  document.getElementById("viabilityRankingSubtitle").textContent = `${items.length} cenario(s) candidato(s) - fluxo ${fluxo}: ${stageLabel}. Filtro 1 manteve ${stageCount} grupo(s).`;
   const scenario = document.getElementById("viabilityScenario");
   if (scenario) scenario.textContent = `${result.total_cenarios_viaveis || 0} cenario(s) viavel(is) - perfil ${profile}`;
 }
@@ -3871,7 +3875,7 @@ function renderAdministratorPlans() {
   renderAdministratorPlanColgroup(rules);
   document.getElementById("administratorPlansHead").innerHTML = `
     <tr class="admin-plan-main-title">
-      <th colspan="${totalColumns}">1) CALCULADORA DE GRUPOS</th>
+      <th colspan="${totalColumns}">ETAPA 4 - FASE 1 - CALCULADORA DE GRUPOS</th>
     </tr>
     <tr class="admin-plan-subtitle">
       <th colspan="${totalColumns}">(Calculo: CREDITO CONTRATADO COM EMBUTIDO, LANCE LIVRE MAXIMO DO CLIENTE POR ADM, COM E SEM EMBUTIDO, PRAZOS MINIMOS GRUPOS PARA ENCAIXE PARCELA MAXIMA DESEJADA E RENDA)</th>

@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260626-02" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260626-03" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -55,7 +55,7 @@
             </button>
             <button class="nav-item" type="button" data-screen="viabilidade">
               <span class="nav-icon">VC</span>
-              <span>Selecao de Grupos</span>
+              <span>Calculadora de Grupos</span>
             </button>
             <button class="nav-item" type="button" data-screen="estudo">
               <span class="nav-icon">EF</span>
@@ -296,7 +296,7 @@
                   <div id="clientPreliminaryAnalysis" class="client-preliminary-grid"></div>
                 </div>
                 <div class="client-profile-actions">
-                  <button id="advanceClientProfileBtn" class="btn btn-primary" type="button">Avancar para Selecao de Grupos</button>
+                  <button id="advanceClientProfileBtn" class="btn btn-primary" type="button">Avancar para Calculadora de Grupos</button>
                 </div>
               </form>
             </div>
@@ -307,8 +307,8 @@
           <div class="content-card viability-groups-intro">
             <div class="table-toolbar">
               <div>
-                <h2>4 - Selecao 10 Melhores Grupos</h2>
-                <p>Fluxo da planilha: objetivo, filtros de contemplacao ou investimento, calculadora por administradora e ranking final.</p>
+                <h2>ETAPA 4 - Calculadora de Grupos</h2>
+                <p>Duas fases: primeiro calcula credito, lance e prazos por administradora; depois seleciona os melhores grupos por prazo remanescente e compatibilidade de menor lance.</p>
               </div>
               <div class="toolbar-actions">
                 <button class="btn btn-outline-secondary" type="button" data-screen-jump="perfil">Editar Perfil</button>
@@ -317,16 +317,16 @@
             </div>
             <div class="selection-flow-grid" aria-label="Sequencia logica da selecao de grupos">
               <article>
-                <strong>Se - Contemplacao</strong>
-                <span>Filtra 20 melhores por urgencia, lance maximo, parcela desejada e limite de renda.</span>
+                <strong>Fase 1 - Calculadora de Grupos</strong>
+                <span>Calcula credito contratado com embutido, lance livre maximo por administradora e prazos minimos com e sem embutido.</span>
               </article>
               <article>
-                <strong>Se - Investimento</strong>
-                <span>Classifica pelos beneficios do grupo: taxas, prazo, lance embutido, lance fixo e historico.</span>
+                <strong>Fase 2 - Selecao dos Melhores Grupos</strong>
+                <span>Seleciona por prazo remanescente, compatibilidade com menor lance e filtros de contemplacao ou investimento.</span>
               </article>
               <article>
-                <strong>Resultado</strong>
-                <span>Entrega Top 10 para estudo e permite selecionar credito/carta para o estudo financeiro.</span>
+                <strong>Adicionar cartas de credito</strong>
+                <span>Permite selecionar credito por grupo para montar os cenarios e seguir para o estudo financeiro.</span>
               </article>
             </div>
           </div>
@@ -334,8 +334,8 @@
           <div class="content-card administrator-plans-card">
             <div class="table-toolbar">
               <div>
-                <h2>Calculadora de Grupos por Administradora</h2>
-                <p>Parametros fixos da planilha usados na selecao: lance embutido, taxa, fundo, seguro, idade e prazo minimo.</p>
+                <h2>Fase 1 - Calculadora de Grupos</h2>
+                <p>Calculo: credito contratado com embutido, lance livre maximo do cliente por administradora, com e sem embutido, e prazos minimos para encaixe da parcela maxima desejada e renda.</p>
               </div>
               <div class="toolbar-actions">
                 <button id="addAdministratorPlanBtn" class="btn btn-outline-secondary" type="button">Adicionar Administradora</button>
@@ -349,7 +349,7 @@
             </div>
 
             <div class="administrator-plan-help">
-              Esta tabela substitui a antiga aba isolada de administradoras. Ela fica dentro da selecao de grupos porque seus parametros alimentam os filtros e calculos da etapa 4 da planilha.
+              Esta fase calcula, por administradora, os parametros que alimentam a selecao: credito contratado, lance embutido, lance livre, taxas, fundo, seguro, idade, parcela e prazo minimo.
             </div>
 
             <div class="table-responsive administrator-plan-wrap">
@@ -370,8 +370,8 @@
             <div class="content-card">
               <div class="table-toolbar">
                 <div>
-                  <h2>Ranking dos Grupos Selecionados</h2>
-                  <p id="viabilityRankingSubtitle">Resultado dos filtros da etapa 4 para analise e escolha do credito</p>
+                  <h2>Fase 2 - Selecao dos Melhores Grupos</h2>
+                  <p id="viabilityRankingSubtitle">Melhores grupos por prazo remanescente e compatibilidade com menor lance. Use Selecionar para adicionar cartas de credito por grupo.</p>
                 </div>
               </div>
               <div class="table-responsive">
@@ -405,7 +405,7 @@
           <div id="studyEmpty" class="placeholder-card">
             <div class="state-badge">Aguardando selecao</div>
             <h2>Estudo Financeiro</h2>
-            <p>Selecione um grupo na Selecao de Grupos para montar o estudo financeiro.</p>
+            <p>Selecione um grupo na Calculadora de Grupos para montar o estudo financeiro.</p>
           </div>
 
           <div id="studyLoading" class="table-state d-none">Carregando estudo financeiro...</div>
@@ -418,7 +418,7 @@
                 <p>Template pre-preenchido</p>
               </div>
               <div class="study-v4-toolbar-actions">
-                <button id="studyChangeGroupBtn" class="btn btn-outline-secondary" type="button">Voltar para Selecao de Grupos</button>
+                <button id="studyChangeGroupBtn" class="btn btn-outline-secondary" type="button">Voltar para Calculadora de Grupos</button>
                 <button id="studyViewStrategyBtn" class="btn btn-outline-secondary" type="button">Ver Estrategia</button>
                 <button id="studyHistoryShortcutBtn" class="btn btn-outline-secondary" type="button">Historico de Estudos</button>
                 <button id="studySaveBtn" class="btn btn-primary" type="button">Salvar</button>
@@ -1243,6 +1243,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260626-02"></script>
+    <script src="/static/js/app.js?v=20260626-03"></script>
   </body>
 </html>

@@ -9,7 +9,44 @@ from .lance_reference import calculate_lance_references, reference_in_profile_ra
 from .models import ViabilidadeRequest
 from .scenario_scoring import scenario_score
 from .strategy_profile import strategic_profile_for_months
-from .viabilidade import client_fgts_total, compatible_tipo_bem, normalize_text
+from .viabilidade import client_fgts_total, compatible_tipo_bem, history_last_12_months, normalize_text
+
+
+STAGE4_CONTEMPLATION_RULES = {
+    "3 meses": {
+        "label": "Contemplacao Urgente",
+        "field": "lance_super_agressivo_3m",
+        "limit": 20,
+    },
+    "6 meses": {
+        "label": "Contemplacao Rapida",
+        "field": "lance_agressivo_6m",
+        "limit": 20,
+    },
+    "12 meses": {
+        "label": "Contemplacao Moderada",
+        "field": "lance_moderado_12m",
+        "limit": 20,
+    },
+    "24 meses": {
+        "label": "Contemplacao Conservadora",
+        "field": "lance_conservador_24m",
+        "limit": 20,
+    },
+    "36 meses": {
+        "label": "Contemplacao Investidor",
+        "field": "lance_investidor",
+        "limit": 20,
+    },
+}
+
+STAGE4_INVESTMENT_OBJECTIVES = {
+    "adquirir imovel e alugar": "Investidor - Comprar imovel para alugar",
+    "adquirir terreno construir e alugar": "Investidor - Comprar terreno, construir e alugar",
+    "adquirir terreno construir e vender": "Investidor - Comprar terreno, construir e vender",
+    "vender carta contemplada": "Investidor - Venda de carta contemplada",
+    "carta de credito aposentadoria": "Investidor - Carta de credito para aposentadoria",
+}
 
 
 def _max_liquid(group: dict[str, Any], considerar_lance_embutido: bool) -> float:
@@ -64,6 +101,140 @@ def _reference_from_group(group: dict[str, Any], profile_field: str) -> float | 
     return None
 
 
+def history_last_12_months_for_group(group: dict[str, Any]) -> dict[str, Any]:
+    return history_last_12_months(group.get("historico") or {})
+
+
+def _stage4_objective_kind(objetivo: str) -> str:
+    normalized = normalize_text(objetivo)
+    return "investimento" if normalized.startswith("investidor") else "contemplacao"
+
+
+def _contemplation_rule_for_payload(payload: ViabilidadeRequest) -> dict[str, Any]:
+    objective = normalize_text(payload.objetivo)
+    if "6 meses" in objective or "rapido" in objective:
+        return STAGE4_CONTEMPLATION_RULES["6 meses"]
+    if "12 meses" in objective or "moderado" in objective:
+        return STAGE4_CONTEMPLATION_RULES["12 meses"]
+    if "24 meses" in objective or "conservador" in objective:
+        return STAGE4_CONTEMPLATION_RULES["24 meses"]
+    if "36 meses" in objective or "investidor" in objective:
+        return STAGE4_CONTEMPLATION_RULES["36 meses"]
+    return STAGE4_CONTEMPLATION_RULES["3 meses"]
+
+
+def _investment_objective_label(objetivo: str) -> str:
+    normalized = normalize_text(objetivo).replace("(", " ").replace(")", " ")
+    normalized = " ".join(normalized.split())
+    for fragment, label in STAGE4_INVESTMENT_OBJECTIVES.items():
+        if fragment in normalized:
+            return label
+    return "Investidor - Estrategia de investimento"
+
+
+def _benefit_flag(value: Any) -> bool:
+    normalized = normalize_text(str(value or ""))
+    return normalized.startswith("sim") or normalized in {"true", "1", "possui", "permite"}
+
+
+def _investment_benefit_score(group: dict[str, Any]) -> float:
+    prazo = as_float(group.get("prazo_restante"), as_float(group.get("prazo_total")))
+    taxa_total = as_float(group.get("taxa_adm")) + as_float(group.get("fundo_reserva"))
+    taxa_ano = as_float(group.get("taxa_adm_ano")) + as_float(group.get("fundo_reserva_ano"))
+    lance_embutido = embedded_bid_percent(group, True)
+    lance_fixo = as_float(group.get("percentual_lance_fixo"))
+    parcela_reduzida = as_float(group.get("percentual_parcela_reduzida"), as_float(group.get("parcela_reduzida")))
+    moderado = _reference_from_group(group, "lance_moderado_12m")
+    conservador = _reference_from_group(group, "lance_conservador_24m")
+    investidor = _reference_from_group(group, "lance_investidor")
+    historico = history_last_12_months_for_group(group)
+    total_contemplacoes = as_float(historico.get("total_contemplacoes"))
+    fixed_and_free = _benefit_flag(group.get("permite_lance_fixo_livre_texto")) or _benefit_flag(group.get("permite_lance_fixo_livre"))
+    return (
+        max(0.0, 35 - taxa_total * 100) * 1.3
+        + max(0.0, 10 - taxa_ano * 100) * 0.8
+        + parcela_reduzida * 20
+        + min(30.0, prazo / 12)
+        + lance_embutido * 40
+        + max(0.0, 25 - lance_fixo * 100) * 0.7
+        + (12 if fixed_and_free else 0)
+        + max(0.0, 30 - as_float(moderado) * 100) * 0.4
+        + max(0.0, 25 - as_float(conservador) * 100) * 0.4
+        + max(0.0, 20 - as_float(investidor) * 100) * 0.5
+        + min(25.0, total_contemplacoes * 2)
+    )
+
+
+def _stage4_contemplation_filter(payload: ViabilidadeRequest, groups: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    rule = _contemplation_rule_for_payload(payload)
+    field = str(rule["field"])
+    scored = []
+    fallback = []
+    for group in groups:
+        reference = _reference_from_group(group, field)
+        if reference is None:
+            continue
+        history = history_last_12_months_for_group(group)
+        score = (
+            (100 if reference_in_profile_range(field, reference) else 45)
+            + min(30, int(history["total_contemplacoes"]) * 2)
+            + max(0, 25 - reference * 100)
+            + min(15, as_float(group.get("prazo_restante"), as_float(group.get("prazo_total"))) / 24)
+        )
+        item = (score, group)
+        if reference_in_profile_range(field, reference):
+            scored.append(item)
+        else:
+            fallback.append(item)
+    ordered = [group for _, group in sorted(scored or fallback, key=lambda item: item[0], reverse=True)]
+    selected = ordered[: int(rule["limit"])]
+    return selected, {
+        "fluxo": "contemplacao",
+        "filtro_1": "Classificacao pela urgencia de contemplacao",
+        "conceito": rule["label"],
+        "campo_lance": field,
+        "limite": int(rule["limit"]),
+        "total_entrada": len(groups),
+        "total_pos_filtro_1": len(selected),
+        "fallback_usado": not scored and bool(fallback),
+    }
+
+
+def _stage4_investment_filter(payload: ViabilidadeRequest, groups: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    objective_label = _investment_objective_label(payload.objetivo)
+    scored = sorted(
+        ((_investment_benefit_score(group), group) for group in groups),
+        key=lambda item: item[0],
+        reverse=True,
+    )
+    selected = [group for _, group in scored[:10]]
+    return selected, {
+        "fluxo": "investimento",
+        "filtro_1": "Classificacao pelo objetivo de investimento",
+        "estrategia": objective_label,
+        "criterios": [
+            "Menor taxa total",
+            "Menor taxa ano",
+            "Maior parcela reduzida",
+            "Maior prazo remanescente",
+            "Maior lance embutido",
+            "Menor lance fixo",
+            "Participa do fixo e livre",
+            "Menores lances moderado/conservador/investidor",
+            "Maior historico de contemplacoes",
+        ],
+        "limite": 10,
+        "total_entrada": len(groups),
+        "total_pos_filtro_1": len(selected),
+    }
+
+
+def stage4_filter_candidates(payload: ViabilidadeRequest, groups: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    if _stage4_objective_kind(payload.objetivo) == "investimento":
+        return _stage4_investment_filter(payload, groups)
+    return _stage4_contemplation_filter(payload, groups)
+
+
 def _candidate_pool_for_admin(
     groups: list[dict[str, Any]],
     target: float,
@@ -98,8 +269,9 @@ def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]],
             continue
         eligible.append(group)
 
+    filtered_groups, stage4_summary = stage4_filter_candidates(payload, eligible)
     by_admin: dict[str, list[dict[str, Any]]] = {}
-    for group in eligible:
+    for group in filtered_groups:
         by_admin.setdefault(str(group.get("administradora") or ""), []).append(group)
 
     scenarios: list[dict[str, Any]] = []
@@ -190,7 +362,10 @@ def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]],
             "fgts_total": round(fgts_total, 2),
             "recursos_proprios_para_lance": round(recurso_total, 2),
         },
+        "etapa4": stage4_summary,
         "total_grupos_analisados": len(groups),
+        "total_grupos_elegiveis": len(eligible),
+        "total_grupos_pos_filtro_1": len(filtered_groups),
         "total_cenarios": len(scenarios),
         "total_cenarios_viaveis": len([item for item in scenarios if item["status"] != "inviavel"]),
         "cenarios": scenarios[:30],

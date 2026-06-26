@@ -424,20 +424,7 @@ def cenarios_analisar(payload: ViabilidadeRequest):
             and compatible_tipo_bem(payload.objetivo, str(item.get("tipo_bem") or ""), payload.tipo_bem)
             and (item.get("credito_maximo") or 0) >= payload.credito_desejado / 3
         ]
-        grouped_candidates: dict[str, list[dict]] = {}
-        for item in summary_candidates:
-            grouped_candidates.setdefault(str(item.get("administradora") or ""), []).append(item)
-        scenario_candidates = []
-        for items in grouped_candidates.values():
-            ordered = sorted(
-                items,
-                key=lambda item: (
-                    abs((item.get("credito_maximo") or 0) - payload.credito_desejado),
-                    -(item.get("credito_maximo") or 0),
-                ),
-            )
-            scenario_candidates.extend(ordered[:12])
-        result = analyze_scenarios(payload, scenario_candidates)
+        result = analyze_scenarios(payload, summary_candidates)
         result["total_grupos_base"] = len(summary_groups)
     except Exception as error:
         logger.exception("Erro ao montar cenarios")
