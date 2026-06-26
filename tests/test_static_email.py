@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260626-11", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-12", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260626-11", index_html)
+        self.assertIn("/static/js/app.js?v=20260626-12", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -132,11 +132,12 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("Demonstrativo logico do calculo", app_js)
         self.assertNotIn("admin-plan-col-group", app_js)
         self.assertNotIn("admin-plan-group-cell", app_js)
-        self.assertIn('const labelColumnWidth = "150px"', app_js)
-        self.assertIn("scenarioColumnWidth", app_js)
+        self.assertIn('const labelColumnWidth = "190px"', app_js)
+        self.assertIn('const scenarioColumnWidth = "108px"', app_js)
         self.assertIn("overflow-x: auto", style_css)
         self.assertIn("width: 100%", style_css)
-        self.assertIn("min-width: 880px", style_css)
+        self.assertIn("min-width: 1486px", style_css)
+        self.assertIn("font-size: 0.72rem", style_css)
         self.assertIn("white-space: normal", style_css)
         self.assertIn("overflow-wrap: normal", style_css)
         self.assertIn('admin-plan-cell[data-admin-plan-field="percentual_lance_embutido"]', style_css)
@@ -714,7 +715,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260626-11", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-12", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

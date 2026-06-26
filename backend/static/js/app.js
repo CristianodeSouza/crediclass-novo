@@ -4022,8 +4022,8 @@ function renderAdministratorPlanScenarioRows(rules) {
 function renderAdministratorPlanColgroup(rules) {
   const target = document.getElementById("administratorPlansCols");
   if (!target) return;
-  const labelColumnWidth = "150px";
-  const scenarioColumnWidth = rules.length ? `calc((100% - ${labelColumnWidth}) / ${rules.length * 2})` : "80px";
+  const labelColumnWidth = "176px";
+  const scenarioColumnWidth = "124px";
   target.innerHTML = `
     <col class="admin-plan-col-label" style="width: ${labelColumnWidth}">
     ${rules.map(() => `
