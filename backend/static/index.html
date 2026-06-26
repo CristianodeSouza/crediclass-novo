@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260626-01" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260626-02" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -796,6 +796,11 @@
                     <label><span>Negociacao de taxa</span><input id="adminRuleNegociacao" class="form-control" placeholder="Nao, Tem promocao, Flexibilidade"></label>
                     <label><span>Fundo de reserva</span><input id="adminRuleFundoReserva" class="form-control" inputmode="decimal"></label>
                     <label><span>Aceita FGTS?</span><select id="adminRuleAceitaFgts" class="form-select"><option value="true">Sim</option><option value="false">Nao</option></select></label>
+                    <label><span>Aceita contratacao por PJ?</span><select id="adminRuleAceitaPJ" class="form-select"><option value="true">Sim</option><option value="false">Nao</option></select></label>
+                    <label><span>Permite renda PJ + socios?</span><select id="adminRuleComposicaoPJSocios" class="form-select"><option value="true">Sim</option><option value="false">Nao</option></select></label>
+                    <label><span>Permite CPF do socio?</span><select id="adminRuleCpfSocio" class="form-select"><option value="true">Sim</option><option value="false">Nao</option></select></label>
+                    <label><span>% comprometimento PJ</span><input id="adminRuleComprometimentoPJ" class="form-control" inputmode="decimal" placeholder="30"></label>
+                    <label><span>% comprometimento CPF</span><input id="adminRuleComprometimentoCPF" class="form-control" inputmode="decimal" placeholder="30"></label>
                     <label class="administrator-rule-notes"><span>Observacoes / excecoes por grupo</span><textarea id="adminRuleObservacoes" class="form-control" rows="2" placeholder="Registre excecoes que devem ser conferidas na etapa de grupos"></textarea></label>
                     <div class="form-actions administrator-rule-actions">
                       <button id="cancelAdministratorRuleBtn" class="btn btn-outline-secondary" type="button">Limpar</button>
@@ -824,6 +829,9 @@
                           <th>Taxa ADM</th>
                           <th>Fundo reserva</th>
                           <th>FGTS</th>
+                          <th>PJ</th>
+                          <th>PJ + Socios</th>
+                          <th>CPF Socio</th>
                           <th>Acoes</th>
                         </tr>
                       </thead>
@@ -1235,6 +1243,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260626-01"></script>
+    <script src="/static/js/app.js?v=20260626-02"></script>
   </body>
 </html>

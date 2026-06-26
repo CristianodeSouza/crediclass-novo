@@ -97,6 +97,8 @@ const CLIENT_PF_ROLES = [
   { papel: "conjuge_2", label: "Conjuge 2" },
 ];
 const CLIENT_PJ_SOCIOS_LIMIT = 5;
+const DEFAULT_PJ_COMMITMENT_PERCENT = 0.3;
+const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
 const authState = { user: null };
 let appBootstrapped = false;
 const administratorPlanDefaultNames = ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"];
@@ -118,6 +120,11 @@ const administratorPlanRows = [
   { key: "seguro_obrigatorio_texto", label: "Seg. obrigatorio?", type: "text", group: "Seguro Obrigatorio" },
   { key: "idade_maxima", label: "Idade maxima seguro", type: "text", group: "Seguro Obrigatorio" },
   { key: "aliquota_seguro_saldo_devedor", label: "Aliquota seguro mensal sobre saldo devedor", type: "percent", group: "Seguro Obrigatorio" },
+  { key: "aceita_pj_texto", label: "Aceita contratacao por PJ?", type: "text", group: "Regras PJ" },
+  { key: "permite_composicao_pj_socios_texto", label: "Permite renda PJ + socios?", type: "text", group: "Regras PJ" },
+  { key: "permite_cpf_socio_texto", label: "Permite analise CPF do socio?", type: "text", group: "Regras PJ" },
+  { key: "percentual_comprometimento_pj", label: "% comprometimento PJ", type: "percent", group: "Regras PJ" },
+  { key: "percentual_comprometimento_cpf", label: "% comprometimento CPF", type: "percent", group: "Regras PJ" },
 ];
 const administratorPlanScenarioRows = [
   { key: "credito_a_ser_contratado", label: "Calculo A - Credito a ser contratado:", type: "money" },
@@ -1799,6 +1806,93 @@ function preliminaryDecision(ok) {
   return ok ? "sem embutido" : "sim embutido";
 }
 
+function approvalStatusLabel(ok) {
+  return ok ? "aprovado" : "reprovado";
+}
+
+function adminRuleTextToBool(value, defaultValue = true) {
+  const normalized = normalizeText(value || "");
+  if (!normalized) return defaultValue;
+  if (normalized.startsWith("sim")) return true;
+  if (normalized.startsWith("nao")) return false;
+  return defaultValue;
+}
+
+function adminRuleBoolText(value, defaultValue = true) {
+  return (value === undefined ? defaultValue : value) === false ? "Nao" : "Sim";
+}
+
+function administratorRuleBoolean(rule, key, defaultValue = true) {
+  if (!rule || rule[key] === undefined || rule[key] === null || rule[key] === "") return defaultValue;
+  return rule[key] !== false;
+}
+
+function administratorRuleCommitment(rule, key, defaultValue) {
+  const percent = administratorPlanPercent(rule || {}, key);
+  return percent > 0 ? percent : defaultValue;
+}
+
+function evaluatePjCapacityScenarios({
+  faturamento,
+  rendaSocios,
+  parcelaDesejada,
+  age,
+  rule = null,
+}) {
+  const acceptsPJ = administratorRuleBoolean(rule, "aceita_pj", true);
+  const allowsPjSocios = administratorRuleBoolean(rule, "permite_composicao_pj_socios", true);
+  const allowsCpfSocio = administratorRuleBoolean(rule, "permite_cpf_socio", true);
+  const pjPercent = administratorRuleCommitment(rule, "percentual_comprometimento_pj", DEFAULT_PJ_COMMITMENT_PERCENT);
+  const cpfPercent = administratorRuleCommitment(rule, "percentual_comprometimento_cpf", DEFAULT_CPF_COMMITMENT_PERCENT);
+  const basePjSocios = faturamento + rendaSocios;
+  const scenarios = [
+    {
+      key: "pj_pura",
+      label: "Cenario 1 - CNPJ com renda PJ",
+      approvalLabel: "Aprovacao somente pela PJ",
+      allowed: acceptsPJ,
+      base: faturamento,
+      percent: pjPercent,
+      capacity: faturamento * pjPercent,
+      approved: acceptsPJ && parcelaDesejada > 0 && faturamento * pjPercent >= parcelaDesejada,
+      alert: acceptsPJ ? "Administradora aceita CNPJ; avaliar PJ pura primeiro." : "Administradora nao aceita contratacao por CNPJ.",
+    },
+    {
+      key: "pj_socios",
+      label: "Cenario 2 - CNPJ com PJ + socio",
+      approvalLabel: "Aprovacao PJ com composicao de renda dos socios",
+      allowed: acceptsPJ && allowsPjSocios,
+      base: basePjSocios,
+      percent: pjPercent,
+      capacity: basePjSocios * pjPercent,
+      approved: acceptsPJ && allowsPjSocios && parcelaDesejada > 0 && basePjSocios * pjPercent >= parcelaDesejada,
+      alert: acceptsPJ && allowsPjSocios ? "Usar se a PJ pura nao aprovar." : "Composicao PJ + socios nao permitida pela administradora.",
+    },
+    {
+      key: "cpf_socios",
+      label: "Cenario 3 - CPF do socio",
+      approvalLabel: "Aprovacao somente pelo CPF dos socios",
+      allowed: allowsCpfSocio,
+      base: rendaSocios,
+      percent: cpfPercent,
+      capacity: rendaSocios * cpfPercent,
+      approved: allowsCpfSocio && age.ok && parcelaDesejada > 0 && rendaSocios * cpfPercent >= parcelaDesejada,
+      alert: allowsCpfSocio ? "Alternativa quando CNPJ nao for aceito, nao passar ou nao for recomendado." : "Analise pelo CPF do socio nao permitida pela administradora.",
+    },
+  ];
+  const firstApproved = scenarios.find((scenario) => scenario.approved);
+  return {
+    acceptsPJ,
+    allowsPjSocios,
+    allowsCpfSocio,
+    pjPercent,
+    cpfPercent,
+    basePjSocios,
+    scenarios,
+    approvedScenario: firstApproved?.approvalLabel || "Reprovado por capacidade financeira",
+  };
+}
+
 function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
   const objetivo = document.getElementById("clientProfileObjetivo").value;
   const credito = toNumber(document.getElementById("clientProfileCredito").value);
@@ -1821,16 +1915,15 @@ function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
   ));
   const pjFaturamento = Number(empresa.faturamento_mensal || 0);
   const pjRendaSocio = sociosAtivos.reduce((sum, socio) => sum + Number(socio.renda || 0), 0);
-  const pjRendaComSocio = pjFaturamento + pjRendaSocio;
-  const pjComprometimento = pjFaturamento * 0.3;
-  const pjParcelaMaximaSocioPF = pjRendaSocio * 0.3;
-  const pjParcelaMaximaComSocio = pjRendaComSocio * 0.3;
   const pjTotalLanceRP = lanceProprio;
-  const pjLinhaCnpjOk = parcelaDesejada <= pjComprometimento && parcelaDesejada > 0;
-  const pjLinhaComSocioOk = parcelaDesejada <= pjParcelaMaximaComSocio && parcelaDesejada > 0;
-  const pjLinhaCpfSocioOk = parcelaDesejada <= pjParcelaMaximaSocioPF && parcelaDesejada > 0;
   const pjLinha2Ok = credito > 0 && pjTotalLanceRP >= credito;
   const pjAge = preliminaryAgeSummary(sociosAtivos);
+  const pjCapacity = evaluatePjCapacityScenarios({
+    faturamento: pjFaturamento,
+    rendaSocios: pjRendaSocio,
+    parcelaDesejada,
+    age: pjAge,
+  });
   return {
     tipoContratacao: titulares.tipo_contratacao,
     pessoaFisica: {
@@ -1855,21 +1948,25 @@ function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
       credito,
       totalRendaPJ: pjFaturamento,
       totalRendaSocio: pjRendaSocio,
-      totalRendaPJComSocio: pjRendaComSocio,
-      comprometimentoMaximo: pjComprometimento,
+      totalRendaPJComSocio: pjCapacity.basePjSocios,
+      comprometimentoMaximo: pjCapacity.scenarios[0].capacity,
       parcelaDesejada,
-      parcelaMaximaPJ: pjComprometimento,
-      parcelaMaximaPJComSocio: pjParcelaMaximaComSocio,
-      parcelaMaximaSocioPF: pjParcelaMaximaSocioPF,
+      parcelaMaximaPJ: pjCapacity.scenarios[0].capacity,
+      parcelaMaximaPJComSocio: pjCapacity.scenarios[1].capacity,
+      parcelaMaximaSocioPF: pjCapacity.scenarios[2].capacity,
+      percentualComprometimentoPJ: pjCapacity.pjPercent,
+      percentualComprometimentoCPF: pjCapacity.cpfPercent,
+      cenariosCapacidade: pjCapacity.scenarios,
+      cenarioAprovado: pjCapacity.approvedScenario,
       totalLanceRP: pjTotalLanceRP,
       percentualCoberturaPJ: credito > 0 ? pjFaturamento / credito : 0,
       percentualCoberturaSocio: credito > 0 ? pjRendaSocio / credito : 0,
-      cnpjSomente: preliminaryDecision(pjLinhaCnpjOk),
-      cnpjComSocio: preliminaryDecision(pjLinhaComSocioOk),
-      cpfSocio: preliminaryDecision(pjLinhaCpfSocioOk && pjAge.ok),
+      cnpjSomente: approvalStatusLabel(pjCapacity.scenarios[0].approved),
+      cnpjComSocio: approvalStatusLabel(pjCapacity.scenarios[1].approved),
+      cpfSocio: approvalStatusLabel(pjCapacity.scenarios[2].approved),
       decisaoLinha2: preliminaryDecision(pjLinha2Ok),
       maiorIdade: pjAge.label,
-      resultado: preliminaryDecision((pjLinhaCnpjOk || pjLinhaComSocioOk || (pjLinhaCpfSocioOk && pjAge.ok)) && pjLinha2Ok),
+      resultado: preliminaryDecision(Boolean(pjCapacity.scenarios.find((scenario) => scenario.approved)) && pjLinha2Ok),
     },
   };
 }
@@ -1896,6 +1993,15 @@ function renderPreliminaryAuditTrail(title, steps) {
   `;
 }
 
+function renderPjScenarioRows(scenarios) {
+  return (scenarios || []).map((scenario) => ([
+    scenario.label,
+    `Base ${formatMoney(scenario.base)} x ${formatPercent(scenario.percent)} = ${formatMoney(scenario.capacity)}`,
+    "",
+    scenario.allowed ? approvalStatusLabel(scenario.approved) : "nao permitido",
+  ]));
+}
+
 function renderClientPreliminaryAnalysis(analysis) {
   const target = document.getElementById("clientPreliminaryAnalysis");
   if (!target) return;
@@ -1912,20 +2018,20 @@ function renderClientPreliminaryAnalysis(analysis) {
           ["Total Renda PJ", formatMoney(pj.totalRendaPJ)],
           ["Total Renda Socio", formatMoney(pj.totalRendaSocio)],
           ["Total Renda PJ + Socio", formatMoney(pj.totalRendaPJComSocio)],
-          ["Comprometimento maximo", formatPercent(0.3)],
+          ["Comprometimento maximo", `PJ ${formatPercent(pj.percentualComprometimentoPJ)} / CPF ${formatPercent(pj.percentualComprometimentoCPF)}`],
           ["Parcela Desejada", formatMoney(pj.parcelaDesejada)],
-          ["Cenario 1 - CNPJ com renda PJ", formatMoney(pj.parcelaMaximaPJ), "", pj.cnpjSomente],
-          ["Cenario 2 - CNPJ com PJ + socio", formatMoney(pj.parcelaMaximaPJComSocio), "", pj.cnpjComSocio],
-          ["Cenario 3 - CPF do socio", formatMoney(pj.parcelaMaximaSocioPF), "", pj.cpfSocio],
+          ...renderPjScenarioRows(pj.cenariosCapacidade),
+          ["Cenario aprovado", pj.cenarioAprovado],
           ["Total Lance RP", formatMoney(pj.totalLanceRP)],
           ["Maior idade (seguro)", pj.maiorIdade],
         ])}
         ${renderPreliminaryAuditTrail("Demonstrativo logico do calculo", [
           `O objetivo selecionado foi ${pj.objetivo || "-"} e o credito desejado informado foi ${formatMoney(pj.credito)}.`,
           `A parcela desejada considerada veio do campo Parcela maxima desejada: ${formatMoney(pj.parcelaDesejada)}.`,
-          `Cenario 1: avaliacao do consorcio no CNPJ usando somente a renda da PJ. Faturamento ${formatMoney(pj.totalRendaPJ)} x 30% = ${formatMoney(pj.parcelaMaximaPJ)}.`,
-          `Cenario 2: se a renda da PJ sozinha nao aprovar, o sistema soma PJ + socio. ${formatMoney(pj.totalRendaPJ)} + ${formatMoney(pj.totalRendaSocio)} = ${formatMoney(pj.totalRendaPJComSocio)}; 30% = ${formatMoney(pj.parcelaMaximaPJComSocio)}.`,
-          `Cenario 3: se a administradora nao aprovar consorcio para o CNPJ, o sistema avalia o CPF do socio. Renda socios ${formatMoney(pj.totalRendaSocio)} x 30% = ${formatMoney(pj.parcelaMaximaSocioPF)}.`,
+          `Cenario 1: avaliacao do consorcio no CNPJ usando somente a renda da PJ. Faturamento ${formatMoney(pj.totalRendaPJ)} x ${formatPercent(pj.percentualComprometimentoPJ)} = ${formatMoney(pj.parcelaMaximaPJ)}. Status: ${pj.cnpjSomente}.`,
+          `Cenario 2: se a renda da PJ sozinha nao aprovar, o sistema soma PJ + socio. ${formatMoney(pj.totalRendaPJ)} + ${formatMoney(pj.totalRendaSocio)} = ${formatMoney(pj.totalRendaPJComSocio)}; ${formatPercent(pj.percentualComprometimentoPJ)} = ${formatMoney(pj.parcelaMaximaPJComSocio)}. Status: ${pj.cnpjComSocio}.`,
+          `Cenario 3: se a administradora nao aprovar consorcio para o CNPJ, o sistema avalia o CPF do socio. Renda socios ${formatMoney(pj.totalRendaSocio)} x ${formatPercent(pj.percentualComprometimentoCPF)} = ${formatMoney(pj.parcelaMaximaSocioPF)}. Status: ${pj.cpfSocio}.`,
+          `Cenario recomendado pela ordem logica: ${pj.cenarioAprovado}.`,
           `O lance maximo com recurso proprio informado foi ${formatMoney(pj.totalLanceRP)} e foi usado como Total Lance RP.`,
           `A validacao de idade retornou: ${pj.maiorIdade}.`,
         ])}
@@ -3274,6 +3380,9 @@ function renderAdministratorRules(rules) {
       <td>${formatPercent(rule.taxa_adm || 0)}</td>
       <td>${formatPercent(rule.fundo_reserva || 0)}</td>
       <td>${rule.aceita_fgts === false ? "Nao" : "Sim"}</td>
+      <td>${rule.aceita_pj === false ? "Nao" : "Sim"}</td>
+      <td>${rule.permite_composicao_pj_socios === false ? "Nao" : "Sim"}</td>
+      <td>${rule.permite_cpf_socio === false ? "Nao" : "Sim"}</td>
       <td>
         <div class="row-actions">
           <button class="btn btn-sm btn-outline-secondary" type="button" data-admin-rule-action="editar" data-admin-rule-index="${index}">Editar</button>
@@ -3313,6 +3422,14 @@ function administratorPlanRulesForKind(kind) {
       aceita_saida_fiscal: false,
       aceita_saida_fiscal_texto: "",
       aceita_fgts: true,
+      aceita_pj: true,
+      aceita_pj_texto: "Sim",
+      permite_composicao_pj_socios: true,
+      permite_composicao_pj_socios_texto: "Sim",
+      permite_cpf_socio: true,
+      permite_cpf_socio_texto: "Sim",
+      percentual_comprometimento_pj: DEFAULT_PJ_COMMITMENT_PERCENT,
+      percentual_comprometimento_cpf: DEFAULT_CPF_COMMITMENT_PERCENT,
       ...(savedRule || {}),
     };
   });
@@ -3355,6 +3472,9 @@ function administratorPlanCellValue(rule, row) {
   if (row.type === "money") return value ?? "";
   if (row.key === "seguro_obrigatorio_texto" && value === undefined) return rule.seguro_obrigatorio ? "Sim" : "";
   if (row.key === "aceita_saida_fiscal_texto" && value === undefined) return rule.aceita_saida_fiscal ? "Sim" : "";
+  if (row.key === "aceita_pj_texto" && value === undefined) return adminRuleBoolText(rule.aceita_pj, true);
+  if (row.key === "permite_composicao_pj_socios_texto" && value === undefined) return adminRuleBoolText(rule.permite_composicao_pj_socios, true);
+  if (row.key === "permite_cpf_socio_texto" && value === undefined) return adminRuleBoolText(rule.permite_cpf_socio, true);
   return value ?? "";
 }
 
@@ -3797,6 +3917,14 @@ function addAdministratorPlanColumn() {
     aceita_saida_fiscal: false,
     aceita_saida_fiscal_texto: "",
     aceita_fgts: true,
+    aceita_pj: true,
+    aceita_pj_texto: "Sim",
+    permite_composicao_pj_socios: true,
+    permite_composicao_pj_socios_texto: "Sim",
+    permite_cpf_socio: true,
+    permite_cpf_socio_texto: "Sim",
+    percentual_comprometimento_pj: DEFAULT_PJ_COMMITMENT_PERCENT,
+    percentual_comprometimento_cpf: DEFAULT_CPF_COMMITMENT_PERCENT,
   });
   configState.data = { ...(configState.data || {}), administradoras_regras: rules };
   renderAdministratorPlans();
@@ -3832,6 +3960,14 @@ function collectAdministratorPlans() {
     rule.seguro_obrigatorio = normalizeText(rule.seguro_obrigatorio_texto || "").startsWith("sim");
     rule.aceita_saida_fiscal = normalizeText(rule.aceita_saida_fiscal_texto || "").startsWith("sim");
     rule.aceita_fgts = rule.aceita_fgts !== false;
+    rule.aceita_pj = adminRuleTextToBool(rule.aceita_pj_texto, true);
+    rule.aceita_pj_texto = adminRuleBoolText(rule.aceita_pj, true);
+    rule.permite_composicao_pj_socios = adminRuleTextToBool(rule.permite_composicao_pj_socios_texto, true);
+    rule.permite_composicao_pj_socios_texto = adminRuleBoolText(rule.permite_composicao_pj_socios, true);
+    rule.permite_cpf_socio = adminRuleTextToBool(rule.permite_cpf_socio_texto, true);
+    rule.permite_cpf_socio_texto = adminRuleBoolText(rule.permite_cpf_socio, true);
+    rule.percentual_comprometimento_pj = administratorPlanPercent(rule, "percentual_comprometimento_pj") || DEFAULT_PJ_COMMITMENT_PERCENT;
+    rule.percentual_comprometimento_cpf = administratorPlanPercent(rule, "percentual_comprometimento_cpf") || DEFAULT_CPF_COMMITMENT_PERCENT;
   });
   return [...otherKinds, ...collected.filter((rule) => rule.administradora)];
 }
@@ -3850,10 +3986,18 @@ function clearAdministratorRuleForm() {
   configAdministratorRuleIndex = null;
   document.getElementById("administratorRulesForm").reset();
   document.getElementById("adminRuleAceitaFgts").value = "true";
+  document.getElementById("adminRuleAceitaPJ").value = "true";
+  document.getElementById("adminRuleComposicaoPJSocios").value = "true";
+  document.getElementById("adminRuleCpfSocio").value = "true";
+  setInputValue("adminRuleComprometimentoPJ", percentToInput(DEFAULT_PJ_COMMITMENT_PERCENT));
+  setInputValue("adminRuleComprometimentoCPF", percentToInput(DEFAULT_CPF_COMMITMENT_PERCENT));
   document.getElementById("saveAdministratorRuleBtn").textContent = "Salvar Administradora";
 }
 
 function collectAdministratorRuleForm() {
+  const aceitaPJ = getSelectBool("adminRuleAceitaPJ");
+  const permiteComposicao = getSelectBool("adminRuleComposicaoPJSocios");
+  const permiteCpfSocio = getSelectBool("adminRuleCpfSocio");
   return {
     administradora: document.getElementById("adminRuleAdministradora").value.trim(),
     seguro_obrigatorio: getSelectBool("adminRuleSeguro"),
@@ -3866,6 +4010,14 @@ function collectAdministratorRuleForm() {
     fundo_reserva: inputToPercent("adminRuleFundoReserva"),
     aceita_saida_fiscal: getSelectBool("adminRuleSaidaFiscal"),
     aceita_fgts: getSelectBool("adminRuleAceitaFgts"),
+    aceita_pj: aceitaPJ,
+    aceita_pj_texto: adminRuleBoolText(aceitaPJ, true),
+    permite_composicao_pj_socios: permiteComposicao,
+    permite_composicao_pj_socios_texto: adminRuleBoolText(permiteComposicao, true),
+    permite_cpf_socio: permiteCpfSocio,
+    permite_cpf_socio_texto: adminRuleBoolText(permiteCpfSocio, true),
+    percentual_comprometimento_pj: inputToPercent("adminRuleComprometimentoPJ") || DEFAULT_PJ_COMMITMENT_PERCENT,
+    percentual_comprometimento_cpf: inputToPercent("adminRuleComprometimentoCPF") || DEFAULT_CPF_COMMITMENT_PERCENT,
     observacoes_operacionais: document.getElementById("adminRuleObservacoes").value.trim(),
   };
 }
@@ -3883,6 +4035,11 @@ function fillAdministratorRuleForm(rule, index) {
   setInputValue("adminRuleNegociacao", rule.possui_negociacao_taxa);
   setInputValue("adminRuleFundoReserva", percentToInput(rule.fundo_reserva));
   setSelectBool("adminRuleAceitaFgts", rule.aceita_fgts !== false);
+  setSelectBool("adminRuleAceitaPJ", rule.aceita_pj !== false);
+  setSelectBool("adminRuleComposicaoPJSocios", rule.permite_composicao_pj_socios !== false);
+  setSelectBool("adminRuleCpfSocio", rule.permite_cpf_socio !== false);
+  setInputValue("adminRuleComprometimentoPJ", percentToInput(rule.percentual_comprometimento_pj || DEFAULT_PJ_COMMITMENT_PERCENT));
+  setInputValue("adminRuleComprometimentoCPF", percentToInput(rule.percentual_comprometimento_cpf || DEFAULT_CPF_COMMITMENT_PERCENT));
   setInputValue("adminRuleObservacoes", rule.observacoes_operacionais);
   document.getElementById("saveAdministratorRuleBtn").textContent = "Atualizar Administradora";
   document.getElementById("adminRuleAdministradora").focus();
