@@ -56,6 +56,8 @@ const viabilityState = {
   lastResult: null,
   administratorEligibility: [],
   funnelSummary: null,
+  phase2Signature: "",
+  phase2Running: false,
 };
 
 const historyState = {
@@ -2204,6 +2206,7 @@ function setViabilityState(state) {
   document.getElementById("viabilityError").classList.toggle("d-none", state !== "error");
   document.getElementById("viabilityEmpty").classList.toggle("d-none", state !== "empty");
   document.getElementById("viabilityResults").classList.toggle("d-none", state !== "ready");
+  document.getElementById("viabilityPhase2Summary")?.classList.toggle("d-none", state !== "ready");
   const button = document.getElementById("analyzeViabilityBtn");
   if (!button) return;
   button.disabled = state === "loading";
@@ -2258,6 +2261,44 @@ function validateViabilityPayload(payload) {
   return true;
 }
 
+function viabilityPayloadIsReady(payload) {
+  return Boolean(
+    payload.credito_desejado
+    && payload.prazo_desejado
+    && payload.renda_total
+    && payload.parcela_desejada
+    && payload.parcela_limite
+    && Number.isFinite(payload.lance_proprio)
+    && payload.lance_proprio >= 0
+  );
+}
+
+function phase2SelectionSignature(payload) {
+  const eligibleAdministrators = administratorEligibilityItemsForDisplay()
+    .filter((item) => item.elegivel)
+    .map((item) => normalizeText(item.administradora))
+    .sort();
+  return JSON.stringify({
+    objetivo: payload.objetivo,
+    credito_desejado: payload.credito_desejado,
+    prazo_desejado: payload.prazo_desejado,
+    lance_proprio: payload.lance_proprio,
+    fgts: payload.fgts,
+    renda_total: payload.renda_total,
+    parcela_desejada: payload.parcela_desejada,
+    parcela_limite: payload.parcela_limite,
+    tipo_contratacao: payload.tipo_contratacao,
+    tipo_bem: payload.tipo_bem,
+    estado_bem: payload.estado_bem,
+    eligibleAdministrators,
+  });
+}
+
+function phase2HasEligibleAdministrators() {
+  const items = administratorEligibilityItemsForDisplay();
+  return items.some((item) => item.elegivel);
+}
+
 function renderViabilityChecklist(checklist) {
   if (!document.getElementById("viabilityChecklist")) return;
   document.querySelectorAll("#viabilityChecklist li").forEach((item) => {
@@ -2265,6 +2306,50 @@ function renderViabilityChecklist(checklist) {
     item.classList.toggle("check-ok", value === true);
     item.classList.toggle("check-fail", value === false);
   });
+}
+
+function renderPhase2Summary(result, items) {
+  const target = document.getElementById("viabilityPhase2Summary");
+  if (!target) return;
+  const etapa4 = result.etapa4 || {};
+  const cliente = result.cliente || {};
+  const fluxo = etapa4.fluxo === "investimento" ? "Investimento" : "Contemplacao";
+  const criterio = etapa4.estrategia || etapa4.conceito || cliente.perfil_estrategico || "-";
+  const top10 = items.slice(0, 10);
+  const viable = top10.filter((item) => item.status !== "inviavel").length;
+  const best = top10[0];
+  target.innerHTML = `
+    <article>
+      <span>Objetivo aplicado</span>
+      <strong>${escapeHtml(fluxo)}</strong>
+      <small>${escapeHtml(criterio)}</small>
+    </article>
+    <article>
+      <span>Grupos ativos</span>
+      <strong>${escapeHtml(result.total_grupos_elegiveis ?? result.total_grupos_analisados ?? "-")}</strong>
+      <small>base elegivel por status e tipo de bem</small>
+    </article>
+    <article>
+      <span>Filtro da Fase 2</span>
+      <strong>${escapeHtml(result.total_grupos_pos_filtro_1 ?? "-")}</strong>
+      <small>${escapeHtml(etapa4.filtro_1 || "prazo remanescente e menor lance")}</small>
+    </article>
+    <article>
+      <span>Cenarios montados</span>
+      <strong>${escapeHtml(result.total_cenarios ?? items.length)}</strong>
+      <small>${escapeHtml(result.total_cenarios_viaveis ?? viable)} viavel(is)</small>
+    </article>
+    <article>
+      <span>Top 10 exibido</span>
+      <strong>${top10.length}</strong>
+      <small>ordenado por score de compatibilidade</small>
+    </article>
+    <article>
+      <span>Melhor recomendacao</span>
+      <strong>${escapeHtml(best?.administradora || "-")}</strong>
+      <small>${escapeHtml(best ? `${best.quantidade_cartas || 1} carta(s) - ${best.status}` : "aguardando ranking")}</small>
+    </article>
+  `;
 }
 
 function renderViabilitySummary(result) {
@@ -2277,6 +2362,7 @@ function renderViabilitySummary(result) {
   document.getElementById("viabilityRankingSubtitle").textContent = `Adicionar cartas de credito por grupo. Selecao por prazo remanescente e compatibilidade com menor lance. ${items.length} cenario(s) candidato(s) - fluxo ${fluxo}: ${stageLabel}. Filtro 1 manteve ${stageCount} grupo(s).`;
   const scenario = document.getElementById("viabilityScenario");
   if (scenario) scenario.textContent = `${result.total_cenarios_viaveis || 0} cenario(s) viavel(is) - perfil ${profile}`;
+  renderPhase2Summary(result, items);
   viabilityState.funnelSummary = {
     ...(viabilityState.funnelSummary || {}),
     totalAdministradoras: result.total_administradoras_analisadas || viabilityState.funnelSummary?.totalAdministradoras,
@@ -2455,9 +2541,10 @@ function openViabilityAudit(groupId, scenarioId = "") {
 }
 
 function renderViabilityRanking(items) {
-  document.getElementById("viabilityRankingBody").innerHTML = items.map((item) => `
+  const top10 = items.slice(0, 10);
+  document.getElementById("viabilityRankingBody").innerHTML = top10.map((item, index) => `
     <tr>
-      <td>${item.ranking || item.id || "-"}</td>
+      <td>${index + 1}</td>
       <td>${escapeHtml(item.administradora)}</td>
       <td>${escapeHtml(item.grupo || (item.cartas || []).map((card) => card.grupo || card.grupo_id).join(" + "))}</td>
       <td>${escapeHtml(item.tipo_bem || (item.cartas?.[0]?.tipo_bem || "-"))}</td>
@@ -2481,11 +2568,39 @@ function renderViabilityRanking(items) {
   `).join("");
 }
 
-async function analyzeViability() {
+async function analyzeViability({ silent = false, force = false } = {}) {
   const payload = collectViabilityPayload();
-  if (!validateViabilityPayload(payload)) return;
+  if (silent) {
+    if (!viabilityPayloadIsReady(payload) || !phase2HasEligibleAdministrators()) {
+      setViabilityState("idle");
+      return;
+    }
+  } else if (!validateViabilityPayload(payload)) {
+    return;
+  }
+  const signature = phase2SelectionSignature(payload);
+  if (!force && signature === viabilityState.phase2Signature && viabilityState.lastResult) {
+    const items = viabilityState.lastResult.cenarios || viabilityState.lastResult.melhores_grupos || [];
+    if (items.length) {
+      renderViabilitySummary(viabilityState.lastResult);
+      renderViabilityRanking(items);
+      setViabilityState("ready");
+      return;
+    }
+  }
+  viabilityState.phase2Signature = signature;
 
   setViabilityState("loading");
+  setPipelineStatus({
+    perfil: "ok",
+    analise: "ok",
+    elegibilidade: "ok",
+    calculo: "processing",
+    compatibilidade: "processing",
+    ranking: "processing",
+    top10: "pending",
+    estudo: "pending",
+  });
   try {
     const result = await withTimeout(
       apiPost("/cenarios/analisar", payload),
@@ -2508,10 +2623,24 @@ async function analyzeViability() {
     }
     renderViabilityRanking(items);
     setViabilityState("ready");
-    showToast("Analise de viabilidade concluida.", "success");
+    if (!silent) showToast("Analise de viabilidade concluida.", "success");
   } catch (error) {
+    viabilityState.phase2Signature = "";
     setViabilityState("error");
-    showToast(error.message || "Nao foi possivel analisar os cenarios.", "danger");
+    if (!silent) showToast(error.message || "Nao foi possivel analisar os cenarios.", "danger");
+  }
+}
+
+async function runPhase2SelectionAutomatically() {
+  if (viabilityState.phase2Running) return;
+  if (!document.getElementById("screen-viabilidade")?.classList.contains("active")) return;
+  const payload = collectViabilityPayload();
+  if (!viabilityPayloadIsReady(payload) || !phase2HasEligibleAdministrators()) return;
+  viabilityState.phase2Running = true;
+  try {
+    await analyzeViability({ silent: true });
+  } finally {
+    viabilityState.phase2Running = false;
   }
 }
 
@@ -2520,6 +2649,9 @@ function resetViabilityForm() {
   const scenario = document.getElementById("viabilityScenario");
   if (scenario) scenario.textContent = "Aguardando analise";
   document.getElementById("viabilityRankingBody").innerHTML = "";
+  document.getElementById("viabilityPhase2Summary").innerHTML = "";
+  viabilityState.phase2Signature = "";
+  viabilityState.lastResult = null;
   setViabilityState("idle");
 }
 
@@ -3677,6 +3809,7 @@ async function refreshAdministratorEligibility({ silent = true } = {}) {
     };
     renderAdministratorEligibility(viabilityState.administratorEligibility);
     renderAdministratorPlans();
+    runPhase2SelectionAutomatically();
     return viabilityState.administratorEligibility;
   } catch (error) {
     if (viabilityState.administratorEligibility?.length) {

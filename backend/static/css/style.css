@@ -2269,6 +2269,39 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 900;
 }
 
+.phase-two-summary {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(132px, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.phase-two-summary article {
+  min-height: 72px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fffef7;
+}
+
+.phase-two-summary span,
+.phase-two-summary small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.phase-two-summary strong {
+  display: block;
+  margin: 3px 0;
+  color: var(--brand-navy);
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1.05;
+}
+
 .administrator-plan-tabs {
   display: flex;
   flex-wrap: wrap;

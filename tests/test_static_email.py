@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 from pathlib import Path
 
 
@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260626-13", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-14", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260626-13", index_html)
+        self.assertIn("/static/js/app.js?v=20260626-14", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -110,6 +110,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn('class="selection-flow-grid"', index_html)
         self.assertNotIn('class="phase-two-help"', index_html)
         self.assertIn('id="viabilityPhase2Idle"', index_html)
+        self.assertIn('id="viabilityPhase2Summary"', index_html)
         self.assertIn('class="content-card phase-two-card"', index_html)
         self.assertIn('data-admin-plan-kind="Imovel"', index_html)
         self.assertIn('data-admin-plan-kind="Automovel"', index_html)
@@ -126,6 +127,9 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function administratorPlanDisplayRulesForKind", app_js)
         self.assertIn("function setPipelineStatus", app_js)
         self.assertIn("function renderSelectionFunnelSummary", app_js)
+        self.assertIn("function runPhase2SelectionAutomatically", app_js)
+        self.assertIn("function renderPhase2Summary", app_js)
+        self.assertIn("function phase2SelectionSignature", app_js)
         self.assertIn("function renderAdministratorPlans()", app_js)
         self.assertIn("function saveAdministratorPlans()", app_js)
         self.assertIn("function renderAdministratorPlanColgroup(rules)", app_js)
@@ -139,6 +143,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("width: max-content", style_css)
         self.assertIn("table-layout: auto", style_css)
         self.assertIn("font-size: 0.8rem", style_css)
+        self.assertIn(".phase-two-summary", style_css)
         self.assertIn("white-space: normal", style_css)
         self.assertIn("overflow-wrap: normal", style_css)
         self.assertIn('admin-plan-cell[data-admin-plan-field="percentual_lance_embutido"]', style_css)
@@ -233,6 +238,9 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn('id="saveAdministratorPlansBtn"', index_html)
         self.assertIn('primaryAction.classList.toggle("d-none", screenName === "viabilidade")', app_js)
         self.assertIn("Aguardando selecao dos melhores grupos", index_html)
+        self.assertIn("Top 10 exibido", app_js)
+        self.assertIn("ordenado por score de compatibilidade", app_js)
+        self.assertIn("await analyzeViability({ silent: true })", app_js)
         self.assertIn('state !== "idle"', app_js)
         self.assertIn('state !== "ready"', app_js)
         self.assertIn("fluxo ${fluxo}", app_js)
@@ -716,7 +724,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260626-13", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-14", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)
