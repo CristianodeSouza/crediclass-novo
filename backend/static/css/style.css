@@ -2106,8 +2106,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.45rem;
   font-weight: 800;
   line-height: 1.08;
-  overflow-wrap: anywhere;
+  white-space: normal;
+  overflow-wrap: normal;
   word-break: normal;
+  hyphens: none;
 }
 
 .administrator-plan-table .admin-plan-main-title th {
@@ -2131,6 +2133,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   background: var(--brand-navy);
   color: #fff;
   font-size: 0.44rem;
+  text-align: center;
 }
 
 .administrator-plan-table .admin-plan-yellow {
@@ -2147,21 +2150,22 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .admin-plan-rule-label {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 1px;
+  display: inline;
   max-width: 100%;
+  line-height: 1.08;
 }
 
 .admin-plan-rule-marker {
   border: 0;
-  padding: 0 1px;
+  margin-left: 2px;
+  padding: 0;
   background: transparent;
   color: #dc2626;
   font-size: 0.64rem;
   font-weight: 900;
   line-height: 1;
   cursor: help;
+  vertical-align: text-top;
 }
 
 .admin-plan-rule-marker:focus {
@@ -2241,7 +2245,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .administrator-plan-table thead .admin-plan-admin-input {
   color: #fff;
+  text-align: center;
   text-transform: uppercase;
+}
+
+.admin-plan-cell[data-admin-plan-field="percentual_lance_embutido"],
+.admin-plan-cell[data-admin-plan-field="lance_embutido_valor"] {
+  text-align: center;
 }
 
 .admin-plan-admin-input:focus,

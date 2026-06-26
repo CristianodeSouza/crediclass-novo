@@ -3784,7 +3784,7 @@ function renderAdministratorPlanColgroup(rules) {
   const target = document.getElementById("administratorPlansCols");
   if (!target) return;
   target.innerHTML = `
-    <col class="admin-plan-col-label" style="width: 150px">
+    <col class="admin-plan-col-label" style="width: 128px">
     ${rules.map(() => `
       <col class="admin-plan-col-admin" style="width: 40px">
       <col class="admin-plan-col-admin" style="width: 40px">
