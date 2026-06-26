@@ -419,16 +419,23 @@ def save_config() -> None:
 _settings = load_config()
 
 
+def ensure_administrator_rules(config: dict) -> dict:
+    if not isinstance(config.get("administradoras_regras"), list) or not config.get("administradoras_regras"):
+        config["administradoras_regras"] = deepcopy(DEFAULT_ADMINISTRATOR_RULES)
+    return config
+
+
 def get_configuracoes() -> dict:
-    return deepcopy(_settings)
+    return deepcopy(ensure_administrator_rules(_settings))
 
 
 def update_configuracoes(payload: dict) -> dict:
     for section in ["empresa", "preferencias", "parametros_financeiros", "integracoes", "notificacoes"]:
         if section in payload and isinstance(payload[section], dict):
             _settings[section].update(payload[section])
-    if "administradoras_regras" in payload and isinstance(payload["administradoras_regras"], list):
+    if "administradoras_regras" in payload and isinstance(payload["administradoras_regras"], list) and payload["administradoras_regras"]:
         _settings["administradoras_regras"] = payload["administradoras_regras"]
+    ensure_administrator_rules(_settings)
     if "usuarios" in payload and isinstance(payload["usuarios"], list):
         _settings["usuarios"] = payload["usuarios"]
     if "regras_negocio_feedbacks" in payload and isinstance(payload["regras_negocio_feedbacks"], dict):

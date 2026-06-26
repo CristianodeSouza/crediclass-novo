@@ -125,6 +125,14 @@ class ConfiguracoesTest(unittest.TestCase):
         self.assertTrue(result["success"])
         self.assertEqual(config["regras_negocio_feedbacks"], feedbacks)
 
+    def test_salvar_configuracoes_nao_apaga_regras_administradoras_com_lista_vazia(self):
+        result = configuracoes_salvar({"administradoras_regras": []})
+        config = configuracoes_obter()
+
+        self.assertTrue(result["success"])
+        self.assertGreaterEqual(len(config["administradoras_regras"]), 10)
+        self.assertIn("CNP", {item["administradora"] for item in config["administradoras_regras"]})
+
     def test_salvar_configuracoes_persiste_json(self):
         original = configuracoes_module.get_configuracoes()
         try:
