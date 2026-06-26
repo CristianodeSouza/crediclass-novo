@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260626-07", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-08", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260626-07", index_html)
+        self.assertIn("/static/js/app.js?v=20260626-08", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -99,11 +99,14 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn('id="screen-administradoras"', index_html)
         self.assertIn("Calculadora de Grupos", index_html)
         self.assertIn("ETAPA 4 - Calculadora de Grupos", index_html)
-        self.assertIn("Fase 1 - Calculadora de Grupos", index_html)
+        self.assertIn("Motor de Elegibilidade das Administradoras", index_html)
+        self.assertIn("Motor de Calculo - Calculadora de Grupos", index_html)
         self.assertIn("Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance", index_html)
         self.assertIn("Adicionar cartas de credito", index_html)
         self.assertIn("Calculo: credito contratado com embutido", index_html)
-        self.assertIn("A selecao usa prazo remanescente, compatibilidade com menor lance", index_html)
+        self.assertIn("Motor de Compatibilidade", index_html)
+        self.assertIn("Motor de Ranking", index_html)
+        self.assertIn("Top 10 Grupos", index_html)
         self.assertNotIn('class="selection-flow-grid"', index_html)
         self.assertNotIn('class="phase-two-help"', index_html)
         self.assertIn('id="viabilityPhase2Idle"', index_html)
@@ -113,6 +116,10 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('id="administratorPlansCols"', index_html)
         self.assertIn('id="administratorPlansBody"', index_html)
         self.assertIn('id="administratorPlanAudit"', index_html)
+        self.assertIn('id="administratorEligibilityBody"', index_html)
+        self.assertIn("function refreshAdministratorEligibility", app_js)
+        self.assertIn('apiPost("/viabilidade/administradoras", payload)', app_js)
+        self.assertIn("function administratorPlanDisplayRulesForKind", app_js)
         self.assertIn("function renderAdministratorPlans()", app_js)
         self.assertIn("function saveAdministratorPlans()", app_js)
         self.assertIn("function renderAdministratorPlanColgroup(rules)", app_js)
@@ -199,7 +206,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn('id="exportAdministratorsCsvBtn"', index_html)
         self.assertNotIn('id="advanceToGroupsBtn"', index_html)
         self.assertIn('if (screenName === "viabilidade") loadConfiguracoes();', app_js)
-        self.assertNotIn('apiPost("/viabilidade/administradoras"', app_js)
+        self.assertIn('apiPost("/viabilidade/administradoras", payload)', app_js)
         self.assertNotIn("function exportAdministratorsCsv()", app_js)
         self.assertNotIn("function syncAdministratorInterviewToGroups()", app_js)
 
@@ -208,7 +215,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
         self.assertIn("Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance", index_html)
-        self.assertIn("Fase 1 - Calculadora de Grupos", index_html)
+        self.assertIn("Motor de Calculo - Calculadora de Grupos", index_html)
         self.assertIn("Adicionar cartas de credito", index_html)
         self.assertNotIn('id="analyzeViabilityBtn"', index_html)
         self.assertNotIn('data-screen-jump="perfil"', index_html)
@@ -682,7 +689,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260626-07", index_html)
+        self.assertIn("/static/css/style.css?v=20260626-08", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

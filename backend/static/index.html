@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260626-07" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260626-08" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -308,15 +308,51 @@
             <div class="table-toolbar">
               <div>
                 <h2>ETAPA 4 - Calculadora de Grupos</h2>
-                <p>Fase 1 calcula os parametros por administradora. Fase 2 seleciona os melhores grupos e permite adicionar cartas de credito por grupo.</p>
+                <p>O funil parte do perfil financeiro, valida administradoras, calcula grupos, mede compatibilidade, ranqueia e leva o Top 10 para o estudo financeiro.</p>
               </div>
+            </div>
+            <div class="funnel-flow" aria-label="Fluxo do funil Crediclass">
+              <span>Cliente</span>
+              <span>Perfil Financeiro</span>
+              <span>Motor de Elegibilidade<br><small>Administradoras</small></span>
+              <span>Motor de Calculo<br><small>Grupos</small></span>
+              <span>Motor de Compatibilidade</span>
+              <span>Motor de Ranking</span>
+              <span>Top 10 Grupos</span>
+              <span>Estudo Financeiro</span>
+            </div>
+          </div>
+
+          <div class="content-card administrator-eligibility-card">
+            <div class="table-toolbar">
+              <div>
+                <h2>Motor de Elegibilidade das Administradoras</h2>
+                <p>Pre-valida quais administradoras podem participar da analise antes da Calculadora de Grupos.</p>
+              </div>
+              <span id="administratorEligibilitySummary" class="eligibility-summary-pill">Aguardando perfil</span>
+            </div>
+            <div id="administratorEligibilityEmpty" class="table-state">Salve ou avance o Perfil do Cliente para calcular a elegibilidade.</div>
+            <div id="administratorEligibilityTableWrap" class="table-responsive d-none">
+              <table class="table table-hover align-middle administrator-eligibility-table">
+                <thead>
+                  <tr>
+                    <th>Administradora</th>
+                    <th>Status</th>
+                    <th>Motivos / alertas</th>
+                    <th>Restricoes</th>
+                    <th>Cenarios PJ</th>
+                    <th>Pode seguir?</th>
+                  </tr>
+                </thead>
+                <tbody id="administratorEligibilityBody"></tbody>
+              </table>
             </div>
           </div>
 
           <div class="content-card administrator-plans-card">
             <div class="table-toolbar">
               <div>
-                <h2>Fase 1 - Calculadora de Grupos</h2>
+                <h2>Motor de Calculo - Calculadora de Grupos</h2>
                 <p>Calculo: credito contratado com embutido, lance livre maximo do cliente por administradora, com e sem embutido, e prazos minimos dos grupos para encaixe da parcela maxima desejada e renda.</p>
               </div>
             </div>
@@ -1223,6 +1259,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260626-07"></script>
+    <script src="/static/js/app.js?v=20260626-08"></script>
   </body>
 </html>

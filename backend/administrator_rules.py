@@ -17,6 +17,9 @@ class AdministratorRule:
     fundo_reserva: float
     aceita_saida_fiscal: bool
     aceita_fgts: bool
+    aceita_pj: bool = True
+    permite_composicao_pj_socios: bool = True
+    permite_cpf_socio: bool = True
     observacoes_operacionais: str = ""
 
 
@@ -75,6 +78,9 @@ def rule_from_config(data: dict) -> AdministratorRule | None:
         fundo_reserva=parse_percent(data.get("fundo_reserva")),
         aceita_saida_fiscal=bool(data.get("aceita_saida_fiscal", False)),
         aceita_fgts=bool(data.get("aceita_fgts", False)),
+        aceita_pj=bool(data.get("aceita_pj", True)),
+        permite_composicao_pj_socios=bool(data.get("permite_composicao_pj_socios", True)),
+        permite_cpf_socio=bool(data.get("permite_cpf_socio", True)),
         observacoes_operacionais=str(data.get("observacoes_operacionais") or ""),
     )
 

@@ -20,6 +20,10 @@ def client_renda_total(payload: ViabilidadeRequest) -> float:
     return float(payload.renda_total or 0)
 
 
+def client_contracting_type(payload: ViabilidadeRequest) -> str:
+    return str(payload.tipo_contratacao or "").strip().lower()
+
+
 def client_parcela_limite(payload: ViabilidadeRequest) -> float:
     return float(payload.parcela_limite or payload.parcela_desejada)
 
@@ -70,36 +74,61 @@ def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: Admin
         if rule.limite_sem_comprovacao_renda is None
         else credito_a_contratar <= float(rule.limite_sem_comprovacao_renda)
     )
+    tipo_contratacao = client_contracting_type(payload)
+    is_pj = tipo_contratacao == "pj"
+    cenarios_pj_disponiveis: list[str] = []
+    if is_pj:
+        if rule.aceita_pj:
+            cenarios_pj_disponiveis.append("PJ_PURA")
+        if rule.permite_composicao_pj_socios:
+            cenarios_pj_disponiveis.append("PJ_SOCIOS")
+        if rule.permite_cpf_socio:
+            cenarios_pj_disponiveis.append("CPF_SOCIOS")
+
+    tipo_contratacao_compativel = not is_pj or bool(cenarios_pj_disponiveis)
     fgts_permitido = fgts_total <= 0 or rule.aceita_fgts
     lance_embutido_permitido = percentual_lance_embutido > 0
 
     alertas: list[str] = []
+    motivos_reprovacao: list[str] = []
+    restricoes: list[str] = []
+    if not tipo_contratacao_compativel:
+        motivos_reprovacao.append("Administradora nao aceita PJ, composicao com socios ou analise por CPF dos socios.")
     if not informed_ages:
         alertas.append("idade_nao_validada")
     elif not idade_compativel:
         alertas.append("idade_incompativel")
+        motivos_reprovacao.append("Idade do participante maior que o limite permitido pela administradora.")
     if not renda_compativel:
         alertas.append("renda_insuficiente")
+        motivos_reprovacao.append("Renda insuficiente para a parcela desejada.")
     if not parcela_compativel:
         alertas.append("parcela_limite_invalida")
+        motivos_reprovacao.append("Parcela limite invalida para calcular a elegibilidade.")
     if not limite_compativel:
         alertas.append("credito_acima_limite_sem_comprovacao")
+        motivos_reprovacao.append("Credito desejado acima do limite sem comprovacao da administradora.")
     if fgts_total > 0 and not rule.aceita_fgts:
         alertas.append("fgts_nao_permitido")
+        restricoes.append("FGTS nao sera considerado no calculo do lance.")
+    if not lance_embutido_permitido:
+        alertas.append("lance_embutido_nao_permitido")
+        restricoes.append("Calculadora devera considerar apenas cenario sem embutido.")
     if rule.seguro_obrigatorio:
         alertas.append("seguro_obrigatorio")
 
     elegivel = all((
+        tipo_contratacao_compativel,
         idade_compativel,
         renda_compativel,
         parcela_compativel,
         limite_compativel,
-        fgts_permitido,
-        lance_embutido_permitido,
     ))
+    status = "REPROVADA" if not elegivel else ("APROVADA_COM_RESTRICOES" if restricoes or alertas else "APROVADA")
 
     return {
         "administradora": rule.administradora,
+        "status": status,
         "seguro_obrigatorio": rule.seguro_obrigatorio,
         "idade_maxima": rule.idade_maxima,
         "limite_sem_comprovacao_renda": rule.limite_sem_comprovacao_renda,
@@ -122,6 +151,21 @@ def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: Admin
         "lance_embutido_permitido": lance_embutido_permitido,
         "elegivel": elegivel,
         "alertas": alertas,
+        "motivos_reprovacao": motivos_reprovacao,
+        "restricoes": restricoes,
+        "cenarios_pj_disponiveis": cenarios_pj_disponiveis if is_pj else [],
+        "regras_aplicaveis": {
+            "aceita_fgts": rule.aceita_fgts,
+            "permite_lance_embutido": lance_embutido_permitido,
+            "percentual_lance_embutido": round(percentual_lance_embutido if lance_embutido_permitido else 0.0, 6),
+            "base_calculo_embutido": rule.tipo_lance_embutido,
+            "seguro_obrigatorio": rule.seguro_obrigatorio,
+            "idade_maxima": rule.idade_maxima,
+            "limite_sem_comprovacao_renda": rule.limite_sem_comprovacao_renda,
+            "aceita_pj": rule.aceita_pj,
+            "permite_pj_socios": rule.permite_composicao_pj_socios,
+            "permite_cpf_socios": rule.permite_cpf_socio,
+        },
     }
 
 

@@ -417,15 +417,40 @@ def cenarios_analisar(payload: ViabilidadeRequest):
     )
     try:
         summary_groups = list_grupos(include_history=True)
+        config = get_configuracoes()
+        administrator_rules = config.get("administradoras_regras") or []
+        administradoras = sorted({item["administradora"] for item in summary_groups if item.get("administradora")})
+        administradoras_viabilidade = analyze_administradoras(payload, administradoras, administrator_rules)
+        administradoras_com_regra = {
+            normalize_admin_name(item["administradora"])
+            for item in administradoras_viabilidade
+        }
+        administradoras_elegiveis = {
+            normalize_admin_name(item["administradora"])
+            for item in administradoras_viabilidade
+            if item["elegivel"]
+        }
+        administradoras_sem_regra = {
+            normalize_admin_name(administradora)
+            for administradora in administradoras
+            if normalize_admin_name(administradora) not in administradoras_com_regra
+        }
+        administradoras_para_busca = administradoras_elegiveis | administradoras_sem_regra
         summary_candidates = [
             item
             for item in summary_groups
-            if normalize_text(str(item.get("status") or "")) == "ativo"
+            if normalize_admin_name(item.get("administradora", "")) in administradoras_para_busca
+            and normalize_text(str(item.get("status") or "")) == "ativo"
             and compatible_tipo_bem(payload.objetivo, str(item.get("tipo_bem") or ""), payload.tipo_bem)
             and (item.get("credito_maximo") or 0) >= payload.credito_desejado / 3
         ]
         result = analyze_scenarios(payload, summary_candidates)
         result["total_grupos_base"] = len(summary_groups)
+        result["total_administradoras_analisadas"] = len(administradoras_viabilidade)
+        result["total_administradoras_elegiveis"] = len(administradoras_para_busca)
+        result["administradoras_viabilidade"] = administradoras_viabilidade
+        if administradoras_sem_regra:
+            result.setdefault("motivos_reprovacao", []).append("regras_administradoras_pendentes_analise_humana")
     except Exception as error:
         logger.exception("Erro ao montar cenarios")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})

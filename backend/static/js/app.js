@@ -54,6 +54,7 @@ const mapState = {
 
 const viabilityState = {
   lastResult: null,
+  administratorEligibility: [],
 };
 
 const historyState = {
@@ -2155,6 +2156,7 @@ function saveClientProfile({ silent = false } = {}) {
   const profile = collectClientProfile();
   window.localStorage.setItem(CLIENT_PROFILE_STORAGE_KEY, JSON.stringify(profile));
   applyClientProfileToFlow(profile);
+  refreshAdministratorEligibility({ silent: true });
   if (!silent) showToast("Perfil do cliente salvo.", "success");
   return profile;
 }
@@ -2192,6 +2194,7 @@ function resetClientProfile() {
 function advanceClientProfile() {
   saveClientProfile({ silent: true });
   activateScreen("viabilidade");
+  refreshAdministratorEligibility({ silent: false });
 }
 
 function setViabilityState(state) {
@@ -2469,6 +2472,11 @@ async function analyzeViability() {
       "A analise de cenarios demorou mais que o esperado. Tente novamente."
     );
     viabilityState.lastResult = result;
+    if (result.administradoras_viabilidade) {
+      viabilityState.administratorEligibility = result.administradoras_viabilidade;
+      renderAdministratorEligibility(viabilityState.administratorEligibility);
+      renderAdministratorPlans();
+    }
     renderViabilityChecklist(result.checklist || {});
     renderViabilitySummary(result);
     const items = result.cenarios || result.melhores_grupos || [];
@@ -3443,6 +3451,99 @@ function administratorPlanRulesForKind(kind) {
   });
 }
 
+function eligibilityStatusClass(status, elegivel) {
+  if (!elegivel || status === "REPROVADA") return "eligibility-status-danger";
+  if (status === "APROVADA_COM_RESTRICOES") return "eligibility-status-warning";
+  return "eligibility-status-ok";
+}
+
+function eligibilityStatusLabel(item) {
+  if (item.status) return String(item.status).replaceAll("_", " ");
+  return item.elegivel ? "APROVADA" : "REPROVADA";
+}
+
+function eligibilityList(items, fallback = "Sem restricoes") {
+  const values = (items || []).filter(Boolean);
+  if (!values.length) return `<span class="text-muted">${escapeHtml(fallback)}</span>`;
+  return `<ul class="eligibility-detail-list">${values.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
+}
+
+function administratorEligibilityItemsForDisplay() {
+  return viabilityState.administratorEligibility || [];
+}
+
+function eligibleAdministratorNamesSet() {
+  const items = administratorEligibilityItemsForDisplay();
+  if (!items.length) return null;
+  return new Set(items.filter((item) => item.elegivel).map((item) => normalizeText(item.administradora)));
+}
+
+function administratorPlanDisplayRulesForKind(kind) {
+  const rules = administratorPlanRulesForKind(kind);
+  const eligibleNames = eligibleAdministratorNamesSet();
+  if (!eligibleNames) return rules;
+  return rules.filter((rule) => eligibleNames.has(normalizeText(rule.administradora)));
+}
+
+function renderAdministratorEligibility(items = administratorEligibilityItemsForDisplay()) {
+  const body = document.getElementById("administratorEligibilityBody");
+  const empty = document.getElementById("administratorEligibilityEmpty");
+  const wrap = document.getElementById("administratorEligibilityTableWrap");
+  const summary = document.getElementById("administratorEligibilitySummary");
+  if (!body || !empty || !wrap || !summary) return;
+
+  const total = items.length;
+  const eligible = items.filter((item) => item.elegivel).length;
+  summary.textContent = total ? `${eligible} de ${total} podem seguir` : "Aguardando perfil";
+  empty.classList.toggle("d-none", total > 0);
+  wrap.classList.toggle("d-none", total === 0);
+  if (!total) {
+    body.innerHTML = "";
+    empty.textContent = "Salve ou avance o Perfil do Cliente para calcular a elegibilidade.";
+    return;
+  }
+
+  body.innerHTML = items.map((item) => {
+    const motivos = [
+      ...(item.motivos_reprovacao || []),
+      ...(item.alertas || []),
+    ];
+    const status = eligibilityStatusLabel(item);
+    return `
+      <tr>
+        <td><strong>${escapeHtml(item.administradora || "-")}</strong></td>
+        <td><span class="eligibility-status ${eligibilityStatusClass(item.status, item.elegivel)}">${escapeHtml(status)}</span></td>
+        <td>${eligibilityList(motivos, "Sem alertas")}</td>
+        <td>${eligibilityList(item.restricoes || [], "Sem restricoes")}</td>
+        <td>${eligibilityList(item.cenarios_pj_disponiveis || [], "-")}</td>
+        <td><strong>${item.elegivel ? "Sim" : "Nao"}</strong></td>
+      </tr>
+    `;
+  }).join("");
+}
+
+async function refreshAdministratorEligibility({ silent = true } = {}) {
+  const payload = collectViabilityPayload();
+  if (!payload.credito_desejado || !payload.prazo_desejado || !payload.renda_total || !payload.parcela_desejada) {
+    viabilityState.administratorEligibility = [];
+    renderAdministratorEligibility([]);
+    renderAdministratorPlans();
+    return [];
+  }
+  try {
+    const result = await apiPost("/viabilidade/administradoras", payload);
+    viabilityState.administratorEligibility = result.items || [];
+    renderAdministratorEligibility(viabilityState.administratorEligibility);
+    renderAdministratorPlans();
+    return viabilityState.administratorEligibility;
+  } catch (error) {
+    viabilityState.administratorEligibility = [];
+    renderAdministratorEligibility([]);
+    if (!silent) showToast("Nao foi possivel calcular a elegibilidade das administradoras.", "warning");
+    return [];
+  }
+}
+
 function administratorPlanCellValue(rule, row) {
   const value = rule[row.key];
   if (row.key === "tipo_bem_calculadora") {
@@ -3866,7 +3967,7 @@ function hideRuleHelpPopover() {
 
 function renderAdministratorPlans() {
   const kind = activeAdministratorPlanKind();
-  const rules = administratorPlanRulesForKind(kind);
+  const rules = administratorPlanDisplayRulesForKind(kind);
   const totalColumns = 1 + (rules.length * 2);
   renderAdministratorPlanColgroup(rules);
   document.getElementById("administratorPlansHead").innerHTML = `
@@ -4127,6 +4228,9 @@ async function loadConfiguracoes() {
   try {
     const data = await apiGet("/configuracoes");
     renderConfiguracoes(data);
+    if (document.getElementById("screen-viabilidade")?.classList.contains("active")) {
+      refreshAdministratorEligibility({ silent: true });
+    }
     setConfigState("ready");
     addOperationalLog("Configuracoes carregadas");
   } catch (error) {

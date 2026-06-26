@@ -294,6 +294,8 @@ class ViabilidadeRequest(BaseModel):
     renda_conjuge: float | None = Field(default=None, ge=0)
     data_nascimento: str = ""
     data_nascimento_conjuge: str = ""
+    tipo_contratacao: str = ""
+    titulares: dict[str, Any] | None = None
     tipo_bem: str = "Imovel"
     estado_bem: str = ""
     considerar_lance_embutido: bool = True
