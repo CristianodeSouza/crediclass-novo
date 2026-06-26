@@ -3663,6 +3663,10 @@ async function refreshAdministratorEligibility({ silent = true } = {}) {
     return [];
   }
   try {
+    if (!configState.data?.administradoras_regras?.length) {
+      const config = await apiGet("/configuracoes");
+      renderConfiguracoes(config);
+    }
     const result = await apiPost("/viabilidade/administradoras", payload);
     viabilityState.administratorEligibility = result.items || [];
     viabilityState.funnelSummary = {
@@ -3675,8 +3679,13 @@ async function refreshAdministratorEligibility({ silent = true } = {}) {
     renderAdministratorPlans();
     return viabilityState.administratorEligibility;
   } catch (error) {
-    viabilityState.administratorEligibility = [];
-    renderAdministratorEligibility([]);
+    if (viabilityState.administratorEligibility?.length) {
+      renderAdministratorEligibility(viabilityState.administratorEligibility);
+      renderAdministratorPlans();
+    } else {
+      renderAdministratorEligibility([]);
+      renderAdministratorPlans();
+    }
     if (!silent) showToast("Nao foi possivel calcular a elegibilidade das administradoras.", "warning");
     return [];
   }

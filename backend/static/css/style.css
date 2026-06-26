@@ -2307,13 +2307,14 @@ body[data-theme="escuro"] .btn-outline-secondary {
   border-radius: 8px;
   background: var(--surface);
   overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .administrator-plan-table {
-  width: 100%;
-  min-width: 1486px;
+  width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
-  table-layout: fixed;
+  table-layout: auto;
 }
 
 .administrator-plan-table th,
@@ -2324,22 +2325,22 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .administrator-plan-table thead th {
-  height: 26px;
+  height: 24px;
   background: var(--brand-navy);
   color: #fff;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   text-align: center;
   text-transform: uppercase;
   line-height: 1.15;
 }
 
 .administrator-plan-table tbody th {
-  padding: 5px 8px;
+  padding: 4px 7px;
   background: var(--surface-soft);
   color: var(--text);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 800;
-  line-height: 1.16;
+  line-height: 1.12;
   white-space: normal;
   overflow-wrap: normal;
   word-break: normal;
@@ -2349,15 +2350,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .administrator-plan-table .admin-plan-main-title th {
   background: #bfbfbf;
   color: #111827;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 900;
 }
 
 .administrator-plan-table .admin-plan-subtitle th {
-  height: 24px;
+  height: 22px;
   background: #e5e5e5;
   color: #111827;
-  font-size: 0.58rem;
+  font-size: 0.62rem;
   font-weight: 800;
   text-transform: none;
 }
@@ -2366,7 +2367,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .administrator-plan-table .admin-plan-section-row th {
   background: var(--brand-navy);
   color: #fff;
-  font-size: 0.66rem;
+  font-size: 0.72rem;
   text-align: center;
 }
 
@@ -2384,7 +2385,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .admin-plan-rule-label {
-  display: inline;
+  display: block;
   max-width: 100%;
   line-height: 1.16;
 }
@@ -2443,14 +2444,14 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .administrator-plan-section-row th {
-  height: 26px;
+  height: 24px;
 }
 
 .administrator-plan-scenario-head th {
-  height: 26px;
+  height: 24px;
   background: #e5e5e5 !important;
   color: #111827 !important;
-  font-size: 0.64rem !important;
+  font-size: 0.7rem !important;
   font-weight: 900;
   text-transform: none !important;
   line-height: 1.1 !important;
@@ -2460,16 +2461,21 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .admin-plan-cell {
   width: 100%;
   min-width: 0;
-  height: 28px;
-  padding: 3px 6px;
+  height: 24px;
+  padding: 2px 7px;
   border: 0;
   background: transparent;
   color: var(--text);
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 800;
   text-align: center;
   line-height: 1.15;
   white-space: nowrap;
+}
+
+.admin-plan-admin-input {
+  height: 24px;
+  font-size: 0.74rem;
 }
 
 .admin-plan-cell[readonly] {
