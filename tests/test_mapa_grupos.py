@@ -147,11 +147,26 @@ class MapaGruposTest(unittest.TestCase):
 
     def test_read_summary_rows_com_historico_usa_intervalo_continuo(self):
         sheets_client.clear_rows_cache()
-        headers = ["ADM", "Grupo", "Tipo de Bem", "Credito Maximo", "Prazo Total", "JAN-26 Menor Lance", "JAN-26 Qtd"]
+        headers = [""] * 65
+        headers[0] = "ADM"
+        headers[1] = "Grupo"
+        headers[2] = "Tipo de Bem"
+        headers[17] = "Credito Maximo"
+        headers[62] = "Agressivo"
+        headers[63] = "JAN-26 Menor Lance"
+        headers[64] = "JAN-26 Qtd"
+        row = [""] * 65
+        row[0] = "Itau"
+        row[1] = "128"
+        row[2] = "Imovel"
+        row[17] = "500000"
+        row[62] = "18"
+        row[63] = "24"
+        row[64] = "12"
 
         class ExecuteMock:
             def execute(self):
-                return {"values": [["Itau", "128", "Imovel", "500000", "180", "24", "12"]]}
+                return {"values": [row]}
 
         class ValuesMock:
             def get(self, **kwargs):
@@ -178,7 +193,64 @@ class MapaGruposTest(unittest.TestCase):
             rows = sheets_client.read_summary_rows(include_history=True)
 
         self.assertEqual(rows[0]["JAN-26 Menor Lance"], "24")
-        self.assertEqual(service.values_api.get_kwargs["range"], "'Grupos'!A2:G")
+        self.assertEqual(service.values_api.get_kwargs["range"], "'Grupos'!A2:BM")
+
+    def test_read_summary_rows_usa_colunas_fixas_do_mapa_de_grupos(self):
+        sheets_client.clear_rows_cache()
+        headers = [f"Coluna {index}" for index in range(63)]
+        headers[0] = "ADM"
+        headers[1] = "Grupo"
+        headers[2] = "Tipo de Bem"
+        row = [""] * 63
+        row[0] = "PORTO"
+        row[1] = "1136"
+        row[2] = "Imovel"
+        row[5] = "14"
+        row[17] = "600.000,00"
+        row[18] = "18%"
+        row[59] = "10%"
+        row[60] = "20%"
+        row[61] = "30%"
+        row[62] = "40%"
+
+        class ExecuteMock:
+            def execute(self):
+                return {"values": [row]}
+
+        class ValuesMock:
+            def get(self, **kwargs):
+                self.get_kwargs = kwargs
+                return ExecuteMock()
+
+        class ServiceMock:
+            def __init__(self):
+                self.values_api = ValuesMock()
+
+            def spreadsheets(self):
+                return self
+
+            def values(self):
+                return self.values_api
+
+        service = ServiceMock()
+        settings = SimpleNamespace(google_sheets_id="sheet-id", google_sheet_name="Grupos")
+        with (
+            patch("backend.sheets_client.read_sheet_headers", return_value=headers),
+            patch("backend.sheets_client.get_service", return_value=service),
+            patch("backend.sheets_client.get_settings", return_value=settings),
+        ):
+            grupo = row_to_grupo(sheets_client.read_summary_rows(include_history=True)[0])
+
+        self.assertEqual(grupo["administradora"], "PORTO")
+        self.assertEqual(grupo["grupo"], "1136")
+        self.assertEqual(grupo["tipo_bem"], "Imovel")
+        self.assertEqual(grupo["prazo_restante"], 14)
+        self.assertEqual(grupo["credito_maximo"], 600000)
+        self.assertEqual(grupo["taxa_adm"], 0.18)
+        self.assertEqual(grupo["lance_super_conservador"], 0.1)
+        self.assertEqual(grupo["lance_conservador"], 0.2)
+        self.assertEqual(grupo["lance_moderado"], 0.3)
+        self.assertEqual(grupo["lance_agressivo"], 0.4)
 
     def test_percentuais_de_historico_nao_gravam_residuos_decimais(self):
         self.assertEqual(format_history_value("maior_lance", 0.56), "56,0")
@@ -242,6 +314,23 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(result["lance_moderado"], 0.4325)
         self.assertEqual(result["lance_conservador"], 0.4325)
         self.assertEqual(result["lance_super_conservador"], 0.4325)
+
+    def test_row_to_grupo_prioriza_lances_diretos_da_planilha(self):
+        row = {
+            "__lance_super_conservador": "11%",
+            "__lance_conservador": "22%",
+            "__lance_moderado": "33%",
+            "__lance_agressivo": "44%",
+            "JAN-26 Menor Lance": "70%",
+            "JAN-26 Qtd Contemplacoes": "3",
+        }
+
+        result = row_to_grupo(row)
+
+        self.assertEqual(result["lance_super_conservador"], 0.11)
+        self.assertEqual(result["lance_conservador"], 0.22)
+        self.assertEqual(result["lance_moderado"], 0.33)
+        self.assertEqual(result["lance_agressivo"], 0.44)
 
     def test_row_to_grupo_accepts_sheet_header_variations(self):
         row = {

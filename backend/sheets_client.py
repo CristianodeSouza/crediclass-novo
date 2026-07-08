@@ -50,8 +50,25 @@ SUMMARY_FIELDS = [
     "fgts",
     "percentual_lance_embutido",
     "percentual_lance_fixo",
+    "lance_super_conservador",
+    "lance_conservador",
+    "lance_moderado",
+    "lance_agressivo",
     "status",
 ]
+
+MAPA_GRUPOS_COLUMN_INDEXES = {
+    "administradora": 0,  # A
+    "grupo": 1,  # B
+    "tipo_bem": 2,  # C
+    "prazo_restante": 5,  # F
+    "credito_maximo": 17,  # R
+    "taxa_adm": 18,  # S
+    "lance_super_conservador": 59,  # BH
+    "lance_conservador": 60,  # BI
+    "lance_moderado": 61,  # BJ
+    "lance_agressivo": 62,  # BK
+}
 
 
 def normalize_header(value: str) -> str:
@@ -126,6 +143,10 @@ FIELD_ALIASES = {
     "categoria": ["categoria"],
     "percentual_lance_embutido": ["percentual lance embutido", "lance embutido percentual", "lance embutido maximo"],
     "percentual_lance_fixo": ["percentual lance fixo", "lance fixo", "lance quitacao"],
+    "lance_super_conservador": ["lance super conservador", "super conservador", "s cons", "s conservador"],
+    "lance_conservador": ["lance conservador", "conservador", "cons"],
+    "lance_moderado": ["lance moderado", "moderado", "mod"],
+    "lance_agressivo": ["lance agressivo", "agressivo", "agr"],
     "investidor": ["investidor"],
     "conservador": ["conservador"],
     "moderado": ["moderado"],
@@ -216,6 +237,15 @@ def clear_rows_cache() -> None:
         _grupo_detail_cache.clear()
 
 
+def canonical_field_header(field: str) -> str:
+    return f"__{field}"
+
+
+def apply_mapa_grupos_fixed_columns(row: dict[str, Any], values: list[Any]) -> None:
+    for field, index in MAPA_GRUPOS_COLUMN_INDEXES.items():
+        row[canonical_field_header(field)] = values[index] if index < len(values) else ""
+
+
 def read_sheet_headers(force_reload: bool = False) -> list[str]:
     now = time.time()
     with _cache_lock:
@@ -243,11 +273,15 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
     selected: list[tuple[str, str, int]] = []
     header_positions = headers_index(headers)
     for field in SUMMARY_FIELDS:
-        header = find_header(headers, field)
-        if header is None:
-            continue
-        index = header_positions[header]
-        selected.append((field, header, index))
+        fixed_index = MAPA_GRUPOS_COLUMN_INDEXES.get(field)
+        if fixed_index is not None:
+            selected.append((field, canonical_field_header(field), fixed_index))
+        else:
+            header = find_header(headers, field)
+            if header is None:
+                continue
+            index = header_positions[header]
+            selected.append((field, header, index))
     selected_indexes = {index for _, _, index in selected}
     if include_history:
         for header, index in header_positions.items():
@@ -335,6 +369,7 @@ def read_sheet_rows(force_reload: bool = False) -> list[dict[str, Any]]:
         row_dict = {}
         for index, header in enumerate(headers):
             row_dict[str(header).strip()] = row[index] if index < len(row) else ""
+        apply_mapa_grupos_fixed_columns(row_dict, row)
         if any(str(value).strip() for value in row_dict.values()):
             rows.append(row_dict)
 
@@ -759,6 +794,10 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
     from .lance_reference import calculate_lance_references
 
     lance_references = calculate_lance_references(build_historico(row))
+    lance_super_conservador = parse_percent(get_optional_field(row, "lance_super_conservador"))
+    lance_conservador = parse_percent(get_optional_field(row, "lance_conservador"))
+    lance_moderado = parse_percent(get_optional_field(row, "lance_moderado"))
+    lance_agressivo = parse_percent(get_optional_field(row, "lance_agressivo"))
     return {
         "grupo_id": build_grupo_id(row),
         "administradora_id": build_administradora_id(row),
@@ -778,10 +817,10 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "fgts": parse_bool(get_optional_field(row, "fgts")),
         "percentual_lance_embutido": parse_percent(get_optional_field(row, "percentual_lance_embutido")),
         "percentual_lance_fixo": parse_percent(get_optional_field(row, "percentual_lance_fixo")),
-        "lance_super_conservador": lance_references["lance_super_conservador"],
-        "lance_conservador": lance_references["lance_conservador"],
-        "lance_moderado": lance_references["lance_moderado"],
-        "lance_agressivo": lance_references["lance_agressivo"],
+        "lance_super_conservador": lance_super_conservador if lance_super_conservador is not None else lance_references["lance_super_conservador"],
+        "lance_conservador": lance_conservador if lance_conservador is not None else lance_references["lance_conservador"],
+        "lance_moderado": lance_moderado if lance_moderado is not None else lance_references["lance_moderado"],
+        "lance_agressivo": lance_agressivo if lance_agressivo is not None else lance_references["lance_agressivo"],
         "lance_super_agressivo_3m": lance_references["lance_super_agressivo_3m"],
         "lance_agressivo_6m": lance_references["lance_agressivo_6m"],
         "lance_moderado_12m": lance_references["lance_moderado_12m"],
