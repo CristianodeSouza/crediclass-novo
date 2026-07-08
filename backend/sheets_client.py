@@ -717,7 +717,7 @@ def get_optional_field(row: dict[str, Any], field: str) -> Any:
 
 
 def parse_number(value: Any) -> float | None:
-    text = str(value or "").strip()
+    text = "" if value is None else str(value).strip()
     if not text:
         return None
     text = text.replace("R$", "").replace("%", "").replace(" ", "")
@@ -798,6 +798,25 @@ def build_historico(row: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return dict(sorted(historico.items()))
 
 
+def history_month_has_full_update(item: dict[str, Any]) -> bool:
+    return all(item.get(field) is not None for field in ("maior_lance", "menor_lance", "qtd_contemplacoes"))
+
+
+def latest_updated_history_month(historico: dict[str, dict[str, Any]]) -> str | None:
+    valid_months = [month for month, item in (historico or {}).items() if history_month_has_full_update(item)]
+    return max(valid_months) if valid_months else None
+
+
+def short_history_month_label(month_key: str | None) -> str:
+    if not month_key:
+        return "-"
+    try:
+        year, month = month_key.split("-")
+        return f"{MONTH_ABBR_BY_NUMBER[month].capitalize()}-{year[-2:]}"
+    except (ValueError, KeyError):
+        return month_key
+
+
 def build_grupo_id(row: dict[str, Any]) -> str:
     grupo = clean_text(get_field(row, "grupo")).upper().replace(" ", "-")
     return grupo
@@ -813,11 +832,13 @@ def build_administradora_id(row: dict[str, Any]) -> str:
 def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
     from .lance_reference import calculate_lance_references
 
-    lance_references = calculate_lance_references(build_historico(row))
+    historico = build_historico(row)
+    lance_references = calculate_lance_references(historico)
     lance_super_conservador = parse_percent(get_optional_field(row, "lance_super_conservador"))
     lance_conservador = parse_percent(get_optional_field(row, "lance_conservador"))
     lance_moderado = parse_percent(get_optional_field(row, "lance_moderado"))
     lance_agressivo = parse_percent(get_optional_field(row, "lance_agressivo"))
+    updated_month = latest_updated_history_month(historico)
     return {
         "grupo_id": build_grupo_id(row),
         "administradora_id": build_administradora_id(row),
@@ -830,6 +851,7 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "fundo_reserva": parse_percent(get_optional_field(row, "fundo_reserva")),
         "prazo_total": parse_int(get_field(row, "prazo_total")),
         "prazo_restante": parse_int(get_optional_field(row, "prazo_restante")),
+        "atualizado": short_history_month_label(updated_month),
         "primeira_assembleia": clean_text(get_field(row, "primeira_assembleia")),
         "ultima_assembleia": clean_text(get_field(row, "ultima_assembleia")),
         "status": clean_text(get_field(row, "status") or "Ativo"),

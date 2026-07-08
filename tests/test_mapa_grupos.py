@@ -355,6 +355,34 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(result["lance_conservador"], 0.4325)
         self.assertEqual(result["lance_super_conservador"], 0.4325)
 
+    def test_row_to_grupo_informa_mes_atualizado_pela_triade_historica(self):
+        row = {
+            "JUN-26 Maior Lance": "60%",
+            "JUN-26 Menor Lance": "50%",
+            "JUN-26 Qtd": "4",
+            "JUL-26 Maior Lance": "10%",
+            "JUL-26 Menor Lance": "",
+            "JUL-26 Qtd": "1",
+            "AGO-26 Maior Lance": 0,
+            "AGO-26 Menor Lance": "0",
+            "AGO-26 Qtd": 0,
+        }
+
+        result = row_to_grupo(row)
+
+        self.assertEqual(result["atualizado"], "Ago-26")
+
+    def test_row_to_grupo_sem_triade_completa_retorna_nao_atualizado(self):
+        row = {
+            "JUN-26 Maior Lance": "60%",
+            "JUN-26 Menor Lance": "",
+            "JUN-26 Qtd": "4",
+        }
+
+        result = row_to_grupo(row)
+
+        self.assertEqual(result["atualizado"], "-")
+
     def test_row_to_grupo_prioriza_lances_diretos_da_planilha(self):
         row = {
             "__lance_super_conservador": "11%",

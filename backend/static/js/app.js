@@ -766,6 +766,7 @@ function renderGroupsTable(items) {
         <td class="lance-profile-cell">${formatPercent(item.lance_conservador)}</td>
         <td class="lance-profile-cell">${formatPercent(item.lance_super_conservador)}</td>
         <td>${item.prazo_restante ?? "-"}</td>
+        <td>${escapeHtml(item.atualizado || "-")}</td>
         <td>
           <div class="row-actions">
             <button class="btn btn-sm btn-outline-primary" type="button" data-map-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver</button>

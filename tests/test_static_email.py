@@ -21,7 +21,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260708-01", index_html)
+        self.assertIn("/static/js/app.js?v=20260708-02", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -58,6 +58,7 @@ class StaticEmailTest(unittest.TestCase):
             '<th title="Administradora">Adm.</th>',
             '<th title="Tipo de Bem">Tipo</th>',
             '<th title="Prazo Restante">Prazo Rest.</th>',
+            '<th title="Ultima atualizacao da triade Maior Lance, Menor Lance e Quantidade de Contemplacao">Atualizado</th>',
         ]:
             self.assertIn(header, index_html)
         groups_table_markup = index_html.split('<tbody id="groupsTableBody"></tbody>')[0].split('<table class="table table-hover align-middle group-table">')[-1]
@@ -70,6 +71,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn("item.credito_minimo", render_groups_block)
         self.assertNotIn("item.primeira_assembleia", render_groups_block)
         self.assertIn("item.prazo_restante", render_groups_block)
+        self.assertIn("item.atualizado", render_groups_block)
         self.assertIn('data-lance-sort="agressivo"', index_html)
         self.assertNotIn('data-lance-sort-order="desc"', index_html)
         self.assertNotIn(">Filtro</option>", index_html)
