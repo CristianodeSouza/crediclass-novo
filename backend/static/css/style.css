@@ -594,30 +594,36 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .map-filter-grid {
   grid-template-columns:
-    minmax(112px, 1fr)
-    minmax(104px, 0.9fr)
+    minmax(96px, 0.9fr)
+    minmax(92px, 0.82fr)
+    minmax(104px, 0.86fr)
+    minmax(104px, 0.86fr)
     minmax(112px, 0.9fr)
     minmax(112px, 0.9fr)
-    minmax(108px, 0.88fr)
-    minmax(108px, 0.88fr)
-    minmax(104px, 0.88fr)
-    minmax(180px, 1.35fr)
-    auto;
+    minmax(88px, 0.78fr)
+    minmax(150px, 1.18fr)
+    minmax(96px, auto);
   gap: 8px;
 }
 
 .map-filter-grid label {
   gap: 4px;
   min-width: 0;
-  font-size: 0.72rem;
+  font-size: 0.64rem;
   line-height: 1.1;
+}
+
+.map-filter-grid label > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .map-filter-grid .form-control,
 .map-filter-grid .form-select {
   min-height: 32px;
-  padding: 4px 10px;
-  font-size: 0.8rem;
+  padding: 4px 8px;
+  font-size: 0.76rem;
 }
 
 .map-filter-grid .filter-search {
@@ -630,7 +636,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .map-filter-grid .filter-actions .btn {
   min-height: 32px;
-  padding: 4px 10px;
+  padding: 4px 8px;
+  font-size: 0.76rem;
   white-space: nowrap;
 }
 
