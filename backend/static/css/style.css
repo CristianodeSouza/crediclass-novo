@@ -1826,6 +1826,160 @@ body[data-theme="escuro"] .btn-outline-secondary {
   min-height: 390px;
 }
 
+#groupDetailsModal .modal-header,
+.group-form-dialog .modal-header {
+  padding: 12px 14px;
+}
+
+#groupDetailsModal .modal-title,
+.group-form-dialog .modal-title {
+  font-size: 1rem;
+}
+
+#groupDetailsModal .modal-subtitle,
+.group-form-dialog .modal-subtitle {
+  margin-top: 2px;
+  font-size: 0.78rem;
+}
+
+#groupDetailsModal .modal-body,
+.group-form-dialog .modal-body {
+  padding: 10px 14px;
+}
+
+#groupDetailsModal .modal-footer,
+.group-form-dialog .modal-footer {
+  padding: 8px 14px;
+}
+
+#groupDetailsModal .details-tabs {
+  margin-bottom: 10px;
+}
+
+#groupDetailsModal .details-tabs .nav-link {
+  padding: 7px 12px;
+  font-size: 0.82rem;
+}
+
+#groupDetailsModal .details-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+#groupDetailsModal .detail-field {
+  min-height: 54px;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+
+#groupDetailsModal .detail-field span {
+  margin-bottom: 3px;
+  font-size: 0.68rem;
+}
+
+#groupDetailsModal .detail-field strong {
+  font-size: 0.84rem;
+}
+
+#groupDetailsModal .history-batch-form,
+.group-form-dialog .history-update-form,
+.group-form-dialog .group-sheet-fields-section {
+  margin-top: 10px;
+  padding: 10px;
+}
+
+#groupDetailsModal .history-batch-form {
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+#groupDetailsModal .history-batch-toolbar,
+.group-form-dialog .table-toolbar {
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#groupDetailsModal .history-batch-toolbar h3,
+.group-form-dialog .table-toolbar h2 {
+  font-size: 0.92rem;
+}
+
+#groupDetailsModal .history-batch-toolbar p,
+.group-form-dialog .table-toolbar p {
+  font-size: 0.76rem;
+}
+
+#groupDetailsModal .history-edit-grid,
+.group-form-dialog .history-edit-grid {
+  max-height: min(300px, 42vh);
+  border-radius: 6px;
+}
+
+#groupDetailsModal .history-edit-head,
+#groupDetailsModal .history-edit-row,
+.group-form-dialog .history-edit-head,
+.group-form-dialog .history-edit-row {
+  grid-template-columns: minmax(104px, 0.72fr) repeat(3, minmax(112px, 1fr));
+  gap: 8px;
+  padding: 7px 10px;
+}
+
+#groupDetailsModal .history-edit-row label,
+.group-form-dialog .history-edit-row label {
+  gap: 3px;
+  font-size: 0.66rem;
+}
+
+#groupDetailsModal .history-edit-row .form-control,
+.group-form-dialog .history-edit-row .form-control,
+.group-form-dialog .group-sheet-fields-grid .form-control,
+.group-form-dialog .viability-form .form-control,
+.group-form-dialog .viability-form .form-select {
+  min-height: 30px;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+}
+
+#groupDetailsModal .history-edit-month strong,
+.group-form-dialog .history-edit-month strong {
+  font-size: 0.78rem;
+}
+
+#groupDetailsModal .history-edit-month span,
+.group-form-dialog .history-edit-month span {
+  font-size: 0.68rem;
+}
+
+#groupDetailsModal .chart-card {
+  min-height: 240px;
+  padding: 10px;
+}
+
+#groupDetailsModal .history-chart-card {
+  min-height: 280px;
+}
+
+#groupDetailsModal .history-chart-card canvas {
+  min-height: 250px;
+}
+
+.group-form-dialog .viability-form {
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.group-form-dialog .viability-form label,
+.group-form-dialog .group-sheet-fields-grid label {
+  gap: 4px;
+  font-size: 0.68rem;
+}
+
+.group-form-dialog .group-sheet-fields-grid {
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 8px;
+  max-height: min(280px, 34vh);
+}
+
 .viability-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
