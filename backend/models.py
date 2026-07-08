@@ -13,6 +13,7 @@ class GrupoResumo(BaseModel):
     credito_maximo: float | None = None
     taxa_adm: float | None = None
     prazo_total: int | None = None
+    prazo_restante: int | None = None
     primeira_assembleia: str = ""
     ultima_assembleia: str = ""
     status: str = "Ativo"

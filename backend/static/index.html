@@ -142,11 +142,11 @@
                 <input id="filterCreditoMaximo" class="form-control" inputmode="decimal" placeholder="Maximo">
               </label>
               <label>
-                <span>Prazo minimo</span>
+                <span>Prazo restante minimo</span>
                 <input id="filterPrazoMinimo" class="form-control" inputmode="numeric" placeholder="Min">
               </label>
               <label>
-                <span>Prazo maximo</span>
+                <span>Prazo restante maximo</span>
                 <input id="filterPrazoMaximo" class="form-control" inputmode="numeric" placeholder="Max">
               </label>
               <label>
@@ -195,15 +195,41 @@
                     <th title="ID Grupo">Grupo</th>
                     <th title="Administradora">Adm.</th>
                     <th title="Tipo de Bem">Tipo</th>
-                    <th title="Credito minimo">Cred. Min.</th>
                     <th title="Credito maximo">Cred. Max.</th>
                     <th title="Taxa ADM">Tx. ADM</th>
-                    <th class="lance-profile-header" title="Agressivo">Agr.</th>
-                    <th class="lance-profile-header" title="Moderado">Mod.</th>
-                    <th class="lance-profile-header" title="Conservador">Cons.</th>
-                    <th class="lance-profile-header" title="Super Conservador">S. Cons.</th>
-                    <th title="Prazo">Prazo</th>
-                    <th title="1a Assembleia">1a Ass.</th>
+                    <th class="lance-profile-header" title="Agressivo">
+                      <span>Agr.</span>
+                      <select class="form-select lance-sort-select" data-lance-sort="agressivo" aria-label="Ordenar Agressivo">
+                        <option value="">Filtro</option>
+                        <option value="desc">Maior</option>
+                        <option value="asc">Menor</option>
+                      </select>
+                    </th>
+                    <th class="lance-profile-header" title="Moderado">
+                      <span>Mod.</span>
+                      <select class="form-select lance-sort-select" data-lance-sort="moderado" aria-label="Ordenar Moderado">
+                        <option value="">Filtro</option>
+                        <option value="desc">Maior</option>
+                        <option value="asc">Menor</option>
+                      </select>
+                    </th>
+                    <th class="lance-profile-header" title="Conservador">
+                      <span>Cons.</span>
+                      <select class="form-select lance-sort-select" data-lance-sort="conservador" aria-label="Ordenar Conservador">
+                        <option value="">Filtro</option>
+                        <option value="desc">Maior</option>
+                        <option value="asc">Menor</option>
+                      </select>
+                    </th>
+                    <th class="lance-profile-header" title="Super Conservador">
+                      <span>S. Cons.</span>
+                      <select class="form-select lance-sort-select" data-lance-sort="super_conservador" aria-label="Ordenar Super Conservador">
+                        <option value="">Filtro</option>
+                        <option value="desc">Maior</option>
+                        <option value="asc">Menor</option>
+                      </select>
+                    </th>
+                    <th title="Prazo Restante">Prazo Rest.</th>
                     <th>Acoes</th>
                   </tr>
                 </thead>

@@ -386,6 +386,84 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(result["total"], 1)
         self.assertEqual(result["items"][0]["grupo_id"], "dentro")
 
+    def test_grupos_endpoint_filtra_por_prazo_restante(self):
+        fake_items = [
+            {
+                "grupo_id": "curto",
+                "administradora": "PORTO",
+                "grupo": "101",
+                "tipo_bem": "Imovel",
+                "credito_minimo": 100000,
+                "credito_maximo": 500000,
+                "taxa_adm": 0.2,
+                "prazo_total": 200,
+                "prazo_restante": 18,
+                "primeira_assembleia": "",
+                "ultima_assembleia": "",
+                "status": "Ativo",
+            },
+            {
+                "grupo_id": "longo",
+                "administradora": "PORTO",
+                "grupo": "102",
+                "tipo_bem": "Imovel",
+                "credito_minimo": 100000,
+                "credito_maximo": 500000,
+                "taxa_adm": 0.2,
+                "prazo_total": 200,
+                "prazo_restante": 55,
+                "primeira_assembleia": "",
+                "ultima_assembleia": "",
+                "status": "Ativo",
+            },
+        ]
+
+        with patch("backend.main.list_grupos", return_value=fake_items):
+            result = grupos(prazo_minimo=50, page=1, page_size=25)
+
+        self.assertEqual(result["total"], 1)
+        self.assertEqual(result["items"][0]["grupo_id"], "longo")
+
+    def test_grupos_endpoint_ordena_lance_antes_da_paginacao(self):
+        fake_items = [
+            {
+                "grupo_id": "baixo",
+                "administradora": "CNP",
+                "grupo": "101",
+                "tipo_bem": "Imovel",
+                "credito_minimo": 100000,
+                "credito_maximo": 500000,
+                "taxa_adm": 0.2,
+                "prazo_total": 200,
+                "prazo_restante": 80,
+                "primeira_assembleia": "",
+                "ultima_assembleia": "",
+                "status": "Ativo",
+                "lance_agressivo": 0.2,
+            },
+            {
+                "grupo_id": "alto",
+                "administradora": "CNP",
+                "grupo": "102",
+                "tipo_bem": "Imovel",
+                "credito_minimo": 100000,
+                "credito_maximo": 500000,
+                "taxa_adm": 0.2,
+                "prazo_total": 200,
+                "prazo_restante": 80,
+                "primeira_assembleia": "",
+                "ultima_assembleia": "",
+                "status": "Ativo",
+                "lance_agressivo": 0.6,
+            },
+        ]
+
+        with patch("backend.main.list_grupos", return_value=fake_items):
+            result = grupos(sort_lance="agressivo", sort_order="desc", page=1, page_size=1)
+
+        self.assertEqual(result["total"], 2)
+        self.assertEqual(result["items"][0]["grupo_id"], "alto")
+
     def test_grupo_detalhe_endpoint_returns_item(self):
         fake_item = {
             "grupo_id": "128",

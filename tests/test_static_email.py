@@ -50,21 +50,30 @@ class StaticEmailTest(unittest.TestCase):
             ("Conservador", "Cons."),
             ("Super Conservador", "S. Cons."),
         ]:
-            self.assertIn(f'<th class="lance-profile-header" title="{full_label}">{short_label}</th>', index_html)
+            self.assertIn(f'<th class="lance-profile-header" title="{full_label}">', index_html)
+            self.assertIn(f"<span>{short_label}</span>", index_html)
         for header in [
             '<th title="ID Grupo">Grupo</th>',
             '<th title="Administradora">Adm.</th>',
             '<th title="Tipo de Bem">Tipo</th>',
-            '<th title="Credito minimo">Cred. Min.</th>',
+            '<th title="Prazo Restante">Prazo Rest.</th>',
         ]:
             self.assertIn(header, index_html)
         groups_table_markup = index_html.split('<tbody id="groupsTableBody"></tbody>')[0].split('<table class="table table-hover align-middle group-table">')[-1]
         self.assertNotIn("Ult. Ass.", groups_table_markup)
+        self.assertNotIn("Cred. Min.", groups_table_markup)
+        self.assertNotIn("1a Ass.", groups_table_markup)
         self.assertNotIn("<th>Status</th>", groups_table_markup)
         self.assertNotIn("item.ultima_assembleia", app_js.split("function renderGroupsTable")[1].split("function defasagemStatusLabel")[0])
+        render_groups_block = app_js.split("function renderGroupsTable")[1].split("function setDefasagemState")[0]
+        self.assertNotIn("item.credito_minimo", render_groups_block)
+        self.assertNotIn("item.primeira_assembleia", render_groups_block)
+        self.assertIn("item.prazo_restante", render_groups_block)
+        self.assertIn('data-lance-sort="agressivo"', index_html)
         for field in ["lance_agressivo", "lance_moderado", "lance_conservador", "lance_super_conservador"]:
             self.assertIn(f"formatPercent(item.{field})", app_js)
         self.assertIn(".lance-profile-cell", style_css)
+        self.assertIn(".lance-sort-select", style_css)
 
     def test_modal_edicao_grupo_exibe_campos_da_planilha(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")

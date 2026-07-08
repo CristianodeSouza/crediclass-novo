@@ -49,6 +49,8 @@ const mapState = {
   total: 0,
   items: [],
   administradoras: [],
+  lanceSortField: "",
+  lanceSortOrder: "",
   lastLoadAt: null,
 };
 
@@ -713,6 +715,10 @@ function buildQuery(params) {
   Object.entries(params).forEach(([key, value]) => {
     if (value !== "" && value !== null && value !== undefined) query.set(key, value);
   });
+  if (mapState.lanceSortField && mapState.lanceSortOrder) {
+    query.set("sort_lance", mapState.lanceSortField);
+    query.set("sort_order", mapState.lanceSortOrder);
+  }
   query.set("page", mapState.page);
   query.set("page_size", mapState.pageSize);
   return query.toString();
@@ -753,15 +759,13 @@ function renderGroupsTable(items) {
         <td>${escapeHtml(item.grupo_id)}</td>
         <td>${escapeHtml(item.administradora)}</td>
         <td>${escapeHtml(item.tipo_bem)}</td>
-        <td>${formatMoney(item.credito_minimo)}</td>
         <td>${formatMoney(item.credito_maximo)}</td>
         <td>${formatPercent(item.taxa_adm)}</td>
         <td class="lance-profile-cell">${formatPercent(item.lance_agressivo)}</td>
         <td class="lance-profile-cell">${formatPercent(item.lance_moderado)}</td>
         <td class="lance-profile-cell">${formatPercent(item.lance_conservador)}</td>
         <td class="lance-profile-cell">${formatPercent(item.lance_super_conservador)}</td>
-        <td>${item.prazo_total ?? "-"}</td>
-        <td>${escapeHtml(item.primeira_assembleia || "-")}</td>
+        <td>${item.prazo_restante ?? "-"}</td>
         <td>
           <div class="row-actions">
             <button class="btn btn-sm btn-outline-primary" type="button" data-map-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver</button>
@@ -4711,8 +4715,25 @@ document.getElementById("filterBusca").addEventListener("input", () => {
 
 document.getElementById("clearFiltersBtn").addEventListener("click", () => {
   document.getElementById("groupFilters").reset();
+  mapState.lanceSortField = "";
+  mapState.lanceSortOrder = "";
+  document.querySelectorAll("[data-lance-sort]").forEach((select) => {
+    select.value = "";
+  });
   mapState.page = 1;
   loadMapaGrupos();
+});
+
+document.querySelectorAll("[data-lance-sort]").forEach((select) => {
+  select.addEventListener("change", (event) => {
+    mapState.lanceSortField = event.target.value ? event.target.dataset.lanceSort : "";
+    mapState.lanceSortOrder = event.target.value;
+    document.querySelectorAll("[data-lance-sort]").forEach((otherSelect) => {
+      if (otherSelect !== event.target) otherSelect.value = "";
+    });
+    mapState.page = 1;
+    loadMapaGrupos();
+  });
 });
 
 document.getElementById("pageSizeSelect").addEventListener("change", (event) => {

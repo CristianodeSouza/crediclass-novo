@@ -3,6 +3,7 @@ import base64
 import hashlib
 import hmac
 import logging
+import math
 import os
 import time
 from typing import Annotated
@@ -132,6 +133,8 @@ def grupos(
     credito_maximo: float | None = None,
     prazo_minimo: int | None = None,
     prazo_maximo: int | None = None,
+    sort_lance: str | None = None,
+    sort_order: str | None = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 25,
 ):
@@ -165,9 +168,25 @@ def grupos(
     if credito_maximo is not None:
         items = [item for item in items if item["credito_maximo"] is not None and item["credito_maximo"] <= credito_maximo]
     if prazo_minimo is not None:
-        items = [item for item in items if item["prazo_total"] is not None and item["prazo_total"] >= prazo_minimo]
+        items = [item for item in items if item.get("prazo_restante") is not None and item["prazo_restante"] >= prazo_minimo]
     if prazo_maximo is not None:
-        items = [item for item in items if item["prazo_total"] is not None and item["prazo_total"] <= prazo_maximo]
+        items = [item for item in items if item.get("prazo_restante") is not None and item["prazo_restante"] <= prazo_maximo]
+
+    lance_sort_fields = {
+        "agressivo": "lance_agressivo",
+        "moderado": "lance_moderado",
+        "conservador": "lance_conservador",
+        "super_conservador": "lance_super_conservador",
+    }
+    sort_field = lance_sort_fields.get((sort_lance or "").lower())
+    sort_direction = (sort_order or "").lower()
+    if sort_field and sort_direction in {"asc", "desc"}:
+        missing_rank = math.inf if sort_direction == "asc" else -math.inf
+        items = sorted(
+            items,
+            key=lambda item: item.get(sort_field) if item.get(sort_field) is not None else missing_rank,
+            reverse=sort_direction == "desc",
+        )
 
     total = len(items)
     total_administradoras = len({item["administradora"] for item in items if item["administradora"]})

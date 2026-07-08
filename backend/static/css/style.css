@@ -937,6 +937,19 @@ body[data-theme="escuro"] .btn-outline-secondary {
   min-width: 54px;
 }
 
+.group-table .lance-profile-header span {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.lance-sort-select {
+  height: 28px;
+  min-width: 74px;
+  padding: 2px 22px 2px 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
 .group-table .lance-profile-cell {
   color: var(--primary);
   font-weight: 800;
