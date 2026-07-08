@@ -55,7 +55,7 @@
             </button>
             <button class="nav-item" type="button" data-screen="viabilidade">
               <span class="nav-icon">VC</span>
-              <span>Motor Inteligente de Selecao</span>
+              <span>Motor Inteligente de Seleção</span>
             </button>
             <button class="nav-item" type="button" data-screen="estudo">
               <span class="nav-icon">EF</span>
@@ -63,7 +63,7 @@
             </button>
             <button class="nav-item" type="button" data-screen="historico">
               <span class="nav-icon">HE</span>
-              <span>Historico de Estudos</span>
+              <span>Histórico de Estudos</span>
             </button>
           </div>
 
@@ -75,7 +75,7 @@
             </button>
             <button class="nav-item" type="button" data-screen="configuracoes">
               <span class="nav-icon">CO</span>
-              <span>Configuracoes</span>
+              <span>Configurações</span>
             </button>
           </div>
         </nav>
@@ -95,7 +95,7 @@
           <div>
             <p id="screenLetter" class="screen-letter">A) MAPA DE GRUPOS</p>
             <h1 id="screenTitle">Mapa de Grupos</h1>
-            <p id="screenSubtitle">Lista e manutencao da base de grupos</p>
+            <p id="screenSubtitle">Lista e manutenção da base de grupos</p>
           </div>
           <div class="header-actions">
             <button id="reloadMapDataBtn" class="btn btn-outline-primary" type="button">Recarregar dados</button>
@@ -134,19 +134,19 @@
                 </select>
               </label>
               <label>
-                <span>Credito minimo</span>
-                <input id="filterCreditoMinimo" class="form-control" inputmode="decimal" placeholder="Minimo">
+                <span>Crédito mínimo</span>
+                <input id="filterCreditoMinimo" class="form-control" inputmode="decimal" placeholder="Mínimo">
               </label>
               <label>
-                <span>Credito maximo</span>
-                <input id="filterCreditoMaximo" class="form-control" inputmode="decimal" placeholder="Maximo">
+                <span>Crédito máximo</span>
+                <input id="filterCreditoMaximo" class="form-control" inputmode="decimal" placeholder="Máximo">
               </label>
               <label>
-                <span>Prazo restante minimo</span>
+                <span>Prazo restante mínimo</span>
                 <input id="filterPrazoMinimo" class="form-control" inputmode="numeric" placeholder="Min">
               </label>
               <label>
-                <span>Prazo restante maximo</span>
+                <span>Prazo restante máximo</span>
                 <input id="filterPrazoMaximo" class="form-control" inputmode="numeric" placeholder="Max">
               </label>
               <label>
@@ -154,7 +154,7 @@
                 <select id="filterStatus" class="form-select">
                   <option value="">Todos</option>
                   <option value="Ativo">Ativo</option>
-                  <option value="Excluido">Excluido</option>
+                  <option value="Excluido">Excluído</option>
                 </select>
               </label>
               <label class="filter-search">
@@ -174,16 +174,16 @@
                 <p id="tableSubtitle">Carregando grupos...</p>
               </div>
               <div class="toolbar-actions">
-                <select id="pageSizeSelect" class="form-select page-size-select" aria-label="Itens por pagina">
-                  <option value="10">10 por pagina</option>
-                  <option value="25" selected>25 por pagina</option>
-                  <option value="50">50 por pagina</option>
+                <select id="pageSizeSelect" class="form-select page-size-select" aria-label="Itens por página">
+                  <option value="10">10 por página</option>
+                  <option value="25" selected>25 por página</option>
+                  <option value="50">50 por página</option>
                 </select>
               </div>
             </div>
 
             <div id="groupsLoading" class="table-state">Carregando grupos...</div>
-            <div id="groupsError" class="table-state table-state-error d-none">Nao foi possivel carregar os grupos.</div>
+            <div id="groupsError" class="table-state table-state-error d-none">Não foi possível carregar os grupos.</div>
             <div id="groupsEmpty" class="table-state d-none">Nenhum grupo encontrado com os filtros atuais.</div>
 
             <div id="groupsTableWrap" class="table-responsive d-none">
@@ -193,7 +193,7 @@
                     <th title="ID Grupo">Grupo</th>
                     <th title="Administradora">Adm.</th>
                     <th title="Tipo de Bem">Tipo</th>
-                    <th title="Credito maximo">Cred. Max.</th>
+                    <th title="Crédito máximo">Cred. Max.</th>
                     <th title="Taxa ADM">Tx. ADM</th>
                     <th class="lance-profile-header" title="Agressivo">
                       <span class="lance-header-control">
@@ -236,8 +236,8 @@
                       </span>
                     </th>
                     <th title="Prazo Restante">Prazo Rest.</th>
-                    <th title="Ultima atualizacao da triade Maior Lance, Menor Lance e Quantidade de Contemplacao">Atualizado</th>
-                    <th>Acoes</th>
+                    <th title="Última atualização da tríade Maior Lance, Menor Lance e Quantidade de Contemplação">Atualizado</th>
+                    <th>Ações</th>
                   </tr>
                 </thead>
                 <tbody id="groupsTableBody"></tbody>
@@ -1334,6 +1334,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260708-04"></script>
+    <script src="/static/js/app.js?v=20260708-05"></script>
   </body>
 </html>

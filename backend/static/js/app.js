@@ -2,44 +2,44 @@ const screens = {
   mapa: {
     letter: "A) MAPA DE GRUPOS",
     title: "Mapa de Grupos",
-    subtitle: "Lista e manutencao da base de grupos",
+    subtitle: "Lista e manutenção da base de grupos",
     action: "Novo Grupo",
   },
   perfil: {
     letter: "B) PERFIL DO CLIENTE",
     title: "Perfil do Cliente",
-    subtitle: "Entrevista, capacidade financeira e necessidade de credito",
+    subtitle: "Entrevista, capacidade financeira e necessidade de crédito",
     action: "Salvar Perfil",
   },
   viabilidade: {
-    letter: "C) MOTOR INTELIGENTE DE SELECAO",
-    title: "Motor Inteligente de Selecao",
-    subtitle: "Elegibilidade, calculo, compatibilidade, ranking e Top 10 grupos",
+    letter: "C) MOTOR INTELIGENTE DE SELEÇÃO",
+    title: "Motor Inteligente de Seleção",
+    subtitle: "Elegibilidade, cálculo, compatibilidade, ranking e Top 10 grupos",
     action: "Selecionar Grupos",
   },
   administradoras: {
-    letter: "C) MOTOR INTELIGENTE DE SELECAO",
-    title: "Motor Inteligente de Selecao",
-    subtitle: "Parametros por administradora integrados a selecao de grupos",
-    action: "Salvar Parametros",
+    letter: "C) MOTOR INTELIGENTE DE SELEÇÃO",
+    title: "Motor Inteligente de Seleção",
+    subtitle: "Parâmetros por administradora integrados à seleção de grupos",
+    action: "Salvar Parâmetros",
   },
   estudo: {
     letter: "E) ESTUDO FINANCEIRO",
     title: "Estudo Financeiro",
-    subtitle: "Geracao do estudo financeiro detalhado",
+    subtitle: "Geração do estudo financeiro detalhado",
     action: "Salvar Estudo",
   },
   historico: {
-    letter: "F) HISTORICO DE ESTUDOS",
-    title: "Historico de Estudos",
-    subtitle: "Consulta e gestao dos estudos financeiros gerados",
+    letter: "F) HISTÓRICO DE ESTUDOS",
+    title: "Histórico de Estudos",
+    subtitle: "Consulta e gestão dos estudos financeiros gerados",
     action: "Buscar Estudos",
   },
   configuracoes: {
-    letter: "G) CONFIGURACOES",
-    title: "Configuracoes",
-    subtitle: "Configuracoes do sistema e preferencias",
-    action: "Salvar Configuracoes",
+    letter: "G) CONFIGURAÇÕES",
+    title: "Configurações",
+    subtitle: "Configurações do sistema e preferências",
+    action: "Salvar Configurações",
   },
 };
 
@@ -704,7 +704,7 @@ function validateMapCreditFilters(filters) {
   const minimum = filters.credito_minimo === "" ? null : Number(filters.credito_minimo);
   const maximum = filters.credito_maximo === "" ? null : Number(filters.credito_maximo);
   if (minimum !== null && maximum !== null && minimum > maximum) {
-    showToast("O credito minimo nao pode ser maior que o credito maximo.", "warning");
+    showToast("O crédito mínimo não pode ser maior que o crédito máximo.", "warning");
     return false;
   }
   return true;
