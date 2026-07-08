@@ -592,6 +592,48 @@ body[data-theme="escuro"] .btn-outline-secondary {
   justify-content: flex-end;
 }
 
+.map-filter-grid {
+  grid-template-columns:
+    minmax(112px, 1fr)
+    minmax(104px, 0.9fr)
+    minmax(112px, 0.9fr)
+    minmax(112px, 0.9fr)
+    minmax(108px, 0.88fr)
+    minmax(108px, 0.88fr)
+    minmax(104px, 0.88fr)
+    minmax(180px, 1.35fr)
+    auto;
+  gap: 8px;
+}
+
+.map-filter-grid label {
+  gap: 4px;
+  min-width: 0;
+  font-size: 0.72rem;
+  line-height: 1.1;
+}
+
+.map-filter-grid .form-control,
+.map-filter-grid .form-select {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 0.8rem;
+}
+
+.map-filter-grid .filter-search {
+  grid-column: auto;
+}
+
+.map-filter-grid .filter-actions {
+  align-self: end;
+}
+
+.map-filter-grid .filter-actions .btn {
+  min-height: 32px;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
 .client-profile-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
