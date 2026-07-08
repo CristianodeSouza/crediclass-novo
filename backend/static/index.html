@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260708-01" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260708-02" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -198,36 +198,44 @@
                     <th title="Credito maximo">Cred. Max.</th>
                     <th title="Taxa ADM">Tx. ADM</th>
                     <th class="lance-profile-header" title="Agressivo">
-                      <span>Agr.</span>
-                      <select class="lance-sort-select" data-lance-sort="agressivo" aria-label="Ordenar Agressivo">
-                        <option value="">⌄</option>
-                        <option value="desc">↓</option>
-                        <option value="asc">↑</option>
-                      </select>
+                      <div class="lance-header-control">
+                        <span>Agr.</span>
+                        <select class="lance-sort-select" data-lance-sort="agressivo" aria-label="Ordenar Agressivo">
+                          <option value="">⌄</option>
+                          <option value="desc">↓</option>
+                          <option value="asc">↑</option>
+                        </select>
+                      </div>
                     </th>
                     <th class="lance-profile-header" title="Moderado">
-                      <span>Mod.</span>
-                      <select class="lance-sort-select" data-lance-sort="moderado" aria-label="Ordenar Moderado">
-                        <option value="">⌄</option>
-                        <option value="desc">↓</option>
-                        <option value="asc">↑</option>
-                      </select>
+                      <div class="lance-header-control">
+                        <span>Mod.</span>
+                        <select class="lance-sort-select" data-lance-sort="moderado" aria-label="Ordenar Moderado">
+                          <option value="">⌄</option>
+                          <option value="desc">↓</option>
+                          <option value="asc">↑</option>
+                        </select>
+                      </div>
                     </th>
                     <th class="lance-profile-header" title="Conservador">
-                      <span>Cons.</span>
-                      <select class="lance-sort-select" data-lance-sort="conservador" aria-label="Ordenar Conservador">
-                        <option value="">⌄</option>
-                        <option value="desc">↓</option>
-                        <option value="asc">↑</option>
-                      </select>
+                      <div class="lance-header-control">
+                        <span>Cons.</span>
+                        <select class="lance-sort-select" data-lance-sort="conservador" aria-label="Ordenar Conservador">
+                          <option value="">⌄</option>
+                          <option value="desc">↓</option>
+                          <option value="asc">↑</option>
+                        </select>
+                      </div>
                     </th>
                     <th class="lance-profile-header" title="Super Conservador">
-                      <span>S. Cons.</span>
-                      <select class="lance-sort-select" data-lance-sort="super_conservador" aria-label="Ordenar Super Conservador">
-                        <option value="">⌄</option>
-                        <option value="desc">↓</option>
-                        <option value="asc">↑</option>
-                      </select>
+                      <div class="lance-header-control">
+                        <span>S. Cons.</span>
+                        <select class="lance-sort-select" data-lance-sort="super_conservador" aria-label="Ordenar Super Conservador">
+                          <option value="">⌄</option>
+                          <option value="desc">↓</option>
+                          <option value="asc">↑</option>
+                        </select>
+                      </div>
                     </th>
                     <th title="Prazo Restante">Prazo Rest.</th>
                     <th>Acoes</th>

@@ -70,6 +70,10 @@ MAPA_GRUPOS_COLUMN_INDEXES = {
     "lance_agressivo": 62,  # BK
 }
 
+MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES = {
+    "taxa_adm": 16,  # Q - Taxa do maior credito, usada quando S estiver vazia.
+}
+
 
 def normalize_header(value: str) -> str:
     text = unicodedata.normalize("NFKD", value or "")
@@ -243,7 +247,16 @@ def canonical_field_header(field: str) -> str:
 
 def apply_mapa_grupos_fixed_columns(row: dict[str, Any], values: list[Any]) -> None:
     for field, index in MAPA_GRUPOS_COLUMN_INDEXES.items():
-        row[canonical_field_header(field)] = values[index] if index < len(values) else ""
+        row[canonical_field_header(field)] = fixed_column_value(field, values)
+
+
+def fixed_column_value(field: str, values: list[Any], base_index: int = 0) -> Any:
+    index = MAPA_GRUPOS_COLUMN_INDEXES[field] - base_index
+    value = values[index] if 0 <= index < len(values) else ""
+    if value in (None, "") and field in MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES:
+        fallback_index = MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES[field] - base_index
+        value = values[fallback_index] if 0 <= fallback_index < len(values) else ""
+    return value
 
 
 def read_sheet_headers(force_reload: bool = False) -> list[str]:
@@ -305,9 +318,9 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
         values = result.get("values", [])
         for offset, row_values in enumerate(values):
             row: dict[str, Any] = {}
-            for _, header, index in selected:
+            for field, header, index in selected:
                 relative_index = index - min_index
-                row[header] = row_values[relative_index] if relative_index < len(row_values) else ""
+                row[header] = fixed_column_value(field, row_values, min_index) if field in MAPA_GRUPOS_COLUMN_INDEXES else row_values[relative_index] if relative_index < len(row_values) else ""
             if not any(str(value).strip() for value in row.values()):
                 continue
             rows.append(row)
@@ -329,9 +342,16 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
 
         for offset in range(row_count):
             row: dict[str, Any] = {}
-            for (_, header, _), column in zip(selected, columns):
+            for (field, header, _), column in zip(selected, columns):
                 cell = column[offset] if offset < len(column) else []
-                row[header] = cell[0] if cell else ""
+                value = cell[0] if cell else ""
+                if value in (None, "") and field in MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES:
+                    fallback_header = canonical_field_header(field)
+                    fallback_index = MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES[field]
+                    if fallback_header == header and fallback_index < len(columns):
+                        fallback_cell = columns[fallback_index][offset] if offset < len(columns[fallback_index]) else []
+                        value = fallback_cell[0] if fallback_cell else ""
+                row[header] = value
             if not any(str(value).strip() for value in row.values()):
                 continue
             rows.append(row)

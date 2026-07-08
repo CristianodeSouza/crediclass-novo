@@ -252,6 +252,46 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(grupo["lance_moderado"], 0.3)
         self.assertEqual(grupo["lance_agressivo"], 0.4)
 
+    def test_read_summary_rows_usa_taxa_do_maior_credito_quando_coluna_s_vazia(self):
+        sheets_client.clear_rows_cache()
+        headers = [f"Coluna {index}" for index in range(63)]
+        headers[0] = "ADM"
+        headers[1] = "Grupo"
+        headers[2] = "Tipo de Bem"
+        row = [""] * 63
+        row[0] = "ITAU"
+        row[1] = "126"
+        row[2] = "Imovel"
+        row[16] = "12,00%"
+        row[18] = ""
+
+        class ExecuteMock:
+            def execute(self):
+                return {"values": [row]}
+
+        class ValuesMock:
+            def get(self, **kwargs):
+                return ExecuteMock()
+
+        class ServiceMock:
+            def __init__(self):
+                self.values_api = ValuesMock()
+
+            def spreadsheets(self):
+                return self
+
+            def values(self):
+                return self.values_api
+
+        with (
+            patch("backend.sheets_client.read_sheet_headers", return_value=headers),
+            patch("backend.sheets_client.get_service", return_value=ServiceMock()),
+            patch("backend.sheets_client.get_settings", return_value=SimpleNamespace(google_sheets_id="sheet-id", google_sheet_name="Grupos")),
+        ):
+            grupo = row_to_grupo(sheets_client.read_summary_rows(include_history=True)[0])
+
+        self.assertEqual(grupo["taxa_adm"], 0.12)
+
     def test_percentuais_de_historico_nao_gravam_residuos_decimais(self):
         self.assertEqual(format_history_value("maior_lance", 0.56), "56,0")
         self.assertEqual(format_history_value("menor_lance", 0.5256000000000001), "52,56")

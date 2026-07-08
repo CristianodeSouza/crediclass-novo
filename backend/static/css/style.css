@@ -937,9 +937,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
   min-width: 54px;
 }
 
-.group-table .lance-profile-header span {
-  display: block;
-  margin-bottom: 4px;
+.lance-header-control {
+  align-items: center;
+  display: inline-flex;
+  gap: 4px;
+  justify-content: center;
+  white-space: nowrap;
 }
 
 .lance-sort-select {
