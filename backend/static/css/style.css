@@ -942,12 +942,33 @@ body[data-theme="escuro"] .btn-outline-secondary {
   margin-bottom: 4px;
 }
 
-.lance-sort-select {
-  height: 28px;
-  min-width: 74px;
-  padding: 2px 22px 2px 6px;
-  font-size: 0.72rem;
+.lance-sort-actions {
+  display: inline-flex;
+  gap: 2px;
+  justify-content: center;
+}
+
+.lance-sort-button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--muted);
+  display: inline-flex;
+  height: 18px;
+  justify-content: center;
+  line-height: 1;
+  padding: 0;
+  width: 18px;
+  font-size: 0.74rem;
   font-weight: 700;
+}
+
+.lance-sort-button:hover,
+.lance-sort-button.active {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .group-table .lance-profile-cell {

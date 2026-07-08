@@ -70,10 +70,12 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn("item.primeira_assembleia", render_groups_block)
         self.assertIn("item.prazo_restante", render_groups_block)
         self.assertIn('data-lance-sort="agressivo"', index_html)
+        self.assertIn('data-lance-sort-order="desc"', index_html)
+        self.assertNotIn(">Filtro</option>", index_html)
         for field in ["lance_agressivo", "lance_moderado", "lance_conservador", "lance_super_conservador"]:
             self.assertIn(f"formatPercent(item.{field})", app_js)
         self.assertIn(".lance-profile-cell", style_css)
-        self.assertIn(".lance-sort-select", style_css)
+        self.assertIn(".lance-sort-button", style_css)
 
     def test_modal_edicao_grupo_exibe_campos_da_planilha(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")

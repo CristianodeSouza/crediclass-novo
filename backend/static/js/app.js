@@ -4717,20 +4717,23 @@ document.getElementById("clearFiltersBtn").addEventListener("click", () => {
   document.getElementById("groupFilters").reset();
   mapState.lanceSortField = "";
   mapState.lanceSortOrder = "";
-  document.querySelectorAll("[data-lance-sort]").forEach((select) => {
-    select.value = "";
+  document.querySelectorAll("[data-lance-sort-order]").forEach((button) => {
+    button.classList.remove("active");
   });
   mapState.page = 1;
   loadMapaGrupos();
 });
 
-document.querySelectorAll("[data-lance-sort]").forEach((select) => {
-  select.addEventListener("change", (event) => {
-    mapState.lanceSortField = event.target.value ? event.target.dataset.lanceSort : "";
-    mapState.lanceSortOrder = event.target.value;
-    document.querySelectorAll("[data-lance-sort]").forEach((otherSelect) => {
-      if (otherSelect !== event.target) otherSelect.value = "";
+document.querySelectorAll("[data-lance-sort-order]").forEach((button) => {
+  button.addEventListener("click", (event) => {
+    const target = event.currentTarget;
+    const isActive = target.classList.contains("active");
+    document.querySelectorAll("[data-lance-sort-order]").forEach((otherButton) => {
+      otherButton.classList.remove("active");
     });
+    mapState.lanceSortField = isActive ? "" : target.dataset.lanceSort;
+    mapState.lanceSortOrder = isActive ? "" : target.dataset.lanceSortOrder;
+    if (!isActive) target.classList.add("active");
     mapState.page = 1;
     loadMapaGrupos();
   });
