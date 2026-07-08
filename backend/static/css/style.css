@@ -942,30 +942,24 @@ body[data-theme="escuro"] .btn-outline-secondary {
   margin-bottom: 4px;
 }
 
-.lance-sort-actions {
-  display: inline-flex;
-  gap: 2px;
-  justify-content: center;
-}
-
-.lance-sort-button {
-  align-items: center;
+.lance-sort-select {
+  appearance: none;
   background: transparent;
-  border: 1px solid transparent;
+  border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--muted);
-  display: inline-flex;
   height: 18px;
-  justify-content: center;
   line-height: 1;
   padding: 0;
-  width: 18px;
+  text-align: center;
+  width: 22px;
   font-size: 0.74rem;
   font-weight: 700;
+  cursor: pointer;
 }
 
-.lance-sort-button:hover,
-.lance-sort-button.active {
+.lance-sort-select:hover,
+.lance-sort-select.active {
   background: var(--primary-soft);
   border-color: var(--primary);
   color: var(--primary);

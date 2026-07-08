@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260626-15" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260708-01" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -199,31 +199,35 @@
                     <th title="Taxa ADM">Tx. ADM</th>
                     <th class="lance-profile-header" title="Agressivo">
                       <span>Agr.</span>
-                      <div class="lance-sort-actions" aria-label="Ordenar Agressivo">
-                        <button class="lance-sort-button" type="button" data-lance-sort="agressivo" data-lance-sort-order="desc" title="Maior para menor">↓</button>
-                        <button class="lance-sort-button" type="button" data-lance-sort="agressivo" data-lance-sort-order="asc" title="Menor para maior">↑</button>
-                      </div>
+                      <select class="lance-sort-select" data-lance-sort="agressivo" aria-label="Ordenar Agressivo">
+                        <option value="">⌄</option>
+                        <option value="desc">↓</option>
+                        <option value="asc">↑</option>
+                      </select>
                     </th>
                     <th class="lance-profile-header" title="Moderado">
                       <span>Mod.</span>
-                      <div class="lance-sort-actions" aria-label="Ordenar Moderado">
-                        <button class="lance-sort-button" type="button" data-lance-sort="moderado" data-lance-sort-order="desc" title="Maior para menor">↓</button>
-                        <button class="lance-sort-button" type="button" data-lance-sort="moderado" data-lance-sort-order="asc" title="Menor para maior">↑</button>
-                      </div>
+                      <select class="lance-sort-select" data-lance-sort="moderado" aria-label="Ordenar Moderado">
+                        <option value="">⌄</option>
+                        <option value="desc">↓</option>
+                        <option value="asc">↑</option>
+                      </select>
                     </th>
                     <th class="lance-profile-header" title="Conservador">
                       <span>Cons.</span>
-                      <div class="lance-sort-actions" aria-label="Ordenar Conservador">
-                        <button class="lance-sort-button" type="button" data-lance-sort="conservador" data-lance-sort-order="desc" title="Maior para menor">↓</button>
-                        <button class="lance-sort-button" type="button" data-lance-sort="conservador" data-lance-sort-order="asc" title="Menor para maior">↑</button>
-                      </div>
+                      <select class="lance-sort-select" data-lance-sort="conservador" aria-label="Ordenar Conservador">
+                        <option value="">⌄</option>
+                        <option value="desc">↓</option>
+                        <option value="asc">↑</option>
+                      </select>
                     </th>
                     <th class="lance-profile-header" title="Super Conservador">
                       <span>S. Cons.</span>
-                      <div class="lance-sort-actions" aria-label="Ordenar Super Conservador">
-                        <button class="lance-sort-button" type="button" data-lance-sort="super_conservador" data-lance-sort-order="desc" title="Maior para menor">↓</button>
-                        <button class="lance-sort-button" type="button" data-lance-sort="super_conservador" data-lance-sort-order="asc" title="Menor para maior">↑</button>
-                      </div>
+                      <select class="lance-sort-select" data-lance-sort="super_conservador" aria-label="Ordenar Super Conservador">
+                        <option value="">⌄</option>
+                        <option value="desc">↓</option>
+                        <option value="asc">↑</option>
+                      </select>
                     </th>
                     <th title="Prazo Restante">Prazo Rest.</th>
                     <th>Acoes</th>
@@ -1322,6 +1326,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260626-15"></script>
+    <script src="/static/js/app.js?v=20260708-01"></script>
   </body>
 </html>
