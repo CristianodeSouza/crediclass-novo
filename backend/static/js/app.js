@@ -563,7 +563,7 @@ function downloadConfigBackup() {
 
 async function exportGroupsCsv() {
   const button = document.getElementById("exportGroupsCsvBtn");
-  button.disabled = true;
+  if (button) button.disabled = true;
   try {
     const response = await fetch("/api/grupos/exportar-planilha", {
       cache: "no-store",
@@ -584,7 +584,7 @@ async function exportGroupsCsv() {
   } catch (error) {
     showToast("Nao foi possivel exportar a planilha oficial.", "danger");
   } finally {
-    button.disabled = false;
+    if (button) button.disabled = false;
   }
 }
 
@@ -4741,7 +4741,7 @@ document.getElementById("primaryAction").addEventListener("click", () => {
   }
 });
 document.getElementById("reloadMapDataBtn").addEventListener("click", reloadMapData);
-document.getElementById("openDefasagemBtn").addEventListener("click", openDefasagemModal);
+document.getElementById("openDefasagemBtn")?.addEventListener("click", openDefasagemModal);
 document.getElementById("defasagemFilter").addEventListener("change", renderDefasagemRows);
 document.getElementById("defasagemTableBody").addEventListener("change", (event) => {
   const grupoId = event.target?.dataset?.defasagemCheck;
@@ -4837,7 +4837,7 @@ document.getElementById("pageSizeSelect").addEventListener("change", (event) => 
   loadMapaGrupos();
 });
 
-document.getElementById("exportGroupsCsvBtn").addEventListener("click", exportGroupsCsv);
+document.getElementById("exportGroupsCsvBtn")?.addEventListener("click", exportGroupsCsv);
 
 document.getElementById("groupFormHistoryYear").addEventListener("change", () => {
   syncGroupFormVisibleHistory();

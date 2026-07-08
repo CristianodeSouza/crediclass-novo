@@ -433,14 +433,14 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("data.administradoras", app_js)
         self.assertIn("data.total_administradoras", app_js)
 
-    def test_mapa_grupos_possui_gestao_de_defasagem(self):
+    def test_mapa_grupos_mantem_gestao_de_defasagem_sem_botao_na_lista(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn('id="openDefasagemBtn"', index_html)
-        self.assertIn("Gestao de Defasagem", index_html)
+        self.assertNotIn('id="openDefasagemBtn"', index_html)
         self.assertIn('id="defasagemModal"', index_html)
+        self.assertIn("Gestao de Defasagem dos Grupos", index_html)
         self.assertIn("Plano de acao da atualizacao", index_html)
         self.assertIn("async function openDefasagemModal()", app_js)
         self.assertIn('apiGet("/grupos/defasagem")', app_js)
@@ -467,9 +467,8 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn('id="exportGroupsCsvBtn"', index_html)
+        self.assertNotIn('id="exportGroupsCsvBtn"', index_html)
         self.assertIn('id="exportStudiesCsvBtn"', index_html)
-        self.assertIn("Exportar Planilha", index_html)
         self.assertIn("function downloadCsv(filename, rows)", app_js)
         self.assertIn("function downloadBlob(filename, blob)", app_js)
         self.assertIn("function exportGroupsCsv()", app_js)
