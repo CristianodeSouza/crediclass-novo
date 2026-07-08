@@ -817,6 +817,21 @@ def short_history_month_label(month_key: str | None) -> str:
         return month_key
 
 
+def history_last_12_rows(historico: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    months = sorted((month for month in (historico or {}) if re.fullmatch(r"\d{4}-\d{2}", str(month))))[-12:]
+    return [
+        {
+            "mes": month,
+            "label": short_history_month_label(month),
+            "maior_lance": historico[month].get("maior_lance"),
+            "menor_lance": historico[month].get("menor_lance"),
+            "qtd_contemplacoes": historico[month].get("qtd_contemplacoes"),
+            "atualizado": history_month_has_full_update(historico[month]),
+        }
+        for month in months
+    ]
+
+
 def build_grupo_id(row: dict[str, Any]) -> str:
     grupo = clean_text(get_field(row, "grupo")).upper().replace(" ", "-")
     return grupo
@@ -852,6 +867,7 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "prazo_total": parse_int(get_field(row, "prazo_total")),
         "prazo_restante": parse_int(get_optional_field(row, "prazo_restante")),
         "atualizado": short_history_month_label(updated_month),
+        "historico_12_meses": history_last_12_rows(historico),
         "primeira_assembleia": clean_text(get_field(row, "primeira_assembleia")),
         "ultima_assembleia": clean_text(get_field(row, "ultima_assembleia")),
         "status": clean_text(get_field(row, "status") or "Ativo"),

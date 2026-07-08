@@ -371,6 +371,9 @@ class MapaGruposTest(unittest.TestCase):
         result = row_to_grupo(row)
 
         self.assertEqual(result["atualizado"], "Ago-26")
+        self.assertEqual(result["historico_12_meses"][-1]["label"], "Ago-26")
+        self.assertTrue(result["historico_12_meses"][-1]["atualizado"])
+        self.assertEqual(result["historico_12_meses"][-1]["qtd_contemplacoes"], 0)
 
     def test_row_to_grupo_sem_triade_completa_retorna_nao_atualizado(self):
         row = {
@@ -382,6 +385,19 @@ class MapaGruposTest(unittest.TestCase):
         result = row_to_grupo(row)
 
         self.assertEqual(result["atualizado"], "-")
+        self.assertFalse(result["historico_12_meses"][0]["atualizado"])
+
+    def test_row_to_grupo_limita_historico_hover_a_12_meses(self):
+        row = {}
+        months = ["JAN-25", "FEV-25", "MAR-25", "ABR-25", "MAI-25", "JUN-25", "JUL-25", "AGO-25", "SET-25", "OUT-25", "NOV-25", "DEZ-25", "JAN-26"]
+        for header_month in months:
+            row[f"{header_month} Maior Lance"] = "10%"
+            row[f"{header_month} Menor Lance"] = "5%"
+            row[f"{header_month} Qtd"] = "1"
+
+        result = row_to_grupo(row)
+
+        self.assertEqual(len(result["historico_12_meses"]), 12)
 
     def test_row_to_grupo_prioriza_lances_diretos_da_planilha(self):
         row = {

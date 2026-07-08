@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260708-03", index_html)
+        self.assertIn("/static/css/style.css?v=20260708-04", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260708-02", index_html)
+        self.assertIn("/static/js/app.js?v=20260708-04", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -72,6 +72,9 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn("item.primeira_assembleia", render_groups_block)
         self.assertIn("item.prazo_restante", render_groups_block)
         self.assertIn("item.atualizado", render_groups_block)
+        self.assertIn("data-history-index", render_groups_block)
+        self.assertIn("function showHistoryHoverModal", app_js)
+        self.assertIn('id="historyHoverModal"', index_html)
         self.assertIn('data-lance-sort="agressivo"', index_html)
         self.assertNotIn('data-lance-sort-order="desc"', index_html)
         self.assertNotIn(">Filtro</option>", index_html)
@@ -738,7 +741,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260708-03", index_html)
+        self.assertIn("/static/css/style.css?v=20260708-04", index_html)
         self.assertIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

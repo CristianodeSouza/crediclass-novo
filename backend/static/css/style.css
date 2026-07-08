@@ -975,6 +975,73 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 800;
 }
 
+.history-hover-trigger {
+  border-bottom: 1px dotted var(--primary);
+  color: var(--primary);
+  cursor: default;
+  font-weight: 800;
+}
+
+.history-hover-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 18px 44px rgba(15, 23, 42, 0.18);
+  color: var(--text);
+  max-width: 420px;
+  min-width: 360px;
+  padding: 10px;
+  position: fixed;
+  z-index: 1090;
+}
+
+.history-hover-title {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.history-hover-title strong {
+  color: var(--primary);
+  font-size: 0.82rem;
+}
+
+.history-hover-title span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.history-hover-modal table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.history-hover-modal th,
+.history-hover-modal td {
+  border-top: 1px solid var(--border);
+  font-size: 0.72rem;
+  padding: 5px 6px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.history-hover-modal th {
+  background: var(--surface-soft);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.history-month-updated td {
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.history-hover-empty {
+  color: var(--muted);
+  text-align: center;
+}
+
 .status-badge {
   display: inline-flex;
   align-items: center;

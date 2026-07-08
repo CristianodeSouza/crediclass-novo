@@ -15,6 +15,7 @@ class GrupoResumo(BaseModel):
     prazo_total: int | None = None
     prazo_restante: int | None = None
     atualizado: str = ""
+    historico_12_meses: list[dict[str, Any]] = Field(default_factory=list)
     primeira_assembleia: str = ""
     ultima_assembleia: str = ""
     status: str = "Ativo"

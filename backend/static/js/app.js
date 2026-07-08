@@ -752,8 +752,9 @@ function renderSummary(items, total, totalAdministradoras = null) {
 }
 
 function renderGroupsTable(items) {
+  hideHistoryHoverModal();
   const tbody = document.getElementById("groupsTableBody");
-  tbody.innerHTML = items.map((item) => {
+  tbody.innerHTML = items.map((item, index) => {
     return `
       <tr>
         <td>${escapeHtml(item.grupo_id)}</td>
@@ -766,7 +767,7 @@ function renderGroupsTable(items) {
         <td class="lance-profile-cell">${formatPercent(item.lance_conservador)}</td>
         <td class="lance-profile-cell">${formatPercent(item.lance_super_conservador)}</td>
         <td>${item.prazo_restante ?? "-"}</td>
-        <td>${escapeHtml(item.atualizado || "-")}</td>
+        <td><span class="history-hover-trigger" data-history-index="${index}" tabindex="0">${escapeHtml(item.atualizado || "-")}</span></td>
         <td>
           <div class="row-actions">
             <button class="btn btn-sm btn-outline-primary" type="button" data-map-action="visualizar" data-group-id="${escapeHtml(item.grupo_id)}">Ver</button>
@@ -776,6 +777,68 @@ function renderGroupsTable(items) {
       </tr>
     `;
   }).join("");
+}
+
+function formatHistoryPercent(value) {
+  return value === null || value === undefined || value === "" ? "-" : formatPercent(value);
+}
+
+function formatHistoryQuantity(value) {
+  return value === null || value === undefined || value === "" ? "-" : escapeHtml(value);
+}
+
+function renderHistoryHoverRows(history = []) {
+  if (!history.length) {
+    return '<tr><td colspan="4" class="history-hover-empty">Sem historico mensal carregado.</td></tr>';
+  }
+  return history.map((item) => `
+    <tr class="${item.atualizado ? "history-month-updated" : ""}">
+      <td>${escapeHtml(item.label || item.mes || "-")}</td>
+      <td>${formatHistoryPercent(item.maior_lance)}</td>
+      <td>${formatHistoryPercent(item.menor_lance)}</td>
+      <td>${formatHistoryQuantity(item.qtd_contemplacoes)}</td>
+    </tr>
+  `).join("");
+}
+
+function positionHistoryHoverModal(modal, trigger) {
+  const rect = trigger.getBoundingClientRect();
+  modal.style.visibility = "hidden";
+  modal.classList.remove("d-none");
+  const modalRect = modal.getBoundingClientRect();
+  const top = Math.min(window.innerHeight - modalRect.height - 12, rect.bottom + 8);
+  const left = Math.min(window.innerWidth - modalRect.width - 12, Math.max(12, rect.left - modalRect.width / 2 + rect.width / 2));
+  modal.style.top = `${Math.max(12, top)}px`;
+  modal.style.left = `${left}px`;
+  modal.style.visibility = "visible";
+}
+
+function showHistoryHoverModal(trigger) {
+  const index = Number(trigger.dataset.historyIndex);
+  const item = mapState.items[index];
+  const modal = document.getElementById("historyHoverModal");
+  if (!item || !modal) return;
+  modal.innerHTML = `
+    <div class="history-hover-title">
+      <strong>Historico dos ultimos 12 meses</strong>
+      <span>${escapeHtml(item.administradora || "-")} - Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</span>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Mes</th><th>Maior Lance</th><th>Menor Lance</th><th>Qtd</th></tr>
+      </thead>
+      <tbody>${renderHistoryHoverRows(item.historico_12_meses || [])}</tbody>
+    </table>
+  `;
+  modal.setAttribute("aria-hidden", "false");
+  positionHistoryHoverModal(modal, trigger);
+}
+
+function hideHistoryHoverModal() {
+  const modal = document.getElementById("historyHoverModal");
+  if (!modal) return;
+  modal.classList.add("d-none");
+  modal.setAttribute("aria-hidden", "true");
 }
 
 function setDefasagemState(state) {
@@ -4713,6 +4776,31 @@ document.getElementById("filterBusca").addEventListener("input", () => {
     loadMapaGrupos();
   }, 300);
 });
+
+document.getElementById("groupsTableBody").addEventListener("mouseover", (event) => {
+  const trigger = event.target.closest("[data-history-index]");
+  if (trigger) showHistoryHoverModal(trigger);
+});
+
+document.getElementById("groupsTableBody").addEventListener("mouseout", (event) => {
+  const trigger = event.target.closest("[data-history-index]");
+  if (!trigger) return;
+  const related = event.relatedTarget;
+  if (related && (trigger.contains(related) || document.getElementById("historyHoverModal")?.contains(related))) return;
+  hideHistoryHoverModal();
+});
+
+document.getElementById("groupsTableBody").addEventListener("focusin", (event) => {
+  const trigger = event.target.closest("[data-history-index]");
+  if (trigger) showHistoryHoverModal(trigger);
+});
+
+document.getElementById("groupsTableBody").addEventListener("focusout", (event) => {
+  const trigger = event.target.closest("[data-history-index]");
+  if (trigger) hideHistoryHoverModal();
+});
+
+document.getElementById("historyHoverModal").addEventListener("mouseleave", hideHistoryHoverModal);
 
 document.getElementById("clearFiltersBtn").addEventListener("click", () => {
   document.getElementById("groupFilters").reset();
