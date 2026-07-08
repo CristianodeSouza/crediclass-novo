@@ -917,6 +917,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.64rem;
   padding-left: 4px;
   padding-right: 4px;
+  text-align: center;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -925,6 +926,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.74rem;
   padding-left: 4px;
   padding-right: 4px;
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -993,6 +995,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .row-actions {
   display: flex;
   gap: 4px;
+  justify-content: center;
 }
 
 .row-actions .btn {
