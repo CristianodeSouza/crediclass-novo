@@ -1,45 +1,45 @@
-const screens = {
+﻿const screens = {
   mapa: {
     letter: "A) MAPA DE GRUPOS",
     title: "Mapa de Grupos",
-    subtitle: "Lista e manutenção da base de grupos",
+    subtitle: "Lista e manutenÃ§Ã£o da base de grupos",
     action: "Novo Grupo",
   },
   perfil: {
     letter: "B) PERFIL DO CLIENTE",
     title: "Perfil do Cliente",
-    subtitle: "Entrevista, capacidade financeira e necessidade de crédito",
+    subtitle: "Entrevista, capacidade financeira e necessidade de crÃ©dito",
     action: "Salvar Perfil",
   },
   viabilidade: {
-    letter: "C) MOTOR INTELIGENTE DE SELEÇÃO",
-    title: "Motor Inteligente de Seleção",
-    subtitle: "Elegibilidade, cálculo, compatibilidade, ranking e Top 10 grupos",
-    action: "Selecionar Grupos",
+    letter: "C) MOTOR INTELIGENTE DE SELEÃ‡ÃƒO",
+    title: "Motor Inteligente de SeleÃ§Ã£o",
+    subtitle: "",
+    action: "",
   },
   administradoras: {
-    letter: "C) MOTOR INTELIGENTE DE SELEÇÃO",
-    title: "Motor Inteligente de Seleção",
-    subtitle: "Parâmetros por administradora integrados à seleção de grupos",
-    action: "Salvar Parâmetros",
+    letter: "C) MOTOR INTELIGENTE DE SELEÃ‡ÃƒO",
+    title: "Motor Inteligente de SeleÃ§Ã£o",
+    subtitle: "ParÃ¢metros por administradora integrados Ã  seleÃ§Ã£o de grupos",
+    action: "Salvar ParÃ¢metros",
   },
   estudo: {
     letter: "E) ESTUDO FINANCEIRO",
     title: "Estudo Financeiro",
-    subtitle: "Geração do estudo financeiro detalhado",
+    subtitle: "GeraÃ§Ã£o do estudo financeiro detalhado",
     action: "Salvar Estudo",
   },
   historico: {
-    letter: "F) HISTÓRICO DE ESTUDOS",
-    title: "Histórico de Estudos",
-    subtitle: "Consulta e gestão dos estudos financeiros gerados",
+    letter: "F) HISTÃ“RICO DE ESTUDOS",
+    title: "HistÃ³rico de Estudos",
+    subtitle: "Consulta e gestÃ£o dos estudos financeiros gerados",
     action: "Buscar Estudos",
   },
   configuracoes: {
-    letter: "G) CONFIGURAÇÕES",
-    title: "Configurações",
-    subtitle: "Configurações do sistema e preferências",
-    action: "Salvar Configurações",
+    letter: "G) CONFIGURAÃ‡Ã•ES",
+    title: "ConfiguraÃ§Ãµes",
+    subtitle: "ConfiguraÃ§Ãµes do sistema e preferÃªncias",
+    action: "Salvar ConfiguraÃ§Ãµes",
   },
 };
 
@@ -52,14 +52,6 @@ const mapState = {
   lanceSortField: "",
   lanceSortOrder: "",
   lastLoadAt: null,
-};
-
-const viabilityState = {
-  lastResult: null,
-  administratorEligibility: [],
-  funnelSummary: null,
-  phase2Signature: "",
-  phase2Running: false,
 };
 
 const historyState = {
@@ -107,83 +99,7 @@ const DEFAULT_PJ_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
 const authState = { user: null };
 let appBootstrapped = false;
-const administratorPlanDefaultNames = ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"];
-const administratorPlanRows = [
-  { key: "tipo_bem_calculadora", label: "Tipo de bem", type: "text", group: "Eficiencia" },
-  { key: "prazo_remanescente", label: "Prazo remanescente", type: "number", group: "Eficiencia" },
-  { key: "percentual_lance_embutido", label: "Lance Embutido", type: "percent", group: "Beneficios" },
-  { key: "tipo_lance_embutido", label: "Calculo do Lance Embutido", type: "text", group: "Beneficios" },
-  { key: "calculo_percentual_lance", label: "Calculo do Percentual de Lance", type: "text", group: "Beneficios" },
-  { key: "permite_amortizar_lance_texto", label: "Permite amortizar o lance na parcela?", type: "text", group: "Beneficios" },
-  { key: "permite_lance_fixo_livre_texto", label: "Permite participar do lance fixo e livre?", type: "text", group: "Beneficios" },
-  { key: "possui_parcela_reduzida_texto", label: "Possui Parcela Reduzida?", type: "text", group: "Beneficios" },
-  { key: "possui_lance_fixo_texto", label: "Possui Lance Fixo?", type: "text", group: "Beneficios" },
-  { key: "taxa_adm", label: "Taxa Administracao (total)", type: "percent", group: "Taxas" },
-  { key: "taxa_adm_ano", label: "Taxa Administracao (ao ano)", type: "percent", group: "Taxas" },
-  { key: "possui_taxa_adesao_texto", label: "Possui Taxa de Adesao?", type: "text", group: "Taxas" },
-  { key: "fundo_reserva", label: "Fundo de reserva (total)", type: "percent", group: "Taxas" },
-  { key: "fundo_reserva_ano", label: "Fundo de reserva (ao ano)", type: "percent", group: "Taxas" },
-  { key: "seguro_obrigatorio_texto", label: "Seg. obrigatorio?", type: "text", group: "Seguro Obrigatorio" },
-  { key: "idade_maxima", label: "Idade maxima seguro", type: "text", group: "Seguro Obrigatorio" },
-  { key: "aliquota_seguro_saldo_devedor", label: "Aliquota seguro mensal sobre saldo devedor", type: "percent", group: "Seguro Obrigatorio" },
-  { key: "aceita_pj_texto", label: "Aceita contratacao por PJ?", type: "text", group: "Regras PJ" },
-  { key: "permite_composicao_pj_socios_texto", label: "Permite renda PJ + socios?", type: "text", group: "Regras PJ" },
-  { key: "permite_cpf_socio_texto", label: "Permite analise CPF do socio?", type: "text", group: "Regras PJ" },
-  { key: "percentual_comprometimento_pj", label: "% comprometimento PJ", type: "percent", group: "Regras PJ" },
-  { key: "percentual_comprometimento_cpf", label: "% comprometimento CPF", type: "percent", group: "Regras PJ" },
-];
-const administratorPlanScenarioRows = [
-  { key: "credito_a_ser_contratado", label: "Calculo A - Credito a ser contratado:", type: "money" },
-  { key: "saldo_devedor_categoria", label: "Saldo devedor / categoria", type: "money" },
-  { key: "lance_maximo", label: "Calculo B - Lance Maximo Cliente:", type: "percent" },
-  { key: "lance_total_considerado", label: "Lance Total:", type: "money" },
-  { key: "recurso_proprio_usado", label: "Recurso Proprio:", type: "money" },
-  { key: "fgts_usado", label: "FGTS:", type: "money" },
-  { key: "lance_embutido_valor", label: "Embutido:", type: "money" },
-  { key: "prazo_minimo_investidor_desejada", label: "Parcela Inicial - Desejada", type: "number", group: "Calculo C - Prazo minimo grupos / Se - Investidor" },
-  { key: "prazo_minimo_investidor_renda", label: "Parcela Inicial - Limite Renda", type: "number", group: "Calculo C - Prazo minimo grupos / Se - Investidor" },
-  { key: "prazo_minimo_contemplacao_desejada", label: "Parcela Apos Lance - Desejada", type: "number", group: "Se - Contemplacao" },
-  { key: "prazo_minimo_contemplacao_renda", label: "Parcela Apos Lance - Limite Renda", type: "number", group: "Se - Contemplacao" },
-];
-const administratorPlanComputedFields = [
-  "tipo_bem_calculadora",
-  "idade_maxima_ok",
-  "credito_a_ser_contratado",
-  "saldo_devedor_categoria",
-  "lance_embutido_valor",
-  "recurso_proprio_usado",
-  "fgts_usado",
-  "lance_proprio_usado",
-  "lance_total_considerado",
-  "lance_maximo",
-  "taxa_administracao_valor",
-  "fundo_reserva_valor",
-  "prazo_minimo",
-  "prazo_minimo_investidor_desejada",
-  "prazo_minimo_investidor_renda",
-  "prazo_minimo_contemplacao_desejada",
-  "prazo_minimo_contemplacao_renda",
-];
 const businessRuleStatuses = ["Pendente", "Em revisao", "Revisado", "Corrigir regra"];
-const administratorPlanRuleHelp = {
-  seguro_obrigatorio_texto: "Usado na etapa de Administradoras para sinalizar se o cliente precisa cumprir regra de seguro obrigatorio antes da escolha de grupos.",
-  idade_maxima: "Usado na validacao de idade da administradora. Se houver idade do titular ou conjuge, o sistema compara com esse limite.",
-  limite_sem_comprovacao_renda: "Usado como referencia de regra da administradora para saber quando a operacao pode exigir comprovacao de renda.",
-  percentual_lance_embutido: "Usado nas formulas oficiais: credito a contratar = credito desejado / (1 - percentual de lance embutido); lance maximo; e prazo minimo.",
-  tipo_lance_embutido: "Usado para indicar como a administradora calcula o lance embutido, por exemplo sobre Credito. Orienta a revisao humana da regra.",
-  aceita_saida_fiscal_texto: "Usado como regra operacional da administradora para validar se o perfil do cliente pode aderir com saida fiscal quando esse ponto for relevante.",
-  taxa_adm: "Usada na formula de prazo minimo e parcela estimada. Taxa ADM em valor = credito a contratar * taxa administrativa.",
-  fundo_reserva: "Usado na formula de prazo minimo e parcela estimada. Fundo de reserva em valor = credito a contratar * fundo reserva.",
-  idade_maxima_ok: "Campo calculado com o Perfil do Cliente. Valida idade minima de 18 anos na adesao e confere a idade maxima cadastrada na administradora; a validacao definitiva pelo termino do grupo acontece na Viabilidade Grupos.",
-  credito_a_ser_contratado: "Campo calculado pela formula oficial F29: credito desejado / (1 - percentual de lance embutido).",
-  lance_embutido_valor: "Valor calculado do lance embutido: credito a contratar * percentual de lance embutido.",
-  lance_proprio_usado: "Valor usado nas formulas oficiais como lance maximo disponivel: recursos proprios em dinheiro + FGTS titular + FGTS conjuge, quando FGTS for permitido.",
-  lance_total_considerado: "Lance total usado nas formulas F30 e F31: lance embutido em R$ + lance maximo disponivel.",
-  lance_maximo: "Campo calculado pela formula oficial F30: ((credito a contratar * percentual de lance embutido) + lance maximo disponivel) / credito a contratar.",
-  taxa_administracao_valor: "Valor calculado da taxa administrativa: credito a contratar * taxa administrativa da administradora.",
-  fundo_reserva_valor: "Valor calculado do fundo de reserva: credito a contratar * fundo de reserva da administradora.",
-  prazo_minimo: "Campo calculado pela formula oficial F31: (credito a contratar + taxa ADM + fundo reserva - lance total considerado) / parcela limite.",
-};
 const businessRulesFlow = [
   {
     id: "perfil-cliente",
@@ -261,7 +177,6 @@ let configUserModal = null;
 let configUserMode = "create";
 let configUserIndex = null;
 let configAdministratorRuleIndex = null;
-let viabilityAuditModal = null;
 
 function setLoginError(message) {
   const errorBox = document.getElementById("loginError");
@@ -695,7 +610,7 @@ function validateMapCreditFilters(filters) {
   const minimum = filters.credito_minimo === "" ? null : Number(filters.credito_minimo);
   const maximum = filters.credito_maximo === "" ? null : Number(filters.credito_maximo);
   if (minimum !== null && maximum !== null && minimum > maximum) {
-    showToast("O crédito mínimo não pode ser maior que o crédito máximo.", "warning");
+    showToast("O credito minimo nao pode ser maior que o credito maximo.", "warning");
     return false;
   }
   return true;
@@ -1573,9 +1488,6 @@ async function loadMapaGrupos() {
     renderSummary(data.items, data.total, data.total_administradoras);
     renderGroupsTable(data.items);
     renderPagination();
-    if (document.getElementById("screen-viabilidade")?.classList.contains("active") && configState.data) {
-      renderAdministratorPlans();
-    }
     document.getElementById("tableSubtitle").textContent = `${data.total} grupo(s) encontrado(s)`;
     setMapState(data.items.length ? "ready" : "empty");
     addOperationalLog(`Mapa de Grupos carregado: ${data.total} grupo(s)`);
@@ -1892,8 +1804,14 @@ function administratorRuleBoolean(rule, key, defaultValue = true) {
   return rule[key] !== false;
 }
 
+function rulePercentValue(rule, key) {
+  const value = rule[key];
+  if (typeof value === "number") return value > 1 ? value / 100 : value;
+  return inputToPercentFromValue(value);
+}
+
 function administratorRuleCommitment(rule, key, defaultValue) {
-  const percent = administratorPlanPercent(rule || {}, key);
+  const percent = rulePercentValue(rule || {}, key);
   return percent > 0 ? percent : defaultValue;
 }
 
@@ -2218,7 +2136,6 @@ function saveClientProfile({ silent = false } = {}) {
   const profile = collectClientProfile();
   window.localStorage.setItem(CLIENT_PROFILE_STORAGE_KEY, JSON.stringify(profile));
   applyClientProfileToFlow(profile);
-  refreshAdministratorEligibility({ silent: true });
   if (!silent) showToast("Perfil do cliente salvo.", "success");
   return profile;
 }
@@ -2256,462 +2173,6 @@ function resetClientProfile() {
 function advanceClientProfile() {
   saveClientProfile({ silent: true });
   activateScreen("viabilidade");
-  refreshAdministratorEligibility({ silent: false });
-}
-
-function setViabilityState(state) {
-  document.getElementById("viabilityPhase2Idle").classList.toggle("d-none", state !== "idle");
-  document.getElementById("viabilityLoading").classList.toggle("d-none", state !== "loading");
-  document.getElementById("viabilityError").classList.toggle("d-none", state !== "error");
-  document.getElementById("viabilityEmpty").classList.toggle("d-none", state !== "empty");
-  document.getElementById("viabilityResults").classList.toggle("d-none", state !== "ready");
-  document.getElementById("viabilityPhase2Summary")?.classList.toggle("d-none", state !== "ready");
-  const button = document.getElementById("analyzeViabilityBtn");
-  if (!button) return;
-  button.disabled = state === "loading";
-  button.textContent = state === "loading" ? "Selecionando..." : "Selecionar Grupos";
-}
-
-function collectViabilityPayload() {
-  const profile = collectClientProfile();
-  const parcelaLimite = profile.parcela_limite || profile.parcela_ideal;
-  return {
-    objetivo: profile.objetivo,
-    credito_desejado: profile.credito_desejado,
-    prazo_desejado: profile.prazo_desejado,
-    lance_proprio: profile.lance_proprio,
-    fgts: profile.fgts,
-    fgts_titular: profile.fgts_titular,
-    fgts_conjuge: profile.fgts_conjuge,
-    renda_total: profile.renda_total,
-    renda_titular: profile.renda_titular,
-    renda_conjuge: profile.renda_conjuge,
-    parcela_desejada: parcelaLimite,
-    parcela_ideal: profile.parcela_ideal,
-    parcela_limite: parcelaLimite,
-    tipo_contratacao: profile.tipo_contratacao,
-    titulares: profile.titulares,
-    nome: profile.nome,
-    nome_conjuge: profile.nome_conjuge,
-    data_nascimento: profile.data_nascimento,
-    data_nascimento_conjuge: profile.data_nascimento_conjuge,
-    tipo_bem: profile.tipo_bem,
-    estado_bem: profile.estado_bem,
-  };
-}
-
-function validateViabilityPayload(payload) {
-  const required = [
-    ["credito_desejado", "Informe o credito desejado."],
-    ["prazo_desejado", "Informe o prazo desejado."],
-    ["renda_total", "Informe a renda total."],
-    ["parcela_desejada", "Informe a parcela ideal."],
-    ["parcela_limite", "Informe a parcela limite."],
-  ];
-  const missing = required.find(([key]) => !payload[key]);
-  if (missing) {
-    showToast(missing[1], "warning");
-    return false;
-  }
-  if (!Number.isFinite(payload.lance_proprio) || payload.lance_proprio < 0) {
-    showToast("Informe um lance proprio igual ou maior que zero.", "warning");
-    return false;
-  }
-  return true;
-}
-
-function viabilityPayloadIsReady(payload) {
-  return Boolean(
-    payload.credito_desejado
-    && payload.prazo_desejado
-    && payload.renda_total
-    && payload.parcela_desejada
-    && payload.parcela_limite
-    && Number.isFinite(payload.lance_proprio)
-    && payload.lance_proprio >= 0
-  );
-}
-
-function phase2SelectionSignature(payload) {
-  const eligibleAdministrators = administratorEligibilityItemsForDisplay()
-    .filter((item) => item.elegivel)
-    .map((item) => normalizeText(item.administradora))
-    .sort();
-  return JSON.stringify({
-    objetivo: payload.objetivo,
-    credito_desejado: payload.credito_desejado,
-    prazo_desejado: payload.prazo_desejado,
-    lance_proprio: payload.lance_proprio,
-    fgts: payload.fgts,
-    renda_total: payload.renda_total,
-    parcela_desejada: payload.parcela_desejada,
-    parcela_limite: payload.parcela_limite,
-    tipo_contratacao: payload.tipo_contratacao,
-    tipo_bem: payload.tipo_bem,
-    estado_bem: payload.estado_bem,
-    eligibleAdministrators,
-  });
-}
-
-function phase2HasEligibleAdministrators() {
-  const items = administratorEligibilityItemsForDisplay();
-  return items.some((item) => item.elegivel);
-}
-
-function renderViabilityChecklist(checklist) {
-  if (!document.getElementById("viabilityChecklist")) return;
-  document.querySelectorAll("#viabilityChecklist li").forEach((item) => {
-    const value = checklist?.[item.dataset.check];
-    item.classList.toggle("check-ok", value === true);
-    item.classList.toggle("check-fail", value === false);
-  });
-}
-
-function renderPhase2Summary(result, items) {
-  const target = document.getElementById("viabilityPhase2Summary");
-  if (!target) return;
-  const etapa4 = result.etapa4 || {};
-  const cliente = result.cliente || {};
-  const fluxo = etapa4.fluxo === "investimento" ? "Investimento" : "Contemplacao";
-  const criterio = etapa4.estrategia || etapa4.conceito || cliente.perfil_estrategico || "-";
-  const top10 = items.slice(0, 10);
-  const viable = top10.filter((item) => item.status !== "inviavel").length;
-  const best = top10[0];
-  target.innerHTML = `
-    <article>
-      <span>Objetivo aplicado</span>
-      <strong>${escapeHtml(fluxo)}</strong>
-      <small>${escapeHtml(criterio)}</small>
-    </article>
-    <article>
-      <span>Grupos ativos</span>
-      <strong>${escapeHtml(result.total_grupos_elegiveis ?? result.total_grupos_analisados ?? "-")}</strong>
-      <small>base elegivel por status e tipo de bem</small>
-    </article>
-    <article>
-      <span>Filtro da Fase 2</span>
-      <strong>${escapeHtml(result.total_grupos_pos_filtro_1 ?? "-")}</strong>
-      <small>${escapeHtml(etapa4.filtro_1 || "prazo remanescente e menor lance")}</small>
-    </article>
-    <article>
-      <span>Cenarios montados</span>
-      <strong>${escapeHtml(result.total_cenarios ?? items.length)}</strong>
-      <small>${escapeHtml(result.total_cenarios_viaveis ?? viable)} viavel(is)</small>
-    </article>
-    <article>
-      <span>Top 10 exibido</span>
-      <strong>${top10.length}</strong>
-      <small>ordenado por score de compatibilidade</small>
-    </article>
-    <article>
-      <span>Melhor recomendacao</span>
-      <strong>${escapeHtml(best?.administradora || "-")}</strong>
-      <small>${escapeHtml(best ? `${best.quantidade_cartas || 1} carta(s) - ${best.status}` : "aguardando ranking")}</small>
-    </article>
-  `;
-}
-
-function renderViabilitySummary(result) {
-  const items = result.cenarios || result.melhores_grupos || [];
-  const profile = result.cliente?.perfil_estrategico || result.perfil || "-";
-  const etapa4 = result.etapa4 || {};
-  const fluxo = etapa4.fluxo === "investimento" ? "Investimento" : "Contemplacao";
-  const stageLabel = etapa4.conceito || etapa4.estrategia || profile;
-  const stageCount = etapa4.total_pos_filtro_1 ?? result.total_grupos_pos_filtro_1 ?? "-";
-  document.getElementById("viabilityRankingSubtitle").textContent = `Adicionar cartas de credito por grupo. Selecao por prazo remanescente e compatibilidade com menor lance. ${items.length} cenario(s) candidato(s) - fluxo ${fluxo}: ${stageLabel}. Filtro 1 manteve ${stageCount} grupo(s).`;
-  const scenario = document.getElementById("viabilityScenario");
-  if (scenario) scenario.textContent = `${result.total_cenarios_viaveis || 0} cenario(s) viavel(is) - perfil ${profile}`;
-  renderPhase2Summary(result, items);
-  viabilityState.funnelSummary = {
-    ...(viabilityState.funnelSummary || {}),
-    totalAdministradoras: result.total_administradoras_analisadas || viabilityState.funnelSummary?.totalAdministradoras,
-    elegiveis: result.total_administradoras_elegiveis || viabilityState.funnelSummary?.elegiveis,
-    eliminadas: Math.max((result.total_administradoras_analisadas || 0) - (result.total_administradoras_elegiveis || 0), 0),
-    gruposAtivos: result.total_grupos_base || result.total_grupos_analisados || "-",
-    gruposCompativeis: result.total_grupos_pos_filtro_1 || result.total_grupos_compativeis || "-",
-    top10: Math.min(items.length, 10),
-  };
-  renderSelectionFunnelSummary(viabilityState.funnelSummary);
-  setPipelineStatus({
-    perfil: "ok",
-    analise: "ok",
-    elegibilidade: "ok",
-    calculo: "ok",
-    compatibilidade: items.length ? "ok" : "processing",
-    ranking: items.length ? "ok" : "pending",
-    top10: items.length ? "ok" : "pending",
-    estudo: "pending",
-  });
-}
-
-function renderViabilityEmpty(result) {
-  const empty = document.getElementById("viabilityEmpty");
-  const reasons = result?.motivos_reprovacao || [];
-  if (reasons.includes("regras_administradoras_pendentes_analise_humana")) {
-    empty.textContent = "Nenhum grupo passou nos filtros basicos do perfil. As regras das administradoras pendentes nao bloquearam a busca.";
-    return;
-  }
-  empty.textContent = "Nenhum cenario compativel encontrado para este perfil.";
-}
-
-function viabilityAuditStatus(item) {
-  const motivos = item.motivos || [];
-  const alertas = item.alertas || [];
-  const hasFailure = motivos.some((motivo) => /acima|abaixo|fora|sem historico/i.test(motivo));
-  if (alertas.includes("regras_administradoras_pendentes_analise_humana")) return "preliminar";
-  if (hasFailure || alertas.length) return "alerta";
-  return "ok";
-}
-
-function auditStatusLabel(status) {
-  if (status === "ok") return "Conforme";
-  if (status === "preliminar") return "Analise preliminar";
-  return "Revisar";
-}
-
-function auditStatusClass(status) {
-  if (status === "ok") return "audit-ok";
-  if (status === "preliminar") return "audit-warning";
-  return "audit-danger";
-}
-
-function formatAuditToken(value) {
-  return String(value || "").replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
-
-function auditRow(label, value, status = "ok", detail = "") {
-  return `
-    <tr>
-      <td>${escapeHtml(label)}</td>
-      <td>${escapeHtml(value)}</td>
-      <td><span class="audit-status ${auditStatusClass(status)}">${escapeHtml(auditStatusLabel(status))}</span></td>
-      <td>${escapeHtml(detail || "-")}</td>
-    </tr>
-  `;
-}
-
-function auditList(title, items) {
-  const list = items?.length
-    ? items.map((item) => `<li>${escapeHtml(formatAuditToken(item))}</li>`).join("")
-    : "<li>Nenhum item registrado.</li>";
-  return `
-    <section class="audit-panel">
-      <h3>${escapeHtml(title)}</h3>
-      <ul class="audit-list-compact">${list}</ul>
-    </section>
-  `;
-}
-
-function ensureViabilityAuditModal() {
-  let modal = document.getElementById("viabilityAuditModal");
-  if (!modal) {
-    document.body.insertAdjacentHTML("beforeend", `
-      <div class="modal fade" id="viabilityAuditModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable">
-          <div class="modal-content">
-            <div class="modal-header">
-              <div>
-                <h2 id="viabilityAuditTitle" class="modal-title h5">Auditoria da Viabilidade</h2>
-                <p id="viabilityAuditSubtitle" class="modal-subtitle">Conferencia das regras aplicadas ao cenario</p>
-              </div>
-              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
-            </div>
-            <div class="modal-body"><div id="viabilityAuditContent"></div></div>
-            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button></div>
-          </div>
-        </div>
-      </div>
-    `);
-    modal = document.getElementById("viabilityAuditModal");
-  }
-  if (!viabilityAuditModal) viabilityAuditModal = new bootstrap.Modal(modal);
-  return viabilityAuditModal;
-}
-
-function findViabilityItem(groupId, scenarioId) {
-  if (scenarioId) {
-    const scenario = viabilityState.lastResult?.cenarios?.find((item) => item.id === scenarioId);
-    if (scenario) return scenario;
-  }
-  return viabilityState.lastResult?.melhores_grupos?.find((group) => group.grupo_id === groupId);
-}
-
-function openViabilityAudit(groupId, scenarioId = "") {
-  const item = findViabilityItem(groupId, scenarioId);
-  if (!item) {
-    showToast("Execute a Viabilidade antes de auditar o cenario.", "warning");
-    return;
-  }
-  const modal = ensureViabilityAuditModal();
-  const payload = collectViabilityPayload();
-  const status = viabilityAuditStatus(item);
-  const isScenario = Array.isArray(item.cartas) && item.cartas.length > 0;
-  const cartas = item.cartas || [];
-  const composicao = item.grupo || cartas.map((card) => card.grupo || card.grupo_id).filter(Boolean).join(" + ") || "-";
-  const creditoContratado = item.credito_contratado || item.credito_contratado_total || 0;
-  const creditoLiquido = item.credito_liquido_total || item.credito || creditoContratado || 0;
-  const creditoReferencia = payload.credito_desejado || 0;
-  const creditoOk = isScenario
-    ? creditoLiquido >= creditoReferencia
-    : creditoContratado >= (item.credito_minimo || 0) && creditoContratado <= (item.credito_maximo || 0);
-  const parcelaReferencia = payload.parcela_limite || payload.parcela_desejada || 0;
-  const parcela = item.parcela_estimada || item.parcela_total || 0;
-  const parcelaOk = parcela <= parcelaReferencia;
-  const prazo = item.prazo || cartas[0]?.prazo_restante || 0;
-  const prazoMinimo = item.prazo_minimo || cartas[0]?.prazo_minimo || 0;
-  const prazoOk = prazo >= prazoMinimo;
-  const hasLanceHistory = item.lance_referencia_percentual !== null && item.lance_referencia_percentual !== undefined;
-  const lanceOk = hasLanceHistory && (item.percentual_lance || 0) >= (item.lance_referencia_percentual || 0);
-  const title = isScenario ? `Auditoria do Cenario ${item.ranking || item.id || composicao}` : `Auditoria do Grupo ${item.grupo}`;
-  const taxaAdm = item.taxa_adm || cartas[0]?.taxa_adm || 0;
-  const fundoReserva = item.fundo_reserva || cartas[0]?.fundo_reserva || 0;
-
-  document.getElementById("viabilityAuditTitle").textContent = title;
-  document.getElementById("viabilityAuditSubtitle").textContent = `${item.administradora} - ${item.tipo_bem} - ${auditStatusLabel(status)}`;
-  document.getElementById("viabilityAuditContent").innerHTML = `
-    <div class="audit-summary ${auditStatusClass(status)}">
-      <strong>${escapeHtml(auditStatusLabel(status))}</strong>
-      <span>${status === "preliminar" ? "Este cenario entrou como candidato porque as regras das administradoras ainda exigem revisao humana." : "Conferencia dos criterios calculados para este cenario."}</span>
-    </div>
-    <section class="audit-panel">
-      <h3>Conferencia dos Requisitos</h3>
-      <div class="table-responsive">
-        <table class="table table-hover align-middle audit-table">
-          <thead><tr><th>Criterio</th><th>Resultado</th><th>Status</th><th>Observacao</th></tr></thead>
-          <tbody>
-            ${auditRow(isScenario ? "Composicao" : "Status do grupo", isScenario ? composicao : "Ativo", "ok", isScenario ? `${cartas.length || 1} carta(s) dentro da mesma administradora.` : "Somente grupos ativos entram na busca.")}
-            ${auditRow("Tipo de bem", item.tipo_bem || "-", "ok", `Perfil solicitou ${payload.tipo_bem || "-"}.`)}
-            ${auditRow(isScenario ? "Credito liquido" : "Faixa de credito", isScenario ? formatMoney(creditoLiquido) : `${formatMoney(item.credito_minimo)} ate ${formatMoney(item.credito_maximo)}`, creditoOk ? "ok" : "alerta", isScenario ? `Credito desejado: ${formatMoney(creditoReferencia)}. Credito contratado: ${formatMoney(creditoContratado)}.` : `Credito a contratar: ${formatMoney(creditoContratado)}.`)}
-            ${auditRow("Prazo", `${prazo} meses restantes`, prazoOk ? "ok" : "alerta", `Prazo minimo calculado: ${Number(prazoMinimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} meses.`)}
-            ${auditRow("Parcela", formatMoney(parcela), parcelaOk ? "ok" : "alerta", `Parcela de referencia: ${formatMoney(parcelaReferencia)}.`)}
-            ${auditRow("Lance historico", hasLanceHistory ? formatPercent(item.lance_referencia_percentual) : "Sem historico suficiente", lanceOk ? "ok" : "alerta", `Lance maximo calculado do cliente: ${formatPercent(item.percentual_lance)}.`)}
-            ${auditRow("Taxa ADM", formatPercent(taxaAdm), "ok", `Valor aplicado: ${formatMoney(item.taxa_administrativa_valor)}.`)}
-            ${auditRow("Fundo reserva", formatPercent(fundoReserva), fundoReserva >= 1 ? "alerta" : "ok", `Valor aplicado: ${formatMoney(item.fundo_reserva_valor)}.`)}
-          </tbody>
-        </table>
-      </div>
-    </section>
-    <div class="audit-grid">
-      ${auditList("Motivos registrados pelo motor", item.motivos || [])}
-      ${auditList("Alertas de conformidade", item.alertas || [])}
-    </div>
-  `;
-  modal.show();
-}
-
-function renderViabilityRanking(items) {
-  const top10 = items.slice(0, 10);
-  document.getElementById("viabilityRankingBody").innerHTML = top10.map((item, index) => `
-    <tr>
-      <td>${index + 1}</td>
-      <td>${escapeHtml(item.administradora)}</td>
-      <td>${escapeHtml(item.grupo || (item.cartas || []).map((card) => card.grupo || card.grupo_id).join(" + "))}</td>
-      <td>${escapeHtml(item.tipo_bem || (item.cartas?.[0]?.tipo_bem || "-"))}</td>
-      <td>${item.credito_minimo === undefined ? `${item.quantidade_cartas || 1} carta(s)` : formatMoney(item.credito_minimo)}</td>
-      <td>${item.credito_maximo === undefined ? formatMoney(item.credito_liquido_total) : formatMoney(item.credito_maximo)}</td>
-      <td>${formatMoney(item.credito_contratado || item.credito_contratado_total)}</td>
-      <td>${item.prazo || item.cartas?.[0]?.prazo_restante || "-"} meses</td>
-      <td>${Number(item.prazo_minimo || item.cartas?.[0]?.prazo_minimo || 0).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}</td>
-      <td>${formatPercent(item.taxa_adm)}</td>
-      <td>${formatPercent(item.fundo_reserva)}</td>
-      <td>${formatMoney(item.parcela_estimada || item.parcela_total)}</td>
-      <td><span class="audit-status ${item.status === "inviavel" ? "audit-danger" : item.alertas?.length ? "audit-warning" : "audit-ok"}">${escapeHtml(item.status || auditStatusLabel(viabilityAuditStatus(item)))}</span></td>
-      <td>
-        <div class="row-actions">
-          <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="auditar" data-group-id="${escapeHtml(item.grupo_id || item.cartas?.[0]?.grupo_id || "")}" data-scenario-id="${escapeHtml(item.id || "")}">Auditar</button>
-          <button class="btn btn-sm btn-outline-primary" type="button" data-viability-action="visualizar" data-group-id="${escapeHtml(item.grupo_id || item.cartas?.[0]?.grupo_id || "")}">Ver detalhes</button>
-          <button class="btn btn-sm btn-outline-secondary" type="button" data-viability-action="estrategias" data-group-id="${escapeHtml(item.grupo_id || item.cartas?.[0]?.grupo_id || "")}" data-scenario-id="${escapeHtml(item.id || "")}">Selecionar</button>
-        </div>
-      </td>
-    </tr>
-  `).join("");
-}
-
-async function analyzeViability({ silent = false, force = false } = {}) {
-  const payload = collectViabilityPayload();
-  if (silent) {
-    if (!viabilityPayloadIsReady(payload) || !phase2HasEligibleAdministrators()) {
-      setViabilityState("idle");
-      return;
-    }
-  } else if (!validateViabilityPayload(payload)) {
-    return;
-  }
-  const signature = phase2SelectionSignature(payload);
-  if (!force && signature === viabilityState.phase2Signature && viabilityState.lastResult) {
-    const items = viabilityState.lastResult.cenarios || viabilityState.lastResult.melhores_grupos || [];
-    if (items.length) {
-      renderViabilitySummary(viabilityState.lastResult);
-      renderViabilityRanking(items);
-      setViabilityState("ready");
-      return;
-    }
-  }
-  viabilityState.phase2Signature = signature;
-
-  setViabilityState("loading");
-  setPipelineStatus({
-    perfil: "ok",
-    analise: "ok",
-    elegibilidade: "ok",
-    calculo: "processing",
-    compatibilidade: "processing",
-    ranking: "processing",
-    top10: "pending",
-    estudo: "pending",
-  });
-  try {
-    const result = await withTimeout(
-      apiPost("/cenarios/analisar", payload),
-      30000,
-      "A analise de cenarios demorou mais que o esperado. Tente novamente."
-    );
-    viabilityState.lastResult = result;
-    if (result.administradoras_viabilidade) {
-      viabilityState.administratorEligibility = result.administradoras_viabilidade;
-      renderAdministratorEligibility(viabilityState.administratorEligibility);
-      renderAdministratorPlans();
-    }
-    renderViabilityChecklist(result.checklist || {});
-    renderViabilitySummary(result);
-    const items = result.cenarios || result.melhores_grupos || [];
-    if (!items.length) {
-      renderViabilityEmpty(result);
-      setViabilityState("empty");
-      return;
-    }
-    renderViabilityRanking(items);
-    setViabilityState("ready");
-    if (!silent) showToast("Analise de viabilidade concluida.", "success");
-  } catch (error) {
-    viabilityState.phase2Signature = "";
-    setViabilityState("error");
-    if (!silent) showToast(error.message || "Nao foi possivel analisar os cenarios.", "danger");
-  }
-}
-
-async function runPhase2SelectionAutomatically() {
-  if (viabilityState.phase2Running) return;
-  if (!document.getElementById("screen-viabilidade")?.classList.contains("active")) return;
-  const payload = collectViabilityPayload();
-  if (!viabilityPayloadIsReady(payload) || !phase2HasEligibleAdministrators()) return;
-  viabilityState.phase2Running = true;
-  try {
-    await analyzeViability({ silent: true });
-  } finally {
-    viabilityState.phase2Running = false;
-  }
-}
-
-function resetViabilityForm() {
-  renderViabilityChecklist({});
-  const scenario = document.getElementById("viabilityScenario");
-  if (scenario) scenario.textContent = "Aguardando analise";
-  document.getElementById("viabilityRankingBody").innerHTML = "";
-  document.getElementById("viabilityPhase2Summary").innerHTML = "";
-  viabilityState.phase2Signature = "";
-  viabilityState.lastResult = null;
-  setViabilityState("idle");
 }
 
 function setStudyState(state) {
@@ -3012,7 +2473,7 @@ function activateStudyTemplateTab(tabName) {
 }
 
 async function openFinancialStudy(groupId, viabilityItem) {
-  const payload = collectViabilityPayload();
+  const payload = collectClientProfile();
   currentStudy = { groupId, viabilityItem, payload, group: null, cenario: viabilityItem?.cartas ? viabilityItem : null, templateCampos: {} };
   activateScreen("estudo");
   setStudyState("loading");
@@ -3535,7 +2996,6 @@ function renderConfiguracoes(data) {
 
   renderBusinessRules(data.regras_negocio_feedbacks || {});
   renderAdministratorRules(data.administradoras_regras || []);
-  renderAdministratorPlans();
   document.getElementById("configSystemGrid").innerHTML = [
     ["Aplicacao", sistema.app],
     ["Versao", sistema.version],
@@ -3575,802 +3035,6 @@ function renderAdministratorRules(rules) {
       </td>
     </tr>
   `).join("");
-}
-
-function activeAdministratorPlanKind() {
-  return document.querySelector("[data-admin-plan-kind].active")?.dataset.adminPlanKind || "Imovel";
-}
-
-function administratorPlanRulesForKind(kind) {
-  const rules = configState.data?.administradoras_regras || [];
-  const byKind = rules.filter((rule) => (rule.tipo_bem || "Imovel") === kind);
-  const knownNames = [
-    ...(mapState.administradoras || []),
-    ...administratorPlanDefaultNames,
-    ...byKind.map((rule) => rule.administradora).filter(Boolean),
-  ];
-  const uniqueNames = [];
-  knownNames.forEach((name) => {
-    if (!name) return;
-    const alreadyAdded = uniqueNames.some((existing) => normalizeText(existing) === normalizeText(name));
-    if (!alreadyAdded) uniqueNames.push(name);
-  });
-
-  return uniqueNames.map((administradora) => {
-    const savedRule = byKind.find((rule) => normalizeText(rule.administradora) === normalizeText(administradora));
-    return {
-      administradora,
-      tipo_bem: kind,
-      seguro_obrigatorio: false,
-      seguro_obrigatorio_texto: "",
-      aceita_saida_fiscal: false,
-      aceita_saida_fiscal_texto: "",
-      aceita_fgts: true,
-      aceita_pj: true,
-      aceita_pj_texto: "Sim",
-      permite_composicao_pj_socios: true,
-      permite_composicao_pj_socios_texto: "Sim",
-      permite_cpf_socio: true,
-      permite_cpf_socio_texto: "Sim",
-      percentual_comprometimento_pj: DEFAULT_PJ_COMMITMENT_PERCENT,
-      percentual_comprometimento_cpf: DEFAULT_CPF_COMMITMENT_PERCENT,
-      status_operacional: "Ativo",
-      data_cadastro_produto: "",
-      responsavel_produto: "",
-      aceita_adesao_clientes_texto: "",
-      limite_sem_comprovacao_renda_texto: "",
-      ...(savedRule || {}),
-    };
-  });
-}
-
-function eligibilityStatusClass(status, elegivel) {
-  if (!elegivel || status === "REPROVADA") return "eligibility-status-danger";
-  if (status === "APROVADA_COM_RESTRICOES") return "eligibility-status-warning";
-  return "eligibility-status-ok";
-}
-
-function eligibilityStatusLabel(item) {
-  if (item.status) return String(item.status).replaceAll("_", " ");
-  return item.elegivel ? "APROVADA" : "REPROVADA";
-}
-
-function eligibilityList(items, fallback = "Sem restricoes") {
-  const values = (items || []).filter(Boolean);
-  if (!values.length) return `<span class="text-muted">${escapeHtml(fallback)}</span>`;
-  return `<ul class="eligibility-detail-list">${values.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
-}
-
-function eligibilityCheck(ok, positive = "OK", negative = "Revisar") {
-  return ok
-    ? `<span class="eligibility-check eligibility-check-ok">✓ ${escapeHtml(positive)}</span>`
-    : `<span class="eligibility-check eligibility-check-danger">× ${escapeHtml(negative)}</span>`;
-}
-
-function eligibilityRuleCell(item, key) {
-  if (key === "credito") {
-    return eligibilityCheck(item.limite_sem_comprovacao_compativel !== false, "OK", "Credito acima do limite");
-  }
-  if (key === "idade") {
-    return item.alertas?.includes("idade_nao_validada")
-      ? `<span class="eligibility-check eligibility-check-warning">△ Idade nao validada</span>`
-      : eligibilityCheck(item.idade_compativel !== false, "OK", "Idade fora do limite");
-  }
-  if (key === "fgts") {
-    return eligibilityCheck(item.fgts_permitido !== false, "OK", "Nao aceita FGTS");
-  }
-  if (key === "pj") {
-    if (item.cenarios_pj_disponiveis?.length) {
-      return `<span class="eligibility-check eligibility-check-ok">✓ ${escapeHtml(item.cenarios_pj_disponiveis.join(", "))}</span>`;
-    }
-    const blocked = item.motivos_reprovacao?.some((motivo) => normalizeText(motivo).includes("nao aceita pj"));
-    return eligibilityCheck(!blocked, "OK", "Nao aceita PJ");
-  }
-  if (key === "embutido") {
-    return eligibilityCheck(item.lance_embutido_permitido !== false, "OK", "Sem embutido");
-  }
-  return eligibilityCheck(true);
-}
-
-function setPipelineStatus(statuses = {}) {
-  document.querySelectorAll("[data-pipeline-step]").forEach((step) => {
-    const status = statuses[step.dataset.pipelineStep] || "pending";
-    step.classList.toggle("pipeline-ok", status === "ok");
-    step.classList.toggle("pipeline-processing", status === "processing");
-    step.classList.toggle("pipeline-pending", status === "pending");
-    const small = step.querySelector("small");
-    if (small) small.textContent = status === "ok" ? "OK" : status === "processing" ? "Processando" : "Aguardando";
-  });
-}
-
-function renderSelectionFunnelSummary(summary = {}) {
-  const target = document.getElementById("selectionFunnelSummary");
-  if (!target) return;
-  const values = [
-    ["Administradoras cadastradas", summary.totalAdministradoras ?? "-"],
-    ["Elegiveis", summary.elegiveis ?? "-"],
-    ["Eliminadas", summary.eliminadas ?? "-"],
-    ["Grupos ativos", summary.gruposAtivos ?? "-"],
-    ["Compativeis", summary.gruposCompativeis ?? "-"],
-    ["Top 10", summary.top10 ?? "-"],
-  ];
-  target.innerHTML = values.map(([label, value]) => `
-    <article><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>
-  `).join("");
-}
-
-function administratorEligibilityItemsForDisplay() {
-  return viabilityState.administratorEligibility || [];
-}
-
-function eligibleAdministratorNamesSet() {
-  const items = administratorEligibilityItemsForDisplay();
-  if (!items.length) return null;
-  return new Set(items.filter((item) => item.elegivel).map((item) => normalizeText(item.administradora)));
-}
-
-function administratorPlanDisplayRulesForKind(kind) {
-  const rules = administratorPlanRulesForKind(kind);
-  const eligibleNames = eligibleAdministratorNamesSet();
-  if (!eligibleNames) return rules;
-  return rules.filter((rule) => eligibleNames.has(normalizeText(rule.administradora)));
-}
-
-function renderAdministratorEligibility(items = administratorEligibilityItemsForDisplay()) {
-  const body = document.getElementById("administratorEligibilityBody");
-  const eliminatedBody = document.getElementById("administratorEliminatedBody");
-  const eliminatedDetails = document.getElementById("administratorEliminatedDetails");
-  const eliminatedCount = document.getElementById("administratorEliminatedCount");
-  const eligibleList = document.getElementById("eligibleAdministratorsList");
-  const empty = document.getElementById("administratorEligibilityEmpty");
-  const wrap = document.getElementById("administratorEligibilityTableWrap");
-  const summary = document.getElementById("administratorEligibilitySummary");
-  if (!body || !empty || !wrap || !summary) return;
-
-  const total = items.length;
-  const eligibleItems = items.filter((item) => item.elegivel);
-  const eliminatedItems = items.filter((item) => !item.elegivel);
-  const eligible = eligibleItems.length;
-  summary.textContent = total ? `${eligible} de ${total} podem seguir` : "Aguardando perfil";
-  empty.classList.toggle("d-none", total > 0);
-  wrap.classList.toggle("d-none", total === 0);
-  if (eliminatedDetails) eliminatedDetails.classList.toggle("d-none", eliminatedItems.length === 0);
-  if (eliminatedCount) eliminatedCount.textContent = String(eliminatedItems.length);
-  if (eligibleList) {
-    eligibleList.innerHTML = eligibleItems.length
-      ? `<strong>Administradoras elegiveis:</strong>${eligibleItems.map((item) => `<span>✓ ${escapeHtml(item.administradora)}</span>`).join("")}`
-      : "Nenhuma administradora elegivel para a calculadora.";
-  }
-  renderSelectionFunnelSummary({
-    ...(viabilityState.funnelSummary || {}),
-    totalAdministradoras: total || viabilityState.funnelSummary?.totalAdministradoras,
-    elegiveis: eligible || viabilityState.funnelSummary?.elegiveis,
-    eliminadas: eliminatedItems.length || viabilityState.funnelSummary?.eliminadas,
-  });
-  setPipelineStatus({
-    perfil: "ok",
-    analise: "ok",
-    elegibilidade: total ? "ok" : "pending",
-    calculo: total ? "processing" : "pending",
-    compatibilidade: "pending",
-    ranking: "pending",
-    top10: "pending",
-    estudo: "pending",
-  });
-  if (!total) {
-    body.innerHTML = "";
-    if (eliminatedBody) eliminatedBody.innerHTML = "";
-    empty.textContent = "Salve ou avance o Perfil do Cliente para calcular a elegibilidade.";
-    return;
-  }
-
-  body.innerHTML = eligibleItems.map((item) => {
-    const motivos = [
-      ...(item.motivos_reprovacao || []),
-      ...(item.alertas || []),
-    ];
-    const status = eligibilityStatusLabel(item);
-    return `
-      <tr>
-        <td><strong>${escapeHtml(item.administradora || "-")}</strong></td>
-        <td><span class="eligibility-status ${eligibilityStatusClass(item.status, item.elegivel)}">${escapeHtml(status)}</span></td>
-        <td>${eligibilityRuleCell(item, "credito")}</td>
-        <td>${eligibilityRuleCell(item, "idade")}</td>
-        <td>${eligibilityRuleCell(item, "fgts")}</td>
-        <td>${eligibilityRuleCell(item, "pj")}</td>
-        <td>${eligibilityRuleCell(item, "embutido")}</td>
-        <td>${eligibilityList(motivos, "Elegivel sem restricoes")}</td>
-        <td>${eligibilityList(item.restricoes || [], "Sem restricoes")}</td>
-        <td><strong>${item.elegivel ? "Sim" : "Nao"}</strong></td>
-      </tr>
-    `;
-  }).join("");
-  if (eliminatedBody) {
-    eliminatedBody.innerHTML = eliminatedItems.map((item) => `
-      <tr>
-        <td><strong>${escapeHtml(item.administradora || "-")}</strong></td>
-        <td><span class="eligibility-status eligibility-status-danger">${escapeHtml(eligibilityStatusLabel(item))}</span></td>
-        <td>${eligibilityList([...(item.motivos_reprovacao || []), ...(item.alertas || [])], "Reprovada")}</td>
-        <td>${eligibilityList(item.cenarios_pj_disponiveis || [], "-")}</td>
-      </tr>
-    `).join("");
-  }
-}
-
-async function refreshAdministratorEligibility({ silent = true } = {}) {
-  const payload = collectViabilityPayload();
-  if (!payload.credito_desejado || !payload.prazo_desejado || !payload.renda_total || !payload.parcela_desejada) {
-    viabilityState.administratorEligibility = [];
-    renderAdministratorEligibility([]);
-    renderAdministratorPlans();
-    return [];
-  }
-  try {
-    if (!configState.data?.administradoras_regras?.length) {
-      const config = await apiGet("/configuracoes");
-      renderConfiguracoes(config);
-    }
-    const result = await apiPost("/viabilidade/administradoras", payload);
-    viabilityState.administratorEligibility = result.items || [];
-    viabilityState.funnelSummary = {
-      ...(viabilityState.funnelSummary || {}),
-      totalAdministradoras: result.total || viabilityState.administratorEligibility.length,
-      elegiveis: result.total_elegiveis || viabilityState.administratorEligibility.filter((item) => item.elegivel).length,
-      eliminadas: (result.total || viabilityState.administratorEligibility.length) - (result.total_elegiveis || 0),
-    };
-    renderAdministratorEligibility(viabilityState.administratorEligibility);
-    renderAdministratorPlans();
-    runPhase2SelectionAutomatically();
-    return viabilityState.administratorEligibility;
-  } catch (error) {
-    if (viabilityState.administratorEligibility?.length) {
-      renderAdministratorEligibility(viabilityState.administratorEligibility);
-      renderAdministratorPlans();
-    } else {
-      renderAdministratorEligibility([]);
-      renderAdministratorPlans();
-    }
-    if (!silent) showToast("Nao foi possivel calcular a elegibilidade das administradoras.", "warning");
-    return [];
-  }
-}
-
-function administratorPlanCellValue(rule, row) {
-  const value = rule[row.key];
-  if (row.key === "tipo_bem_calculadora") {
-    return activeAdministratorPlanKind();
-  }
-  if (row.key === "idade_maxima_ok") {
-    return administratorPlanAgeValidation(rule);
-  }
-  if (row.key === "credito_a_ser_contratado") {
-    return formatAdministratorPlanNumber(administratorPlanCreditoContratado(rule, true), 2);
-  }
-  if (row.key === "lance_embutido_valor") {
-    return formatAdministratorPlanNumber(administratorPlanLanceEmbutidoValor(rule, true), 2);
-  }
-  if (row.key === "lance_proprio_usado") {
-    return formatAdministratorPlanNumber(currentClientProfileLanceMaximoDisponivel(rule), 2);
-  }
-  if (row.key === "lance_total_considerado") {
-    return formatAdministratorPlanNumber(administratorPlanLanceTotalConsiderado(rule, true), 2);
-  }
-  if (row.key === "lance_maximo") {
-    const lanceMaximo = administratorPlanLanceMaximo(rule, true);
-    return lanceMaximo === null ? "" : formatAdministratorPlanNumber(lanceMaximo * 100, 4);
-  }
-  if (row.key === "taxa_administracao_valor") {
-    return formatAdministratorPlanNumber(administratorPlanTaxaAdmValor(rule, true), 2);
-  }
-  if (row.key === "fundo_reserva_valor") {
-    return formatAdministratorPlanNumber(administratorPlanFundoReservaValor(rule, true), 2);
-  }
-  if (row.key === "prazo_minimo") {
-    return formatAdministratorPlanNumber(administratorPlanLegacyPrazoMinimo(rule), 0);
-  }
-  if (row.type === "percent") return percentToInput(value);
-  if (row.type === "money") return value ?? "";
-  if (row.key === "seguro_obrigatorio_texto" && value === undefined) return rule.seguro_obrigatorio ? "Sim" : "";
-  if (row.key === "aceita_saida_fiscal_texto" && value === undefined) return rule.aceita_saida_fiscal ? "Sim" : "";
-  if (row.key === "aceita_pj_texto" && value === undefined) return adminRuleBoolText(rule.aceita_pj, true);
-  if (row.key === "permite_composicao_pj_socios_texto" && value === undefined) return adminRuleBoolText(rule.permite_composicao_pj_socios, true);
-  if (row.key === "permite_cpf_socio_texto" && value === undefined) return adminRuleBoolText(rule.permite_cpf_socio, true);
-  return value ?? "";
-}
-
-function currentClientProfileNumber(inputId, profileKey) {
-  const activeInput = document.getElementById(inputId);
-  const activeValue = activeInput ? toNumber(activeInput.value) : 0;
-  if (activeValue) return activeValue;
-  try {
-    const savedProfile = JSON.parse(window.localStorage.getItem(CLIENT_PROFILE_STORAGE_KEY) || "null");
-    return Number(savedProfile?.[profileKey] || 0);
-  } catch {
-    return 0;
-  }
-}
-
-function currentClientProfileCredit() {
-  return currentClientProfileNumber("clientProfileCredito", "credito_desejado");
-}
-
-function currentClientProfileLanceProprio() {
-  return currentClientProfileNumber("clientProfileLanceProprio", "lance_proprio");
-}
-
-function currentClientProfileFgtsTotal() {
-  return currentClientProfileNumber("clientProfileFgtsTitular", "fgts_titular")
-    + currentClientProfileNumber("clientProfileFgtsConjuge", "fgts_conjuge");
-}
-
-function currentClientProfileLanceMaximoDisponivel(rule = {}) {
-  const fgtsPermitido = rule.aceita_fgts !== false;
-  return currentClientProfileLanceProprio() + (fgtsPermitido ? currentClientProfileFgtsTotal() : 0);
-}
-
-function currentClientProfileParcelaLimite() {
-  return currentClientProfileNumber("clientProfileParcelaLimite", "parcela_limite")
-    || currentClientProfileNumber("clientProfileParcelaIdeal", "parcela_ideal");
-}
-
-function currentClientProfileParcelaDesejada() {
-  return currentClientProfileNumber("clientProfileParcelaIdeal", "parcela_ideal")
-    || currentClientProfileParcelaLimite();
-}
-
-function currentClientProfileValue(inputId, profileKey) {
-  const activeInput = document.getElementById(inputId);
-  const activeValue = activeInput ? String(activeInput.value || "").trim() : "";
-  if (activeValue) return activeValue;
-  try {
-    const savedProfile = JSON.parse(window.localStorage.getItem(CLIENT_PROFILE_STORAGE_KEY) || "null");
-    return savedProfile?.[profileKey] || "";
-  } catch {
-    return "";
-  }
-}
-
-function calculateAgeFromDateText(dateText) {
-  if (!dateText) return null;
-  const born = new Date(`${dateText}T00:00:00`);
-  if (Number.isNaN(born.getTime())) return null;
-  const today = new Date();
-  let age = today.getFullYear() - born.getFullYear();
-  const monthDiff = today.getMonth() - born.getMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < born.getDate())) age -= 1;
-  return age;
-}
-
-function administratorPlanAgeValidation(rule) {
-  const birthDate = currentClientProfileValue("clientProfileNascimento", "data_nascimento");
-  const age = calculateAgeFromDateText(birthDate);
-  if (age === null) return "Idade nao validada";
-  if (age < 18) return "Nao - menor de 18";
-  const maximumAge = optionalNumber(rule.idade_maxima);
-  if (!maximumAge) return "Sim - sem idade maxima cadastrada";
-  if (age > maximumAge) return "Nao - acima da idade maxima";
-  return "Sim - validar termino no grupo";
-}
-
-function administratorPlanPercent(rule, key) {
-  const value = rule[key];
-  if (typeof value === "number") return value > 1 ? value / 100 : value;
-  return inputToPercentFromValue(value);
-}
-
-function administratorPlanCreditoContratado(rule, useEmbedded = true) {
-  const creditoDesejado = currentClientProfileCredit();
-  const percentualLanceEmbutido = administratorPlanPercent(rule, "percentual_lance_embutido");
-  if (!creditoDesejado) return null;
-  if (!useEmbedded) return creditoDesejado;
-  if (percentualLanceEmbutido < 0 || percentualLanceEmbutido >= 1) return null;
-  return creditoDesejado / (1 - percentualLanceEmbutido);
-}
-
-function administratorPlanLanceEmbutidoValor(rule, useEmbedded = true) {
-  if (!useEmbedded) return 0;
-  const creditoContratado = administratorPlanCreditoContratado(rule, true);
-  if (!creditoContratado) return null;
-  return creditoContratado * administratorPlanPercent(rule, "percentual_lance_embutido");
-}
-
-function administratorPlanRecursoProprioUsado() {
-  return currentClientProfileLanceProprio();
-}
-
-function administratorPlanFgtsUsado(rule) {
-  return rule.aceita_fgts !== false ? currentClientProfileFgtsTotal() : 0;
-}
-
-function administratorPlanLanceTotalConsiderado(rule, useEmbedded = true) {
-  const lanceEmbutido = administratorPlanLanceEmbutidoValor(rule, useEmbedded);
-  if (lanceEmbutido === null) return null;
-  return lanceEmbutido + administratorPlanRecursoProprioUsado() + administratorPlanFgtsUsado(rule);
-}
-
-function administratorPlanLanceMaximo(rule, useEmbedded = true) {
-  const creditoContratado = administratorPlanCreditoContratado(rule, useEmbedded);
-  if (!creditoContratado) return null;
-  const lanceTotal = administratorPlanLanceTotalConsiderado(rule, useEmbedded);
-  return lanceTotal === null ? null : lanceTotal / creditoContratado;
-}
-
-function administratorPlanTaxaAdmValor(rule, useEmbedded = true) {
-  const creditoContratado = administratorPlanCreditoContratado(rule, useEmbedded);
-  if (!creditoContratado) return null;
-  return creditoContratado * administratorPlanPercent(rule, "taxa_adm");
-}
-
-function administratorPlanFundoReservaValor(rule, useEmbedded = true) {
-  const creditoContratado = administratorPlanCreditoContratado(rule, useEmbedded);
-  if (!creditoContratado) return null;
-  return creditoContratado * administratorPlanPercent(rule, "fundo_reserva");
-}
-
-function administratorPlanSaldoDevedor(rule, useEmbedded = true) {
-  const creditoContratado = administratorPlanCreditoContratado(rule, useEmbedded);
-  if (!creditoContratado) return null;
-  return creditoContratado
-    + (administratorPlanTaxaAdmValor(rule, useEmbedded) || 0)
-    + (administratorPlanFundoReservaValor(rule, useEmbedded) || 0);
-}
-
-function administratorPlanPrazoMinimo(rule, useEmbedded = true, options = {}) {
-  const saldoDevedor = administratorPlanSaldoDevedor(rule, useEmbedded);
-  const parcelaMaxima = options.parcela || currentClientProfileParcelaLimite();
-  if (!saldoDevedor || !parcelaMaxima) return null;
-  const lanceTotal = options.deductLance ? administratorPlanLanceTotalConsiderado(rule, useEmbedded) : 0;
-  if (lanceTotal === null) return null;
-  return Math.max(saldoDevedor - lanceTotal, 0) / parcelaMaxima;
-}
-
-function administratorPlanScenarioValue(rule, key, useEmbedded) {
-  if (key === "credito_a_ser_contratado") {
-    return administratorPlanCreditoContratado(rule, useEmbedded);
-  }
-  if (key === "saldo_devedor_categoria") {
-    return administratorPlanSaldoDevedor(rule, useEmbedded);
-  }
-  if (key === "lance_maximo") {
-    return administratorPlanLanceMaximo(rule, useEmbedded);
-  }
-  if (key === "lance_total_considerado") {
-    return administratorPlanLanceTotalConsiderado(rule, useEmbedded);
-  }
-  if (key === "recurso_proprio_usado") {
-    return administratorPlanRecursoProprioUsado();
-  }
-  if (key === "fgts_usado") {
-    return administratorPlanFgtsUsado(rule);
-  }
-  if (key === "lance_embutido_valor") {
-    return administratorPlanLanceEmbutidoValor(rule, useEmbedded);
-  }
-  if (key === "prazo_minimo_investidor_desejada") {
-    return administratorPlanPrazoMinimo(rule, useEmbedded, {
-      parcela: currentClientProfileParcelaDesejada(),
-      deductLance: false,
-    });
-  }
-  if (key === "prazo_minimo_investidor_renda") {
-    return administratorPlanPrazoMinimo(rule, useEmbedded, {
-      parcela: currentClientProfileParcelaLimite(),
-      deductLance: false,
-    });
-  }
-  if (key === "prazo_minimo_contemplacao_desejada") {
-    return administratorPlanPrazoMinimo(rule, useEmbedded, {
-      parcela: currentClientProfileParcelaDesejada(),
-      deductLance: true,
-    });
-  }
-  if (key === "prazo_minimo_contemplacao_renda") {
-    return administratorPlanPrazoMinimo(rule, useEmbedded, {
-      parcela: currentClientProfileParcelaLimite(),
-      deductLance: true,
-    });
-  }
-  return null;
-}
-
-function currentClientObjectiveFlow() {
-  const objective = document.getElementById("clientProfileObjetivo")?.value || "";
-  return normalizeText(objective).startsWith("investidor") ? "investimento" : "contemplacao";
-}
-
-function visibleAdministratorPlanScenarioRows() {
-  const flow = currentClientObjectiveFlow();
-  return administratorPlanScenarioRows.filter((row) => {
-    if (row.key.includes("_investidor_")) return flow === "investimento";
-    if (row.key.includes("_contemplacao_")) return flow === "contemplacao";
-    return true;
-  });
-}
-
-function administratorPlanScenarioCellValue(rule, row, useEmbedded) {
-  const value = administratorPlanScenarioValue(rule, row.key, useEmbedded);
-  if (row.type === "percent") {
-    return value === null ? "" : formatAdministratorPlanNumber(value * 100, 2);
-  }
-  if (row.type === "number") {
-    return formatAdministratorPlanNumber(value, 0);
-  }
-  return formatAdministratorPlanNumber(value, 2);
-}
-
-function administratorPlanLegacyPrazoMinimo(rule) {
-  const creditoContratado = administratorPlanCreditoContratado(rule, true);
-  const lanceTotal = administratorPlanLanceTotalConsiderado(rule, true);
-  const parcelaMaxima = currentClientProfileParcelaLimite();
-  if (!creditoContratado || lanceTotal === null || !parcelaMaxima) return null;
-  const taxaAdmValor = administratorPlanTaxaAdmValor(rule, true) || 0;
-  const fundoReservaValor = administratorPlanFundoReservaValor(rule, true) || 0;
-  return (
-    creditoContratado
-    + taxaAdmValor
-    + fundoReservaValor
-    - lanceTotal
-  ) / parcelaMaxima;
-}
-
-function formatAdministratorPlanNumber(value, maximumFractionDigits) {
-  if (value === null || value === undefined || !Number.isFinite(Number(value))) return "";
-  return Number(value).toLocaleString("pt-BR", {
-    minimumFractionDigits: maximumFractionDigits,
-    maximumFractionDigits,
-  });
-}
-
-function recalculateAdministratorPlanComputedCells() {
-  const currentRules = collectAdministratorPlans();
-  const visibleScenarioRows = visibleAdministratorPlanScenarioRows();
-  document.querySelectorAll("[data-admin-plan-field]").forEach((input) => {
-    if (!administratorPlanComputedFields.includes(input.dataset.adminPlanField)) return;
-    const index = Number(input.dataset.adminPlanIndex);
-    const row = [...administratorPlanRows, ...visibleScenarioRows].find((item) => item.key === input.dataset.adminPlanField);
-    if (!row || !currentRules[index]) return;
-    if (input.dataset.adminPlanScenario) {
-      input.value = administratorPlanScenarioCellValue(
-        currentRules[index],
-        row,
-        input.dataset.adminPlanScenario === "com_embutido",
-      );
-    } else {
-      input.value = administratorPlanCellValue(currentRules[index], row);
-    }
-  });
-  renderAdministratorPlanAudit(administratorPlanRulesForKind(activeAdministratorPlanKind()));
-}
-
-function renderAdministratorPlanRegisterRows(rules) {
-  return administratorPlanRows.map((row) => `
-      <tr class="admin-plan-register-row">
-        <th>${renderAdministratorPlanRowLabel(row)}</th>
-        ${rules.map((rule, index) => `
-          <td colspan="2">
-            <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" value="${escapeHtml(administratorPlanCellValue(rule, row))}" ${administratorPlanComputedFields.includes(row.key) ? "readonly" : ""}>
-          </td>
-        `).join("")}
-      </tr>
-    `).join("");
-}
-
-function renderAdministratorPlanScenarioRows(rules) {
-  const visibleRows = visibleAdministratorPlanScenarioRows();
-  return visibleRows.map((row) => `
-      <tr class="admin-plan-scenario-row">
-        <th>${renderAdministratorPlanRowLabel(row)}</th>
-        ${rules.map((rule, index) => `
-          <td>
-            <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" data-admin-plan-scenario="sem_embutido" value="${escapeHtml(administratorPlanScenarioCellValue(rule, row, false))}" readonly>
-          </td>
-          <td>
-            <input class="admin-plan-cell" data-admin-plan-index="${index}" data-admin-plan-field="${escapeHtml(row.key)}" data-admin-plan-type="${escapeHtml(row.type)}" data-admin-plan-scenario="com_embutido" value="${escapeHtml(administratorPlanScenarioCellValue(rule, row, true))}" readonly>
-          </td>
-        `).join("")}
-      </tr>
-    `).join("");
-}
-
-function renderAdministratorPlanColgroup(rules) {
-  const target = document.getElementById("administratorPlansCols");
-  if (!target) return;
-  const labelColumnWidth = "176px";
-  const scenarioColumnWidth = "124px";
-  target.innerHTML = `
-    <col class="admin-plan-col-label" style="width: ${labelColumnWidth}">
-    ${rules.map(() => `
-      <col class="admin-plan-col-admin" style="width: ${scenarioColumnWidth}">
-      <col class="admin-plan-col-admin" style="width: ${scenarioColumnWidth}">
-    `).join("")}
-  `;
-}
-
-function renderAdministratorPlanAudit(rules) {
-  const target = document.getElementById("administratorPlanAudit");
-  if (!target) return;
-  if (!rules.length) {
-    target.innerHTML = "";
-    return;
-  }
-  const rule = rules[0];
-  const administradora = rule.administradora || "primeira administradora";
-  const creditoDesejado = currentClientProfileCredit();
-  const percentualEmbutido = administratorPlanPercent(rule, "percentual_lance_embutido");
-  const creditoSemEmbutido = administratorPlanCreditoContratado(rule, false);
-  const creditoComEmbutido = administratorPlanCreditoContratado(rule, true);
-  const recursoProprio = administratorPlanRecursoProprioUsado();
-  const fgts = administratorPlanFgtsUsado(rule);
-  const lanceSemEmbutido = administratorPlanLanceTotalConsiderado(rule, false);
-  const lanceComEmbutido = administratorPlanLanceTotalConsiderado(rule, true);
-  const saldoSemEmbutido = administratorPlanSaldoDevedor(rule, false);
-  const saldoComEmbutido = administratorPlanSaldoDevedor(rule, true);
-  const parcelaDesejada = currentClientProfileParcelaDesejada();
-  const parcelaLimite = currentClientProfileParcelaLimite();
-  const flow = currentClientObjectiveFlow();
-  const prazoStep = flow === "investimento"
-    ? `O prazo minimo de investimento divide o saldo devedor pela parcela desejada (${formatMoney(parcelaDesejada)}) e pelo limite de renda (${formatMoney(parcelaLimite)}).`
-    : `O prazo minimo de contemplacao desconta o lance total do saldo devedor e depois divide pela parcela desejada (${formatMoney(parcelaDesejada)}) ou pelo limite de renda (${formatMoney(parcelaLimite)}).`;
-  target.innerHTML = renderPreliminaryAuditTrail("Demonstrativo logico do calculo", [
-    `A calculadora usa o credito desejado do perfil do cliente: ${formatMoney(creditoDesejado)}.`,
-    `Para ${administradora}, o lance embutido cadastrado e ${formatPercent(percentualEmbutido)}. Sem embutido, o credito contratado fica em ${formatMoney(creditoSemEmbutido)}; com embutido, fica em ${formatMoney(creditoComEmbutido)}.`,
-    `O recurso proprio considerado foi ${formatMoney(recursoProprio)} e o FGTS permitido para esta administradora foi ${formatMoney(fgts)}.`,
-    `No cenario sem embutido, o lance total ficou em ${formatMoney(lanceSemEmbutido)}. No cenario com embutido, o lance total ficou em ${formatMoney(lanceComEmbutido)}.`,
-    `O saldo devedor/categoria soma credito contratado, taxa de administracao e fundo de reserva. Resultado: ${formatMoney(saldoSemEmbutido)} sem embutido e ${formatMoney(saldoComEmbutido)} com embutido.`,
-    `O perfil selecionado no cadastro do cliente definiu o fluxo da Fase 1 como ${flow === "investimento" ? "Investidor" : "Contemplacao"}.`,
-    prazoStep,
-  ]).replace("client-preliminary-audit", "client-preliminary-audit administrator-plan-audit");
-}
-
-function renderAdministratorPlanRowLabel(row) {
-  const help = administratorPlanRuleHelp[row.key];
-  if (!help) return escapeHtml(row.label);
-  return `
-    <span class="admin-plan-rule-label">
-      ${escapeHtml(row.label)}
-      <button class="admin-plan-rule-marker" type="button" data-rule-help="${escapeHtml(help)}" aria-label="Explicar uso do campo ${escapeHtml(row.label)}">*</button>
-    </span>
-  `;
-}
-
-function ensureRuleHelpPopover() {
-  let popover = document.getElementById("adminRuleHelpPopover");
-  if (!popover) {
-    popover = document.createElement("div");
-    popover.id = "adminRuleHelpPopover";
-    popover.className = "admin-rule-help-popover d-none";
-    popover.setAttribute("role", "tooltip");
-    document.body.appendChild(popover);
-  }
-  return popover;
-}
-
-function showRuleHelpPopover(target) {
-  const popover = ensureRuleHelpPopover();
-  const rect = target.getBoundingClientRect();
-  popover.textContent = target.dataset.ruleHelp || "";
-  popover.style.left = `${Math.min(rect.left + window.scrollX + 12, window.scrollX + window.innerWidth - 340)}px`;
-  popover.style.top = `${rect.bottom + window.scrollY + 8}px`;
-  popover.classList.remove("d-none");
-}
-
-function hideRuleHelpPopover() {
-  document.getElementById("adminRuleHelpPopover")?.classList.add("d-none");
-}
-
-function renderAdministratorPlans() {
-  const kind = activeAdministratorPlanKind();
-  const rules = administratorPlanDisplayRulesForKind(kind);
-  const totalColumns = 1 + (rules.length * 2);
-  renderAdministratorPlanColgroup(rules);
-  document.getElementById("administratorPlansHead").innerHTML = `
-    <tr class="admin-plan-main-title">
-      <th colspan="${totalColumns}">ETAPA 4 - FASE 1 - CALCULADORA DE GRUPOS</th>
-    </tr>
-    <tr class="admin-plan-subtitle">
-      <th colspan="${totalColumns}">(Calculo: CREDITO CONTRATADO COM EMBUTIDO, LANCE LIVRE MAXIMO DO CLIENTE POR ADM, COM E SEM EMBUTIDO, PRAZOS MINIMOS GRUPOS PARA ENCAIXE PARCELA MAXIMA DESEJADA E RENDA)</th>
-    </tr>
-    <tr class="admin-plan-admin-row">
-      <th>Administradora</th>
-      ${rules.map((rule, index) => `
-        <th colspan="2">
-          <input class="admin-plan-admin-input" data-admin-plan-admin="${index}" value="${escapeHtml(rule.administradora || "")}" aria-label="Administradora ${index + 1}">
-        </th>
-      `).join("")}
-    </tr>
-  `;
-  document.getElementById("administratorPlansBody").innerHTML = `
-    ${renderAdministratorPlanRegisterRows(rules)}
-    <tr class="admin-plan-section-row">
-      <th>CENARIOS CALCULO</th>
-      ${rules.map((rule) => `<th colspan="2">${escapeHtml(rule.administradora || "Administradora")}</th>`).join("")}
-    </tr>
-    <tr class="admin-plan-scenario-head">
-      <th></th>
-      ${rules.map(() => `
-        <th title="Sem Embutido">Sem Emb.</th>
-        <th title="Com Embutido">Com Emb.</th>
-      `).join("")}
-    </tr>
-    ${renderAdministratorPlanScenarioRows(rules)}
-  `;
-  renderAdministratorPlanAudit(rules);
-}
-
-function addAdministratorPlanColumn() {
-  const kind = activeAdministratorPlanKind();
-  const rules = [...(configState.data?.administradoras_regras || [])];
-  rules.push({
-    administradora: "Nova",
-    tipo_bem: kind,
-    seguro_obrigatorio: false,
-    seguro_obrigatorio_texto: "",
-    aceita_saida_fiscal: false,
-    aceita_saida_fiscal_texto: "",
-    aceita_fgts: true,
-    aceita_pj: true,
-    aceita_pj_texto: "Sim",
-    permite_composicao_pj_socios: true,
-    permite_composicao_pj_socios_texto: "Sim",
-    permite_cpf_socio: true,
-    permite_cpf_socio_texto: "Sim",
-    percentual_comprometimento_pj: DEFAULT_PJ_COMMITMENT_PERCENT,
-    percentual_comprometimento_cpf: DEFAULT_CPF_COMMITMENT_PERCENT,
-  });
-  configState.data = { ...(configState.data || {}), administradoras_regras: rules };
-  renderAdministratorPlans();
-}
-
-function collectAdministratorPlans() {
-  const kind = activeAdministratorPlanKind();
-  const existing = configState.data?.administradoras_regras || [];
-  const otherKinds = existing.filter((rule) => (rule.tipo_bem || "Imovel") !== kind);
-  const currentRules = administratorPlanRulesForKind(kind);
-  const collected = currentRules.map((rule, index) => ({
-    ...rule,
-    tipo_bem: kind,
-    administradora: document.querySelector(`[data-admin-plan-admin="${index}"]`)?.value.trim() || rule.administradora || "",
-  }));
-  document.querySelectorAll("[data-admin-plan-field]").forEach((input) => {
-    const index = Number(input.dataset.adminPlanIndex);
-    const field = input.dataset.adminPlanField;
-    const type = input.dataset.adminPlanType;
-    if (!collected[index]) return;
-    if (administratorPlanComputedFields.includes(field)) return;
-    if (type === "percent") {
-      collected[index][field] = inputToPercentFromValue(input.value);
-    } else if (type === "money") {
-      collected[index][field] = optionalNumber(input.value);
-    } else if (type === "number") {
-      collected[index][field] = optionalNumber(input.value);
-    } else {
-      collected[index][field] = input.value.trim();
-    }
-  });
-  collected.forEach((rule) => {
-    rule.seguro_obrigatorio = normalizeText(rule.seguro_obrigatorio_texto || "").startsWith("sim");
-    rule.aceita_saida_fiscal = normalizeText(rule.aceita_saida_fiscal_texto || "").startsWith("sim");
-    rule.aceita_fgts = rule.aceita_fgts !== false;
-    rule.aceita_pj = adminRuleTextToBool(rule.aceita_pj_texto, true);
-    rule.aceita_pj_texto = adminRuleBoolText(rule.aceita_pj, true);
-    rule.permite_composicao_pj_socios = adminRuleTextToBool(rule.permite_composicao_pj_socios_texto, true);
-    rule.permite_composicao_pj_socios_texto = adminRuleBoolText(rule.permite_composicao_pj_socios, true);
-    rule.permite_cpf_socio = adminRuleTextToBool(rule.permite_cpf_socio_texto, true);
-    rule.permite_cpf_socio_texto = adminRuleBoolText(rule.permite_cpf_socio, true);
-    rule.percentual_comprometimento_pj = administratorPlanPercent(rule, "percentual_comprometimento_pj") || DEFAULT_PJ_COMMITMENT_PERCENT;
-    rule.percentual_comprometimento_cpf = administratorPlanPercent(rule, "percentual_comprometimento_cpf") || DEFAULT_CPF_COMMITMENT_PERCENT;
-  });
-  return [...otherKinds, ...collected.filter((rule) => rule.administradora)];
-}
-
-async function saveAdministratorPlans() {
-  const rules = collectAdministratorPlans();
-  await apiPut("/configuracoes", { administradoras_regras: rules });
-  configState.data = { ...(configState.data || {}), administradoras_regras: rules };
-  renderAdministratorRules(rules);
-  renderAdministratorPlans();
-  showToast("Administradoras salvas.", "success");
-  addOperationalLog("Planos de administradoras salvos");
 }
 
 function clearAdministratorRuleForm() {
@@ -4500,9 +3164,6 @@ async function loadConfiguracoes() {
   try {
     const data = await apiGet("/configuracoes");
     renderConfiguracoes(data);
-    if (document.getElementById("screen-viabilidade")?.classList.contains("active")) {
-      refreshAdministratorEligibility({ silent: true });
-    }
     setConfigState("ready");
     addOperationalLog("Configuracoes carregadas");
   } catch (error) {
@@ -4628,10 +3289,6 @@ document.querySelectorAll("[data-screen-jump]").forEach((button) => {
 document.getElementById("primaryAction").addEventListener("click", () => {
   if (document.getElementById("screen-perfil").classList.contains("active")) {
     saveClientProfile();
-    return;
-  }
-  if (document.getElementById("screen-viabilidade").classList.contains("active")) {
-    analyzeViability();
     return;
   }
   if (document.getElementById("screen-mapa").classList.contains("active")) {
@@ -4791,15 +3448,9 @@ document.getElementById("groupFormModal").addEventListener("blur", (event) => {
 ].forEach((id) => {
   document.getElementById(id).addEventListener("input", updateClientProfileTotals);
 });
-["clientProfileCredito", "clientProfileLanceProprio", "clientProfileParcelaIdeal", "clientProfileParcelaLimite"].forEach((id) => {
-  document.getElementById(id).addEventListener("input", recalculateAdministratorPlanComputedCells);
-});
 
 ["clientProfilePrazo", "clientProfileObjetivo", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
-  document.getElementById(id).addEventListener("change", () => {
-    updateClientProfileTotals();
-    if (id === "clientProfileObjetivo") renderAdministratorPlans();
-  });
+  document.getElementById(id).addEventListener("change", updateClientProfileTotals);
 });
 
 document.getElementById("clientProfileTipoContratacao").addEventListener("change", (event) => {
@@ -4807,47 +3458,23 @@ document.getElementById("clientProfileTipoContratacao").addEventListener("change
   current.tipo_contratacao = event.target.value;
   renderClientProfileTitulares(current);
   updateClientProfileTotals();
-  recalculateAdministratorPlanComputedCells();
 });
 
 document.getElementById("clientProfileForm").addEventListener("input", (event) => {
   if (!event.target.matches("[data-holder-field]")) return;
   updateClientProfileTotals();
-  recalculateAdministratorPlanComputedCells();
 });
 
 document.getElementById("clientProfileForm").addEventListener("blur", (event) => {
   if (event.target.matches("[data-holder-field][data-money]")) {
     event.target.value = formatMoneyInputValue(event.target.value);
     updateClientProfileTotals();
-    recalculateAdministratorPlanComputedCells();
   }
 }, true);
 
 document.getElementById("saveClientProfileBtn").addEventListener("click", () => saveClientProfile());
 document.getElementById("clearClientProfileBtn").addEventListener("click", resetClientProfile);
 document.getElementById("advanceClientProfileBtn").addEventListener("click", advanceClientProfile);
-
-document.querySelector("[data-open-admin-rules]")?.addEventListener("click", () => {
-  activateScreen("configuracoes");
-  const tabButton = document.querySelector('[data-bs-target="#configAdministradoras"]');
-  if (tabButton && window.bootstrap) bootstrap.Tab.getOrCreateInstance(tabButton).show();
-});
-
-document.getElementById("administratorPlansBody").addEventListener("mouseover", (event) => {
-  const marker = event.target.closest(".admin-plan-rule-marker");
-  if (marker) showRuleHelpPopover(marker);
-});
-document.getElementById("administratorPlansBody").addEventListener("mouseout", (event) => {
-  if (event.target.closest(".admin-plan-rule-marker")) hideRuleHelpPopover();
-});
-document.getElementById("administratorPlansBody").addEventListener("focusin", (event) => {
-  const marker = event.target.closest(".admin-plan-rule-marker");
-  if (marker) showRuleHelpPopover(marker);
-});
-document.getElementById("administratorPlansBody").addEventListener("focusout", (event) => {
-  if (event.target.closest(".admin-plan-rule-marker")) hideRuleHelpPopover();
-});
 
 document.getElementById("prevPageBtn").addEventListener("click", () => {
   if (mapState.page > 1) {
@@ -4900,48 +3527,6 @@ document.getElementById("historyUpdateForm").addEventListener("submit", (event) 
 
 document.querySelector('[data-bs-target="#detailsHistory"]').addEventListener("shown.bs.tab", () => detailsChart?.resize());
 
-document.querySelectorAll("[data-admin-plan-kind]").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll("[data-admin-plan-kind]").forEach((item) => item.classList.toggle("active", item === button));
-    renderAdministratorPlans();
-  });
-});
-document.getElementById("addAdministratorPlanBtn")?.addEventListener("click", addAdministratorPlanColumn);
-document.getElementById("saveAdministratorPlansBtn")?.addEventListener("click", () => {
-  saveAdministratorPlans().catch(() => setConfigState("error"));
-});
-document.getElementById("administratorPlansTable").addEventListener("input", (event) => {
-  if (["idade_maxima", "percentual_lance_embutido", "taxa_adm", "fundo_reserva"].includes(event.target?.dataset?.adminPlanField)) {
-    recalculateAdministratorPlanComputedCells();
-  }
-});
-
-document.getElementById("analyzeViabilityBtn")?.addEventListener("click", analyzeViability);
-
-document.getElementById("viabilityRankingBody").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-viability-action]");
-  if (!button) return;
-  if (button.dataset.viabilityAction === "auditar") {
-    openViabilityAudit(button.dataset.groupId, button.dataset.scenarioId);
-    return;
-  }
-  if (button.dataset.viabilityAction === "visualizar") {
-    openGroupDetails(button.dataset.groupId);
-    return;
-  }
-  const item = button.dataset.scenarioId
-    ? viabilityState.lastResult?.cenarios?.find((scenario) => scenario.id === button.dataset.scenarioId)
-    : viabilityState.lastResult?.melhores_grupos?.find((group) => group.grupo_id === button.dataset.groupId);
-  if (!item) {
-    showToast("Execute a Viabilidade antes de selecionar o estudo.", "warning");
-    return;
-  }
-  if (button.dataset.viabilityAction === "estrategias") {
-    openFinancialStudy(button.dataset.groupId, item);
-    return;
-  }
-});
-
 document.getElementById("studyChangeGroupBtn").addEventListener("click", () => activateScreen("viabilidade"));
 document.getElementById("studyViewStrategyBtn").addEventListener("click", () => {
   document.querySelector(".study-v4-strategy")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -4961,7 +3546,6 @@ studyOperatorFields.forEach(([, , id]) => {
   });
 });
 document.getElementById("studyNewSimulationBtn").addEventListener("click", () => {
-  resetViabilityForm();
   activateScreen("viabilidade");
 });
 document.getElementById("studyStrategyTabs").addEventListener("click", (event) => {

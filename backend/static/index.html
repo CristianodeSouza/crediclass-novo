@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260708-07" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260716-01" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -338,147 +338,117 @@
         </section>
 
         <section id="screen-viabilidade" class="screen-panel">
-          <div class="content-card viability-groups-intro">
-            <div class="table-toolbar">
+          <div class="content-card smart-engine-card">
+            <div class="smart-engine-header">
               <div>
-                <h2>Motor Inteligente de Selecao</h2>
-                <p>O funil parte do perfil financeiro, valida administradoras, calcula grupos, mede compatibilidade, ranqueia e leva o Top 10 para o estudo financeiro.</p>
+                <h2>Motor Inteligente de Seleção</h2>
+                <p>Estrutura inicial da nova etapa de cálculo. As regras e fórmulas serão aplicadas após a definição dos campos.</p>
               </div>
+              <span class="state-badge">ITAÚ</span>
             </div>
-            <div id="selectionPipeline" class="funnel-flow" aria-label="Pipeline de processamento Crediclass">
-              <span data-pipeline-step="perfil">Perfil<br><small>OK</small></span>
-              <span data-pipeline-step="analise">Analise Financeira<br><small>OK</small></span>
-              <span data-pipeline-step="elegibilidade">Elegibilidade<br><small>Aguardando</small></span>
-              <span data-pipeline-step="calculo">Calculo dos Grupos<br><small>Aguardando</small></span>
-              <span data-pipeline-step="compatibilidade">Compatibilidade<br><small>Aguardando</small></span>
-              <span data-pipeline-step="ranking">Ranking Inteligente<br><small>Aguardando</small></span>
-              <span data-pipeline-step="top10">Top 10 Grupos<br><small>Aguardando</small></span>
-              <span data-pipeline-step="estudo">Estudo Financeiro<br><small>Proxima etapa</small></span>
-            </div>
-          </div>
-
-          <div class="content-card administrator-eligibility-card">
-            <div class="table-toolbar">
-              <div>
-                <h2>Motor de Elegibilidade das Administradoras</h2>
-                <p>Pre-valida quais administradoras podem participar da analise antes da Calculadora de Grupos.</p>
-              </div>
-              <span id="administratorEligibilitySummary" class="eligibility-summary-pill">Aguardando perfil</span>
-            </div>
-            <div id="selectionFunnelSummary" class="selection-funnel-summary">
-              <article><span>Administradoras cadastradas</span><strong>-</strong></article>
-              <article><span>Elegiveis</span><strong>-</strong></article>
-              <article><span>Eliminadas</span><strong>-</strong></article>
-              <article><span>Grupos ativos</span><strong>-</strong></article>
-              <article><span>Compativeis</span><strong>-</strong></article>
-              <article><span>Top 10</span><strong>-</strong></article>
-            </div>
-            <div id="administratorEligibilityEmpty" class="table-state">Salve ou avance o Perfil do Cliente para calcular a elegibilidade.</div>
-            <div id="administratorEligibilityTableWrap" class="table-responsive d-none">
-              <table class="table table-hover align-middle administrator-eligibility-table">
+            <div class="smart-engine-table-wrap">
+              <table class="smart-engine-table">
                 <thead>
                   <tr>
-                    <th>Administradora</th>
-                    <th>Status</th>
-                    <th>Credito</th>
-                    <th>Idade</th>
-                    <th>FGTS</th>
-                    <th>PJ</th>
-                    <th>Embutido</th>
-                    <th>Resultado</th>
-                    <th>Observacao</th>
-                    <th>Segue?</th>
+                    <th class="smart-engine-section-col">Etapa</th>
+                    <th class="smart-engine-field-col">Campo</th>
+                    <th>Sem Embutido</th>
+                    <th>Com Embutido</th>
                   </tr>
                 </thead>
-                <tbody id="administratorEligibilityBody"></tbody>
-              </table>
-            </div>
-            <details id="administratorEliminatedDetails" class="administrator-eliminated-details d-none">
-              <summary>Administradoras eliminadas (<span id="administratorEliminatedCount">0</span>)</summary>
-              <table class="table table-hover align-middle administrator-eligibility-table administrator-eliminated-table">
-                <thead>
+                <tbody>
+                  <tr class="smart-engine-group-row">
+                    <td>Calculo A</td>
+                    <td>Credito a ser contratado</td>
+                    <td data-engine-field="itau-a-sem">-</td>
+                    <td data-engine-field="itau-a-com">-</td>
+                  </tr>
                   <tr>
-                    <th>Administradora</th>
-                    <th>Status</th>
-                    <th>Motivo</th>
-                    <th>Cenarios PJ</th>
+                    <td></td>
+                    <td>Taxa adm</td>
+                    <td data-engine-field="itau-a-taxa-sem">-</td>
+                    <td data-engine-field="itau-a-taxa-com">-</td>
                   </tr>
-                </thead>
-                <tbody id="administratorEliminatedBody"></tbody>
+                  <tr>
+                    <td></td>
+                    <td>Fundo reserva</td>
+                    <td data-engine-field="itau-a-fundo-sem">-</td>
+                    <td data-engine-field="itau-a-fundo-com">-</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td>Saldo devedor / categoria</td>
+                    <td data-engine-field="itau-a-saldo-sem">-</td>
+                    <td data-engine-field="itau-a-saldo-com">-</td>
+                  </tr>
+                  <tr class="smart-engine-group-row">
+                    <td>Calculo B</td>
+                    <td>Lance Maximo Cliente</td>
+                    <td data-engine-field="itau-b-sem">-</td>
+                    <td data-engine-field="itau-b-com">-</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td>Total Lance: FGTS + RP</td>
+                    <td data-engine-field="itau-b-total-sem">-</td>
+                    <td data-engine-field="itau-b-total-com">-</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td>Recurso Proprio</td>
+                    <td data-engine-field="itau-b-rp-sem">-</td>
+                    <td data-engine-field="itau-b-rp-com">-</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td>FGTS</td>
+                    <td data-engine-field="itau-b-fgts-sem">-</td>
+                    <td data-engine-field="itau-b-fgts-com">-</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td>Embutido</td>
+                    <td data-engine-field="itau-b-embutido-sem">-</td>
+                    <td data-engine-field="itau-b-embutido-com">-</td>
+                  </tr>
+                  <tr class="smart-engine-group-row">
+                    <td>Calculo C</td>
+                    <td>Prazo minimo grupos - Investidor</td>
+                    <td data-engine-field="itau-c-sem">-</td>
+                    <td data-engine-field="itau-c-com">-</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td>Parcela Inicial - Desejada</td>
+                    <td data-engine-field="itau-c-desejada-sem">-</td>
+                    <td data-engine-field="itau-c-desejada-com">-</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td>Parcela Inicial - Limite Renda</td>
+                    <td data-engine-field="itau-c-renda-sem">-</td>
+                    <td data-engine-field="itau-c-renda-com">-</td>
+                  </tr>
+                  <tr class="smart-engine-group-row">
+                    <td>Calculo D</td>
+                    <td>Prazo minimo grupos - Contemplacao</td>
+                    <td data-engine-field="itau-d-sem">-</td>
+                    <td data-engine-field="itau-d-com">-</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td>Parcela Apos Lance - Desejada</td>
+                    <td data-engine-field="itau-d-desejada-sem">-</td>
+                    <td data-engine-field="itau-d-desejada-com">-</td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td>Parcela Apos Lance - Limite Renda</td>
+                    <td data-engine-field="itau-d-renda-sem">-</td>
+                    <td data-engine-field="itau-d-renda-com">-</td>
+                  </tr>
+                </tbody>
               </table>
-            </details>
-            <div class="administrator-rule-shortcut">
-              <span>As regras usadas neste motor sao cadastradas em Configuracoes &gt; Regras Administradoras.</span>
-              <button class="btn btn-sm btn-outline-primary" type="button" data-open-admin-rules>Abrir cadastro de administradoras</button>
-            </div>
-          </div>
-
-          <div class="content-card administrator-plans-card">
-            <div class="table-toolbar">
-              <div>
-                <h2>Calculo dos Grupos</h2>
-                <p>Calculo: credito contratado com embutido, lance livre maximo do cliente por administradora, com e sem embutido, e prazos minimos dos grupos para encaixe da parcela maxima desejada e renda.</p>
-              </div>
-            </div>
-            <div id="eligibleAdministratorsList" class="eligible-administrator-list">Aguardando motor de elegibilidade.</div>
-
-            <div class="administrator-plan-tabs" role="tablist" aria-label="Tipo de bem dos planos">
-              <button class="active" type="button" data-admin-plan-kind="Imovel">Imoveis</button>
-              <button type="button" data-admin-plan-kind="Automovel">Automoveis</button>
-            </div>
-
-            <div class="administrator-plan-help">
-              Esta fase calcula, por administradora, os parametros que alimentam a selecao: credito contratado, lance embutido, lance livre, taxas, fundo, seguro, idade, parcela e prazo minimo.
-            </div>
-
-            <div class="table-responsive administrator-plan-wrap">
-              <table id="administratorPlansTable" class="administrator-plan-table">
-                <colgroup id="administratorPlansCols"></colgroup>
-                <thead id="administratorPlansHead"></thead>
-                <tbody id="administratorPlansBody"></tbody>
-              </table>
-            </div>
-            <div id="administratorPlanAudit"></div>
-          </div>
-
-          <div class="content-card phase-two-card">
-            <div class="table-toolbar">
-              <div>
-                <h2>Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance</h2>
-                <p id="viabilityRankingSubtitle">Adicionar cartas de credito por grupo. A selecao usa prazo remanescente, compatibilidade com menor lance e o objetivo definido no Perfil do Cliente.</p>
-              </div>
-              <div class="phase-two-badge">FASE 2</div>
-            </div>
-            <div id="viabilityPhase2Idle" class="table-state">Aguardando selecao dos melhores grupos.</div>
-            <div id="viabilityLoading" class="table-state d-none">Selecionando grupos...</div>
-            <div id="viabilityError" class="table-state table-state-error d-none">Nao foi possivel selecionar os grupos.</div>
-            <div id="viabilityEmpty" class="table-state d-none">Nenhum grupo compativel encontrado para este perfil.</div>
-            <div id="viabilityPhase2Summary" class="phase-two-summary d-none"></div>
-
-            <div id="viabilityResults" class="d-none">
-              <div class="table-responsive">
-                <table class="table table-hover align-middle viability-table">
-                  <thead>
-                    <tr>
-                      <th>Ranking</th>
-                      <th>Administradora</th>
-                      <th>Composicao</th>
-                      <th>Tipo de Bem</th>
-                      <th>Cartas</th>
-                      <th>Credito liquido</th>
-                      <th>Credito contratado</th>
-                      <th>Prazo restante</th>
-                      <th>Prazo minimo</th>
-                      <th>Taxa ADM</th>
-                      <th>Fundo reserva</th>
-                      <th>Parcela total</th>
-                      <th>Status</th>
-                      <th>Acoes</th>
-                    </tr>
-                  </thead>
-                  <tbody id="viabilityRankingBody"></tbody>
-                </table>
-              </div>
             </div>
           </div>
         </section>
@@ -1254,6 +1224,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260716-02"></script>
+    <script src="/static/js/app.js?v=20260716-03"></script>
   </body>
 </html>

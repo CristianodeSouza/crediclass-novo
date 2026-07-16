@@ -1,4 +1,4 @@
-import unittest
+﻿import unittest
 from pathlib import Path
 
 
@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260708-07", index_html)
+        self.assertIn("/static/css/style.css?v=20260716-01", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260716-02", index_html)
+        self.assertIn("/static/js/app.js?v=20260716-03", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -107,176 +107,75 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn("cdn.jsdelivr.net", index_html)
         self.assertIn(".d-none", style_css)
 
-    def test_calculadora_administradoras_fica_na_selecao_de_grupos(self):
+    def test_motor_inteligente_mantem_apenas_a_aba_para_refatoracao(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
         self.assertNotIn('data-screen="administradoras"', index_html)
         self.assertNotIn('id="screen-administradoras"', index_html)
         self.assertIn("Motor Inteligente de Seleção", index_html)
-        self.assertIn("selectionPipeline", index_html)
-        self.assertIn("Motor de Elegibilidade das Administradoras", index_html)
-        self.assertIn("Calculo dos Grupos", index_html)
-        self.assertIn("Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance", index_html)
-        self.assertIn("Adicionar cartas de credito", index_html)
-        self.assertIn("Calculo: credito contratado com embutido", index_html)
-        self.assertIn("Compatibilidade", index_html)
-        self.assertIn("Ranking Inteligente", index_html)
-        self.assertIn("Top 10 Grupos", index_html)
-        self.assertNotIn('class="selection-flow-grid"', index_html)
-        self.assertNotIn('class="phase-two-help"', index_html)
-        self.assertIn('id="viabilityPhase2Idle"', index_html)
-        self.assertIn('id="viabilityPhase2Summary"', index_html)
-        self.assertIn('class="content-card phase-two-card"', index_html)
-        self.assertIn('data-admin-plan-kind="Imovel"', index_html)
-        self.assertIn('data-admin-plan-kind="Automovel"', index_html)
-        self.assertIn('id="administratorPlansCols"', index_html)
-        self.assertIn('id="administratorPlansBody"', index_html)
-        self.assertIn('id="administratorPlanAudit"', index_html)
-        self.assertIn('id="administratorEligibilityBody"', index_html)
-        self.assertIn('id="administratorEliminatedDetails"', index_html)
-        self.assertIn('id="eligibleAdministratorsList"', index_html)
-        self.assertIn('id="selectionFunnelSummary"', index_html)
-        self.assertIn("function refreshAdministratorEligibility", app_js)
-        self.assertIn('apiGet("/configuracoes")', app_js)
-        self.assertIn('apiPost("/viabilidade/administradoras", payload)', app_js)
-        self.assertIn("function administratorPlanDisplayRulesForKind", app_js)
-        self.assertIn("function setPipelineStatus", app_js)
-        self.assertIn("function renderSelectionFunnelSummary", app_js)
-        self.assertIn("function runPhase2SelectionAutomatically", app_js)
-        self.assertIn("function renderPhase2Summary", app_js)
-        self.assertIn("function phase2SelectionSignature", app_js)
-        self.assertIn("function renderAdministratorPlans()", app_js)
-        self.assertIn("function saveAdministratorPlans()", app_js)
-        self.assertIn("function renderAdministratorPlanColgroup(rules)", app_js)
-        self.assertIn("function renderAdministratorPlanAudit(rules)", app_js)
-        self.assertIn("Demonstrativo logico do calculo", app_js)
-        self.assertNotIn("admin-plan-col-group", app_js)
-        self.assertNotIn("admin-plan-group-cell", app_js)
-        self.assertIn('const labelColumnWidth = "176px"', app_js)
-        self.assertIn('const scenarioColumnWidth = "124px"', app_js)
-        self.assertIn("overflow-x: auto", style_css)
-        self.assertIn("width: max-content", style_css)
-        self.assertIn("table-layout: auto", style_css)
-        self.assertIn("font-size: 0.8rem", style_css)
-        self.assertIn(".phase-two-summary", style_css)
-        self.assertIn("white-space: normal", style_css)
-        self.assertIn("overflow-wrap: normal", style_css)
-        self.assertIn('admin-plan-cell[data-admin-plan-field="percentual_lance_embutido"]', style_css)
-        self.assertIn('admin-plan-cell[data-admin-plan-field="lance_embutido_valor"]', style_css)
-        self.assertIn("mapState.administradoras", app_js)
-        for campo in [
-            "ETAPA 4 - FASE 1 - CALCULADORA DE GRUPOS",
-            "CENARIOS CALCULO",
-            "Sem Emb.",
-            "Com Emb.",
-            "Tipo de bem",
-            "Prazo remanescente",
-            "Lance Embutido",
-            "Calculo do Lance Embutido",
-            "Calculo do Percentual de Lance",
-            "Permite amortizar o lance na parcela?",
-            "Permite participar do lance fixo e livre?",
-            "Possui Parcela Reduzida?",
-            "Possui Lance Fixo?",
-            "Taxa Administracao (total)",
-            "Taxa Administracao (ao ano)",
-            "Possui Taxa de Adesao?",
-            "Fundo de reserva (total)",
-            "Fundo de reserva (ao ano)",
-            "Seg. obrigatorio?",
-            "Idade maxima seguro",
-            "Aliquota seguro mensal sobre saldo devedor",
-            "Calculo A - Credito a ser contratado:",
-            "Saldo devedor / categoria",
-            "Calculo B - Lance Maximo Cliente:",
-            "Lance Total:",
-            "Recurso Proprio:",
-            "FGTS:",
-            "Embutido:",
-            "Parcela Inicial - Desejada",
-            "Parcela Inicial - Limite Renda",
-            "Parcela Apos Lance - Desejada",
-            "Parcela Apos Lance - Limite Renda",
+        self.assertIn('id="screen-viabilidade"', index_html)
+        self.assertIn("smart-engine-table", index_html)
+        self.assertIn("ITAÚ", index_html)
+        for field in [
+            "Calculo A",
+            "Calculo B",
+            "Calculo C",
+            "Calculo D",
+            "Credito a ser contratado",
+            "Lance Maximo Cliente",
+            "Prazo minimo grupos - Investidor",
+            "Prazo minimo grupos - Contemplacao",
         ]:
-            self.assertIn(campo, app_js)
-        self.assertIn("const administratorPlanComputedFields", app_js)
-        self.assertIn('"idade_maxima_ok"', app_js)
-        self.assertIn("const administratorPlanScenarioRows", app_js)
-        self.assertIn("function administratorPlanAgeValidation(rule)", app_js)
-        self.assertIn("function calculateAgeFromDateText(dateText)", app_js)
-        self.assertIn('if (age < 18) return "Nao - menor de 18";', app_js)
-        self.assertIn('return "Sim - validar termino no grupo";', app_js)
-        self.assertIn('["idade_maxima", "percentual_lance_embutido", "taxa_adm", "fundo_reserva"].includes', app_js)
-        self.assertIn('.replace("R$", "").replace("%", "")', app_js)
-        self.assertIn("function administratorPlanCreditoContratado(rule, useEmbedded = true)", app_js)
-        self.assertIn('administratorPlanPercent(rule, "percentual_lance_embutido")', app_js)
-        self.assertIn("return creditoDesejado / (1 - percentualLanceEmbutido);", app_js)
-        self.assertIn("function administratorPlanLanceEmbutidoValor(rule, useEmbedded = true)", app_js)
-        self.assertIn("function currentClientProfileFgtsTotal()", app_js)
-        self.assertIn("function currentClientProfileLanceMaximoDisponivel(rule = {})", app_js)
-        self.assertIn("function administratorPlanLanceTotalConsiderado(rule, useEmbedded = true)", app_js)
-        self.assertIn("function administratorPlanLanceMaximo(rule, useEmbedded = true)", app_js)
-        self.assertIn("return lanceTotal === null ? null : lanceTotal / creditoContratado", app_js)
-        self.assertIn("function administratorPlanTaxaAdmValor(rule, useEmbedded = true)", app_js)
-        self.assertIn("function administratorPlanFundoReservaValor(rule, useEmbedded = true)", app_js)
-        self.assertIn("function administratorPlanSaldoDevedor(rule, useEmbedded = true)", app_js)
-        self.assertIn("function administratorPlanPrazoMinimo(rule, useEmbedded = true, options = {})", app_js)
-        self.assertIn("function administratorPlanScenarioCellValue(rule, row, useEmbedded)", app_js)
-        self.assertIn("function currentClientObjectiveFlow()", app_js)
-        self.assertIn("function visibleAdministratorPlanScenarioRows()", app_js)
-        self.assertIn('row.key.includes("_investidor_")', app_js)
-        self.assertIn('row.key.includes("_contemplacao_")', app_js)
-        self.assertIn('if (id === "clientProfileObjetivo") renderAdministratorPlans();', app_js)
-        self.assertIn("- lanceTotal", app_js)
-        self.assertIn("administratorPlanComputedFields.includes", app_js)
-        for administradora in ["AUTO-CAIXA", "AUTO-CAOA", "AUTO-ITAU", "CAIXA", "CANOPUS", "CAOA", "ITAU", "PORTO", "RODOBENS"]:
-            self.assertIn(administradora, app_js)
-        self.assertNotIn("administratorTotalDisponivel", index_html)
-        self.assertNotIn("administratorUsarFgts", index_html)
-        self.assertNotIn('id="exportAdministratorsCsvBtn"', index_html)
-        self.assertNotIn('id="advanceToGroupsBtn"', index_html)
+            self.assertIn(field, index_html)
         self.assertIn('if (screenName === "viabilidade") loadConfiguracoes();', app_js)
-        self.assertIn('apiPost("/viabilidade/administradoras", payload)', app_js)
+        self.assertIn('primaryAction.classList.toggle("d-none", screenName === "viabilidade")', app_js)
+        for removed in [
+            "selectionPipeline",
+            "Motor de Elegibilidade das Administradoras",
+            "Fase 2 - Selecao Melhores Grupos",
+            "administratorPlansBody",
+            "administratorEligibilityBody",
+            "selectionFunnelSummary",
+            "viabilityPhase2Summary",
+            "viabilityRankingBody",
+            "analyzeViabilityBtn",
+            "addAdministratorPlanBtn",
+            "saveAdministratorPlansBtn",
+        ]:
+            self.assertNotIn(removed, index_html)
+        for removed in [
+            "function refreshAdministratorEligibility",
+            "function renderAdministratorPlans",
+            "function saveAdministratorPlans",
+            "function analyzeViability",
+            "function openViabilityAudit",
+            "function resetViabilityForm",
+            "function phase2SelectionSignature",
+            "function setPipelineStatus",
+            "viabilityState",
+            "administratorPlanComputedFields",
+            "recalculateAdministratorPlanComputedCells",
+        ]:
+            self.assertNotIn(removed, app_js)
         self.assertNotIn("function exportAdministratorsCsv()", app_js)
         self.assertNotIn("function syncAdministratorInterviewToGroups()", app_js)
-
-    def test_viabilidade_cenarios_nao_repete_formulario_do_cliente(self):
+    def test_viabilidade_nao_expoe_fluxo_antigo(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn("Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance", index_html)
-        self.assertIn("Calculo dos Grupos", index_html)
-        self.assertIn("Adicionar cartas de credito", index_html)
+        self.assertIn('id="screen-viabilidade"', index_html)
         self.assertNotIn('id="analyzeViabilityBtn"', index_html)
         self.assertNotIn('data-screen-jump="perfil"', index_html)
         self.assertNotIn('id="addAdministratorPlanBtn"', index_html)
         self.assertNotIn('id="saveAdministratorPlansBtn"', index_html)
         self.assertIn('primaryAction.classList.toggle("d-none", screenName === "viabilidade")', app_js)
-        self.assertIn("Aguardando selecao dos melhores grupos", index_html)
-        self.assertIn("Top 10 exibido", app_js)
-        self.assertIn("ordenado por score de compatibilidade", app_js)
-        self.assertIn("await analyzeViability({ silent: true })", app_js)
-        self.assertIn('state !== "idle"', app_js)
-        self.assertIn('state !== "ready"', app_js)
-        self.assertIn("fluxo ${fluxo}", app_js)
-        self.assertIn("Filtro 1 manteve", app_js)
-        self.assertIn("const profile = collectClientProfile();", app_js)
-        self.assertIn("const parcelaLimite = profile.parcela_limite || profile.parcela_ideal;", app_js)
-        self.assertIn("parcela_desejada: parcelaLimite", app_js)
-        self.assertIn("Credito contratado", index_html)
-        self.assertNotIn("Lance referencia perfil", index_html)
-        self.assertNotIn("Lance maximo cliente", index_html)
-        self.assertNotIn("Motivo / Alerta", index_html)
-        self.assertNotIn("<th>Compativel</th>", index_html)
-        self.assertIn("function renderViabilityEmpty(result)", app_js)
-        self.assertIn("function openViabilityAudit(groupId, scenarioId", app_js)
-        self.assertIn("data-viability-action=\"auditar\"", app_js)
-        self.assertIn('button.dataset.viabilityAction === "estrategias"', app_js)
-        self.assertIn("openFinancialStudy(button.dataset.groupId, item)", app_js)
-        self.assertIn("<th>Status</th>", index_html)
-        self.assertIn("regras_administradoras_pendentes_analise_humana", app_js)
+        self.assertNotIn("Aguardando selecao dos melhores grupos", index_html)
+        self.assertNotIn("Top 10 exibido", app_js)
+        self.assertNotIn("await analyzeViability({ silent: true })", app_js)
+        self.assertNotIn("Filtro 1 manteve", app_js)
+        self.assertNotIn("data-viability-action", app_js)
+        self.assertNotIn("openFinancialStudy(button.dataset.groupId, item)", app_js)
         self.assertNotIn('id="viabilityProfileSummary"', index_html)
         self.assertNotIn("function renderViabilityProfileSummary()", app_js)
         self.assertNotIn("Viabilidade por Administradoras", index_html)
@@ -285,7 +184,6 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn('id="viabilityForm"', index_html)
         self.assertNotIn('id="clearViabilityBtn"', index_html)
         self.assertNotIn('id="viabilityChecklist"', index_html)
-
     def test_tela_perfil_cliente_fica_no_fluxo_antes_do_mapa(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
@@ -371,12 +269,10 @@ class StaticEmailTest(unittest.TestCase):
             self.assertIn(field_name, app_js)
         self.assertIn("function renderAdministratorRules(rules)", app_js)
         self.assertIn("function saveAdministratorRule()", app_js)
-        self.assertIn("administratorPlanRuleHelp", app_js)
-        self.assertIn("function renderAdministratorPlanRowLabel(row)", app_js)
-        self.assertIn("admin-plan-rule-marker", app_js)
         self.assertIn("administradoras_regras", app_js)
-        self.assertIn(".admin-plan-rule-marker", style_css)
-        self.assertIn("#dc2626", style_css)
+        self.assertNotIn("administratorPlanRuleHelp", app_js)
+        self.assertNotIn("function renderAdministratorPlanRowLabel(row)", app_js)
+        self.assertNotIn("admin-plan-rule-marker", app_js)
 
     def test_configuracoes_possui_regras_de_negocio_com_feedback(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -412,7 +308,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
         self.assertIn("function validateMapCreditFilters(filters)", app_js)
-        self.assertIn("O crédito mínimo não pode ser maior que o crédito máximo.", app_js)
+        self.assertIn("O credito minimo nao pode ser maior que o credito maximo.", app_js)
 
     def test_percentuais_de_entrada_sao_formatados_sem_residuo_decimal(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
@@ -583,7 +479,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_estudo_financeiro_preserva_data_nascimento_conjuge(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn("data_nascimento_conjuge: profile.data_nascimento_conjuge", app_js)
+        self.assertIn("data_nascimento_conjuge: summary.data_nascimento_conjuge", app_js)
         self.assertIn('data_nascimento_conjuge: currentStudy.payload.data_nascimento_conjuge', app_js)
         self.assertIn('["Data nascimento conjuge", payload.data_nascimento_conjuge || "-"]', app_js)
         self.assertIn('["Data nascimento conjuge", cliente.data_nascimento_conjuge || "-"]', app_js)
@@ -605,9 +501,9 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function clientProfileConcept(months)", app_js)
         self.assertIn("CLIENT_OBJECTIVE_RULES", app_js)
         self.assertIn('id="clientProfileTipoBem"', index_html)
-        self.assertIn("tipo_bem: profile.tipo_bem", app_js)
+        self.assertIn('tipo_bem: document.getElementById("clientProfileTipoBem").value', app_js)
         self.assertNotIn('tipo_bem: "Imovel"', app_js)
-        self.assertIn("payload.lance_proprio < 0", app_js)
+        self.assertIn('lance_proprio: toNumber(document.getElementById("clientProfileLanceProprio").value)', app_js)
 
     def test_perfil_cliente_suporta_titulares_pf_pj(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -625,7 +521,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('profileHolderInput("pessoa_juridica.empresa.cnpj", empresa.cnpj, "CNPJ")', app_js)
         self.assertIn("renderClientProfileTitulares", app_js)
         self.assertIn("summarizeClientTitulares", app_js)
-        self.assertIn("titulares: profile.titulares", app_js)
+        self.assertIn("titulares: totals.titulares", app_js)
         self.assertIn("titulares: currentStudy.payload.titulares", app_js)
 
     def test_estudo_financeiro_exibe_metricas_historico_12_meses(self):
@@ -740,7 +636,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260708-07", index_html)
+        self.assertIn("/static/css/style.css?v=20260716-01", index_html)
         self.assertNotIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

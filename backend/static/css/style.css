@@ -3821,3 +3821,79 @@ body[data-theme="escuro"] .btn-outline-secondary {
     grid-template-columns: 1fr;
   }
 }
+
+.smart-engine-card {
+  margin-top: 0;
+}
+
+.smart-engine-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.smart-engine-header h2 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.smart-engine-header p {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.smart-engine-table-wrap {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.smart-engine-table {
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  min-width: 760px;
+  width: 100%;
+}
+
+.smart-engine-table th,
+.smart-engine-table td {
+  border-bottom: 1px solid var(--line);
+  padding: 9px 12px;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.smart-engine-table th {
+  background: #10212a;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.smart-engine-table td:nth-child(2) {
+  text-align: left;
+}
+
+.smart-engine-section-col {
+  width: 150px;
+}
+
+.smart-engine-field-col {
+  width: 340px;
+}
+
+.smart-engine-group-row td {
+  background: #f5fbf7;
+  font-weight: 800;
+}
+
+.smart-engine-group-row td:first-child,
+.smart-engine-group-row td:nth-child(2) {
+  background: #16a34a;
+  color: #fff;
+}
