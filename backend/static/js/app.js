@@ -2218,7 +2218,6 @@ function updateClientProfileTotals() {
   document.getElementById("clientProfileConceito").value = conceito;
   const totals = { fgts, lance, renda, conceito, holderSummary, titulares };
   renderClientPreliminaryAnalysis(calculateClientPreliminaryAnalysis(titulares, holderSummary));
-  renderClientProfileSummary(totals);
   return totals;
 }
 
@@ -2250,24 +2249,6 @@ function collectClientProfile() {
     tipo_bem: document.getElementById("clientProfileTipoBem").value,
     estado_bem: document.getElementById("clientProfileEstadoBem").value,
   };
-}
-
-function renderClientProfileSummary(totals = null) {
-  const current = totals || updateClientProfileTotals();
-  const contractingMode = CLIENT_CONTRACTING_MODES[current.titulares?.tipo_contratacao]?.label || "-";
-  const summary = document.getElementById("clientProfileSummary");
-  if (!summary) return;
-  summary.innerHTML = [
-    ["Contratacao", contractingMode],
-    ["Titular(es)", current.holderSummary?.resumo_label || "-"],
-    ["Conceito IA", current.conceito],
-    ["Credito desejado", formatMoney(toNumber(document.getElementById("clientProfileCredito").value))],
-    ["Parcela maxima", formatMoney(toNumber(document.getElementById("clientProfileParcelaIdeal").value))],
-    ["Lance maximo com recurso proprio", formatMoney(current.lance)],
-    ["Lance recursos proprios dos titulares", formatMoney(current.holderSummary?.lance_recursos_proprios || 0)],
-    ["FGTS total", formatMoney(current.fgts)],
-    ["Renda do cliente", formatMoney(current.renda)],
-  ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
 }
 
 function applyClientProfileToFlow(profile) {
