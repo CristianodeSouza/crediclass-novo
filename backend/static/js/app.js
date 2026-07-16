@@ -1769,6 +1769,21 @@ function summarizeClientTitulares(titulares) {
   };
 }
 
+function calculateAgeFromDateText(value) {
+  const text = String(value || "").trim();
+  if (!text) return null;
+  const parts = text.includes("/") ? text.split("/").map(Number) : text.split("-").map(Number).reverse();
+  if (parts.length !== 3 || parts.some((part) => !Number.isFinite(part))) return null;
+  const [day, month, year] = parts;
+  const birthDate = new Date(year, month - 1, day);
+  if (birthDate.getFullYear() !== year || birthDate.getMonth() !== month - 1 || birthDate.getDate() !== day) return null;
+  const today = new Date();
+  let age = today.getFullYear() - year;
+  const birthdayPending = today.getMonth() < month - 1 || (today.getMonth() === month - 1 && today.getDate() < day);
+  if (birthdayPending) age -= 1;
+  return age >= 0 ? age : null;
+}
+
 function preliminaryAgeSummary(people) {
   const ages = people.map((person) => calculateAgeFromDateText(person.nascimento)).filter((age) => age !== null);
   if (!ages.length) {
