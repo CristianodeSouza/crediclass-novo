@@ -643,7 +643,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .client-profile-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 280px;
   gap: 16px;
   align-items: start;
 }
@@ -797,6 +797,42 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .client-success {
   color: #15803d;
+}
+
+.client-profile-side {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.client-profile-side h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.client-profile-summary {
+  display: grid;
+  gap: 8px;
+}
+
+.client-profile-summary div {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.client-profile-summary span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.client-profile-summary strong {
+  font-size: 0.94rem;
 }
 
 .client-preliminary-section {

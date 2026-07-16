@@ -1546,6 +1546,7 @@ function emptyPessoaFisica(index) {
     nome: "",
     nascimento: "",
     lance_fgts: 0,
+    lance_recursos_proprios: 0,
     renda: 0,
   };
 }
@@ -1563,6 +1564,7 @@ function emptyPessoaJuridica() {
       papel: index === 0 ? "socio_administrador" : `socio_${index + 1}`,
       nome: "",
       nascimento: "",
+      lance_recursos_proprios: 0,
       renda: 0,
     })),
   };
@@ -1630,7 +1632,8 @@ function renderPessoaFisicaCard(person, index) {
         ${profileHolderInput(`pessoas_fisicas.${index}.nome`, person.nome, "Nome")}
         ${profileHolderInput(`pessoas_fisicas.${index}.nascimento`, person.nascimento, "Nascimento", { type: "date" })}
         ${profileHolderInput(`pessoas_fisicas.${index}.lance_fgts`, formatMoneyInputValue(person.lance_fgts || ""), "Lance FGTS", { money: true })}
-        ${profileHolderInput(`pessoas_fisicas.${index}.renda`, formatMoneyInputValue(person.renda || ""), "Renda", { money: true })}
+        ${profileHolderInput(`pessoas_fisicas.${index}.lance_recursos_proprios`, formatMoneyInputValue(person.lance_recursos_proprios || ""), "Lance Recursos Proprios", { money: true })}
+        ${profileHolderInput(`pessoas_fisicas.${index}.renda`, formatMoneyInputValue(person.renda || ""), "Renda do Cliente", { money: true })}
       </div>
     </article>
   `;
@@ -1656,7 +1659,8 @@ function renderPessoaJuridicaCards(data) {
         <div class="profile-holder-fields">
           ${profileHolderInput(`pessoa_juridica.socios.${index}.nome`, socio.nome, "Nome")}
           ${profileHolderInput(`pessoa_juridica.socios.${index}.nascimento`, socio.nascimento, "Nascimento", { type: "date" })}
-          ${profileHolderInput(`pessoa_juridica.socios.${index}.renda`, formatMoneyInputValue(socio.renda || ""), "Renda", { money: true })}
+          ${profileHolderInput(`pessoa_juridica.socios.${index}.lance_recursos_proprios`, formatMoneyInputValue(socio.lance_recursos_proprios || ""), "Lance Recursos Proprios", { money: true })}
+          ${profileHolderInput(`pessoa_juridica.socios.${index}.renda`, formatMoneyInputValue(socio.renda || ""), "Renda do Cliente", { money: true })}
         </div>
       </article>
     `).join("")}
@@ -1724,8 +1728,9 @@ function collectClientTitularesFromForm() {
 function summarizeClientTitulares(titulares) {
   if (titulares.tipo_contratacao === "pj") {
     const empresa = titulares.pessoa_juridica.empresa;
-    const socios = titulares.pessoa_juridica.socios.filter((socio) => socio.nome || socio.nascimento || Number(socio.renda || 0) > 0);
+    const socios = titulares.pessoa_juridica.socios.filter((socio) => socio.nome || socio.nascimento || Number(socio.lance_recursos_proprios || 0) > 0 || Number(socio.renda || 0) > 0);
     const rendaSocios = socios.reduce((sum, socio) => sum + Number(socio.renda || 0), 0);
+    const lanceRecursosProprios = socios.reduce((sum, socio) => sum + Number(socio.lance_recursos_proprios || 0), 0);
     const faturamento = Number(empresa.faturamento_mensal || 0);
     return {
       nome: empresa.nome || "Empresa titular",
@@ -1735,6 +1740,7 @@ function summarizeClientTitulares(titulares) {
       fgts_titular: 0,
       fgts_conjuge: 0,
       fgts: 0,
+      lance_recursos_proprios: lanceRecursosProprios,
       renda_titular: faturamento + rendaSocios,
       renda_conjuge: 0,
       renda_total: faturamento + rendaSocios,
@@ -1742,8 +1748,9 @@ function summarizeClientTitulares(titulares) {
       titulares_count: socios.length + (empresa.nome ? 1 : 0),
     };
   }
-  const pessoas = titulares.pessoas_fisicas.filter((person) => person.nome || person.nascimento || Number(person.lance_fgts || 0) > 0 || Number(person.renda || 0) > 0);
+  const pessoas = titulares.pessoas_fisicas.filter((person) => person.nome || person.nascimento || Number(person.lance_fgts || 0) > 0 || Number(person.lance_recursos_proprios || 0) > 0 || Number(person.renda || 0) > 0);
   const fgts = pessoas.reduce((sum, person) => sum + Number(person.lance_fgts || 0), 0);
+  const lanceRecursosProprios = pessoas.reduce((sum, person) => sum + Number(person.lance_recursos_proprios || 0), 0);
   const renda = pessoas.reduce((sum, person) => sum + Number(person.renda || 0), 0);
   return {
     nome: pessoas[0]?.nome || "",
@@ -1753,6 +1760,7 @@ function summarizeClientTitulares(titulares) {
     fgts_titular: fgts,
     fgts_conjuge: 0,
     fgts,
+    lance_recursos_proprios: lanceRecursosProprios,
     renda_titular: renda,
     renda_conjuge: 0,
     renda_total: renda,
@@ -2193,8 +2201,10 @@ function updateClientProfileTotals() {
   document.getElementById("clientProfileTotalDisponivel").value = formatMoney(lance + fgts);
   document.getElementById("clientProfileRendaTotal").value = formatMoney(renda);
   document.getElementById("clientProfileConceito").value = conceito;
+  const totals = { fgts, lance, renda, conceito, holderSummary, titulares };
   renderClientPreliminaryAnalysis(calculateClientPreliminaryAnalysis(titulares, holderSummary));
-  return { fgts, lance, renda, conceito, holderSummary, titulares };
+  renderClientProfileSummary(totals);
+  return totals;
 }
 
 function collectClientProfile() {
@@ -2209,6 +2219,7 @@ function collectClientProfile() {
     prazo_desejado: Number(document.getElementById("clientProfilePrazo").value),
     conceito_ia: totals.conceito,
     lance_proprio: toNumber(document.getElementById("clientProfileLanceProprio").value),
+    lance_recursos_proprios: summary.lance_recursos_proprios || 0,
     fgts_titular: summary.fgts_titular,
     fgts_conjuge: summary.fgts_conjuge,
     fgts: totals.fgts,
@@ -2224,6 +2235,24 @@ function collectClientProfile() {
     tipo_bem: document.getElementById("clientProfileTipoBem").value,
     estado_bem: document.getElementById("clientProfileEstadoBem").value,
   };
+}
+
+function renderClientProfileSummary(totals = null) {
+  const current = totals || updateClientProfileTotals();
+  const contractingMode = CLIENT_CONTRACTING_MODES[current.titulares?.tipo_contratacao]?.label || "-";
+  const summary = document.getElementById("clientProfileSummary");
+  if (!summary) return;
+  summary.innerHTML = [
+    ["Contratacao", contractingMode],
+    ["Titular(es)", current.holderSummary?.resumo_label || "-"],
+    ["Conceito IA", current.conceito],
+    ["Credito desejado", formatMoney(toNumber(document.getElementById("clientProfileCredito").value))],
+    ["Parcela maxima", formatMoney(toNumber(document.getElementById("clientProfileParcelaIdeal").value))],
+    ["Lance maximo com recurso proprio", formatMoney(current.lance)],
+    ["Lance recursos proprios dos titulares", formatMoney(current.holderSummary?.lance_recursos_proprios || 0)],
+    ["FGTS total", formatMoney(current.fgts)],
+    ["Renda do cliente", formatMoney(current.renda)],
+  ].map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("");
 }
 
 function applyClientProfileToFlow(profile) {
@@ -2295,6 +2324,7 @@ function resetClientProfile() {
 function advanceClientProfile() {
   saveClientProfile({ silent: true });
   activateScreen("viabilidade");
+  renderSmartEngine();
 }
 
 function setStudyState(state) {
