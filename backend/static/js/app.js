@@ -3559,8 +3559,6 @@ function renderAdministratorRules(rules) {
     <tr>
       <td>${escapeHtml(rule.administradora || "-")}</td>
       <td>${escapeHtml(rule.status_operacional || "Ativo")}</td>
-      <td>${escapeHtml(rule.data_cadastro_produto || "-")}</td>
-      <td>${escapeHtml(rule.responsavel_produto || "-")}</td>
       <td>${rule.seguro_obrigatorio ? "Sim" : "Nao"}</td>
       <td>${rule.idade_maxima || "-"}</td>
       <td>${rule.limite_sem_comprovacao_renda_texto ? escapeHtml(rule.limite_sem_comprovacao_renda_texto) : formatMoney(rule.limite_sem_comprovacao_renda)}</td>
@@ -3569,10 +3567,6 @@ function renderAdministratorRules(rules) {
       <td>${rule.aceita_saida_fiscal ? "Sim" : "Nao"}</td>
       <td>${formatPercent(rule.taxa_adm || 0)}</td>
       <td>${formatPercent(rule.fundo_reserva || 0)}</td>
-      <td>${rule.aceita_fgts === false ? "Nao" : "Sim"}</td>
-      <td>${rule.aceita_pj === false ? "Nao" : "Sim"}</td>
-      <td>${rule.permite_composicao_pj_socios === false ? "Nao" : "Sim"}</td>
-      <td>${rule.permite_cpf_socio === false ? "Nao" : "Sim"}</td>
       <td>
         <div class="row-actions">
           <button class="btn btn-sm btn-outline-secondary" type="button" data-admin-rule-action="editar" data-admin-rule-index="${index}">Editar</button>

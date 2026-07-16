@@ -21,7 +21,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260716-01", index_html)
+        self.assertIn("/static/js/app.js?v=20260716-02", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
