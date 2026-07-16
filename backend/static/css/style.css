@@ -3897,3 +3897,65 @@ body[data-theme="escuro"] .btn-outline-secondary {
   background: #16a34a;
   color: #fff;
 }
+
+.smart-engine-generic-card {
+  margin-top: 16px;
+}
+
+.smart-engine-filter-note {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border: 1px solid #f3c49c;
+  border-radius: 6px;
+  background: #fff7ed;
+  color: #9a4d15;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.smart-engine-generic-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 0.78rem;
+}
+
+.smart-engine-generic-table th,
+.smart-engine-generic-table td {
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.smart-engine-generic-table thead th {
+  background: #174c9a;
+  color: #fff;
+  font-weight: 800;
+  text-align: center;
+}
+
+.smart-engine-generic-table thead th:first-child {
+  width: 16%;
+}
+
+.smart-engine-generic-table thead th:nth-child(2) {
+  width: 52%;
+}
+
+.smart-engine-generic-table tbody th {
+  background: #f1f5f9;
+  color: var(--text);
+  font-weight: 800;
+  text-align: center;
+}
+
+.smart-engine-generic-table tbody td:nth-child(2) {
+  background: #f8fafc;
+  font-weight: 700;
+}
+
+.smart-engine-generic-table tbody td:last-child {
+  color: #e11d48;
+  font-weight: 800;
+  text-align: center;
+}

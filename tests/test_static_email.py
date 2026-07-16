@@ -21,7 +21,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260716-07", index_html)
+        self.assertIn("/static/js/app.js?v=20260716-08", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -247,6 +247,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("Lance Recursos Proprios", app_js)
         self.assertIn("Renda do Cliente", app_js)
         self.assertIn("function calculateAgeFromDateText", app_js)
+        self.assertIn("function smartEngineGenericField", app_js)
+        self.assertIn('data-generic-filter="lance_embutido"', index_html)
         self.assertIn("function formatMoneyInputValue(value)", app_js)
         self.assertIn("const moneyInputIds", app_js)
         self.assertIn(".client-profile-layout", style_css)
