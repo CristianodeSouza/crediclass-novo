@@ -3902,6 +3902,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
   margin-top: 16px;
 }
 
+.smart-engine-generic-card .smart-engine-header {
+  margin-bottom: 10px;
+}
+
+.smart-engine-generic-card .smart-engine-header h2 {
+  color: var(--text);
+  font-size: 1rem;
+}
+
 .smart-engine-filter-note {
   margin: 0 0 12px;
   padding: 9px 12px;
@@ -3918,13 +3927,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
   border-collapse: collapse;
   table-layout: fixed;
   font-size: 0.78rem;
+  color: var(--text);
 }
 
 .smart-engine-generic-table th,
 .smart-engine-generic-table td {
-  padding: 7px 9px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
   vertical-align: middle;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
 }
 
 .smart-engine-generic-table thead th {
@@ -3942,20 +3954,32 @@ body[data-theme="escuro"] .btn-outline-secondary {
   width: 52%;
 }
 
+.smart-engine-generic-table thead th:last-child {
+  width: 32%;
+}
+
 .smart-engine-generic-table tbody th {
   background: #f1f5f9;
   color: var(--text);
   font-weight: 800;
   text-align: center;
+  white-space: normal;
 }
 
 .smart-engine-generic-table tbody td:nth-child(2) {
   background: #f8fafc;
   font-weight: 700;
+  color: #334155;
 }
 
 .smart-engine-generic-table tbody td:last-child {
-  color: #e11d48;
+  background: #fffaf0;
+  color: var(--primary);
   font-weight: 800;
   text-align: center;
+}
+
+.smart-engine-generic-table tbody tr:hover td,
+.smart-engine-generic-table tbody tr:hover th {
+  background: #f8fbff;
 }
