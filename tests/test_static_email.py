@@ -21,7 +21,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260708-05", index_html)
+        self.assertIn("/static/js/app.js?v=20260716-01", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -741,10 +741,9 @@ class StaticEmailTest(unittest.TestCase):
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
         self.assertIn("/static/css/style.css?v=20260708-07", index_html)
-        self.assertIn('id="configTema"', index_html)
+        self.assertNotIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)
-        self.assertIn('document.getElementById("configTema").addEventListener("change"', app_js)
         self.assertIn('body[data-theme="escuro"]', style_css)
 
     def test_login_inicial_protege_dashboard(self):
@@ -782,61 +781,60 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('document.getElementById("studyAdminLogo").textContent', app_js)
         self.assertIn(".admin-logo", style_css)
 
-    def test_preferencias_configuracoes_expoem_campos_obrigatorios(self):
+    def test_configuracoes_remove_aba_geral(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
+        self.assertNotIn("configGeral", index_html)
+        self.assertNotIn("configGeneralForm", index_html)
         for field_id in [
+            "configEmpresaNome",
+            "configMoeda",
+            "configTema",
             "configCasasValores",
             "configCasasPercentuais",
             "configMeiaParcela",
             "configLanceEmbutido",
             "configHistorico36",
         ]:
-            self.assertIn(f'id="{field_id}"', index_html)
-            self.assertIn(field_id, app_js)
+            self.assertNotIn(f'id="{field_id}"', index_html)
+            self.assertNotIn(field_id, app_js)
 
         self.assertIn("function setSelectBool(id, value)", app_js)
         self.assertIn("function getSelectBool(id)", app_js)
-        self.assertIn("casas_decimais_valores", app_js)
-        self.assertIn("ativar_lance_embutido", app_js)
 
-    def test_notificacoes_configuracoes_disponiveis(self):
+    def test_notificacoes_configuracoes_removidas_da_tela(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn("configNotificacoes", index_html)
+        self.assertNotIn("configNotificacoes", index_html)
         for field_id in ["notifySync", "notifyStudySaved", "notifyHistoryUpdated", "notifyIntegrationFailure"]:
-            self.assertIn(f'id="{field_id}"', index_html)
-            self.assertIn(field_id, app_js)
+            self.assertNotIn(f'id="{field_id}"', index_html)
+            self.assertNotIn(field_id, app_js)
 
-        self.assertIn("notificacoes", app_js)
-        self.assertIn("alertar_sincronizacao", app_js)
-        self.assertIn("alertar_falha_integracao", app_js)
-
-    def test_notificacoes_controlam_alertas_operacionais(self):
+    def test_alertas_operacionais_nao_dependem_de_aba_notificacoes(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn("function isNotificationEnabled(key)", app_js)
-        self.assertIn("function notifyWhen(key, message, type = \"success\")", app_js)
-        self.assertIn('notifyWhen("alertar_sincronizacao"', app_js)
-        self.assertIn('notifyWhen("alertar_estudo_salvo"', app_js)
-        self.assertIn('notifyWhen("alertar_historico_atualizado"', app_js)
-        self.assertIn('notifyWhen("alertar_falha_integracao"', app_js)
+        self.assertNotIn("function isNotificationEnabled", app_js)
+        self.assertNotIn("function notifyWhen", app_js)
+        self.assertIn("function showToast(message, type = \"success\")", app_js)
+        self.assertIn('showToast(`Estudo salvo: ${result.estudo_id}`, "success")', app_js)
+        self.assertIn('showToast(`Google Sheets sincronizado: ${result.total} linhas.`, "success")', app_js)
+        self.assertIn('showToast("Nao foi possivel reindexar os dados.", "danger")', app_js)
 
-    def test_integracoes_configuracoes_podem_ser_alteradas(self):
+    def test_integracoes_e_acesso_configuracoes_removidas_da_tela(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn('id="configureIntegrationsBtn"', index_html)
-        self.assertIn('id="configIntegrationsForm"', index_html)
+        self.assertNotIn("configIntegracoes", index_html)
+        self.assertNotIn("configAcesso", index_html)
+        self.assertNotIn('id="configureIntegrationsBtn"', index_html)
+        self.assertNotIn('id="configIntegrationsForm"', index_html)
+        self.assertNotIn('id="configAccessGrid"', index_html)
+        self.assertNotIn("renderAccessPolicy", app_js)
         for field_id in ["integrationGoogleSheetsToggle", "integrationPiperunToggle", "integrationEmailToggle", "integrationBackupToggle"]:
-            self.assertIn(f'id="{field_id}"', index_html)
-            self.assertIn(field_id, app_js)
-
-        self.assertIn("integracoes", app_js)
-        self.assertIn("google_sheets: getSelectBool", app_js)
-        self.assertIn("piperun_crm: getSelectBool", app_js)
+            self.assertNotIn(f'id="{field_id}"', index_html)
+            self.assertNotIn(field_id, app_js)
 
     def test_usuarios_operacionais_possuem_acoes_reais(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")

@@ -375,15 +375,6 @@ function showToast(message, type = "success") {
   setTimeout(() => toast.remove(), 3600);
 }
 
-function isNotificationEnabled(key) {
-  const settings = configState.data?.notificacoes || {};
-  return settings[key] !== false;
-}
-
-function notifyWhen(key, message, type = "success") {
-  if (isNotificationEnabled(key)) showToast(message, type);
-}
-
 function withTimeout(promise, timeoutMs, message) {
   let timeoutId;
   const timeout = new Promise((_, reject) => {
@@ -1293,7 +1284,7 @@ async function saveHistoryUpdate() {
   await apiPut(`/grupos/${encodeURIComponent(currentDetailsGroupId)}/historico/lote`, { items: payloads });
   markHistoryPayloadsSaved("historyUpdate", payloads);
   setHistoryUpdateState("success", "Historico atualizado na Google Sheets.");
-  notifyWhen("alertar_historico_atualizado", "Historico mensal atualizado na Google Sheets.", "success");
+  showToast("Historico mensal atualizado na Google Sheets.", "success");
   await loadMapaGrupos();
 }
 
@@ -1546,7 +1537,7 @@ async function saveGroupForm() {
     setGroupFormHistoryState("success", `Salvando ${historyPayloads.length} mes(es) de historico...`);
     await apiPut(`/grupos/${encodeURIComponent(targetGroupId)}/historico/lote`, { items: historyPayloads });
     markHistoryPayloadsSaved("groupFormHistory", historyPayloads);
-    notifyWhen("alertar_historico_atualizado", "Historico mensal atualizado na Google Sheets.", "success");
+    showToast("Historico mensal atualizado na Google Sheets.", "success");
   }
   groupFormModal.hide();
   await loadMapaGrupos();
@@ -3072,7 +3063,7 @@ async function saveCurrentStudy() {
   const result = await apiPost("/estudos", payload);
   currentStudy.savedStudyId = result.estudo_id;
   document.getElementById("studyDisplayId").textContent = result.estudo_id;
-  notifyWhen("alertar_estudo_salvo", `Estudo salvo: ${result.estudo_id}`, "success");
+  showToast(`Estudo salvo: ${result.estudo_id}`, "success");
   loadHistoryStudies();
   return result;
 }
@@ -3506,38 +3497,11 @@ async function saveBusinessRuleFeedbacks() {
 
 function renderConfiguracoes(data) {
   configState.data = data;
-  const empresa = data.empresa || {};
   const pref = data.preferencias || {};
   const params = data.parametros_financeiros || {};
-  const integracoes = data.integracoes || {};
-  const notificacoes = data.notificacoes || {};
   const sistema = data.sistema || {};
 
-  setInputValue("configEmpresaNome", empresa.nome);
-  setInputValue("configEmpresaCnpj", empresa.cnpj);
-  setInputValue("configEmpresaEmail", empresa.email);
-  setInputValue("configEmpresaTelefone", empresa.telefone);
-  setInputValue("configEmpresaEndereco", empresa.endereco);
-  setInputValue("configEmpresaLogo", empresa.logo);
-  setInputValue("configMoeda", pref.moeda);
-  setInputValue("configFormatoData", pref.formato_data);
-  setInputValue("configTema", pref.tema);
   applyTheme(pref.tema);
-  setInputValue("configIdioma", pref.idioma);
-  setInputValue("configCasasValores", pref.casas_decimais_valores);
-  setInputValue("configCasasPercentuais", pref.casas_decimais_percentuais);
-  setInputValue("configAtualizacaoMinutos", pref.atualizacao_automatica_minutos);
-  setSelectBool("configMeiaParcela", pref.ativar_meia_parcela);
-  setSelectBool("configLanceEmbutido", pref.ativar_lance_embutido);
-  setSelectBool("configHistorico36", pref.exibir_historico_36_meses);
-  setSelectBool("notifySync", notificacoes.alertar_sincronizacao);
-  setSelectBool("notifyStudySaved", notificacoes.alertar_estudo_salvo);
-  setSelectBool("notifyHistoryUpdated", notificacoes.alertar_historico_atualizado);
-  setSelectBool("notifyIntegrationFailure", notificacoes.alertar_falha_integracao);
-  setSelectBool("integrationGoogleSheetsToggle", integracoes.google_sheets);
-  setSelectBool("integrationPiperunToggle", integracoes.piperun_crm);
-  setSelectBool("integrationEmailToggle", integracoes.email_smtp);
-  setSelectBool("integrationBackupToggle", integracoes.backup_automatico);
 
   setInputValue("configTaxaAdm", percentToInput(params.taxa_administracao_padrao));
   setInputValue("configFundoReserva", percentToInput(params.fundo_reserva_padrao));
@@ -3547,12 +3511,6 @@ function renderConfiguracoes(data) {
   setInputValue("configPrazoMaximo", params.prazo_maximo);
   setInputValue("configPrazoMinimo", params.prazo_minimo);
   setInputValue("configIndiceCorrecao", params.indice_correcao_anual);
-
-  document.getElementById("integrationSheets").textContent = sistema.google_sheets_configurado && integracoes.google_sheets ? "Ativo" : "Pendente";
-  document.getElementById("integrationPiperun").textContent = integracoes.piperun_crm ? "Ativo" : "Inativo";
-  document.getElementById("integrationEmail").textContent = integracoes.email_smtp ? "Ativo" : "Inativo";
-  document.getElementById("integrationBackup").textContent = integracoes.backup_automatico ? "Ativo" : "Inativo";
-  document.getElementById("integrationSheetName").textContent = sistema.google_sheet_name || "-";
 
   document.getElementById("configUsersBody").innerHTML = (data.usuarios || []).map((user, index) => {
     const inactive = user.status !== "Ativo";
@@ -3575,7 +3533,6 @@ function renderConfiguracoes(data) {
   `;
   }).join("");
 
-  renderAccessPolicy(data.acesso || {});
   renderBusinessRules(data.regras_negocio_feedbacks || {});
   renderAdministratorRules(data.administradoras_regras || []);
   renderAdministratorPlans();
@@ -3589,14 +3546,6 @@ function renderConfiguracoes(data) {
     ["Logs nesta sessao", operationalLogs.length],
   ].map(([label, value]) => detailField(label, value)).join("");
   renderOperationalLogs();
-}
-
-function renderAccessPolicy(acesso) {
-  document.getElementById("configAccessGrid").innerHTML = [
-    ["Paineis", acesso.paineis_liberados ? "Liberados para todos" : "Restritos"],
-    ["Dados", "Todos podem visualizar os dados dos paineis"],
-    ["Observacao", acesso.descricao || "-"],
-  ].map(([label, value]) => detailField(label, value)).join("");
 }
 
 function adminRuleNumber(value) {
@@ -4537,26 +4486,6 @@ async function removeAdministratorRule(index) {
 
 function collectConfiguracoesPayload() {
   return {
-    empresa: {
-      nome: document.getElementById("configEmpresaNome").value.trim(),
-      cnpj: document.getElementById("configEmpresaCnpj").value.trim(),
-      email: document.getElementById("configEmpresaEmail").value.trim(),
-      telefone: document.getElementById("configEmpresaTelefone").value.trim(),
-      endereco: document.getElementById("configEmpresaEndereco").value.trim(),
-      logo: document.getElementById("configEmpresaLogo").value.trim(),
-    },
-    preferencias: {
-      moeda: document.getElementById("configMoeda").value.trim(),
-      formato_data: document.getElementById("configFormatoData").value.trim(),
-      tema: document.getElementById("configTema").value,
-      idioma: document.getElementById("configIdioma").value.trim(),
-      casas_decimais_valores: Number(document.getElementById("configCasasValores").value || 0),
-      casas_decimais_percentuais: Number(document.getElementById("configCasasPercentuais").value || 0),
-      atualizacao_automatica_minutos: Number(document.getElementById("configAtualizacaoMinutos").value || 0),
-      ativar_meia_parcela: getSelectBool("configMeiaParcela"),
-      ativar_lance_embutido: getSelectBool("configLanceEmbutido"),
-      exibir_historico_36_meses: getSelectBool("configHistorico36"),
-    },
     parametros_financeiros: {
       taxa_administracao_padrao: inputToPercent("configTaxaAdm"),
       fundo_reserva_padrao: inputToPercent("configFundoReserva"),
@@ -4566,18 +4495,6 @@ function collectConfiguracoesPayload() {
       prazo_maximo: Number(document.getElementById("configPrazoMaximo").value || 0),
       prazo_minimo: Number(document.getElementById("configPrazoMinimo").value || 0),
       indice_correcao_anual: document.getElementById("configIndiceCorrecao").value.trim(),
-    },
-    integracoes: {
-      google_sheets: getSelectBool("integrationGoogleSheetsToggle"),
-      piperun_crm: getSelectBool("integrationPiperunToggle"),
-      email_smtp: getSelectBool("integrationEmailToggle"),
-      backup_automatico: getSelectBool("integrationBackupToggle"),
-    },
-    notificacoes: {
-      alertar_sincronizacao: getSelectBool("notifySync"),
-      alertar_estudo_salvo: getSelectBool("notifyStudySaved"),
-      alertar_historico_atualizado: getSelectBool("notifyHistoryUpdated"),
-      alertar_falha_integracao: getSelectBool("notifyIntegrationFailure"),
     },
     administradoras_regras: configState.data?.administradoras_regras || [],
     regras_negocio_feedbacks: collectBusinessRuleFeedbacks({ preserveExistingWhenBlank: true }),
@@ -4661,7 +4578,7 @@ async function submitConfigUserForm() {
 
 async function syncGoogleSheets() {
   const result = await apiPost("/reload", {});
-  notifyWhen("alertar_sincronizacao", `Google Sheets sincronizado: ${result.total} linhas.`, "success");
+  showToast(`Google Sheets sincronizado: ${result.total} linhas.`, "success");
   addOperationalLog(`Google Sheets sincronizado: ${result.total} linha(s)`);
 }
 
@@ -5112,27 +5029,6 @@ document.getElementById("historyTableBody").addEventListener("click", async (eve
   }
 });
 
-document.getElementById("saveConfigBtn").addEventListener("click", () => {
-  saveConfiguracoes().catch(() => setConfigState("error"));
-});
-
-document.getElementById("configTema").addEventListener("change", (event) => {
-  applyTheme(event.target.value);
-});
-
-document.getElementById("configureIntegrationsBtn").addEventListener("click", () => {
-  document.getElementById("configIntegrationsForm").scrollIntoView({ behavior: "smooth", block: "center" });
-  document.getElementById("integrationGoogleSheetsToggle").focus();
-});
-
-document.getElementById("testIntegrationsBtn").addEventListener("click", () => {
-  syncGoogleSheets().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel testar integracoes.", "danger"));
-});
-
-document.getElementById("syncSheetsBtn").addEventListener("click", () => {
-  syncGoogleSheets().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel sincronizar Google Sheets.", "danger"));
-});
-
 document.getElementById("downloadConfigBackupBtn").addEventListener("click", downloadConfigBackup);
 document.getElementById("saveBusinessRulesFeedbackBtn").addEventListener("click", () => {
   saveBusinessRuleFeedbacks().catch(() => setConfigState("error"));
@@ -5196,15 +5092,15 @@ document.getElementById("configUsersBody").addEventListener("click", (event) => 
 document.getElementById("clearSystemCacheBtn").addEventListener("click", clearSystemCache);
 
 document.getElementById("reindexSystemBtn").addEventListener("click", () => {
-  reindexSystemData().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel reindexar os dados.", "danger"));
+  reindexSystemData().catch(() => showToast("Nao foi possivel reindexar os dados.", "danger"));
 });
 
 document.getElementById("validateSystemBtn").addEventListener("click", () => {
-  validateSystemIntegrity().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel validar a integridade.", "danger"));
+  validateSystemIntegrity().catch(() => showToast("Nao foi possivel validar a integridade.", "danger"));
 });
 
 document.getElementById("restartSyncBtn").addEventListener("click", () => {
-  restartSystemSync().catch(() => notifyWhen("alertar_falha_integracao", "Nao foi possivel reiniciar a sincronizacao.", "danger"));
+  restartSystemSync().catch(() => showToast("Nao foi possivel reiniciar a sincronizacao.", "danger"));
 });
 
 document.getElementById("loginForm").addEventListener("submit", submitLogin);

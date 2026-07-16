@@ -802,46 +802,15 @@
 
           <div id="configContent" class="d-none">
             <ul class="nav nav-tabs details-tabs" role="tablist">
-              <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#configGeral" type="button" role="tab">Geral</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configFinanceiro" type="button" role="tab">Parametros Financeiros</button></li>
+              <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#configFinanceiro" type="button" role="tab">Parametros Financeiros</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configAdministradoras" type="button" role="tab">Regras Administradoras</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configIntegracoes" type="button" role="tab">Integracoes</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configUsuarios" type="button" role="tab">Usuarios</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configAcesso" type="button" role="tab">Acesso</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configNotificacoes" type="button" role="tab">Notificacoes</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configRegrasNegocio" type="button" role="tab">Regras de Negocio</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configSistema" type="button" role="tab">Backup & Logs</button></li>
             </ul>
 
             <div class="tab-content details-tab-content">
-              <section id="configGeral" class="tab-pane fade show active" role="tabpanel">
-                <div class="content-card">
-                  <div class="table-toolbar">
-                    <div><h2>Informacoes da Empresa</h2><p>Dados gerais do sistema</p></div>
-                    <button id="saveConfigBtn" class="btn btn-primary" type="button">Salvar Configuracoes</button>
-                  </div>
-                  <form id="configGeneralForm" class="viability-form">
-                    <label><span>Nome da empresa</span><input id="configEmpresaNome" class="form-control"></label>
-                    <label><span>CNPJ</span><input id="configEmpresaCnpj" class="form-control"></label>
-                    <label><span>E-mail</span><input id="configEmpresaEmail" class="form-control" type="email"></label>
-                    <label><span>Telefone</span><input id="configEmpresaTelefone" class="form-control"></label>
-                    <label><span>Endereco</span><input id="configEmpresaEndereco" class="form-control"></label>
-                    <label><span>Logo da empresa</span><input id="configEmpresaLogo" class="form-control"></label>
-                    <label><span>Moeda padrao</span><input id="configMoeda" class="form-control"></label>
-                    <label><span>Formato de data</span><input id="configFormatoData" class="form-control"></label>
-                    <label><span>Tema</span><select id="configTema" class="form-select"><option>Claro</option><option>Escuro</option></select></label>
-                    <label><span>Idioma</span><input id="configIdioma" class="form-control"></label>
-                    <label><span>Casas decimais valores</span><input id="configCasasValores" class="form-control" inputmode="numeric"></label>
-                    <label><span>Casas decimais percentuais</span><input id="configCasasPercentuais" class="form-control" inputmode="numeric"></label>
-                    <label><span>Atualizacao automatica em minutos</span><input id="configAtualizacaoMinutos" class="form-control" inputmode="numeric"></label>
-                    <label><span>Ativar meia parcela</span><select id="configMeiaParcela" class="form-select"><option value="true">Sim</option><option value="false">Nao</option></select></label>
-                    <label><span>Ativar lance embutido</span><select id="configLanceEmbutido" class="form-select"><option value="true">Sim</option><option value="false">Nao</option></select></label>
-                    <label><span>Exibir historico de 36 meses</span><select id="configHistorico36" class="form-select"><option value="true">Sim</option><option value="false">Nao</option></select></label>
-                  </form>
-                </div>
-              </section>
-
-              <section id="configFinanceiro" class="tab-pane fade" role="tabpanel">
+              <section id="configFinanceiro" class="tab-pane fade show active" role="tabpanel">
                 <div class="content-card">
                   <div class="table-toolbar"><div><h2>Parametros Financeiros</h2><p>Padroes usados nas simulacoes</p></div></div>
                   <form id="configFinanceForm" class="viability-form">
@@ -935,30 +904,6 @@
                 </div>
               </section>
 
-              <section id="configIntegracoes" class="tab-pane fade" role="tabpanel">
-                <div class="summary-grid">
-                  <article class="summary-card"><span class="summary-label">Google Sheets</span><strong id="integrationSheets">-</strong><small>Fonte oficial</small></article>
-                  <article class="summary-card"><span class="summary-label">PipeRun CRM</span><strong id="integrationPiperun">-</strong><small>Integracao futura</small></article>
-                  <article class="summary-card"><span class="summary-label">E-mail SMTP</span><strong id="integrationEmail">-</strong><small>Envio futuro</small></article>
-                  <article class="summary-card"><span class="summary-label">Backup Automatico</span><strong id="integrationBackup">-</strong><small>Rotina futura</small></article>
-                  <article class="summary-card"><span class="summary-label">Planilha</span><strong id="integrationSheetName">-</strong><small>Google Sheets</small></article>
-                </div>
-                <div class="content-card study-actions">
-                  <button id="configureIntegrationsBtn" class="btn btn-outline-primary" type="button">Configurar</button>
-                  <button id="testIntegrationsBtn" class="btn btn-outline-primary" type="button">Testar todas as integracoes</button>
-                  <button id="syncSheetsBtn" class="btn btn-primary" type="button">Sincronizar com Google Sheets</button>
-                </div>
-                <div class="content-card">
-                  <div class="table-toolbar"><div><h2>Configuracao das Integracoes</h2><p>Controle operacional dos servicos conectados</p></div></div>
-                  <form id="configIntegrationsForm" class="viability-form">
-                    <label><span>Google Sheets</span><select id="integrationGoogleSheetsToggle" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
-                    <label><span>PipeRun CRM</span><select id="integrationPiperunToggle" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
-                    <label><span>E-mail SMTP</span><select id="integrationEmailToggle" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
-                    <label><span>Backup Automatico</span><select id="integrationBackupToggle" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
-                  </form>
-                </div>
-              </section>
-
               <section id="configUsuarios" class="tab-pane fade" role="tabpanel">
                 <div class="content-card">
                   <div class="table-toolbar">
@@ -971,25 +916,6 @@
                       <tbody id="configUsersBody"></tbody>
                     </table>
                   </div>
-                </div>
-              </section>
-
-              <section id="configAcesso" class="tab-pane fade" role="tabpanel">
-                <div class="content-card">
-                  <div class="table-toolbar"><div><h2>Acesso aos Paineis</h2><p>Visualizacao liberada para todos os usuarios</p></div></div>
-                  <div id="configAccessGrid" class="details-grid"></div>
-                </div>
-              </section>
-
-              <section id="configNotificacoes" class="tab-pane fade" role="tabpanel">
-                <div class="content-card">
-                  <div class="table-toolbar"><div><h2>Notificacoes</h2><p>Alertas visuais das rotinas operacionais</p></div></div>
-                  <form id="configNotificationsForm" class="viability-form">
-                    <label><span>Sincronizacao Google Sheets</span><select id="notifySync" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
-                    <label><span>Estudo salvo</span><select id="notifyStudySaved" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
-                    <label><span>Historico mensal atualizado</span><select id="notifyHistoryUpdated" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
-                    <label><span>Falhas de integracao</span><select id="notifyIntegrationFailure" class="form-select"><option value="true">Ativo</option><option value="false">Inativo</option></select></label>
-                  </form>
                 </div>
               </section>
 
@@ -1334,6 +1260,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260708-05"></script>
+    <script src="/static/js/app.js?v=20260716-01"></script>
   </body>
 </html>
