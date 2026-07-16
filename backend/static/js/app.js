@@ -1815,6 +1815,125 @@ function administratorRuleCommitment(rule, key, defaultValue) {
   return percent > 0 ? percent : defaultValue;
 }
 
+const SMART_ENGINE_ITAU_DEFAULTS = {
+  administradora: "ITAU",
+  taxa_adm: 0.16,
+  fundo_reserva: 0.03,
+  percentual_lance_embutido: 0.30,
+  tipo_lance_embutido: "Credito",
+  aceita_fgts: true,
+};
+
+function smartEngineField(id, value) {
+  const target = document.querySelector(`[data-engine-field="${id}"]`);
+  if (target) target.textContent = value;
+}
+
+function formatSmartEngineMoney(value) {
+  if (!Number.isFinite(Number(value))) return "-";
+  return formatMoney(Number(value));
+}
+
+function formatSmartEngineMonths(value) {
+  if (!Number.isFinite(Number(value))) return "-";
+  return String(Math.max(0, Math.round(Number(value))));
+}
+
+function findSmartEngineAdministratorRule(administradora) {
+  const normalized = normalizeText(administradora);
+  return (configState.data?.administradoras_regras || []).find((rule) => (
+    normalizeText(rule.administradora) === normalized
+  )) || null;
+}
+
+function smartEngineItauRule() {
+  const rule = findSmartEngineAdministratorRule("ITAU") || {};
+  return {
+    ...SMART_ENGINE_ITAU_DEFAULTS,
+    ...rule,
+    taxa_adm: rulePercentValue(rule, "taxa_adm") || SMART_ENGINE_ITAU_DEFAULTS.taxa_adm,
+    fundo_reserva: rulePercentValue(rule, "fundo_reserva") || SMART_ENGINE_ITAU_DEFAULTS.fundo_reserva,
+    percentual_lance_embutido: rulePercentValue(rule, "percentual_lance_embutido") || SMART_ENGINE_ITAU_DEFAULTS.percentual_lance_embutido,
+    aceita_fgts: administratorRuleBoolean(rule, "aceita_fgts", SMART_ENGINE_ITAU_DEFAULTS.aceita_fgts),
+  };
+}
+
+function calculateSmartEngineScenario(profile, rule, withEmbedded) {
+  const creditoDesejado = Number(profile.credito_desejado || 0);
+  const parcelaDesejada = Number(profile.parcela_desejada || profile.parcela_ideal || 0);
+  const parcelaLimiteRenda = Number(profile.renda_total || 0) * 0.30;
+  const recursoProprio = Number(profile.lance_proprio || 0);
+  const fgts = rule.aceita_fgts ? Number(profile.fgts || 0) : 0;
+  const embeddedPercent = withEmbedded ? Number(rule.percentual_lance_embutido || 0) : 0;
+  const creditoContratado = embeddedPercent > 0 && embeddedPercent < 1
+    ? creditoDesejado / (1 - embeddedPercent)
+    : creditoDesejado;
+  const taxaAdm = creditoContratado * Number(rule.taxa_adm || 0);
+  const fundoReserva = withEmbedded
+    ? creditoDesejado * Number(rule.fundo_reserva || 0)
+    : creditoContratado * Number(rule.fundo_reserva || 0);
+  const saldoDevedor = creditoContratado + taxaAdm + fundoReserva;
+  const valorEmbutido = creditoContratado * embeddedPercent;
+  const lanceTotal = recursoProprio + fgts + valorEmbutido;
+  const saldoAposLance = saldoDevedor - lanceTotal;
+  return {
+    creditoContratado,
+    taxaAdm,
+    fundoReserva,
+    saldoDevedor,
+    percentualLance: creditoContratado > 0 ? lanceTotal / creditoContratado : 0,
+    lanceTotal,
+    recursoProprio,
+    fgts,
+    valorEmbutido,
+    prazoInicialDesejada: parcelaDesejada > 0 ? saldoDevedor / parcelaDesejada : null,
+    prazoInicialLimiteRenda: parcelaLimiteRenda > 0 ? saldoDevedor / parcelaLimiteRenda : null,
+    prazoAposLanceDesejada: parcelaDesejada > 0 ? saldoAposLance / parcelaDesejada : null,
+    prazoAposLanceLimiteRenda: parcelaLimiteRenda > 0 ? saldoAposLance / parcelaLimiteRenda : null,
+  };
+}
+
+function renderSmartEngine() {
+  if (!document.querySelector("[data-engine-field]")) return;
+  const profile = collectClientProfile();
+  const rule = smartEngineItauRule();
+  const semEmbutido = calculateSmartEngineScenario(profile, rule, false);
+  const comEmbutido = calculateSmartEngineScenario(profile, rule, true);
+  const values = {
+    "itau-a-sem": formatSmartEngineMoney(semEmbutido.creditoContratado),
+    "itau-a-com": formatSmartEngineMoney(comEmbutido.creditoContratado),
+    "itau-a-taxa-sem": formatSmartEngineMoney(semEmbutido.taxaAdm),
+    "itau-a-taxa-com": formatSmartEngineMoney(comEmbutido.taxaAdm),
+    "itau-a-fundo-sem": formatSmartEngineMoney(semEmbutido.fundoReserva),
+    "itau-a-fundo-com": formatSmartEngineMoney(comEmbutido.fundoReserva),
+    "itau-a-saldo-sem": formatSmartEngineMoney(semEmbutido.saldoDevedor),
+    "itau-a-saldo-com": formatSmartEngineMoney(comEmbutido.saldoDevedor),
+    "itau-b-sem": formatPercent(semEmbutido.percentualLance),
+    "itau-b-com": formatPercent(comEmbutido.percentualLance),
+    "itau-b-total-sem": formatSmartEngineMoney(semEmbutido.lanceTotal),
+    "itau-b-total-com": formatSmartEngineMoney(comEmbutido.lanceTotal),
+    "itau-b-rp-sem": formatSmartEngineMoney(semEmbutido.recursoProprio),
+    "itau-b-rp-com": formatSmartEngineMoney(comEmbutido.recursoProprio),
+    "itau-b-fgts-sem": formatSmartEngineMoney(semEmbutido.fgts),
+    "itau-b-fgts-com": formatSmartEngineMoney(comEmbutido.fgts),
+    "itau-b-embutido-sem": formatSmartEngineMoney(semEmbutido.valorEmbutido),
+    "itau-b-embutido-com": formatSmartEngineMoney(comEmbutido.valorEmbutido),
+    "itau-c-sem": "Se - Investidor",
+    "itau-c-com": "Se - Investidor",
+    "itau-c-desejada-sem": formatSmartEngineMonths(semEmbutido.prazoInicialDesejada),
+    "itau-c-desejada-com": formatSmartEngineMonths(comEmbutido.prazoInicialDesejada),
+    "itau-c-renda-sem": formatSmartEngineMonths(semEmbutido.prazoInicialLimiteRenda),
+    "itau-c-renda-com": formatSmartEngineMonths(comEmbutido.prazoInicialLimiteRenda),
+    "itau-d-sem": "Se - Contemplação",
+    "itau-d-com": "Se - Contemplação",
+    "itau-d-desejada-sem": formatSmartEngineMonths(semEmbutido.prazoAposLanceDesejada),
+    "itau-d-desejada-com": formatSmartEngineMonths(comEmbutido.prazoAposLanceDesejada),
+    "itau-d-renda-sem": formatSmartEngineMonths(semEmbutido.prazoAposLanceLimiteRenda),
+    "itau-d-renda-com": formatSmartEngineMonths(comEmbutido.prazoAposLanceLimiteRenda),
+  };
+  Object.entries(values).forEach(([id, value]) => smartEngineField(id, value));
+}
+
 function evaluatePjCapacityScenarios({
   faturamento,
   rendaSocios,
@@ -2136,6 +2255,7 @@ function saveClientProfile({ silent = false } = {}) {
   const profile = collectClientProfile();
   window.localStorage.setItem(CLIENT_PROFILE_STORAGE_KEY, JSON.stringify(profile));
   applyClientProfileToFlow(profile);
+  renderSmartEngine();
   if (!silent) showToast("Perfil do cliente salvo.", "success");
   return profile;
 }
@@ -2150,6 +2270,7 @@ function loadClientProfile() {
   if (!profile) {
     renderClientProfileTitulares({ tipo_contratacao: "pf_individual" });
     updateClientProfileTotals();
+    renderSmartEngine();
     return;
   }
   renderClientProfileTitulares(profile);
@@ -2160,6 +2281,7 @@ function loadClientProfile() {
   setInputValue("clientProfileObjetivo", objective);
   updateClientProfileTotals();
   applyClientProfileToFlow(collectClientProfile());
+  renderSmartEngine();
 }
 
 function resetClientProfile() {
@@ -3164,6 +3286,7 @@ async function loadConfiguracoes() {
   try {
     const data = await apiGet("/configuracoes");
     renderConfiguracoes(data);
+    renderSmartEngine();
     setConfigState("ready");
     addOperationalLog("Configuracoes carregadas");
   } catch (error) {
