@@ -1842,15 +1842,6 @@ function administratorRuleCommitment(rule, key, defaultValue) {
 
 const SMART_ENGINE_ITAU_DEFAULTS = {
   administradora: "ITAU",
-  tipo_bem_filtro: "Imóvel / Automóvel",
-  indexador: "INCC, Fixo 3% e 5%",
-  prazo_remanescente: "46 meses",
-  prazo_inicial: "-",
-  primeira_assembleia: "-",
-  assembleias: "Não",
-  modalidades_lance: "Fixo e Livre",
-  calculo_embutido: "Sobre o Crédito",
-  limite_parcela: "Não",
   taxa_adm_ano: 0.0417,
   fundo_reserva_ano: 0.0078,
   taxa_adm: 0.16,
@@ -1981,20 +1972,11 @@ function renderSmartEngine() {
   };
   Object.entries(values).forEach(([id, value]) => smartEngineField(id, value));
   const genericValues = {
-    tipo_bem: rule.tipo_bem_filtro,
-    indexador: rule.indexador,
-    prazo_remanescente: rule.prazo_remanescente,
-    prazo_inicial: rule.prazo_inicial,
-    primeira_assembleia: rule.primeira_assembleia,
     taxa_adm: formatPercent(rule.taxa_adm),
     taxa_adm_ano: formatPercent(rule.taxa_adm_ano),
     fundo_reserva: formatPercent(rule.fundo_reserva),
     fundo_reserva_ano: formatPercent(rule.fundo_reserva_ano),
-    assembleias: rule.assembleias,
     lance_embutido: formatPercent(rule.percentual_lance_embutido),
-    modalidades_lance: rule.modalidades_lance,
-    calculo_embutido: rule.calculo_embutido,
-    limite_parcela: rule.limite_parcela,
   };
   Object.entries(genericValues).forEach(([id, value]) => smartEngineGenericField(id, value));
 }
