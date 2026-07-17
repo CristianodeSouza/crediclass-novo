@@ -27,6 +27,16 @@ class GrupoResumo(BaseModel):
     lance_agressivo_6m: float | None = None
     lance_moderado_12m: float | None = None
     lance_conservador_24m: float | None = None
+    modalidades_assembleia: str = ""
+    base_calculo_embutido: str = ""
+    modalidades_embutido: str = ""
+    seguro_obrigatorio: bool | None = None
+    idade_maxima_seguro: int | None = None
+    aliquota_seguro: float | None = None
+    parcela_inicial_grupo: float | None = None
+    parcela_apos_lance_grupo: float | None = None
+    dados_incompletos: list[str] = Field(default_factory=list)
+    origens: dict[str, str] = Field(default_factory=dict)
 
 
 class HistoricoMensal(BaseModel):
@@ -302,6 +312,7 @@ class ViabilidadeRequest(BaseModel):
     tipo_bem: str = "Imovel"
     estado_bem: str = ""
     considerar_lance_embutido: bool = True
+    saldo_embutido_modo: Literal["coerente", "legado"] = "coerente"
 
 
 class ViabilidadeHistorico(BaseModel):
@@ -339,6 +350,11 @@ class ViabilidadeGrupo(BaseModel):
     prazo_minimo: float | None = None
     taxa_adm: float | None = None
     fundo_reserva: float | None = None
+    saldo_devedor: float | None = None
+    saldo_devedor_legado: float | None = None
+    saldo_devedor_coerente: float | None = None
+    saldo_embutido_modo: str = "coerente"
+    origens: dict[str, str] = Field(default_factory=dict)
     prazo: int
     afinidade: float
     selo: str

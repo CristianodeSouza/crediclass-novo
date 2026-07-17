@@ -1856,6 +1856,7 @@ const SMART_ENGINE_ITAU_DEFAULTS = {
   taxa_adm: 0.16,
   fundo_reserva: 0.03,
   percentual_lance_embutido: 0.30,
+  saldo_embutido_modo: "coerente",
   tipo_lance_embutido: "Credito",
   aceita_fgts: true,
 };
@@ -1914,7 +1915,9 @@ function calculateSmartEngineScenario(profile, rule, withEmbedded) {
   const fundoReserva = withEmbedded
     ? creditoDesejado * Number(rule.fundo_reserva || 0)
     : creditoContratado * Number(rule.fundo_reserva || 0);
-  const saldoDevedor = creditoContratado + taxaAdm + fundoReserva;
+  const saldoCoerente = creditoContratado + taxaAdm + fundoReserva;
+  const saldoLegado = creditoContratado + taxaAdm + (creditoContratado * Number(rule.fundo_reserva || 0));
+  const saldoDevedor = withEmbedded && rule.saldo_embutido_modo === "legado" ? saldoLegado : saldoCoerente;
   const valorEmbutido = creditoContratado * embeddedPercent;
   const lanceTotal = recursoProprio + fgts + valorEmbutido;
   const saldoAposLance = saldoDevedor - lanceTotal;
@@ -1923,6 +1926,9 @@ function calculateSmartEngineScenario(profile, rule, withEmbedded) {
     taxaAdm,
     fundoReserva,
     saldoDevedor,
+    saldoCoerente,
+    saldoLegado,
+    saldoEmbutidoModo: rule.saldo_embutido_modo || "coerente",
     percentualLance: creditoContratado > 0 ? lanceTotal / creditoContratado : 0,
     lanceTotal,
     recursoProprio,
@@ -2076,7 +2082,7 @@ async function loadScenarioAnalysis() {
       cache: "no-store",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...profile, considerar_lance_embutido: true }),
+      body: JSON.stringify({ ...profile, considerar_lance_embutido: true, saldo_embutido_modo: "coerente" }),
     });
     const result = await response.json().catch(() => ({}));
     if (requestId !== scenarioAnalysisRequestId) return;

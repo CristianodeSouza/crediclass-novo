@@ -88,10 +88,6 @@ def _scenario_status(
 
 
 def _reference_from_group(group: dict[str, Any], profile_field: str) -> float | None:
-    historico = group.get("historico") or {}
-    if historico:
-        references = calculate_lance_references(historico, group.get("percentual_lance_fixo"))
-        return references.get(profile_field)
     aliases = {
         "lance_super_agressivo_3m": ["lance_super_agressivo_3m", "lance_agressivo"],
         "lance_agressivo_6m": ["lance_agressivo_6m", "lance_moderado"],
@@ -103,6 +99,10 @@ def _reference_from_group(group: dict[str, Any], profile_field: str) -> float | 
         value = group.get(field)
         if value is not None:
             return as_float(value)
+    historico = group.get("historico") or {}
+    if historico:
+        references = calculate_lance_references(historico, group.get("percentual_lance_fixo"))
+        return references.get(profile_field)
     return None
 
 
@@ -142,6 +142,20 @@ def _benefit_flag(value: Any) -> bool:
     return normalized.startswith("sim") or normalized in {"true", "1", "possui", "permite"}
 
 
+def _embedded_configuration_valid(group: dict[str, Any]) -> bool:
+    percent = as_float(group.get("percentual_lance_embutido"))
+    if percent <= 0:
+        return True
+    # Hand-built legacy integrations may not expose the new X/Y/Z fields.
+    # Rows read from the new sheet always contain those keys, so blank values
+    # there remain invalid instead of being silently assumed.
+    if "base_calculo_embutido" not in group and "modalidades_embutido" not in group:
+        return True
+    base = normalize_text(str(group.get("base_calculo_embutido") or ""))
+    modalities = normalize_text(str(group.get("modalidades_embutido") or ""))
+    return "credito" in base and bool(modalities)
+
+
 def _investment_benefit_score(group: dict[str, Any]) -> float:
     prazo = as_float(group.get("prazo_restante"), as_float(group.get("prazo_total")))
     taxa_total = as_float(group.get("taxa_adm")) + as_float(group.get("fundo_reserva"))
@@ -176,6 +190,8 @@ def _stage4_contemplation_filter(payload: ViabilidadeRequest, groups: list[dict[
     scored = []
     fallback = []
     for group in groups:
+        if group.get("dados_incompletos"):
+            continue
         reference = _reference_from_group(group, field)
         if reference is None:
             continue
@@ -272,6 +288,8 @@ def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]],
         prazo_restante = as_float(group.get("prazo_restante"), as_float(group.get("prazo_total")))
         if prazo_restante <= 0:
             continue
+        if group.get("dados_incompletos"):
+            continue
         eligible.append(group)
 
     filtered_groups, stage4_summary = stage4_filter_candidates(payload, eligible)
@@ -301,13 +319,17 @@ def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]],
                 recurso_por_carta = recurso_total / quantity if quantity else 0
                 fgts_por_carta = fgts_total / quantity if quantity else 0
                 for group, credito_liquido in zip(combo, allocations):
+                    embedded_valid = _embedded_configuration_valid(group)
+                    if payload.considerar_lance_embutido and not embedded_valid:
+                        alertas.append("parametros_embutido_incompletos")
                     card = build_card_from_liquid(
                         group,
                         credito_liquido,
                         recurso_por_carta,
                         fgts_por_carta,
                         parcela_limite,
-                        payload.considerar_lance_embutido,
+                        payload.considerar_lance_embutido and embedded_valid,
+                        payload.saldo_embutido_modo,
                     )
                     lance_ref = _reference_from_group(group, profile["campo_lance"])
                     card["referencia_lance"] = lance_ref
@@ -315,12 +337,14 @@ def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]],
                     card["historico_lance_insuficiente"] = lance_ref is None
                     if lance_ref is None:
                         alertas.append("historico_lance_insuficiente")
-                        lance_compativel = False
                     elif not reference_in_profile_range(profile["campo_lance"], lance_ref):
                         alertas.append("lance_historico_fora_do_perfil")
                         lance_compativel = False
                     elif card["percentual_lance_total"] < float(lance_ref):
                         alertas.append("lance_total_abaixo_da_referencia")
+                        lance_compativel = False
+                    if card["credito_contratado"] < as_float(group.get("credito_minimo")) or card["credito_contratado"] > as_float(group.get("credito_maximo")):
+                        alertas.append("credito_bruto_fora_da_faixa")
                         lance_compativel = False
                     if fgts_total > 0 and not group.get("fgts"):
                         alertas.append("fgts_nao_permitido")
@@ -370,12 +394,24 @@ def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]],
             "renda_total": round(float(payload.renda_total or 0), 2),
             "fgts_total": round(fgts_total, 2),
             "recursos_proprios_para_lance": round(recurso_total, 2),
+            "origens": {
+                "credito_desejado": "front-end",
+                "parcela_desejada": "front-end",
+                "renda_total": "front-end",
+                "fgts_total": "front-end",
+                "recurso_proprio": "front-end",
+                "regras_grupo": "planilha",
+                "saldo_embutido_modo": "configuracao",
+            },
         },
         "etapa4": stage4_summary,
         "total_grupos_analisados": len(groups),
         "total_grupos_elegiveis": len(eligible),
+        "total_grupos_dados_incompletos": len([group for group in groups if group.get("dados_incompletos")]),
         "total_grupos_pos_filtro_1": len(filtered_groups),
         "total_cenarios": len(scenarios),
         "total_cenarios_viaveis": len([item for item in scenarios if item["status"] != "inviavel"]),
+        "saldo_embutido_modo": payload.saldo_embutido_modo,
+        "alertas": ["dados_incompletos"] if any(group.get("dados_incompletos") for group in groups) else [],
         "cenarios": scenarios[:30],
     }

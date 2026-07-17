@@ -20,6 +20,7 @@ class AdministratorRule:
     aceita_pj: bool = True
     permite_composicao_pj_socios: bool = True
     permite_cpf_socio: bool = True
+    saldo_embutido_modo: str = "coerente"
     status_operacional: str = "Ativo"
     data_cadastro_produto: str = ""
     responsavel_produto: str = ""
@@ -86,6 +87,7 @@ def rule_from_config(data: dict) -> AdministratorRule | None:
         aceita_pj=bool(data.get("aceita_pj", True)),
         permite_composicao_pj_socios=bool(data.get("permite_composicao_pj_socios", True)),
         permite_cpf_socio=bool(data.get("permite_cpf_socio", True)),
+        saldo_embutido_modo=str(data.get("saldo_embutido_modo") or "coerente"),
         status_operacional=str(data.get("status_operacional") or "Ativo"),
         data_cadastro_produto=str(data.get("data_cadastro_produto") or ""),
         responsavel_produto=str(data.get("responsavel_produto") or ""),

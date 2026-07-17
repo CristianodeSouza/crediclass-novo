@@ -48,6 +48,7 @@ DEFAULT_ADMINISTRATOR_RULES = [
         "limite_sem_comprovacao_renda_texto": "Sob consulta/Sistema Itau",
         "aceita_adesao_clientes_texto": "Sim, consultar regras",
         "percentual_lance_embutido": 0.30,
+        "saldo_embutido_modo": "coerente",
         "tipo_lance_embutido": "Credito",
         "taxa_adm": 0,
         "possui_negociacao_taxa": "",

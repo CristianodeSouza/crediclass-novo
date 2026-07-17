@@ -159,8 +159,10 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
     results: list[dict[str, Any]] = []
 
     for group in groups:
-        credito_minimo = group.get("credito_minimo") or 0
-        credito_maximo = group.get("credito_maximo") or 0
+        if group.get("dados_incompletos"):
+            continue
+        credito_minimo = group.get("credito_minimo")
+        credito_maximo = group.get("credito_maximo")
         prazo_restante = group.get("prazo_restante")
         if prazo_restante is None:
             prazo_restante = group.get("prazo_total") or 0
@@ -175,7 +177,14 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
 
         fgts_permitido = bool(group.get("fgts"))
         fgts_utilizado = fgts_total if fgts_permitido else 0
-        lance_embutido_permitido = bool(group.get("lance_embutido"))
+        base_embutido = normalize_text(str(group.get("base_calculo_embutido") or ""))
+        modalidades_embutido = normalize_text(str(group.get("modalidades_embutido") or ""))
+        percentual_cadastrado = group.get("percentual_lance_embutido") or 0
+        lance_embutido_permitido = bool(group.get("lance_embutido")) and (
+            (not base_embutido and not modalidades_embutido)
+            or ("credito" in base_embutido and bool(modalidades_embutido))
+            or percentual_cadastrado <= 0
+        )
         percentual_lance_embutido = (group.get("percentual_lance_embutido") or 0) if lance_embutido_permitido else 0
         if percentual_lance_embutido < 0 or percentual_lance_embutido >= 1:
             percentual_lance_embutido = 0
@@ -195,29 +204,35 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         # Regra da planilha: com embutido, o fundo incide sobre o credito liquido.
         fundo_reserva_base = credito_disponivel if percentual_lance_embutido > 0 else credito_contratado
         fundo_reserva_valor = fundo_reserva_base * fundo_reserva
-        parcela_estimada = (
+        saldo_coerente = (
             credito_contratado
             + taxa_administrativa_valor
             + fundo_reserva_valor
-        ) / prazo_total
+        )
+        saldo_legado = credito_contratado + taxa_administrativa_valor + (credito_contratado * fundo_reserva)
+        saldo_devedor = saldo_legado if payload.saldo_embutido_modo == "legado" and percentual_lance_embutido > 0 else saldo_coerente
+        parcela_estimada = saldo_devedor / prazo_total
         prazo_minimo = (
-            credito_contratado
-            + taxa_administrativa_valor
-            + fundo_reserva_valor
-            - lance_total_formula
+            saldo_devedor - lance_total_formula
         ) / parcela_limite
 
         historico = group.get("historico") or {}
         historico_12m = history_last_12_months(historico)
-        lance_references = calculate_lance_references(
-            historico,
-            group.get("percentual_lance_fixo"),
-        )
-        lance_referencia = lance_references[profile_field]
+        direct_profile_fields = {
+            "lance_super_agressivo_3m": "lance_super_agressivo_3m",
+            "lance_agressivo_6m": "lance_agressivo_6m",
+            "lance_moderado_12m": "lance_moderado_12m",
+            "lance_conservador_24m": "lance_conservador_24m",
+            "lance_investidor": "lance_investidor",
+        }
+        lance_referencia = group.get(direct_profile_fields.get(profile_field, profile_field))
+        if lance_referencia is None:
+            lance_references = calculate_lance_references(historico, group.get("percentual_lance_fixo"))
+            lance_referencia = lance_references[profile_field]
         historico_disponivel = lance_referencia is not None
         lance_na_faixa_perfil = reference_in_profile_range(profile_field, lance_referencia)
 
-        credito_score = 0 if credito_contratado < credito_minimo or credito_contratado > credito_maximo else 100
+        credito_score = 0 if credito_minimo is None or credito_maximo is None or credito_contratado < credito_minimo or credito_contratado > credito_maximo else 100
         parcela_score = 100 if parcela_estimada <= payload.parcela_desejada else score_ratio(payload.parcela_desejada, parcela_estimada)
         lance_score = 0 if not historico_disponivel or not lance_na_faixa_perfil else (100 if percentual_lance >= float(lance_referencia) else score_ratio(percentual_lance, float(lance_referencia)))
         prazo_score = 100 if prazo_restante >= prazo_minimo else score_ratio(prazo_restante, prazo_minimo)
@@ -239,7 +254,7 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         parcela_compativel = parcela_estimada <= parcela_limite
         lance_compativel = historico_disponivel and lance_na_faixa_perfil and percentual_lance >= float(lance_referencia)
         prazo_compativel = prazo_restante >= prazo_minimo
-        credito_compativel = credito_minimo <= credito_contratado <= credito_maximo
+        credito_compativel = credito_minimo is not None and credito_maximo is not None and credito_minimo <= credito_contratado <= credito_maximo
         permissoes_compativeis = (fgts_total <= 0 or fgts_permitido) and (
             percentual_lance_embutido <= 0 or lance_embutido_permitido
         )
@@ -257,6 +272,8 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             alertas.append("fgts_nao_permitido")
         if group.get("percentual_lance_embutido") and not lance_embutido_permitido:
             alertas.append("lance_embutido_nao_permitido")
+        if group.get("seguro_obrigatorio") and group.get("idade_maxima_seguro") is None:
+            alertas.append("regra_seguro_incompleta")
 
         if modo_preliminar:
             aprovado = credito_compativel
@@ -298,7 +315,11 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
             "lance_total": round(lance_total, 2),
             "percentual_lance": round(percentual_lance, 4),
             "taxa_administrativa_valor": round(taxa_administrativa_valor, 2),
-            "fundo_reserva_valor": round(fundo_reserva_valor, 2),
+                "fundo_reserva_valor": round(fundo_reserva_valor, 2),
+                "saldo_devedor": round(saldo_devedor, 2),
+                "saldo_devedor_legado": round(saldo_legado, 2),
+                "saldo_devedor_coerente": round(saldo_coerente, 2),
+                "saldo_embutido_modo": payload.saldo_embutido_modo,
             "parcela_estimada": round(parcela_estimada, 2),
             "lance_sugerido_percentual": (
                 round(float(lance_referencia), 6)

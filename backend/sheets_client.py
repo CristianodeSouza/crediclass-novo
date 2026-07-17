@@ -42,6 +42,14 @@ SUMMARY_FIELDS = [
     "credito_maximo",
     "taxa_adm",
     "fundo_reserva",
+    "modalidades_assembleia",
+    "base_calculo_embutido",
+    "modalidades_embutido",
+    "seguro_obrigatorio",
+    "idade_maxima_seguro",
+    "aliquota_seguro",
+    "parcela_inicial_grupo",
+    "parcela_apos_lance_grupo",
     "prazo_total",
     "prazo_restante",
     "primeira_assembleia",
@@ -54,25 +62,42 @@ SUMMARY_FIELDS = [
     "lance_conservador",
     "lance_moderado",
     "lance_agressivo",
+    "lance_super_agressivo_3m",
+    "lance_agressivo_6m",
+    "lance_moderado_12m",
+    "lance_conservador_24m",
     "status",
 ]
 
+# The Itaú motor uses the column contract from the new group base.  These
+# positions are intentionally explicit so a renamed sheet header cannot move
+# a financial parameter to a different field silently.
 MAPA_GRUPOS_COLUMN_INDEXES = {
     "administradora": 0,  # A
     "grupo": 1,  # B
     "tipo_bem": 2,  # C
     "prazo_restante": 5,  # F
-    "credito_maximo": 17,  # R
-    "taxa_adm": 18,  # S
-    "lance_super_conservador": 59,  # BH
-    "lance_conservador": 60,  # BI
-    "lance_moderado": 61,  # BJ
-    "lance_agressivo": 62,  # BK
+    "seguro_obrigatorio": 11,  # L
+    "idade_maxima_seguro": 12,  # M
+    "aliquota_seguro": 13,  # N
+    "credito_minimo": 14,  # O
+    "credito_maximo": 20,  # U
+    "modalidades_assembleia": 22,  # W
+    "percentual_lance_embutido": 23,  # X
+    "base_calculo_embutido": 24,  # Y
+    "modalidades_embutido": 25,  # Z
+    "fundo_reserva": 26,  # AA
+    "taxa_adm": 28,  # AC
+    "parcela_inicial_grupo": 35,  # AJ
+    "parcela_apos_lance_grupo": 36,  # AK
+    "lance_investidor": 63,  # BL
+    "lance_conservador_24m": 64,  # BM
+    "lance_moderado_12m": 65,  # BN
+    "lance_agressivo_6m": 66,  # BO
+    "lance_super_agressivo_3m": 67,  # BP
 }
 
-MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES = {
-    "taxa_adm": 16,  # Q - Taxa do maior credito, usada quando S estiver vazia.
-}
+MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES: dict[str, int] = {}
 
 
 def normalize_header(value: str) -> str:
@@ -127,6 +152,14 @@ FIELD_ALIASES = {
     "credito_maximo": ["credito maximo", "maior credito", "credito max", "carta maxima", "valor maximo"],
     "taxa_adm": ["taxa administracao", "taxa adm", "taxa adm original", "taxa de administracao", "taxa administrativa", "tx adm", "tx administracao"],
     "fundo_reserva": ["fundo reserva", "fundo de reserva", "fundo rsv"],
+    "modalidades_assembleia": ["assembleias modalidades", "modalidades assembleia", "permite participar do lance fixo fidelidade e livre"],
+    "base_calculo_embutido": ["base calculo embutido", "calculo do embutido", "lance embutido calculo"],
+    "modalidades_embutido": ["modalidades embutido", "permite utilizar em quais modalidades"],
+    "seguro_obrigatorio": ["seguro obrigatorio"],
+    "idade_maxima_seguro": ["idade maxima seguro", "idade maxima para seguro"],
+    "aliquota_seguro": ["aliquota seguro", "aliquota seguro mensal sobre saldo devedor"],
+    "parcela_inicial_grupo": ["parcela inicial"],
+    "parcela_apos_lance_grupo": ["parcela apos lance", "parcela apos o lance"],
     "prazo_total": ["prazo total", "prazo do grupo", "prazo grupo"],
     "prazo_restante": ["prazo restante"],
     "primeira_assembleia": ["primeira assembleia", "1 assembleia", "1a assembleia"],
@@ -151,6 +184,11 @@ FIELD_ALIASES = {
     "lance_conservador": ["lance conservador", "conservador", "cons"],
     "lance_moderado": ["lance moderado", "moderado", "mod"],
     "lance_agressivo": ["lance agressivo", "agressivo", "agr"],
+    "lance_investidor": ["lance investidor", "investidor"],
+    "lance_super_agressivo_3m": ["lance super agressivo 3m", "super agressivo 3 meses"],
+    "lance_agressivo_6m": ["lance agressivo 6m", "agressivo 6 meses"],
+    "lance_moderado_12m": ["lance moderado 12m", "moderado 12 meses"],
+    "lance_conservador_24m": ["lance conservador 24m", "conservador 24 meses"],
     "investidor": ["investidor"],
     "conservador": ["conservador"],
     "moderado": ["moderado"],
@@ -702,6 +740,9 @@ def update_historico_mensal_lote(grupo_id: str, payloads: list[dict[str, Any]]) 
 
 
 def get_field(row: dict[str, Any], field: str) -> Any:
+    canonical = row.get(canonical_field_header(field))
+    if canonical_field_header(field) in row:
+        return canonical
     normalized = {normalize_header(key): value for key, value in row.items()}
     for alias in FIELD_ALIASES[field]:
         value = normalized.get(normalize_header(alias))
@@ -849,10 +890,25 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
 
     historico = build_historico(row)
     lance_references = calculate_lance_references(historico)
-    lance_super_conservador = parse_percent(get_optional_field(row, "lance_super_conservador"))
-    lance_conservador = parse_percent(get_optional_field(row, "lance_conservador"))
-    lance_moderado = parse_percent(get_optional_field(row, "lance_moderado"))
-    lance_agressivo = parse_percent(get_optional_field(row, "lance_agressivo"))
+    lance_investidor = parse_percent(get_optional_field(row, "lance_investidor"))
+    lance_conservador_24m = parse_percent(get_optional_field(row, "lance_conservador_24m"))
+    lance_moderado_12m = parse_percent(get_optional_field(row, "lance_moderado_12m"))
+    lance_agressivo_6m = parse_percent(get_optional_field(row, "lance_agressivo_6m"))
+    lance_super_agressivo_3m = parse_percent(get_optional_field(row, "lance_super_agressivo_3m"))
+    missing = [
+        field for field in ("credito_minimo", "credito_maximo", "taxa_adm", "fundo_reserva")
+        if get_field(row, field) in (None, "")
+    ]
+    origins = {
+        "credito_minimo": "planilha",
+        "credito_maximo": "planilha",
+        "taxa_adm": "planilha",
+        "fundo_reserva": "planilha",
+        "prazo_remanescente": "planilha",
+        "percentual_embutido": "planilha",
+        "seguro_obrigatorio": "planilha",
+        "indices_perfil": "planilha",
+    }
     updated_month = latest_updated_history_month(historico)
     return {
         "grupo_id": build_grupo_id(row),
@@ -864,6 +920,14 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "credito_maximo": parse_credit(get_field(row, "credito_maximo")),
         "taxa_adm": parse_percent(get_field(row, "taxa_adm")),
         "fundo_reserva": parse_percent(get_optional_field(row, "fundo_reserva")),
+        "modalidades_assembleia": clean_text(get_optional_field(row, "modalidades_assembleia")),
+        "base_calculo_embutido": clean_text(get_optional_field(row, "base_calculo_embutido")),
+        "modalidades_embutido": clean_text(get_optional_field(row, "modalidades_embutido")),
+        "seguro_obrigatorio": parse_bool(get_optional_field(row, "seguro_obrigatorio")),
+        "idade_maxima_seguro": parse_int(get_optional_field(row, "idade_maxima_seguro")),
+        "aliquota_seguro": parse_percent(get_optional_field(row, "aliquota_seguro")),
+        "parcela_inicial_grupo": parse_number(get_optional_field(row, "parcela_inicial_grupo")),
+        "parcela_apos_lance_grupo": parse_number(get_optional_field(row, "parcela_apos_lance_grupo")),
         "prazo_total": parse_int(get_field(row, "prazo_total")),
         "prazo_restante": parse_int(get_optional_field(row, "prazo_restante")),
         "atualizado": short_history_month_label(updated_month),
@@ -871,18 +935,24 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "primeira_assembleia": clean_text(get_field(row, "primeira_assembleia")),
         "ultima_assembleia": clean_text(get_field(row, "ultima_assembleia")),
         "status": clean_text(get_field(row, "status") or "Ativo"),
-        "lance_embutido": parse_bool(get_optional_field(row, "lance_embutido")),
+        "lance_embutido": parse_bool(get_optional_field(row, "lance_embutido")) if get_optional_field(row, "lance_embutido") not in (None, "") else bool(parse_percent(get_optional_field(row, "percentual_lance_embutido") or 0) > 0),
         "fgts": parse_bool(get_optional_field(row, "fgts")),
         "percentual_lance_embutido": parse_percent(get_optional_field(row, "percentual_lance_embutido")),
         "percentual_lance_fixo": parse_percent(get_optional_field(row, "percentual_lance_fixo")),
-        "lance_super_conservador": lance_super_conservador if lance_super_conservador is not None else lance_references["lance_super_conservador"],
-        "lance_conservador": lance_conservador if lance_conservador is not None else lance_references["lance_conservador"],
-        "lance_moderado": lance_moderado if lance_moderado is not None else lance_references["lance_moderado"],
-        "lance_agressivo": lance_agressivo if lance_agressivo is not None else lance_references["lance_agressivo"],
-        "lance_super_agressivo_3m": lance_references["lance_super_agressivo_3m"],
-        "lance_agressivo_6m": lance_references["lance_agressivo_6m"],
-        "lance_moderado_12m": lance_references["lance_moderado_12m"],
-        "lance_conservador_24m": lance_references["lance_conservador_24m"],
+        "lance_investidor": lance_investidor,
+        "lance_conservador_24m": lance_conservador_24m,
+        "lance_moderado_12m": lance_moderado_12m,
+        "lance_agressivo_6m": lance_agressivo_6m,
+        "lance_super_agressivo_3m": lance_super_agressivo_3m,
+        # Legacy aliases remain available to older consumers; the Itaú motor
+        # uses the explicit 3/6/12/24 month fields above.
+        "lance_super_conservador": lance_references["lance_super_conservador"],
+        "lance_conservador": lance_references["lance_conservador"],
+        "lance_moderado": lance_references["lance_moderado"],
+        "lance_agressivo": lance_references["lance_agressivo"],
+        "idade_maxima": parse_int(get_optional_field(row, "idade_maxima")) or parse_int(get_optional_field(row, "idade_maxima_seguro")),
+        "dados_incompletos": missing,
+        "origens": origins,
     }
 
 
@@ -912,7 +982,7 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
         "super_agressivo": parse_percent(get_optional_field(row, "super_agressivo")),
         "parcela_reduzida": str(get_optional_field(row, "parcela_reduzida")),
         "percentual_parcela_reduzida": parse_percent(get_optional_field(row, "percentual_parcela_reduzida")),
-        "idade_maxima": parse_int(get_optional_field(row, "idade_maxima")),
+        "idade_maxima": parse_int(get_optional_field(row, "idade_maxima")) or parse_int(get_optional_field(row, "idade_maxima_seguro")),
         "observacoes": clean_text(get_optional_field(row, "observacoes")),
         "indice_correcao": str(get_optional_field(row, "indice_correcao")),
         "vencimento_parcela": str(get_optional_field(row, "vencimento_parcela")),

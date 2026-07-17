@@ -40,6 +40,7 @@ def build_card_from_liquid(
     fgts_total: float,
     parcela_limite: float,
     considerar_lance_embutido: bool = True,
+    saldo_embutido_modo: str = "coerente",
 ) -> dict[str, Any]:
     percent_embutido = embedded_bid_percent(group, considerar_lance_embutido)
     credit = contracted_credit_for_liquid(credito_liquido, percent_embutido)
@@ -51,10 +52,12 @@ def build_card_from_liquid(
     taxa_adm = as_float(group.get("taxa_adm"))
     fundo_reserva = as_float(group.get("fundo_reserva"))
     taxa_adm_valor = credito_contratado * taxa_adm
-    # Com lance embutido, a planilha aplica o fundo sobre o credito liquido.
+    # A planilha exibe o fundo com base no credito liquido quando ha embutido.
     fundo_reserva_base = credito_liquido if percent_embutido > 0 else credito_contratado
     fundo_reserva_valor = fundo_reserva_base * fundo_reserva
-    custo_total = credito_contratado + taxa_adm_valor + fundo_reserva_valor
+    saldo_legado = credito_contratado + taxa_adm_valor + (credito_contratado * fundo_reserva)
+    saldo_coerente = credito_contratado + taxa_adm_valor + fundo_reserva_valor
+    custo_total = saldo_legado if saldo_embutido_modo == "legado" and percent_embutido > 0 else saldo_coerente
     prazo_restante = int(as_float(group.get("prazo_restante"), as_float(group.get("prazo_total"))))
     prazo_base = prazo_restante or int(as_float(group.get("prazo_total")))
     parcela_estimada = custo_total / prazo_base if prazo_base > 0 else math.inf
@@ -74,6 +77,18 @@ def build_card_from_liquid(
         "percentual_lance_total": round(lance_total / credito_contratado, 6) if credito_contratado else 0,
         "taxa_adm_valor": round(taxa_adm_valor, 2),
         "fundo_reserva_valor": round(fundo_reserva_valor, 2),
+        "saldo_devedor": round(custo_total, 2),
+        "saldo_devedor_legado": round(saldo_legado, 2),
+        "saldo_devedor_coerente": round(saldo_coerente, 2),
+        "saldo_embutido_modo": saldo_embutido_modo,
+        "origens": {
+            "credito_liquido": "front-end",
+            "recurso_proprio": "front-end",
+            "fgts": "front-end",
+            "taxa_adm": "planilha",
+            "fundo_reserva": "planilha",
+            "saldo_embutido_modo": "configuracao",
+        },
         "parcela_estimada": round(parcela_estimada, 2) if math.isfinite(parcela_estimada) else parcela_estimada,
         "prazo_restante": prazo_restante,
         "prazo_minimo": round(max(0.0, prazo_minimo), 2) if math.isfinite(prazo_minimo) else prazo_minimo,

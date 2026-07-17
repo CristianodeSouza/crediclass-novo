@@ -458,15 +458,14 @@ def cenarios_analisar(payload: ViabilidadeRequest):
         summary_candidates = [
             item
             for item in summary_groups
-            if normalize_admin_name(item.get("administradora", "")) in administradoras_para_busca
+            if normalize_admin_name(item.get("administradora", "")) == "ITAU"
             and normalize_text(str(item.get("status") or "")) == "ativo"
             and compatible_tipo_bem(payload.objetivo, str(item.get("tipo_bem") or ""), payload.tipo_bem)
-            and (item.get("credito_maximo") or 0) >= payload.credito_desejado / 3
         ]
         result = analyze_scenarios(payload, summary_candidates)
         result["total_grupos_base"] = len(summary_groups)
         result["total_administradoras_analisadas"] = len(administradoras_viabilidade)
-        result["total_administradoras_elegiveis"] = len(administradoras_para_busca)
+        result["total_administradoras_elegiveis"] = 1 if summary_candidates else 0
         result["administradoras_viabilidade"] = administradoras_viabilidade
         if administradoras_sem_regra:
             result.setdefault("motivos_reprovacao", []).append("regras_administradoras_pendentes_analise_humana")
