@@ -61,7 +61,7 @@ class ScenarioBuilderTest(unittest.TestCase):
         self.assertEqual(result["etapa4"]["conceito"], "Contemplacao Urgente")
 
     def test_valida_parcela_total_e_renda_do_cenario(self):
-        result = analyze_scenarios(payload(renda_total=20000), [
+        result = analyze_scenarios(payload(renda_total=20000, lance_proprio=50000), [
             group("500", 500000, prazo_total=250),
             group("400", 400000, prazo_total=267),
         ])

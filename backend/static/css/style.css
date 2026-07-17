@@ -3983,3 +3983,118 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .smart-engine-generic-table tbody tr:hover th {
   background: #f8fbff;
 }
+
+.smart-engine-phase-two-card {
+  margin-top: 16px;
+}
+
+.smart-engine-phase-two-summary {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.smart-engine-summary-item {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.smart-engine-summary-item span,
+.smart-engine-scenario-metrics small {
+  color: var(--muted);
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.smart-engine-summary-item strong {
+  color: var(--text);
+  display: block;
+  font-size: 1.05rem;
+  margin-top: 2px;
+}
+
+.compact-placeholder {
+  min-height: 92px;
+  padding: 22px;
+}
+
+.compact-placeholder p {
+  margin: 0;
+}
+
+.smart-engine-scenarios {
+  display: grid;
+  gap: 8px;
+}
+
+.smart-engine-scenario-row {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 10px 12px;
+}
+
+.smart-engine-scenario-heading {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.smart-engine-scenario-heading strong {
+  font-size: 0.84rem;
+}
+
+.scenario-status-ok,
+.scenario-status-error {
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.scenario-status-ok {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.scenario-status-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.smart-engine-scenario-metrics {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.smart-engine-scenario-metrics span {
+  background: #fffaf0;
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.smart-engine-scenario-metrics b {
+  display: block;
+  font-size: 0.82rem;
+  margin-top: 2px;
+}
+
+.smart-engine-scenario-alert {
+  color: #9a3412;
+  font-size: 0.76rem;
+  margin: 8px 0 0;
+}
+
+@media (max-width: 900px) {
+  .smart-engine-phase-two-summary,
+  .smart-engine-scenario-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

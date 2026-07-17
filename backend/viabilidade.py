@@ -192,7 +192,9 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         fundo_reserva = group.get("fundo_reserva") or 0
         prazo_total = group.get("prazo_total") or prazo_restante
         taxa_administrativa_valor = credito_contratado * taxa_adm
-        fundo_reserva_valor = credito_contratado * fundo_reserva
+        # Regra da planilha: com embutido, o fundo incide sobre o credito liquido.
+        fundo_reserva_base = credito_disponivel if percentual_lance_embutido > 0 else credito_contratado
+        fundo_reserva_valor = fundo_reserva_base * fundo_reserva
         parcela_estimada = (
             credito_contratado
             + taxa_administrativa_valor

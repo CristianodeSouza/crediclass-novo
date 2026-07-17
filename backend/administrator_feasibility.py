@@ -51,7 +51,9 @@ def calculate_administrator_feasibility(payload: ViabilidadeRequest, rule: Admin
     lance_total = lance_embutido_valor + lance_proprio
     lance_maximo_percentual = lance_total / credito_a_contratar if credito_a_contratar else 0.0
     taxa_adm_valor = credito_a_contratar * float(rule.taxa_adm or 0)
-    fundo_reserva_valor = credito_a_contratar * float(rule.fundo_reserva or 0)
+    # Com embutido, o fundo de reserva usa o credito liquido desejado.
+    fundo_reserva_base = payload.credito_desejado if percentual_lance_embutido > 0 else credito_a_contratar
+    fundo_reserva_valor = fundo_reserva_base * float(rule.fundo_reserva or 0)
     parcela_limite = client_parcela_limite(payload)
     parcela_ideal = client_parcela_ideal(payload)
     prazo_minimo = (

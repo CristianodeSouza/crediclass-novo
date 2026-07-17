@@ -31,7 +31,7 @@ class FinancialStudyEngineTest(unittest.TestCase):
         self.assertAlmostEqual(financeiro["credito_disponivel"], 500000)
         self.assertAlmostEqual(financeiro["recurso_proprio"], 100000)
         self.assertAlmostEqual(financeiro["percentual_lance_total"], 0.44)
-        self.assertAlmostEqual(financeiro["parcela_inicial"], 4880.952380952381)
+        self.assertAlmostEqual(financeiro["parcela_inicial"], 4845.238095238095)
 
     def test_build_financeiro_herda_cenario_aprovado(self):
         cenario = {

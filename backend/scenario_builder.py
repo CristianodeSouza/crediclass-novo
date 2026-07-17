@@ -76,8 +76,13 @@ def _allocate_liquid(target: float, groups: tuple[dict[str, Any], ...], consider
     return [round(value, 2) for value in values]
 
 
-def _scenario_status(alertas: list[str], parcela_compativel: bool, renda_compativel: bool) -> str:
-    if not parcela_compativel or not renda_compativel:
+def _scenario_status(
+    alertas: list[str],
+    parcela_compativel: bool,
+    renda_compativel: bool,
+    lance_compativel: bool,
+) -> str:
+    if not parcela_compativel or not renda_compativel or not lance_compativel:
         return "inviavel"
     return "viavel_com_alertas" if alertas else "viavel"
 
@@ -292,6 +297,7 @@ def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]],
                     continue
                 cards = []
                 alertas: list[str] = []
+                lance_compativel = True
                 recurso_por_carta = recurso_total / quantity if quantity else 0
                 fgts_por_carta = fgts_total / quantity if quantity else 0
                 for group, credito_liquido in zip(combo, allocations):
@@ -309,10 +315,13 @@ def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]],
                     card["historico_lance_insuficiente"] = lance_ref is None
                     if lance_ref is None:
                         alertas.append("historico_lance_insuficiente")
+                        lance_compativel = False
                     elif not reference_in_profile_range(profile["campo_lance"], lance_ref):
                         alertas.append("lance_historico_fora_do_perfil")
+                        lance_compativel = False
                     elif card["percentual_lance_total"] < float(lance_ref):
                         alertas.append("lance_total_abaixo_da_referencia")
+                        lance_compativel = False
                     if fgts_total > 0 and not group.get("fgts"):
                         alertas.append("fgts_nao_permitido")
                     if as_float(group.get("percentual_lance_embutido")) > 0 and not group.get("lance_embutido"):
@@ -342,7 +351,7 @@ def analyze_scenarios(payload: ViabilidadeRequest, groups: list[dict[str, Any]],
                     else 0,
                     "renda_minima": round(renda_minima, 2),
                     "excedente_credito_liquido": round(max(0.0, totals["credito_liquido_total"] - payload.credito_desejado), 2),
-                    "status": _scenario_status(sorted(set(alertas)), parcela_compativel, renda_compativel),
+                    "status": _scenario_status(sorted(set(alertas)), parcela_compativel, renda_compativel, lance_compativel),
                     "alertas": sorted(set(alertas)),
                     "cartas": cards,
                 }

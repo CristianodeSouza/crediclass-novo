@@ -113,7 +113,8 @@ def build_financeiro(payload: EstudoRequest, grupo: dict) -> dict:
     prazo = int(as_number(grupo.get("prazo_restante")) or as_number(grupo.get("prazo_total")) or as_number(cliente.prazo_desejado) or 1)
     taxa_adm = as_number(grupo.get("taxa_adm"))
     fundo_reserva = as_number(grupo.get("fundo_reserva"))
-    custo_total = credito_original * (1 + taxa_adm + fundo_reserva)
+    fundo_reserva_base = credito_disponivel if percentual_embutido > 0 else credito_original
+    custo_total = credito_original + (credito_original * taxa_adm) + (fundo_reserva_base * fundo_reserva)
     parcela_inicial = custo_total / prazo
     historico = summarize_history(grupo.get("historico") or {})
     references = calculate_lance_references(

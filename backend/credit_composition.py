@@ -51,7 +51,9 @@ def build_card_from_liquid(
     taxa_adm = as_float(group.get("taxa_adm"))
     fundo_reserva = as_float(group.get("fundo_reserva"))
     taxa_adm_valor = credito_contratado * taxa_adm
-    fundo_reserva_valor = credito_contratado * fundo_reserva
+    # Com lance embutido, a planilha aplica o fundo sobre o credito liquido.
+    fundo_reserva_base = credito_liquido if percent_embutido > 0 else credito_contratado
+    fundo_reserva_valor = fundo_reserva_base * fundo_reserva
     custo_total = credito_contratado + taxa_adm_valor + fundo_reserva_valor
     prazo_restante = int(as_float(group.get("prazo_restante"), as_float(group.get("prazo_total"))))
     prazo_base = prazo_restante or int(as_float(group.get("prazo_total")))
