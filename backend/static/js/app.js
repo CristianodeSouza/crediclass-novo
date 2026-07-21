@@ -2094,7 +2094,7 @@ function renderInvestorAnalysis(result) {
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">
-        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Crédito máx.</th><th>Parcela inicial</th><th>Parcela desejada</th><th>Diferença</th><th>Desvio</th><th>Classificação</th></tr></thead>
+        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Crédito máx.</th><th>Parcela inicial</th><th>Parcela desejada</th><th>Classificação</th></tr></thead>
         <tbody>${items.map((item) => `
           <tr>
             <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
@@ -2103,8 +2103,6 @@ function renderInvestorAnalysis(result) {
             <td>${formatMoney(item.credito_maximo)}</td>
             <td>${formatMoney(item.parcela_inicial)}</td>
             <td>${formatMoney(item.parcela_desejada)}</td>
-            <td>${formatMoney(item.diferenca_parcela)}</td>
-            <td>${formatPercent(item.desvio_percentual)}</td>
             <td><span class="investor-distance investor-distance-${normalizeText(item.classificacao_parcela).replace(/[^a-z0-9]+/g, "-")}">${escapeHtml(item.classificacao_parcela || "-")}</span></td>
           </tr>`).join("")}</tbody>
       </table>
