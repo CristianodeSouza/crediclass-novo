@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260721-01" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260721-02" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -506,6 +506,24 @@
               </div>
               <span id="investorAnalysisStatus" class="state-badge">Aguardando perfil</span>
             </div>
+            <div class="investor-preferences-toolbar">
+              <button id="investorPreferencesBtn" class="btn btn-outline-secondary btn-sm" type="button">Filtros e benefícios</button>
+              <span id="investorPreferencesSummary" class="text-muted">Nenhuma preferência selecionada</span>
+            </div>
+            <aside id="investorPreferencesPanel" class="investor-preferences-panel d-none" aria-label="Preferências de ranking">
+              <div class="investor-preferences-heading">
+                <strong>Preferências de ranking</strong>
+                <button id="closeInvestorPreferencesBtn" class="btn-close" type="button" aria-label="Fechar"></button>
+              </div>
+              <div id="investorPreferencesOptions" class="investor-preferences-options"></div>
+              <div class="investor-preferences-footer">
+                <span>As preferências apenas reordenam os grupos compatíveis.</span>
+                <div>
+                  <button id="clearInvestorPreferencesBtn" class="btn btn-outline-secondary btn-sm" type="button">Limpar</button>
+                  <button id="applyInvestorPreferencesBtn" class="btn btn-primary btn-sm" type="button">Aplicar</button>
+                </div>
+              </div>
+            </aside>
             <div id="investorAnalysisSummary" class="smart-engine-phase-two-summary"></div>
             <div id="investorAnalysisLoading" class="table-state d-none">Calculando grupos para investimento...</div>
             <div id="investorAnalysisError" class="table-state table-state-error d-none">Não foi possível calcular os grupos investidores.</div>
@@ -1287,6 +1305,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260721-03"></script>
+    <script src="/static/js/app.js?v=20260721-04"></script>
   </body>
 </html>

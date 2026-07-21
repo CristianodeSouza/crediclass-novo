@@ -74,6 +74,14 @@ const configState = {
 };
 
 const operationalLogs = [];
+const investorPreferenceFlags = [
+  { id: "menor_taxa_total", label: "Menor Taxa Total" },
+  { id: "menor_taxa_ano", label: "Menor Taxa Ano" },
+  { id: "maior_parcela_reduzida", label: "Maior Parcela Reduzida" },
+  { id: "maior_prazo_remanescente", label: "Maior Prazo Remanescente" },
+  { id: "maior_lance_embutido", label: "Maior Lance Embutido" },
+];
+const investorState = { result: null, preferences: [] };
 const HISTORY_START_MONTH = "2024-01";
 const CLIENT_PROFILE_STORAGE_KEY = "crediclass.clientProfile.v1";
 const CLIENT_OBJECTIVE_RULES = {
@@ -2063,6 +2071,60 @@ function setInvestorAnalysisState(state) {
   });
 }
 
+function investorPreferenceNumber(value, isPercent = false) {
+  if (value === null || value === undefined || value === "") return null;
+  const normalized = String(value).replace("%", "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
+  const number = Number(normalized);
+  if (!Number.isFinite(number)) return null;
+  return isPercent || String(value).includes("%") ? (number > 1 ? number / 100 : number) : number;
+}
+
+function applyInvestorPreferences(items, selectedFlags) {
+  if (!selectedFlags.length) return items;
+  const definitions = {
+    menor_taxa_total: { field: "taxa_total", direction: "min", label: "Menor Taxa Total" },
+    menor_taxa_ano: { field: "taxa_ano", direction: "min", label: "Menor Taxa Ano" },
+    maior_parcela_reduzida: { field: "parcela_reduzida", direction: "max", label: "Maior Parcela Reduzida" },
+    maior_prazo_remanescente: { field: "prazo_remanescente", direction: "max", label: "Maior Prazo Remanescente" },
+    maior_lance_embutido: { field: "lance_embutido", direction: "max", label: "Maior Lance Embutido" },
+  };
+  const scores = new Map(items.map((item) => [item, {}]));
+  selectedFlags.forEach((flag) => {
+    const definition = definitions[flag];
+    const values = items.map((item) => investorPreferenceNumber(item[definition.field], flag === "maior_lance_embutido"));
+    const valid = values.filter((value) => value !== null);
+    const min = valid.length ? Math.min(...valid) : null;
+    const max = valid.length ? Math.max(...valid) : null;
+    items.forEach((item, index) => {
+      const value = values[index];
+      let score = 0;
+      if (value !== null && min !== null && max !== null && max !== min) {
+        score = definition.direction === "min" ? (max - value) / (max - min) : (value - min) / (max - min);
+      }
+      scores.get(item)[flag] = score;
+    });
+  });
+  return items.map((item) => {
+    const itemScores = scores.get(item);
+    const scoreValues = selectedFlags.map((flag) => itemScores[flag]);
+    const highlights = selectedFlags
+      .filter((flag) => itemScores[flag] >= 0.999999)
+      .map((flag) => definitions[flag].label);
+    return {
+      ...item,
+      indice_preferencia: scoreValues.length ? Math.round((scoreValues.reduce((sum, value) => sum + value, 0) / scoreValues.length) * 10000) / 100 : null,
+      destaques_preferencia: highlights,
+    };
+  }).sort((a, b) => (
+    (b.indice_preferencia ?? 0) - (a.indice_preferencia ?? 0)
+    || (a.desvio_percentual === null ? 1 : 0) - (b.desvio_percentual === null ? 1 : 0)
+    || (a.desvio_percentual ?? 0) - (b.desvio_percentual ?? 0)
+    || (a.parcela_inicial ?? Number.POSITIVE_INFINITY) - (b.parcela_inicial ?? Number.POSITIVE_INFINITY)
+    || (a.taxa_total ?? Number.POSITIVE_INFINITY) - (b.taxa_total ?? Number.POSITIVE_INFINITY)
+    || String(a.grupo || "").localeCompare(String(b.grupo || ""), "pt-BR", { numeric: true })
+  )).map((item, index) => ({ ...item, ranking: index + 1 }));
+}
+
 function renderInvestorAnalysis(result) {
   const status = document.getElementById("investorAnalysisStatus");
   const summary = document.getElementById("investorAnalysisSummary");
@@ -2070,19 +2132,19 @@ function renderInvestorAnalysis(result) {
   if (!status || !summary || !results) return;
   const client = result.cliente || {};
   const totals = result.totais_exclusao || {};
+  const items = applyInvestorPreferences(result.items || [], investorState.preferences);
   const summaryItems = [
     ["Grupos considerados", result.total_grupos_considerados ?? 0],
     ["Crédito mínimo", formatMoney(client.credito_desejado_liquido)],
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
     ["Compatíveis", result.total_grupos_compativeis ?? 0],
     ["Excluídos por crédito", totals.credito_insuficiente ?? 0],
-    ["Grupos exibidos", result.total_grupos_exibidos ?? 0],
+    ["Grupos exibidos", items.length],
   ];
   summary.innerHTML = summaryItems.map(([label, value]) => (
     `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`
   )).join("");
-  status.textContent = `${result.total_grupos_exibidos || 0} grupos compatíveis exibidos`;
-  const items = result.items || [];
+  status.textContent = `${items.length} grupos compatíveis exibidos`;
   if (!items.length) {
     results.innerHTML = `<div class="table-state">Nenhum grupo atende aos filtros de crédito e parcela.</div>`;
     setInvestorAnalysisState("results");
@@ -2094,7 +2156,7 @@ function renderInvestorAnalysis(result) {
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">
-        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Crédito máx.</th><th>Parcela inicial</th><th>Parcela desejada</th><th>Classificação</th></tr></thead>
+        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Crédito máx.</th><th>Parcela inicial</th><th>Parcela desejada</th><th>Índice de preferência</th><th>Destaques</th><th>Classificação</th></tr></thead>
         <tbody>${items.map((item) => `
           <tr>
             <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
@@ -2103,6 +2165,8 @@ function renderInvestorAnalysis(result) {
             <td>${formatMoney(item.credito_maximo)}</td>
             <td>${formatMoney(item.parcela_inicial)}</td>
             <td>${formatMoney(item.parcela_desejada)}</td>
+            <td>${item.indice_preferencia === null || item.indice_preferencia === undefined ? "-" : formatPercent(item.indice_preferencia / 100)}</td>
+            <td>${escapeHtml((item.destaques_preferencia || []).join(", ") || "-")}</td>
             <td><span class="investor-distance investor-distance-${normalizeText(item.classificacao_parcela).replace(/[^a-z0-9]+/g, "-")}">${escapeHtml(item.classificacao_parcela || "-")}</span></td>
           </tr>`).join("")}</tbody>
       </table>
@@ -2110,6 +2174,22 @@ function renderInvestorAnalysis(result) {
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
   `;
   setInvestorAnalysisState("results");
+}
+
+function renderInvestorPreferenceOptions() {
+  const options = document.getElementById("investorPreferencesOptions");
+  if (!options) return;
+  options.innerHTML = investorPreferenceFlags.map((flag) => `
+    <label class="investor-preference-option"><input type="checkbox" value="${flag.id}" ${investorState.preferences.includes(flag.id) ? "checked" : ""}> <span>${escapeHtml(flag.label)}</span></label>
+  `).join("");
+}
+
+function updateInvestorPreferenceSummary() {
+  const summary = document.getElementById("investorPreferencesSummary");
+  if (!summary) return;
+  summary.textContent = investorState.preferences.length
+    ? `${investorState.preferences.length} preferência(s) aplicada(s)`
+    : "Nenhuma preferência selecionada";
 }
 
 async function loadInvestorAnalysis() {
@@ -2133,6 +2213,7 @@ async function loadInvestorAnalysis() {
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "Falha ao calcular grupos investidores.");
+    investorState.result = result;
     renderInvestorAnalysis(result);
   } catch (error) {
     status.textContent = "Erro no cálculo";
@@ -3848,6 +3929,23 @@ document.getElementById("clientProfileForm").addEventListener("blur", (event) =>
 document.getElementById("saveClientProfileBtn").addEventListener("click", () => saveClientProfile());
 document.getElementById("clearClientProfileBtn").addEventListener("click", resetClientProfile);
 document.getElementById("advanceClientProfileBtn").addEventListener("click", advanceClientProfile);
+document.getElementById("investorPreferencesBtn")?.addEventListener("click", () => {
+  renderInvestorPreferenceOptions();
+  document.getElementById("investorPreferencesPanel")?.classList.toggle("d-none");
+});
+document.getElementById("closeInvestorPreferencesBtn")?.addEventListener("click", () => document.getElementById("investorPreferencesPanel")?.classList.add("d-none"));
+document.getElementById("clearInvestorPreferencesBtn")?.addEventListener("click", () => {
+  investorState.preferences = [];
+  renderInvestorPreferenceOptions();
+  updateInvestorPreferenceSummary();
+  if (investorState.result) renderInvestorAnalysis(investorState.result);
+});
+document.getElementById("applyInvestorPreferencesBtn")?.addEventListener("click", () => {
+  investorState.preferences = Array.from(document.querySelectorAll("#investorPreferencesOptions input:checked"), (input) => input.value);
+  updateInvestorPreferenceSummary();
+  document.getElementById("investorPreferencesPanel")?.classList.add("d-none");
+  if (investorState.result) renderInvestorAnalysis(investorState.result);
+});
 
 document.getElementById("prevPageBtn").addEventListener("click", () => {
   if (mapState.page > 1) {

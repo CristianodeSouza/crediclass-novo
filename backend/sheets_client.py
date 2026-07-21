@@ -52,6 +52,8 @@ SUMMARY_FIELDS = [
     "parcela_apos_lance_grupo",
     "prazo_total",
     "prazo_restante",
+    "taxa_adm_ano",
+    "parcela_reduzida",
     "primeira_assembleia",
     "ultima_assembleia",
     "lance_embutido",
@@ -88,8 +90,10 @@ MAPA_GRUPOS_COLUMN_INDEXES = {
     "modalidades_embutido": 25,  # Z
     "fundo_reserva": 26,  # AA
     "taxa_adm": 28,  # AC
+    "taxa_adm_ano": 29,  # AD
     "parcela_inicial_grupo": 35,  # AJ
     "parcela_apos_lance_grupo": 36,  # AK
+    "parcela_reduzida": 37,  # AL
     "lance_investidor": 63,  # BL
     "lance_conservador_24m": 64,  # BM
     "lance_moderado_12m": 65,  # BN
@@ -151,6 +155,7 @@ FIELD_ALIASES = {
     "credito_minimo": ["credito minimo", "menor credito", "credito min", "carta minima", "valor minimo"],
     "credito_maximo": ["credito maximo", "maior credito", "credito max", "carta maxima", "valor maximo"],
     "taxa_adm": ["taxa administracao", "taxa adm", "taxa adm original", "taxa de administracao", "taxa administrativa", "tx adm", "tx administracao"],
+    "taxa_adm_ano": ["taxa administracao ao ano", "taxa adm ao ano", "taxa adm ano", "taxa anual administracao"],
     "fundo_reserva": ["fundo reserva", "fundo de reserva", "fundo rsv"],
     "modalidades_assembleia": ["assembleias modalidades", "modalidades assembleia", "permite participar do lance fixo fidelidade e livre"],
     "base_calculo_embutido": ["base calculo embutido", "calculo do embutido", "lance embutido calculo"],
@@ -919,6 +924,7 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "credito_minimo": parse_credit(get_field(row, "credito_minimo")),
         "credito_maximo": parse_credit(get_field(row, "credito_maximo")),
         "taxa_adm": parse_percent(get_field(row, "taxa_adm")),
+        "taxa_adm_ano": parse_percent(get_optional_field(row, "taxa_adm_ano")),
         "fundo_reserva": parse_percent(get_optional_field(row, "fundo_reserva")),
         "modalidades_assembleia": clean_text(get_optional_field(row, "modalidades_assembleia")),
         "base_calculo_embutido": clean_text(get_optional_field(row, "base_calculo_embutido")),
@@ -928,6 +934,7 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "aliquota_seguro": parse_percent(get_optional_field(row, "aliquota_seguro")),
         "parcela_inicial_grupo": parse_number(get_optional_field(row, "parcela_inicial_grupo")),
         "parcela_apos_lance_grupo": parse_number(get_optional_field(row, "parcela_apos_lance_grupo")),
+        "parcela_reduzida": parse_number(get_optional_field(row, "parcela_reduzida")),
         "prazo_total": parse_int(get_field(row, "prazo_total")),
         "prazo_restante": parse_int(get_optional_field(row, "prazo_restante")),
         "atualizado": short_history_month_label(updated_month),
@@ -963,6 +970,7 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
     historico = build_historico(row)
     detalhe.update({
         "fundo_reserva": parse_percent(get_optional_field(row, "fundo_reserva")),
+        "taxa_adm_ano": parse_percent(get_optional_field(row, "taxa_adm_ano")),
         "prazo_restante": parse_int(get_optional_field(row, "prazo_restante")),
         "data_termino": str(get_optional_field(row, "data_termino")),
         "proxima_assembleia": clean_text(get_optional_field(row, "proxima_assembleia")),
@@ -980,7 +988,7 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
         "moderado": parse_percent(get_optional_field(row, "moderado")),
         "agressivo": parse_percent(get_optional_field(row, "agressivo")),
         "super_agressivo": parse_percent(get_optional_field(row, "super_agressivo")),
-        "parcela_reduzida": str(get_optional_field(row, "parcela_reduzida")),
+        "parcela_reduzida": parse_number(get_optional_field(row, "parcela_reduzida")),
         "percentual_parcela_reduzida": parse_percent(get_optional_field(row, "percentual_parcela_reduzida")),
         "idade_maxima": parse_int(get_optional_field(row, "idade_maxima")) or parse_int(get_optional_field(row, "idade_maxima_seguro")),
         "observacoes": clean_text(get_optional_field(row, "observacoes")),

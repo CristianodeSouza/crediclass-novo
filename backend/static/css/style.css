@@ -3992,6 +3992,64 @@ body[data-theme="escuro"] .btn-outline-secondary {
   margin-top: 16px;
 }
 
+.investor-preferences-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+.investor-preferences-toolbar .text-muted {
+  font-size: 0.75rem;
+}
+
+.investor-preferences-panel {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(24, 44, 58, 0.14);
+  margin: 0 0 12px auto;
+  max-width: 360px;
+  padding: 14px;
+}
+
+.investor-preferences-heading,
+.investor-preferences-footer {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.investor-preferences-options {
+  display: grid;
+  gap: 9px;
+  margin: 14px 0;
+}
+
+.investor-preference-option {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  font-size: 0.82rem;
+}
+
+.investor-preferences-footer {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.investor-preferences-footer > span {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.investor-preferences-footer > div {
+  display: flex;
+  gap: 6px;
+}
+
 .investor-engine-note,
 .investor-engine-audit {
   margin: 0 0 12px;
