@@ -18,9 +18,9 @@
     action: "",
   },
   investidor: {
-    letter: "C) MOTOR GRUPOS PERFIL INVESTIDOR",
-    title: "Motor Grupos Perfil Investidor",
-    subtitle: "Crédito disponível, capacidade de pagamento e proximidade da parcela",
+    letter: "C) MOTOR 360 DE VIABILIDADE",
+    title: "Motor 360 de Viabilidade do Consórcio",
+    subtitle: "Todas as estratégias viáveis, com destaque para a preferência declarada",
     action: "",
   },
   contemplar: {
@@ -2142,6 +2142,9 @@ function applyInvestorPreferences(items, selectedFlags) {
 }
 
 function renderCreditScenarioCell(item) {
+  if (Array.isArray(item.cenarios)) {
+    return `<div class="credit-scenario-cell">${item.cenarios.map((scenario) => `<span>${escapeHtml(scenario.label)}: ${formatMoney(scenario.credito_contratado)} - ${scenario.compativel_credito ? "OK" : "não atende"}</span><small>Lance: ${formatPercent(scenario.percentual_lance)} | Saldo: ${formatMoney(scenario.saldo_devedor)} | Prazo após lance: ${scenario.prazo_apos_lance_limite_renda ?? "-"} meses</small>`).join("")}</div>`;
+  }
   const percent = item.percentual_lance_embutido;
   const withoutStatus = item.compativel_sem_embutido ? "OK" : "nao atende";
   const withStatus = item.compativel_com_embutido ? "OK" : "nao atende";
@@ -2164,42 +2167,41 @@ function renderInvestorAnalysis(result) {
   const totals = result.totais_exclusao || {};
   const items = applyInvestorPreferences(result.items || [], investorState.preferences);
   const summaryItems = [
-    ["Grupos considerados", result.total_grupos_considerados ?? 0],
+    ["Grupos analisados", result.total_grupos_analisados ?? 0],
     ["Crédito líquido desejado", formatMoney(client.credito_desejado_liquido)],
-    ["Crédito necessário sem emb.", formatMoney(client.credito_necessario_sem_embutido)],
+    ["Estratégia declarada", result.estrategia_preferida === "investment" ? "Investimento" : "Contemplação"],
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
-    ["Compatíveis", result.total_grupos_compativeis ?? 0],
-    ["Excluídos por crédito", totals.credito_insuficiente ?? 0],
+    ["Viáveis por crédito", result.total_grupos_viaveis ?? 0],
+    ["Excluídos por crédito", totals.credito ?? 0],
     ["Grupos exibidos", items.length],
   ];
   summary.innerHTML = summaryItems.map(([label, value]) => (
     `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`
   )).join("");
-  status.textContent = `${items.length} grupos compatíveis exibidos`;
+  status.textContent = `${items.length} grupos viáveis exibidos`;
   if (!items.length) {
-    results.innerHTML = `<div class="table-state">Nenhum grupo atende aos filtros de crédito e parcela.</div>`;
+    results.innerHTML = `<div class="table-state">Nenhum grupo possui uma faixa de crédito compatível com os cenários calculados.</div>`;
     setInvestorAnalysisState("results");
     return;
   }
   results.innerHTML = `
     <div class="investor-engine-note">
-      <strong>Critérios aplicados:</strong> a coluna U e comparada ao credito contratado sem ou com embutido. As colunas AC e AA formam o saldo devedor, que sera usado nas proximas validacoes de parcela e prazo; depois, a Parcela Inicial (coluna AJ) deve ser menor ou igual à parcela máxima.
+      <strong>Visão 360:</strong> o objetivo do cliente é preferência, não bloqueio. Cada grupo é analisado sem e com lance embutido; a faixa válida é Crédito mínimo (O) ≤ crédito contratado ≤ Crédito máximo (U). Taxa (AC), fundo (AA), lance, parcela e prazo são exibidos por cenário.
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">
-        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Crédito máx.</th><th>Cenários de crédito</th><th>Parcela inicial</th><th>Parcela desejada</th><th>Índice de preferência</th><th>Destaques</th><th>Classificação</th></tr></thead>
+        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Faixa de crédito</th><th>Cenários financeiros</th><th>Parcela inicial</th><th>Prazo restante</th><th>Estratégias possíveis</th><th>Preferência</th></tr></thead>
         <tbody>${items.map((item) => `
           <tr>
             <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
             <td>${escapeHtml(item.grupo || item.grupo_id || "-")}</td>
             <td>${escapeHtml(item.administradora || "-")}</td>
-            <td>${formatMoney(item.credito_maximo)}</td>
+            <td>${formatMoney(item.credito_minimo)} a ${formatMoney(item.credito_maximo)}</td>
             <td>${renderCreditScenarioCell(item)}</td>
             <td>${formatMoney(item.parcela_inicial)}</td>
-            <td>${formatMoney(item.parcela_desejada)}</td>
-            <td>${item.indice_preferencia === null || item.indice_preferencia === undefined ? "-" : formatPercent(item.indice_preferencia / 100)}</td>
-            <td>${escapeHtml((item.destaques_preferencia || []).join(", ") || "-")}</td>
-            <td><span class="investor-distance investor-distance-${normalizeText(item.classificacao_parcela).replace(/[^a-z0-9]+/g, "-")}">${escapeHtml(item.classificacao_parcela || "-")}</span></td>
+            <td>${escapeHtml(String(item.prazo_remanescente ?? "-"))}</td>
+            <td>${escapeHtml((item.estrategias_possiveis || []).join(", ") || "Em análise")}</td>
+            <td><span class="investor-distance">${item.destaque_preferencia ? "Destaque" : "Alternativa"}</span></td>
           </tr>`).join("")}</tbody>
       </table>
     </div>
@@ -2237,15 +2239,15 @@ async function loadInvestorAnalysis() {
   const status = document.getElementById("investorAnalysisStatus");
   if (!status) return;
   const profile = collectClientProfile();
-  if (!isInvestorObjective(profile.objetivo) || !(Number(profile.credito_desejado) > 0) || !(Number(profile.renda_total) > 0)) {
-    status.textContent = "Aguardando perfil investidor";
+  if (!(Number(profile.credito_desejado) > 0)) {
+    status.textContent = "Aguardando perfil do cliente";
     setInvestorAnalysisState("empty");
     return;
   }
   status.textContent = "Processando...";
   setInvestorAnalysisState("loading");
   try {
-    const response = await fetch("/api/investidor/analisar", {
+    const response = await fetch("/api/viabilidade-360/analisar", {
       method: "POST",
       cache: "no-store",
       credentials: "same-origin",
@@ -2253,13 +2255,13 @@ async function loadInvestorAnalysis() {
       body: JSON.stringify(profile),
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "Falha ao calcular grupos investidores.");
+    if (!response.ok) throw new Error(result.error || "Falha ao calcular a viabilidade dos grupos.");
     investorState.result = result;
     renderInvestorAnalysis(result);
   } catch (error) {
     status.textContent = "Erro no cálculo";
     setInvestorAnalysisState("error");
-    showToast(error.message || "Não foi possível calcular os grupos investidores.", "danger");
+    showToast(error.message || "Não foi possível calcular a viabilidade dos grupos.", "danger");
   }
 }
 

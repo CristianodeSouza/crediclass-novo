@@ -17,6 +17,7 @@ from .administrator_feasibility import analyze_administradoras
 from .administrator_rules import normalize_admin_name, rules_by_administradora
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
+from .consortium_viability_engine import analyze_client_consortium_viability
 from .contemplar_engine import analyze_contemplar_groups, is_contemplar_objective
 from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
@@ -525,6 +526,24 @@ def contemplar_analisar(payload: ViabilidadeRequest):
         return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
     except Exception as error:
         logger.exception("Erro ao analisar grupos do perfil contemplar")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+
+@app.post("/api/viabilidade-360/analisar")
+def viabilidade_360_analisar(payload: ViabilidadeRequest):
+    """Single entry point: declared objective is a presentation preference, never an exclusion."""
+    logger.info("POST /api/viabilidade-360/analisar credito=%s", payload.credito_desejado)
+    try:
+        try:
+            groups = list_grupos(include_history=False)
+        except Exception as light_error:
+            logger.warning("Falha na leitura leve do motor 360; tentando leitura completa: %s", light_error)
+            groups = list_grupos(include_history=True)
+        return analyze_client_consortium_viability(payload, groups)
+    except ValueError as error:
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
+    except Exception as error:
+        logger.exception("Erro no motor 360 de viabilidade")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
 
 
