@@ -3937,6 +3937,8 @@ document.getElementById("clientProfileForm").addEventListener("blur", (event) =>
 document.getElementById("saveClientProfileBtn").addEventListener("click", () => saveClientProfile());
 document.getElementById("clearClientProfileBtn").addEventListener("click", resetClientProfile);
 document.getElementById("advanceClientProfileBtn").addEventListener("click", advanceClientProfile);
+renderInvestorPreferenceOptions();
+updateInvestorPreferenceSummary();
 document.getElementById("investorPreferencesBtn")?.addEventListener("click", () => {
   renderInvestorPreferenceOptions();
   document.getElementById("investorPreferencesPanel")?.classList.toggle("d-none");

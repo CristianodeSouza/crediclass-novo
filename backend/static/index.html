@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260721-03" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260721-04" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -507,13 +507,12 @@
               <span id="investorAnalysisStatus" class="state-badge">Aguardando perfil</span>
             </div>
             <div class="investor-preferences-toolbar">
-              <button id="investorPreferencesBtn" class="btn btn-outline-secondary btn-sm" type="button">Filtros e benefícios</button>
+              <strong>Filtro</strong>
               <span id="investorPreferencesSummary" class="text-muted">Nenhuma preferência selecionada</span>
             </div>
-            <aside id="investorPreferencesPanel" class="investor-preferences-panel d-none" aria-label="Preferências de ranking">
+            <aside id="investorPreferencesPanel" class="investor-preferences-panel" aria-label="Filtro">
               <div class="investor-preferences-heading">
-                <strong>Preferências de ranking</strong>
-                <button id="closeInvestorPreferencesBtn" class="btn-close" type="button" aria-label="Fechar"></button>
+                <strong>Critérios de ordenação</strong>
               </div>
               <div id="investorPreferencesOptions" class="investor-preferences-options"></div>
               <div class="investor-preferences-footer">
@@ -1305,6 +1304,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260721-05"></script>
+    <script src="/static/js/app.js?v=20260721-06"></script>
   </body>
 </html>
