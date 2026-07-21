@@ -3988,6 +3988,74 @@ body[data-theme="escuro"] .btn-outline-secondary {
   margin-top: 16px;
 }
 
+.investor-engine-card {
+  margin-top: 16px;
+}
+
+.investor-engine-note,
+.investor-engine-audit {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid #dbe4ef;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.investor-engine-audit {
+  margin: 12px 0 0;
+  background: #fffaf0;
+  border-color: #f3c49c;
+  color: #7c4a20;
+}
+
+.investor-engine-table {
+  margin: 0;
+  font-size: 0.78rem;
+}
+
+.investor-engine-table th,
+.investor-engine-table td {
+  padding: 8px 9px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.investor-engine-table thead th {
+  background: #24343d;
+  color: #fff;
+  font-weight: 800;
+}
+
+.investor-engine-table tbody td:first-child,
+.investor-engine-table tbody td:nth-child(2),
+.investor-engine-table tbody td:nth-child(3) {
+  text-align: left;
+}
+
+.investor-distance {
+  display: inline-block;
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: #ecfdf3;
+  color: #147a48;
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.investor-distance-distante {
+  background: #fff7ed;
+  color: #b45309;
+}
+
+.investor-distance-sem-referencia {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
 .smart-engine-phase-two-summary {
   display: grid;
   gap: 8px;

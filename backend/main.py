@@ -19,6 +19,7 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
+from .investor_engine import analyze_investor_groups, is_investor_objective
 from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
 from .scenario_builder import analyze_scenarios
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
@@ -473,6 +474,27 @@ def cenarios_analisar(payload: ViabilidadeRequest):
         logger.exception("Erro ao montar cenarios")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
     return result
+
+
+@app.post("/api/investidor/analisar")
+def investidor_analisar(payload: ViabilidadeRequest):
+    logger.info("POST /api/investidor/analisar credito=%s", payload.credito_desejado)
+    if not is_investor_objective(payload.objetivo):
+        return {
+            "perfil_investidor": False,
+            "objetivo": payload.objetivo,
+            "items": [],
+            "total_grupos_considerados": 0,
+            "total_grupos_compativeis": 0,
+            "total_grupos_exibidos": 0,
+            "mensagem": "O objetivo selecionado pertence ao fluxo de contemplação.",
+        }
+    try:
+        groups = list_grupos(include_history=False)
+        return analyze_investor_groups(payload, groups)
+    except Exception as error:
+        logger.exception("Erro ao analisar grupos do perfil investidor")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
 
 
 @app.post("/api/auth/login")

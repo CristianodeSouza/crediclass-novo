@@ -17,6 +17,12 @@
     subtitle: "",
     action: "",
   },
+  investidor: {
+    letter: "C) MOTOR GRUPOS PERFIL INVESTIDOR",
+    title: "Motor Grupos Perfil Investidor",
+    subtitle: "Crédito disponível, capacidade de pagamento e proximidade da parcela",
+    action: "",
+  },
   administradoras: {
     letter: "C) MOTOR INTELIGENTE DE SELEÃ‡ÃƒO",
     title: "Motor Inteligente de SeleÃ§Ã£o",
@@ -316,7 +322,7 @@ function activateScreen(screenName) {
   document.getElementById("screenSubtitle").textContent = meta.subtitle;
   const primaryAction = document.getElementById("primaryAction");
   primaryAction.textContent = meta.action;
-  primaryAction.classList.toggle("d-none", screenName === "viabilidade");
+  primaryAction.classList.toggle("d-none", screenName === "viabilidade" || screenName === "investidor");
   document.getElementById("reloadMapDataBtn").classList.toggle("d-none", screenName !== "mapa");
 
   if (screenName === "historico") {
@@ -324,6 +330,7 @@ function activateScreen(screenName) {
   }
   if (screenName === "viabilidade") loadConfiguracoes();
   if (screenName === "viabilidade") loadScenarioAnalysis();
+  if (screenName === "investidor") loadInvestorAnalysis();
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
@@ -2045,6 +2052,97 @@ function renderScenarioAnalysis(result) {
   setScenarioAnalysisState("ready");
 }
 
+function isInvestorObjective(objective) {
+  return normalizeText(objective).startsWith("investidor");
+}
+
+function setInvestorAnalysisState(state) {
+  ["Loading", "Error", "Empty", "Results"].forEach((suffix) => {
+    const element = document.getElementById(`investorAnalysis${suffix}`);
+    if (element) element.classList.toggle("d-none", state !== suffix.toLowerCase());
+  });
+}
+
+function renderInvestorAnalysis(result) {
+  const status = document.getElementById("investorAnalysisStatus");
+  const summary = document.getElementById("investorAnalysisSummary");
+  const results = document.getElementById("investorAnalysisResults");
+  if (!status || !summary || !results) return;
+  const client = result.cliente || {};
+  const totals = result.totais_exclusao || {};
+  const summaryItems = [
+    ["Grupos considerados", result.total_grupos_considerados ?? 0],
+    ["Crédito mínimo", formatMoney(client.credito_desejado_liquido)],
+    ["Parcela máxima", formatMoney(client.parcela_maxima)],
+    ["Compatíveis", result.total_grupos_compativeis ?? 0],
+    ["Excluídos por crédito", totals.credito_insuficiente ?? 0],
+    ["Top 10 exibido", result.total_grupos_exibidos ?? 0],
+  ];
+  summary.innerHTML = summaryItems.map(([label, value]) => (
+    `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`
+  )).join("");
+  status.textContent = `${result.total_grupos_exibidos || 0} grupos selecionados`;
+  const items = result.items || [];
+  if (!items.length) {
+    results.innerHTML = `<div class="table-state">Nenhum grupo atende aos filtros de crédito e parcela.</div>`;
+    setInvestorAnalysisState("results");
+    return;
+  }
+  results.innerHTML = `
+    <div class="investor-engine-note">
+      <strong>Critérios aplicados:</strong> Maior Crédito (coluna U) &ge; crédito desejado; Parcela Inicial (coluna AJ) &le; parcela máxima; ordenação pelo menor desvio da parcela desejada.
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle investor-engine-table">
+        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Crédito máx.</th><th>Parcela inicial</th><th>Parcela desejada</th><th>Diferença</th><th>Desvio</th><th>Classificação</th></tr></thead>
+        <tbody>${items.map((item) => `
+          <tr>
+            <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
+            <td>${escapeHtml(item.grupo || item.grupo_id || "-")}</td>
+            <td>${escapeHtml(item.administradora || "-")}</td>
+            <td>${formatMoney(item.credito_maximo)}</td>
+            <td>${formatMoney(item.parcela_inicial)}</td>
+            <td>${formatMoney(item.parcela_desejada)}</td>
+            <td>${formatMoney(item.diferenca_parcela)}</td>
+            <td>${formatPercent(item.desvio_percentual)}</td>
+            <td><span class="investor-distance investor-distance-${normalizeText(item.classificacao_parcela).replace(/[^a-z0-9]+/g, "-")}">${escapeHtml(item.classificacao_parcela || "-")}</span></td>
+          </tr>`).join("")}</tbody>
+      </table>
+    </div>
+    <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
+  `;
+  setInvestorAnalysisState("results");
+}
+
+async function loadInvestorAnalysis() {
+  const status = document.getElementById("investorAnalysisStatus");
+  if (!status) return;
+  const profile = collectClientProfile();
+  if (!isInvestorObjective(profile.objetivo) || !(Number(profile.credito_desejado) > 0) || !(Number(profile.renda_total) > 0)) {
+    status.textContent = "Aguardando perfil investidor";
+    setInvestorAnalysisState("empty");
+    return;
+  }
+  status.textContent = "Processando...";
+  setInvestorAnalysisState("loading");
+  try {
+    const response = await fetch("/api/investidor/analisar", {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...profile, considerar_lance_embutido: false }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Falha ao calcular grupos investidores.");
+    renderInvestorAnalysis(result);
+  } catch (error) {
+    status.textContent = "Erro no cálculo";
+    setInvestorAnalysisState("error");
+    showToast(error.message || "Não foi possível calcular os grupos investidores.", "danger");
+  }
+}
+
 async function loadScenarioAnalysis() {
   const status = document.getElementById("scenarioAnalysisStatus");
   if (!status) return;
@@ -2332,7 +2430,8 @@ function updateClientProfileTotals() {
   document.getElementById("clientProfilePrazo").value = objectiveRule.prazo;
   document.getElementById("clientProfileTipoBem").value = objectiveRule.tipoBem || "Imovel";
   document.getElementById("clientProfileEstadoBem").value = objectiveRule.estadoBem || "Pronto";
-  document.getElementById("clientProfileParcelaLimite").value = document.getElementById("clientProfileParcelaIdeal").value;
+  // The income limit is independent from the installment desired by the client.
+  document.getElementById("clientProfileParcelaLimite").value = renda * DEFAULT_PJ_COMMITMENT_PERCENT;
   document.getElementById("clientProfileFgtsTotal").value = formatMoney(fgts);
   document.getElementById("clientProfileTotalDisponivel").value = formatMoney(lance + fgts);
   document.getElementById("clientProfileRendaTotal").value = formatMoney(renda);
@@ -2403,6 +2502,7 @@ function saveClientProfile({ silent = false } = {}) {
   applyClientProfileToFlow(profile);
   renderSmartEngine();
   loadScenarioAnalysis();
+  loadInvestorAnalysis();
   if (!silent) showToast("Perfil do cliente salvo.", "success");
   return profile;
 }
@@ -2440,10 +2540,13 @@ function resetClientProfile() {
 }
 
 function advanceClientProfile() {
-  saveClientProfile({ silent: true });
-  activateScreen("viabilidade");
-  renderSmartEngine();
-  loadScenarioAnalysis();
+  const profile = saveClientProfile({ silent: true });
+  const nextScreen = isInvestorObjective(profile.objetivo) ? "investidor" : "viabilidade";
+  activateScreen(nextScreen);
+  if (nextScreen === "viabilidade") {
+    renderSmartEngine();
+    loadScenarioAnalysis();
+  }
 }
 
 function setStudyState(state) {

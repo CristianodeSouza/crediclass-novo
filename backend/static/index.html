@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260716-03" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260721-01" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -56,6 +56,10 @@
             <button class="nav-item" type="button" data-screen="viabilidade">
               <span class="nav-icon">VC</span>
               <span>Motor Inteligente de Seleção</span>
+            </button>
+            <button class="nav-item" type="button" data-screen="investidor">
+              <span class="nav-icon">MI</span>
+              <span>Motor Grupos Perfil Investidor</span>
             </button>
             <button class="nav-item" type="button" data-screen="estudo">
               <span class="nav-icon">EF</span>
@@ -490,6 +494,25 @@
               <p>Salve ou avance o Perfil do Cliente para executar a seleção.</p>
             </div>
             <div id="scenarioAnalysisResults" class="smart-engine-scenarios d-none"></div>
+          </div>
+        </section>
+
+        <section id="screen-investidor" class="screen-panel">
+          <div class="content-card investor-engine-card">
+            <div class="smart-engine-header">
+              <div>
+                <h2>Motor Grupos Perfil Investidor</h2>
+                <p>Seleção inicial por crédito disponível, capacidade de pagamento e proximidade da parcela desejada.</p>
+              </div>
+              <span id="investorAnalysisStatus" class="state-badge">Aguardando perfil</span>
+            </div>
+            <div id="investorAnalysisSummary" class="smart-engine-phase-two-summary"></div>
+            <div id="investorAnalysisLoading" class="table-state d-none">Calculando grupos para investimento...</div>
+            <div id="investorAnalysisError" class="table-state table-state-error d-none">Não foi possível calcular os grupos investidores.</div>
+            <div id="investorAnalysisEmpty" class="placeholder-card compact-placeholder">
+              <p>Selecione um objetivo Investidor e salve o Perfil do Cliente para executar este motor.</p>
+            </div>
+            <div id="investorAnalysisResults" class="investor-engine-results d-none"></div>
           </div>
         </section>
 
@@ -1264,6 +1287,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260717-02"></script>
+    <script src="/static/js/app.js?v=20260721-01"></script>
   </body>
 </html>
