@@ -2076,12 +2076,12 @@ function renderInvestorAnalysis(result) {
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
     ["Compatíveis", result.total_grupos_compativeis ?? 0],
     ["Excluídos por crédito", totals.credito_insuficiente ?? 0],
-    ["Top 10 exibido", result.total_grupos_exibidos ?? 0],
+    ["Grupos exibidos", result.total_grupos_exibidos ?? 0],
   ];
   summary.innerHTML = summaryItems.map(([label, value]) => (
     `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`
   )).join("");
-  status.textContent = `${result.total_grupos_exibidos || 0} grupos selecionados`;
+  status.textContent = `${result.total_grupos_exibidos || 0} grupos compatíveis exibidos`;
   const items = result.items || [];
   if (!items.length) {
     results.innerHTML = `<div class="table-state">Nenhum grupo atende aos filtros de crédito e parcela.</div>`;

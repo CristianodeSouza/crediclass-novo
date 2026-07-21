@@ -55,6 +55,15 @@ class InvestorEngineTest(unittest.TestCase):
         self.assertEqual(result["total_grupos_compativeis"], 0)
         self.assertEqual(result["totais_exclusao"]["dados_incompletos"], 1)
 
+    def test_returns_all_compatible_groups_instead_of_top_ten(self):
+        groups = [group(f"compatible-{index}", 1000000 + index, 6000 + index) for index in range(12)]
+        result = analyze_investor_groups(payload(), groups)
+
+        self.assertEqual(result["total_grupos_compativeis"], 12)
+        self.assertEqual(result["total_grupos_exibidos"], 12)
+        self.assertEqual(len(result["items"]), 12)
+        self.assertEqual([item["ranking"] for item in result["items"]], list(range(1, 13)))
+
 
 if __name__ == "__main__":
     unittest.main()

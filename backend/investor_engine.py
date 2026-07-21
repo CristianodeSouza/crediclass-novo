@@ -85,10 +85,10 @@ def analyze_investor_groups(payload: Any, groups: list[dict[str, Any]], commitme
         })
 
     compatible.sort(key=lambda item: (item["desvio_percentual"] is None, item["desvio_percentual"] or 0, -item["credito_maximo"]))
-    top10 = []
-    for rank, item in enumerate(compatible[:10], start=1):
+    selected = []
+    for rank, item in enumerate(compatible, start=1):
         item["ranking"] = rank
-        top10.append(item)
+        selected.append(item)
 
     return {
         "perfil_investidor": True,
@@ -112,7 +112,7 @@ def analyze_investor_groups(payload: Any, groups: list[dict[str, Any]], commitme
         },
         "total_grupos_considerados": considered,
         "total_grupos_compativeis": len(compatible),
-        "total_grupos_exibidos": len(top10),
+        "total_grupos_exibidos": len(selected),
         "totais_exclusao": {
             "credito_insuficiente": excluded_credit,
             "parcela_acima_da_renda": excluded_installment,
@@ -126,5 +126,5 @@ def analyze_investor_groups(payload: Any, groups: list[dict[str, Any]], commitme
             "Calculado o desvio percentual da parcela inicial em relação à parcela desejada.",
             "Ordenados os grupos compatíveis do menor para o maior desvio.",
         ],
-        "items": top10,
+        "items": selected,
     }
