@@ -64,6 +64,18 @@ class InvestorEngineTest(unittest.TestCase):
         self.assertEqual(len(result["items"]), 12)
         self.assertEqual([item["ranking"] for item in result["items"]], list(range(1, 13)))
 
+    def test_applies_credit_eligibility_with_and_without_embedded_bid(self):
+        result = analyze_investor_groups(payload(lance_proprio=100000, fgts=100000), [
+            group("sem", 1150000, 6000, percentual_lance_embutido="30%"),
+            group("ambos", 1642857.14, 6000, percentual_lance_embutido="0.30"),
+            group("nenhum", 1149999, 6000, percentual_lance_embutido="30"),
+        ])
+
+        self.assertEqual(result["total_grupos_compativeis"], 2)
+        by_group = {item["grupo"]: item for item in result["items"]}
+        self.assertEqual(by_group["sem"]["classificacao_credito"], "Compativel sem embutido")
+        self.assertEqual(by_group["ambos"]["classificacao_credito"], "Compativel nos dois cenarios")
+
 
 if __name__ == "__main__":
     unittest.main()

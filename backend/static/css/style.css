@@ -4061,6 +4061,27 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 800;
 }
 
+.credit-scenario-cell {
+  display: grid;
+  gap: 3px;
+  min-width: 220px;
+  text-align: left;
+}
+
+.credit-scenario-cell span:first-child {
+  color: #147a48;
+}
+
+.credit-scenario-cell span:last-child {
+  color: #9a3412;
+}
+
+.credit-scenario-cell small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
 .investor-preferences-toolbar {
   align-items: center;
   background: #f6f8fa;

@@ -4,6 +4,7 @@ import math
 import re
 from typing import Any
 
+from .credit_liquidity import build_credit_liquidity_scenarios, evaluate_group_credit_liquidity
 from .viabilidade import normalize_text
 
 
@@ -75,7 +76,18 @@ def analyze_contemplar_groups(payload: Any, groups: list[dict[str, Any]]) -> dic
             incomplete += 1
             continue
 
-        if credit_max < required_credit:
+        liquidity = evaluate_group_credit_liquidity(
+            credit_max,
+            build_credit_liquidity_scenarios(
+                desired_credit,
+                own_resources,
+                fgts,
+                group.get("percentual_lance_embutido"),
+                group.get("taxa_adm"),
+                group.get("fundo_reserva"),
+            ),
+        )
+        if not liquidity["compativel_sem_embutido"] and not liquidity["compativel_com_embutido"]:
             incompatible_credit += 1
             continue
 
@@ -90,16 +102,18 @@ def analyze_contemplar_groups(payload: Any, groups: list[dict[str, Any]]) -> dic
             "grupo": str(group.get("grupo") or ""),
             "administradora": str(group.get("administradora") or ""),
             "credito_minimo": credit_min,
-            "credito_maximo": credit_max,
+            **liquidity,
             "credito_bruto_necessario": required_credit,
-            "margem_credito": round(credit_max - required_credit, 2),
-            "compatibilidade": "Compativel",
+            "compatibilidade": liquidity["classificacao_credito"],
             "origens": {
                 "credito_liquido_desejado": "front-end",
                 "recurso_proprio": "front-end",
                 "fgts": "front-end",
                 "credito_maximo": "planilha coluna U",
                 "credito_minimo": "planilha coluna O (informativo)",
+                "percentual_lance_embutido": "planilha coluna X",
+                "taxa_administracao_total": "planilha coluna AC",
+                "fundo_reserva_total": "planilha coluna AA",
             },
         })
 
@@ -114,6 +128,7 @@ def analyze_contemplar_groups(payload: Any, groups: list[dict[str, Any]]) -> dic
             "credito_liquido_desejado": desired_credit,
             "recurso_proprio": own_resources,
             "fgts": fgts,
+            "credito_bruto_necessario_sem_embutido": required_credit,
             "credito_bruto_necessario": required_credit,
         },
         "total_grupos_analisados": len(groups),
@@ -121,14 +136,16 @@ def analyze_contemplar_groups(payload: Any, groups: list[dict[str, Any]]) -> dic
         "total_grupos_incompativeis_credito": incompatible_credit,
         "total_grupos_incompletos": incomplete,
         "filtros": {
-            "regra": "credito_maximo >= credito_bruto_necessario",
+            "regra_sem_embutido": "credito_maximo >= credito_liquido_desejado + recurso_proprio + fgts",
+            "regra_com_embutido": "credito_maximo >= (credito_liquido_desejado + recurso_proprio + fgts) / (1 - percentual_lance_embutido)",
             "ordem": "margem_credito ASC, grupo ASC",
             "sem_limite_de_resultados": True,
         },
         "passos": [
             "Identificado o perfil Contemplar pelo objetivo selecionado.",
-            f"Credito bruto necessario = credito liquido desejado ({desired_credit:,.2f}) + recurso proprio ({own_resources:,.2f}) + FGTS ({fgts:,.2f}) = {required_credit:,.2f}.",
-            "Foram mantidos somente grupos cujo Maior Credito (coluna U) e maior ou igual ao credito bruto necessario.",
+            f"Credito necessario sem embutido = credito liquido desejado ({desired_credit:,.2f}) + recurso proprio ({own_resources:,.2f}) + FGTS ({fgts:,.2f}) = {required_credit:,.2f}.",
+            "Para cada grupo, o sistema tambem calcula o cenario com embutido usando o percentual da coluna X e mantem o grupo se passar em pelo menos um cenario.",
+            "Taxa administrativa total (coluna AC) e fundo de reserva total (coluna AA) compoem o saldo devedor de cada cenario, sem alterar a comparacao da coluna U.",
             "Credito minimo (coluna O) e exibido apenas como informacao e nao elimina grupos.",
             "Os grupos compativeis foram ordenados da menor para a maior margem de credito, sem limite de quantidade.",
         ],

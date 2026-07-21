@@ -65,6 +65,19 @@ class ContemplarEngineTest(unittest.TestCase):
         self.assertEqual([item["ranking"] for item in result["items"]], [1, 2, 3])
         self.assertTrue(result["filtros"]["sem_limite_de_resultados"])
 
+    def test_keeps_each_group_credit_scenario_separate(self):
+        result = analyze_contemplar_groups(payload(fgts=100000), [
+            group("sem", 1150000, percentual_lance_embutido="30%"),
+            group("ambos", 1642857.14, percentual_lance_embutido="0,30"),
+            group("nenhum", 1149999, percentual_lance_embutido="30"),
+        ])
+
+        self.assertEqual(result["total_grupos_compativeis"], 2)
+        by_group = {item["grupo"]: item for item in result["items"]}
+        self.assertEqual(by_group["sem"]["compatibilidade"], "Compativel sem embutido")
+        self.assertEqual(by_group["ambos"]["compatibilidade"], "Compativel nos dois cenarios")
+        self.assertEqual(by_group["ambos"]["credito_liquido_projetado_com_embutido"], 950000)
+
     def test_rejects_invalid_credit_input(self):
         with self.assertRaises(ValueError):
             analyze_contemplar_groups(payload(credito_desejado=0), [])

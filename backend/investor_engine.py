@@ -4,6 +4,7 @@ import math
 from typing import Any, Iterable
 
 from .credit_composition import as_float
+from .credit_liquidity import build_credit_liquidity_scenarios, evaluate_group_credit_liquidity
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
@@ -101,6 +102,8 @@ def apply_preference_ranking(items: Iterable[dict[str, Any]], selected_flags: It
 
 def analyze_investor_groups(payload: Any, groups: list[dict[str, Any]], commitment_percent: float = 0.30) -> dict[str, Any]:
     desired_credit = float(payload.credito_desejado)
+    own_resources = max(0.0, float(getattr(payload, "lance_proprio", 0) or 0))
+    fgts = max(0.0, float(getattr(payload, "fgts", 0) or 0))
     desired_installment = float(payload.parcela_desejada or payload.parcela_ideal or 0)
     income_limit = float(payload.parcela_limite or (float(payload.renda_total) * commitment_percent))
     considered = 0
@@ -129,7 +132,18 @@ def analyze_investor_groups(payload: Any, groups: list[dict[str, Any]], commitme
 
         credit_max = float(group["credito_maximo"])
         initial_installment = float(group["parcela_inicial_grupo"])
-        if credit_max < desired_credit:
+        liquidity = evaluate_group_credit_liquidity(
+            credit_max,
+            build_credit_liquidity_scenarios(
+                desired_credit,
+                own_resources,
+                fgts,
+                group.get("percentual_lance_embutido"),
+                group.get("taxa_adm"),
+                group.get("fundo_reserva"),
+            ),
+        )
+        if not liquidity["compativel_sem_embutido"] and not liquidity["compativel_com_embutido"]:
             excluded_credit += 1
             continue
         if initial_installment > income_limit:
@@ -143,7 +157,7 @@ def analyze_investor_groups(payload: Any, groups: list[dict[str, Any]], commitme
             "grupo": str(group.get("grupo") or ""),
             "administradora": str(group.get("administradora") or ""),
             "tipo_bem": str(group.get("tipo_bem") or ""),
-            "credito_maximo": round(credit_max, 2),
+            **liquidity,
             "parcela_inicial": round(initial_installment, 2),
             "parcela_desejada": round(desired_installment, 2),
             "parcela_maxima": round(income_limit, 2),
@@ -154,13 +168,18 @@ def analyze_investor_groups(payload: Any, groups: list[dict[str, Any]], commitme
             "taxa_ano": _preference_number(group.get("taxa_adm_ano"), percent=True),
             "parcela_reduzida": _preference_number(group.get("parcela_reduzida")),
             "prazo_remanescente": _preference_number(group.get("prazo_remanescente")),
-            "lance_embutido": _preference_number(group.get("percentual_lance_embutido"), percent=True),
+            "lance_embutido": liquidity["percentual_lance_embutido"],
             "origens": {
                 "credito_desejado": "front-end",
+                "recurso_proprio": "front-end",
+                "fgts": "front-end",
                 "parcela_desejada": "front-end",
                 "parcela_maxima": "front-end/configuração",
                 "credito_maximo": "planilha coluna U",
                 "parcela_inicial": "planilha coluna AJ",
+                "percentual_lance_embutido": "planilha coluna X",
+                "taxa_administracao_total": "planilha coluna AC",
+                "fundo_reserva_total": "planilha coluna AA",
             },
         })
 
@@ -174,12 +193,16 @@ def analyze_investor_groups(payload: Any, groups: list[dict[str, Any]], commitme
         "objetivo": payload.objetivo,
         "cliente": {
             "credito_desejado_liquido": round(desired_credit, 2),
+            "recurso_proprio": round(own_resources, 2),
+            "fgts": round(fgts, 2),
+            "credito_necessario_sem_embutido": round(desired_credit + own_resources + fgts, 2),
             "parcela_desejada": round(desired_installment, 2),
             "parcela_maxima": round(income_limit, 2),
             "renda_total": round(float(payload.renda_total), 2),
         },
         "filtros": {
-            "credito_minimo_grupo": round(desired_credit, 2),
+            "credito_minimo_sem_embutido": round(desired_credit + own_resources + fgts, 2),
+            "credito_minimo_com_embutido": "(credito liquido + RP + FGTS) / (1 - percentual da coluna X)",
             "parcela_inicial_maxima": round(income_limit, 2),
             "ordem": "desvio_percentual ASC",
             "classificacao": {
@@ -200,7 +223,10 @@ def analyze_investor_groups(payload: Any, groups: list[dict[str, Any]], commitme
         },
         "passos": [
             "Identificado o perfil Investidor pelo objetivo selecionado.",
-            f"Filtrados grupos com Maior Crédito (coluna U) maior ou igual a R$ {desired_credit:,.2f}.",
+            f"Calculado o credito necessario sem embutido: R$ {desired_credit + own_resources + fgts:,.2f}.",
+            "Para cada grupo, foi calculado tambem o credito necessario com embutido usando o percentual da coluna X.",
+            "Foram mantidos grupos compativeis em pelo menos um dos cenarios de credito.",
+            "Taxa administrativa (coluna AC) e fundo de reserva (coluna AA) foram somados ao credito contratado para formar o saldo devedor de cada cenario.",
             f"Filtrados grupos com Parcela Inicial (coluna AJ) menor ou igual a R$ {income_limit:,.2f}.",
             "Calculado o desvio percentual da parcela inicial em relação à parcela desejada.",
             "Ordenados os grupos compatíveis do menor para o maior desvio.",

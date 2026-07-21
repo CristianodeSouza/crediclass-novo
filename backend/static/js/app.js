@@ -2141,6 +2141,20 @@ function applyInvestorPreferences(items, selectedFlags) {
   )).map((item, index) => ({ ...item, ranking: index + 1 }));
 }
 
+function renderCreditScenarioCell(item) {
+  const percent = item.percentual_lance_embutido;
+  const withoutStatus = item.compativel_sem_embutido ? "OK" : "nao atende";
+  const withStatus = item.compativel_com_embutido ? "OK" : "nao atende";
+  const withEmbedded = percent === null || percent === undefined
+    ? "Com emb.: indisponivel"
+    : `Com emb. (${formatPercent(percent)}): ${formatMoney(item.credito_necessario_com_embutido)} - ${withStatus}`;
+  const withoutBalance = `Saldo sem emb.: ${formatMoney(item.saldo_devedor_sem_embutido)}`;
+  const withBalance = item.saldo_devedor_com_embutido === null || item.saldo_devedor_com_embutido === undefined
+    ? "Saldo com emb.: indisponivel"
+    : `Saldo com emb.: ${formatMoney(item.saldo_devedor_com_embutido)}`;
+  return `<div class="credit-scenario-cell"><span>Sem emb.: ${formatMoney(item.credito_necessario_sem_embutido)} - ${withoutStatus}</span><span>${withEmbedded}</span><small>${withoutBalance}</small><small>${withBalance}</small></div>`;
+}
+
 function renderInvestorAnalysis(result) {
   const status = document.getElementById("investorAnalysisStatus");
   const summary = document.getElementById("investorAnalysisSummary");
@@ -2151,7 +2165,8 @@ function renderInvestorAnalysis(result) {
   const items = applyInvestorPreferences(result.items || [], investorState.preferences);
   const summaryItems = [
     ["Grupos considerados", result.total_grupos_considerados ?? 0],
-    ["Crédito mínimo", formatMoney(client.credito_desejado_liquido)],
+    ["Crédito líquido desejado", formatMoney(client.credito_desejado_liquido)],
+    ["Crédito necessário sem emb.", formatMoney(client.credito_necessario_sem_embutido)],
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
     ["Compatíveis", result.total_grupos_compativeis ?? 0],
     ["Excluídos por crédito", totals.credito_insuficiente ?? 0],
@@ -2168,17 +2183,18 @@ function renderInvestorAnalysis(result) {
   }
   results.innerHTML = `
     <div class="investor-engine-note">
-      <strong>Critérios aplicados:</strong> Maior Crédito (coluna U) &ge; crédito desejado; Parcela Inicial (coluna AJ) &le; parcela máxima; ordenação pelo menor desvio da parcela desejada.
+      <strong>Critérios aplicados:</strong> a coluna U e comparada ao credito contratado sem ou com embutido. As colunas AC e AA formam o saldo devedor, que sera usado nas proximas validacoes de parcela e prazo; depois, a Parcela Inicial (coluna AJ) deve ser menor ou igual à parcela máxima.
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">
-        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Crédito máx.</th><th>Parcela inicial</th><th>Parcela desejada</th><th>Índice de preferência</th><th>Destaques</th><th>Classificação</th></tr></thead>
+        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Crédito máx.</th><th>Cenários de crédito</th><th>Parcela inicial</th><th>Parcela desejada</th><th>Índice de preferência</th><th>Destaques</th><th>Classificação</th></tr></thead>
         <tbody>${items.map((item) => `
           <tr>
             <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
             <td>${escapeHtml(item.grupo || item.grupo_id || "-")}</td>
             <td>${escapeHtml(item.administradora || "-")}</td>
             <td>${formatMoney(item.credito_maximo)}</td>
+            <td>${renderCreditScenarioCell(item)}</td>
             <td>${formatMoney(item.parcela_inicial)}</td>
             <td>${formatMoney(item.parcela_desejada)}</td>
             <td>${item.indice_preferencia === null || item.indice_preferencia === undefined ? "-" : formatPercent(item.indice_preferencia / 100)}</td>
@@ -2234,7 +2250,7 @@ async function loadInvestorAnalysis() {
       cache: "no-store",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...profile, considerar_lance_embutido: false }),
+      body: JSON.stringify(profile),
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "Falha ao calcular grupos investidores.");
@@ -2269,7 +2285,7 @@ function renderContemplarAnalysis(result) {
     ["Credito liquido desejado", formatMoney(client.credito_liquido_desejado)],
     ["Recurso proprio", formatMoney(client.recurso_proprio)],
     ["FGTS", formatMoney(client.fgts)],
-    ["Credito bruto necessario", formatMoney(client.credito_bruto_necessario)],
+    ["Credito necessario sem embutido", formatMoney(client.credito_bruto_necessario_sem_embutido)],
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
     ["Compativeis", result.total_grupos_compativeis ?? 0],
     ["Incompativeis por credito", result.total_grupos_incompativeis_credito ?? 0],
@@ -2288,11 +2304,11 @@ function renderContemplarAnalysis(result) {
   }
   results.innerHTML = `
     <div class="contemplar-engine-note">
-      <strong>Regra aplicada:</strong> Credito bruto necessario = credito liquido desejado + recurso proprio + FGTS. Somente grupos com Maior Credito (coluna U) maior ou igual a esse valor sao exibidos. Credito minimo (coluna O) e apenas informativo.
+      <strong>Regra aplicada:</strong> o sistema calcula os cenarios sem e com embutido. O segundo usa o percentual da coluna X. O grupo e exibido quando o Maior Credito (coluna U) atende a pelo menos um cenario. Credito minimo (coluna O) e apenas informativo.
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle contemplar-engine-table">
-        <thead><tr><th>Rank</th><th>Grupo</th><th>Administradora</th><th>Credito minimo</th><th>Credito maximo</th><th>Credito bruto necessario</th><th>Margem de credito</th><th>Compatibilidade</th></tr></thead>
+        <thead><tr><th>Rank</th><th>Grupo</th><th>Administradora</th><th>Credito minimo</th><th>Credito maximo</th><th>Cenarios de credito</th><th>Margem de credito</th><th>Compatibilidade</th></tr></thead>
         <tbody>${items.map((item) => `
           <tr>
             <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
@@ -2300,7 +2316,7 @@ function renderContemplarAnalysis(result) {
             <td>${escapeHtml(item.administradora || "-")}</td>
             <td>${formatMoney(item.credito_minimo)}</td>
             <td>${formatMoney(item.credito_maximo)}</td>
-            <td>${formatMoney(item.credito_bruto_necessario)}</td>
+            <td>${renderCreditScenarioCell(item)}</td>
             <td>${formatMoney(item.margem_credito)}</td>
             <td><span class="contemplar-compatible">${escapeHtml(item.compatibilidade || "Compativel")}</span></td>
           </tr>`).join("")}</tbody>
@@ -2328,7 +2344,7 @@ async function loadContemplarAnalysis() {
       cache: "no-store",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...profile, considerar_lance_embutido: false }),
+      body: JSON.stringify(profile),
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "Falha ao calcular grupos do perfil contemplar.");
