@@ -17,6 +17,7 @@ from .administrator_feasibility import analyze_administradoras
 from .administrator_rules import normalize_admin_name, rules_by_administradora
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
+from .contemplar_engine import analyze_contemplar_groups, is_contemplar_objective
 from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
 from .investor_engine import analyze_investor_groups, is_investor_objective
@@ -498,6 +499,32 @@ def investidor_analisar(payload: ViabilidadeRequest):
         return analyze_investor_groups(payload, groups)
     except Exception as error:
         logger.exception("Erro ao analisar grupos do perfil investidor")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+
+@app.post("/api/contemplar/analisar")
+def contemplar_analisar(payload: ViabilidadeRequest):
+    logger.info("POST /api/contemplar/analisar credito=%s", payload.credito_desejado)
+    if not is_contemplar_objective(payload.objetivo):
+        return {
+            "perfil_contemplar": False,
+            "objetivo": payload.objetivo,
+            "items": [],
+            "total_grupos_analisados": 0,
+            "total_grupos_compativeis": 0,
+            "mensagem": "O objetivo selecionado pertence ao fluxo Investidor.",
+        }
+    try:
+        try:
+            groups = list_grupos(include_history=False)
+        except Exception as light_error:
+            logger.warning("Falha na leitura leve do motor contemplar; tentando leitura completa: %s", light_error)
+            groups = list_grupos(include_history=True)
+        return analyze_contemplar_groups(payload, groups)
+    except ValueError as error:
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
+    except Exception as error:
+        logger.exception("Erro ao analisar grupos do perfil contemplar")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
 
 

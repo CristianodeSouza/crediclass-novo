@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260721-04" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260721-05" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -60,6 +60,10 @@
             <button class="nav-item" type="button" data-screen="investidor">
               <span class="nav-icon">MI</span>
               <span>Motor Grupos Perfil Investidor</span>
+            </button>
+            <button class="nav-item" type="button" data-screen="contemplar">
+              <span class="nav-icon">MC</span>
+              <span>Motor Grupos Perfil Contemplar</span>
             </button>
             <button class="nav-item" type="button" data-screen="estudo">
               <span class="nav-icon">EF</span>
@@ -530,6 +534,25 @@
               <p>Selecione um objetivo Investidor e salve o Perfil do Cliente para executar este motor.</p>
             </div>
             <div id="investorAnalysisResults" class="investor-engine-results d-none"></div>
+          </div>
+        </section>
+
+        <section id="screen-contemplar" class="screen-panel">
+          <div class="content-card contemplar-engine-card">
+            <div class="smart-engine-header">
+              <div>
+                <h2>Motor Grupos Perfil Contemplar</h2>
+                <p>Etapa inicial: elegibilidade exclusivamente pelo credito necessario para a carta.</p>
+              </div>
+              <span id="contemplarAnalysisStatus" class="state-badge">Aguardando perfil</span>
+            </div>
+            <div id="contemplarAnalysisSummary" class="smart-engine-phase-two-summary"></div>
+            <div id="contemplarAnalysisLoading" class="table-state d-none">Calculando compatibilidade de credito...</div>
+            <div id="contemplarAnalysisError" class="table-state table-state-error d-none">Nao foi possivel calcular os grupos do perfil contemplar.</div>
+            <div id="contemplarAnalysisEmpty" class="placeholder-card compact-placeholder">
+              <p>Selecione um objetivo Contemplar e salve o Perfil do Cliente para executar este motor.</p>
+            </div>
+            <div id="contemplarAnalysisResults" class="contemplar-engine-results d-none"></div>
           </div>
         </section>
 
@@ -1304,6 +1327,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260721-06"></script>
+    <script src="/static/js/app.js?v=20260721-07"></script>
   </body>
 </html>

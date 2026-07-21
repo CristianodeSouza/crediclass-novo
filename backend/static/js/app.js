@@ -23,6 +23,12 @@
     subtitle: "Crédito disponível, capacidade de pagamento e proximidade da parcela",
     action: "",
   },
+  contemplar: {
+    letter: "C) MOTOR GRUPOS PERFIL CONTEMPLAR",
+    title: "Motor Grupos Perfil Contemplar",
+    subtitle: "Elegibilidade inicial por crédito bruto necessário",
+    action: "",
+  },
   administradoras: {
     letter: "C) MOTOR INTELIGENTE DE SELEÃ‡ÃƒO",
     title: "Motor Inteligente de SeleÃ§Ã£o",
@@ -330,7 +336,7 @@ function activateScreen(screenName) {
   document.getElementById("screenSubtitle").textContent = meta.subtitle;
   const primaryAction = document.getElementById("primaryAction");
   primaryAction.textContent = meta.action;
-  primaryAction.classList.toggle("d-none", screenName === "viabilidade" || screenName === "investidor");
+  primaryAction.classList.toggle("d-none", screenName === "viabilidade" || screenName === "investidor" || screenName === "contemplar");
   document.getElementById("reloadMapDataBtn").classList.toggle("d-none", screenName !== "mapa");
 
   if (screenName === "historico") {
@@ -339,6 +345,7 @@ function activateScreen(screenName) {
   if (screenName === "viabilidade") loadConfiguracoes();
   if (screenName === "viabilidade") loadScenarioAnalysis();
   if (screenName === "investidor") loadInvestorAnalysis();
+  if (screenName === "contemplar") loadContemplarAnalysis();
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
@@ -2230,6 +2237,99 @@ async function loadInvestorAnalysis() {
   }
 }
 
+function isContemplarObjective(objective) {
+  return normalizeText(objective).startsWith("contemplar");
+}
+
+function setContemplarAnalysisState(state) {
+  ["Loading", "Error", "Empty", "Results"].forEach((suffix) => {
+    const element = document.getElementById(`contemplarAnalysis${suffix}`);
+    if (element) element.classList.toggle("d-none", state !== suffix.toLowerCase());
+  });
+}
+
+function renderContemplarAnalysis(result) {
+  const status = document.getElementById("contemplarAnalysisStatus");
+  const summary = document.getElementById("contemplarAnalysisSummary");
+  const results = document.getElementById("contemplarAnalysisResults");
+  if (!status || !summary || !results) return;
+
+  const client = result.cliente || {};
+  const summaryItems = [
+    ["Credito liquido desejado", formatMoney(client.credito_liquido_desejado)],
+    ["Recurso proprio", formatMoney(client.recurso_proprio)],
+    ["FGTS", formatMoney(client.fgts)],
+    ["Credito bruto necessario", formatMoney(client.credito_bruto_necessario)],
+    ["Grupos analisados", result.total_grupos_analisados ?? 0],
+    ["Compativeis", result.total_grupos_compativeis ?? 0],
+    ["Incompativeis por credito", result.total_grupos_incompativeis_credito ?? 0],
+    ["Dados incompletos", result.total_grupos_incompletos ?? 0],
+  ];
+  summary.innerHTML = summaryItems.map(([label, value]) => (
+    `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`
+  )).join("");
+
+  const items = result.items || [];
+  status.textContent = `${items.length} grupos compativeis`;
+  if (!items.length) {
+    results.innerHTML = `<div class="table-state">Nenhum grupo possui Maior Credito suficiente para o valor necessario.</div>`;
+    setContemplarAnalysisState("results");
+    return;
+  }
+  results.innerHTML = `
+    <div class="contemplar-engine-note">
+      <strong>Regra aplicada:</strong> Credito bruto necessario = credito liquido desejado + recurso proprio + FGTS. Somente grupos com Maior Credito (coluna U) maior ou igual a esse valor sao exibidos. Credito minimo (coluna O) e apenas informativo.
+    </div>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle contemplar-engine-table">
+        <thead><tr><th>Rank</th><th>Grupo</th><th>Administradora</th><th>Credito minimo</th><th>Credito maximo</th><th>Credito bruto necessario</th><th>Margem de credito</th><th>Compatibilidade</th></tr></thead>
+        <tbody>${items.map((item) => `
+          <tr>
+            <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
+            <td>${escapeHtml(item.grupo || item.grupo_id || "-")}</td>
+            <td>${escapeHtml(item.administradora || "-")}</td>
+            <td>${formatMoney(item.credito_minimo)}</td>
+            <td>${formatMoney(item.credito_maximo)}</td>
+            <td>${formatMoney(item.credito_bruto_necessario)}</td>
+            <td>${formatMoney(item.margem_credito)}</td>
+            <td><span class="contemplar-compatible">${escapeHtml(item.compatibilidade || "Compativel")}</span></td>
+          </tr>`).join("")}</tbody>
+      </table>
+    </div>
+    <div class="contemplar-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
+  `;
+  setContemplarAnalysisState("results");
+}
+
+async function loadContemplarAnalysis() {
+  const status = document.getElementById("contemplarAnalysisStatus");
+  if (!status) return;
+  const profile = collectClientProfile();
+  if (!isContemplarObjective(profile.objetivo) || !(Number(profile.credito_desejado) > 0)) {
+    status.textContent = "Aguardando perfil contemplar";
+    setContemplarAnalysisState("empty");
+    return;
+  }
+  status.textContent = "Processando...";
+  setContemplarAnalysisState("loading");
+  try {
+    const response = await fetch("/api/contemplar/analisar", {
+      method: "POST",
+      cache: "no-store",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...profile, considerar_lance_embutido: false }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "Falha ao calcular grupos do perfil contemplar.");
+    renderContemplarAnalysis(result);
+  } catch (error) {
+    status.textContent = "Erro no calculo";
+    setContemplarAnalysisState("error");
+    showToast(error.message || "Nao foi possivel calcular os grupos do perfil contemplar.", "danger");
+  }
+}
+
 async function loadScenarioAnalysis() {
   const status = document.getElementById("scenarioAnalysisStatus");
   if (!status) return;
@@ -2590,6 +2690,7 @@ function saveClientProfile({ silent = false } = {}) {
   renderSmartEngine();
   loadScenarioAnalysis();
   loadInvestorAnalysis();
+  loadContemplarAnalysis();
   if (!silent) showToast("Perfil do cliente salvo.", "success");
   return profile;
 }
@@ -2628,7 +2729,11 @@ function resetClientProfile() {
 
 function advanceClientProfile() {
   const profile = saveClientProfile({ silent: true });
-  const nextScreen = isInvestorObjective(profile.objetivo) ? "investidor" : "viabilidade";
+  const nextScreen = isInvestorObjective(profile.objetivo)
+    ? "investidor"
+    : isContemplarObjective(profile.objetivo)
+      ? "contemplar"
+      : "viabilidade";
   activateScreen(nextScreen);
   if (nextScreen === "viabilidade") {
     renderSmartEngine();
