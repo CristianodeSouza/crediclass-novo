@@ -2079,6 +2079,14 @@ function investorPreferenceNumber(value, isPercent = false) {
   return isPercent || String(value).includes("%") ? (number > 1 ? number / 100 : number) : number;
 }
 
+function formatInvestorPreferenceValue(flag, value) {
+  const number = investorPreferenceNumber(value, flag === "maior_lance_embutido");
+  if (number === null) return "-";
+  if (["menor_taxa_total", "menor_taxa_ano", "maior_lance_embutido"].includes(flag)) return formatPercent(number);
+  if (flag === "maior_prazo_remanescente") return `${number} meses`;
+  return formatMoney(number);
+}
+
 function applyInvestorPreferences(items, selectedFlags) {
   if (!selectedFlags.length) return items;
   const definitions = {
@@ -2109,7 +2117,7 @@ function applyInvestorPreferences(items, selectedFlags) {
     const scoreValues = selectedFlags.map((flag) => itemScores[flag]);
     const highlights = selectedFlags
       .filter((flag) => itemScores[flag] >= 0.999999)
-      .map((flag) => definitions[flag].label);
+      .map((flag) => `${definitions[flag].label}: ${formatInvestorPreferenceValue(flag, item[definitions[flag].field])}`);
     return {
       ...item,
       indice_preferencia: scoreValues.length ? Math.round((scoreValues.reduce((sum, value) => sum + value, 0) / scoreValues.length) * 10000) / 100 : null,
