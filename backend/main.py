@@ -490,7 +490,11 @@ def investidor_analisar(payload: ViabilidadeRequest):
             "mensagem": "O objetivo selecionado pertence ao fluxo de contemplação.",
         }
     try:
-        groups = list_grupos(include_history=False)
+        try:
+            groups = list_grupos(include_history=False)
+        except Exception as light_error:
+            logger.warning("Falha na leitura leve do motor investidor; tentando leitura completa: %s", light_error)
+            groups = list_grupos(include_history=True)
         return analyze_investor_groups(payload, groups)
     except Exception as error:
         logger.exception("Erro ao analisar grupos do perfil investidor")
