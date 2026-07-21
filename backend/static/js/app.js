@@ -1607,6 +1607,7 @@ function normalizeClientTitulares(profile = {}) {
       nome: profile.nome || "",
       nascimento: profile.data_nascimento || "",
       lance_fgts: Number(profile.fgts_titular || profile.fgts || 0),
+      lance_recursos_proprios: Number(profile.lance_recursos_proprios || profile.lance_proprio || 0),
       renda: Number(profile.renda_titular || profile.renda_total || 0),
     };
     pessoasFisicas[1] = {
@@ -2207,6 +2208,15 @@ function updateInvestorPreferenceSummary() {
     : "Nenhuma preferência selecionada";
 }
 
+function syncInvestorPreferencesFromInputs() {
+  investorState.preferences = Array.from(
+    document.querySelectorAll("#investorPreferencesOptions input:checked"),
+    (input) => input.value,
+  );
+  updateInvestorPreferenceSummary();
+  if (investorState.result) renderInvestorAnalysis(investorState.result);
+}
+
 async function loadInvestorAnalysis() {
   const status = document.getElementById("investorAnalysisStatus");
   if (!status) return;
@@ -2428,7 +2438,8 @@ function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
   const objetivo = document.getElementById("clientProfileObjetivo").value;
   const credito = toNumber(document.getElementById("clientProfileCredito").value);
   const parcelaDesejada = toNumber(document.getElementById("clientProfileParcelaIdeal").value);
-  const lanceProprio = toNumber(document.getElementById("clientProfileLanceProprio").value);
+  const lanceManual = toNumber(document.getElementById("clientProfileLanceProprio").value);
+  const lanceProprio = Number(holderSummary.lance_recursos_proprios || 0) || lanceManual;
   const pessoasAtivas = (titulares.pessoas_fisicas || []).filter((person) => (
     person.nome || person.nascimento || Number(person.lance_fgts || 0) > 0 || Number(person.renda || 0) > 0
   ));
@@ -2602,7 +2613,8 @@ function updateClientProfileTotals() {
   const titulares = collectClientTitularesFromForm();
   const holderSummary = summarizeClientTitulares(titulares);
   const fgts = holderSummary.fgts;
-  const lance = toNumber(document.getElementById("clientProfileLanceProprio").value);
+  const lanceManual = toNumber(document.getElementById("clientProfileLanceProprio").value);
+  const lance = Number(holderSummary.lance_recursos_proprios || 0) || lanceManual;
   const renda = holderSummary.renda_total;
   const objectiveRule = clientObjectiveRule(document.getElementById("clientProfileObjetivo").value);
   const conceito = objectiveRule.conceito || clientProfileConcept(objectiveRule.prazo);
@@ -2639,7 +2651,7 @@ function collectClientProfile() {
     credito_desejado: toNumber(document.getElementById("clientProfileCredito").value),
     prazo_desejado: Number(document.getElementById("clientProfilePrazo").value),
     conceito_ia: totals.conceito,
-    lance_proprio: toNumber(document.getElementById("clientProfileLanceProprio").value),
+    lance_proprio: totals.lance,
     lance_recursos_proprios: summary.lance_recursos_proprios || 0,
     fgts_titular: summary.fgts_titular,
     fgts_conjuge: summary.fgts_conjuge,
@@ -4044,21 +4056,11 @@ document.getElementById("clearClientProfileBtn").addEventListener("click", reset
 document.getElementById("advanceClientProfileBtn").addEventListener("click", advanceClientProfile);
 renderInvestorPreferenceOptions();
 updateInvestorPreferenceSummary();
-document.getElementById("investorPreferencesBtn")?.addEventListener("click", () => {
-  renderInvestorPreferenceOptions();
-  document.getElementById("investorPreferencesPanel")?.classList.toggle("d-none");
-});
-document.getElementById("closeInvestorPreferencesBtn")?.addEventListener("click", () => document.getElementById("investorPreferencesPanel")?.classList.add("d-none"));
+document.getElementById("investorPreferencesOptions")?.addEventListener("change", syncInvestorPreferencesFromInputs);
 document.getElementById("clearInvestorPreferencesBtn")?.addEventListener("click", () => {
   investorState.preferences = [];
   renderInvestorPreferenceOptions();
   updateInvestorPreferenceSummary();
-  if (investorState.result) renderInvestorAnalysis(investorState.result);
-});
-document.getElementById("applyInvestorPreferencesBtn")?.addEventListener("click", () => {
-  investorState.preferences = Array.from(document.querySelectorAll("#investorPreferencesOptions input:checked"), (input) => input.value);
-  updateInvestorPreferenceSummary();
-  document.getElementById("investorPreferencesPanel")?.classList.add("d-none");
   if (investorState.result) renderInvestorAnalysis(investorState.result);
 });
 
