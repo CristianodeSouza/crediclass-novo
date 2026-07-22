@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Any
 
 
@@ -46,6 +47,17 @@ def normalize_cost_percent(value: Any) -> float:
     return round(percent, 8) if percent < 1 else 0.0
 
 
+def _decimal_money(value: Any) -> Decimal:
+    try:
+        return Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal("0.00")
+
+
+def _money(value: Decimal | None) -> float | None:
+    return float(value.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)) if value is not None else None
+
+
 def build_credit_liquidity_scenarios(
     desired_net_credit: float,
     own_resources: float,
@@ -54,20 +66,22 @@ def build_credit_liquidity_scenarios(
     administration_fee_percent: Any = 0,
     reserve_fund_percent: Any = 0,
 ) -> dict[str, float | None]:
-    desired = float(desired_net_credit)
-    own = max(0.0, float(own_resources))
-    fgts_value = max(0.0, float(fgts))
+    desired = max(Decimal("0"), _decimal_money(desired_net_credit))
+    own = max(Decimal("0"), _decimal_money(own_resources))
+    fgts_value = max(Decimal("0"), _decimal_money(fgts))
     required_without = desired + own + fgts_value
     percent = normalize_embedded_bid_percent(embedded_bid_percent)
     administration_fee_percent = normalize_cost_percent(administration_fee_percent)
     reserve_fund_percent = normalize_cost_percent(reserve_fund_percent)
-    required_with = required_without / (1 - percent) if percent is not None else None
-    embedded_amount = required_with * percent if required_with is not None and percent is not None else None
-    administration_fee_without = required_without * administration_fee_percent
-    reserve_fund_without = required_without * reserve_fund_percent
+    embedded_percent = Decimal(str(percent)) if percent is not None else None
+    fee_percent, fund_percent = Decimal(str(administration_fee_percent)), Decimal(str(reserve_fund_percent))
+    required_with = required_without / (Decimal("1") - embedded_percent) if embedded_percent is not None else None
+    embedded_amount = required_with * embedded_percent if required_with is not None and embedded_percent is not None else None
+    administration_fee_without = required_without * fee_percent
+    reserve_fund_without = required_without * fund_percent
     debtor_balance_without = required_without + administration_fee_without + reserve_fund_without
-    administration_fee_with = required_with * administration_fee_percent if required_with is not None else None
-    reserve_fund_with = required_with * reserve_fund_percent if required_with is not None else None
+    administration_fee_with = required_with * fee_percent if required_with is not None else None
+    reserve_fund_with = required_with * fund_percent if required_with is not None else None
     debtor_balance_with = (
         required_with + administration_fee_with + reserve_fund_with
         if required_with is not None and administration_fee_with is not None and reserve_fund_with is not None
@@ -79,23 +93,23 @@ def build_credit_liquidity_scenarios(
         else None
     )
     return {
-        "credito_liquido_desejado": round(desired, 2),
-        "recurso_proprio": round(own, 2),
-        "fgts": round(fgts_value, 2),
+        "credito_liquido_desejado": _money(desired),
+        "recurso_proprio": _money(own),
+        "fgts": _money(fgts_value),
         "percentual_lance_embutido": percent,
         "taxa_administracao_total": administration_fee_percent,
         "fundo_reserva_total": reserve_fund_percent,
-        "credito_necessario_sem_embutido": round(required_without, 2),
-        "credito_necessario_com_embutido": round(required_with, 2) if required_with is not None else None,
-        "valor_lance_embutido": round(embedded_amount, 2) if embedded_amount is not None else None,
-        "taxa_administracao_sem_embutido": round(administration_fee_without, 2),
-        "fundo_reserva_sem_embutido": round(reserve_fund_without, 2),
-        "saldo_devedor_sem_embutido": round(debtor_balance_without, 2),
-        "taxa_administracao_com_embutido": round(administration_fee_with, 2) if administration_fee_with is not None else None,
-        "fundo_reserva_com_embutido": round(reserve_fund_with, 2) if reserve_fund_with is not None else None,
-        "saldo_devedor_com_embutido": round(debtor_balance_with, 2) if debtor_balance_with is not None else None,
-        "credito_liquido_projetado_sem_embutido": round(required_without - own - fgts_value, 2),
-        "credito_liquido_projetado_com_embutido": round(projected_with, 2) if projected_with is not None else None,
+        "credito_necessario_sem_embutido": _money(required_without),
+        "credito_necessario_com_embutido": _money(required_with),
+        "valor_lance_embutido": _money(embedded_amount),
+        "taxa_administracao_sem_embutido": _money(administration_fee_without),
+        "fundo_reserva_sem_embutido": _money(reserve_fund_without),
+        "saldo_devedor_sem_embutido": _money(debtor_balance_without),
+        "taxa_administracao_com_embutido": _money(administration_fee_with),
+        "fundo_reserva_com_embutido": _money(reserve_fund_with),
+        "saldo_devedor_com_embutido": _money(debtor_balance_with),
+        "credito_liquido_projetado_sem_embutido": _money(required_without - own - fgts_value),
+        "credito_liquido_projetado_com_embutido": _money(projected_with),
     }
 
 

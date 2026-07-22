@@ -534,12 +534,8 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest):
     """Single entry point: declared objective is a presentation preference, never an exclusion."""
     logger.info("POST /api/viabilidade-360/analisar credito=%s", payload.credito_desejado)
     try:
-        try:
-            groups = list_grupos(include_history=False)
-        except Exception as light_error:
-            logger.warning("Falha na leitura leve do motor 360; tentando leitura completa: %s", light_error)
-            groups = list_grupos(include_history=True)
-        return analyze_client_consortium_viability(payload, groups)
+        groups = list_grupos(include_history=payload.base_mode == "historical_audit")
+        return analyze_client_consortium_viability(payload, groups, mode=payload.base_mode)
     except ValueError as error:
         return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
     except Exception as error:

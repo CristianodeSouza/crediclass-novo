@@ -309,7 +309,12 @@ class ViabilidadeRequest(BaseModel):
     data_nascimento_conjuge: str = ""
     tipo_contratacao: str = ""
     titulares: dict[str, Any] | None = None
-    tipo_bem: str = "Imovel"
+    tipo_bem: str = ""
+    tipo_bem_explicit: bool = False
+    lance_proprio_participantes: float | None = Field(default=None, ge=0)
+    lance_proprio_manual: float | None = Field(default=None, ge=0)
+    own_resources_source: Literal["participants", "manual"] | None = None
+    base_mode: Literal["current", "historical_audit"] = "current"
     estado_bem: str = ""
     considerar_lance_embutido: bool = True
     saldo_embutido_modo: Literal["coerente", "legado"] = "coerente"

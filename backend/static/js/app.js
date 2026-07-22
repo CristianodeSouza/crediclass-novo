@@ -115,7 +115,8 @@ const CLIENT_PF_ROLES = [
   { papel: "conjuge_2", label: "Conjuge 2" },
 ];
 const CLIENT_PJ_SOCIOS_LIMIT = 5;
-const DEFAULT_PJ_COMMITMENT_PERCENT = 0.3;
+const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
+const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
 const authState = { user: null };
 let appBootstrapped = false;
@@ -2164,7 +2165,7 @@ function renderInvestorAnalysis(result) {
   const results = document.getElementById("investorAnalysisResults");
   if (!status || !summary || !results) return;
   const client = result.cliente || {};
-  const totals = result.totais_exclusao || {};
+  const totals = result.contadores || {};
   const items = applyInvestorPreferences(result.items || [], investorState.preferences);
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
@@ -2172,7 +2173,7 @@ function renderInvestorAnalysis(result) {
     ["Estratégia declarada", result.estrategia_preferida === "investment" ? "Investimento" : "Contemplação"],
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
     ["Viáveis por crédito", result.total_grupos_viaveis ?? 0],
-    ["Excluídos por crédito", totals.credito ?? 0],
+    ["Dados incompletos", totals.dados_incompletos ?? 0],
     ["Grupos exibidos", items.length],
   ];
   summary.innerHTML = summaryItems.map(([label, value]) => (
@@ -2186,11 +2187,11 @@ function renderInvestorAnalysis(result) {
   }
   results.innerHTML = `
     <div class="investor-engine-note">
-      <strong>Visão 360:</strong> o objetivo do cliente é preferência, não bloqueio. Cada grupo é analisado sem e com lance embutido; a faixa válida é Crédito mínimo (O) ≤ crédito contratado ≤ Crédito máximo (U). Taxa (AC), fundo (AA), lance, parcela e prazo são exibidos por cenário.
+      <strong>Visão 360:</strong> o objetivo do cliente é preferência, não bloqueio. Crédito é validado por cenário na faixa O a U. AJ é apenas parcela de referência até a seleção da carta exata; taxa (AC), fundo (AA) e prazo (F) precisam estar completos para uma recomendação financeira.
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">
-        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Faixa de crédito</th><th>Cenários financeiros</th><th>Parcela inicial</th><th>Prazo restante</th><th>Estratégias possíveis</th><th>Preferência</th></tr></thead>
+        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Faixa de crédito</th><th>Cenários financeiros</th><th>Parcela de referência</th><th>Prazo restante</th><th>Melhor contemplação</th><th>Status</th></tr></thead>
         <tbody>${items.map((item) => `
           <tr>
             <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
@@ -2198,10 +2199,10 @@ function renderInvestorAnalysis(result) {
             <td>${escapeHtml(item.administradora || "-")}</td>
             <td>${formatMoney(item.credito_minimo)} a ${formatMoney(item.credito_maximo)}</td>
             <td>${renderCreditScenarioCell(item)}</td>
-            <td>${formatMoney(item.parcela_inicial)}</td>
+            <td>${formatMoney(item.reference_installment)}</td>
             <td>${escapeHtml(String(item.prazo_remanescente ?? "-"))}</td>
-            <td>${escapeHtml((item.estrategias_possiveis || []).join(", ") || "Em análise")}</td>
-            <td><span class="investor-distance">${item.destaque_preferencia ? "Destaque" : "Alternativa"}</span></td>
+            <td>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</td>
+            <td><span class="investor-distance ${item.recommendable ? "" : "investor-distance-sem-referencia"}">${item.recommendable ? "Recomendável" : item.data_completeness === "incomplete" ? "Dados incompletos" : "Compatível por crédito"}</span></td>
           </tr>`).join("")}</tbody>
       </table>
     </div>
@@ -2632,7 +2633,7 @@ function updateClientProfileTotals() {
   const holderSummary = summarizeClientTitulares(titulares);
   const fgts = holderSummary.fgts;
   const lanceManual = toNumber(document.getElementById("clientProfileLanceProprio").value);
-  const lance = Number(holderSummary.lance_recursos_proprios || 0) || lanceManual;
+  const lance = Number(holderSummary.lance_recursos_proprios || 0);
   const renda = holderSummary.renda_total;
   const objectiveRule = clientObjectiveRule(document.getElementById("clientProfileObjetivo").value);
   const conceito = objectiveRule.conceito || clientProfileConcept(objectiveRule.prazo);
@@ -2645,15 +2646,15 @@ function updateClientProfileTotals() {
   document.getElementById("clientProfileRendaTitular").value = holderSummary.renda_titular;
   document.getElementById("clientProfileRendaConjuge").value = holderSummary.renda_conjuge;
   document.getElementById("clientProfilePrazo").value = objectiveRule.prazo;
-  document.getElementById("clientProfileTipoBem").value = objectiveRule.tipoBem || "Imovel";
+  // Tipo de bem só filtra grupos quando o operador o informa explicitamente.
   document.getElementById("clientProfileEstadoBem").value = objectiveRule.estadoBem || "Pronto";
   // The income limit is independent from the installment desired by the client.
-  document.getElementById("clientProfileParcelaLimite").value = renda * DEFAULT_PJ_COMMITMENT_PERCENT;
+  document.getElementById("clientProfileParcelaLimite").value = renda * DEFAULT_INCOME_COMMITMENT_PERCENT;
   document.getElementById("clientProfileFgtsTotal").value = formatMoney(fgts);
   document.getElementById("clientProfileTotalDisponivel").value = formatMoney(lance + fgts);
   document.getElementById("clientProfileRendaTotal").value = formatMoney(renda);
   document.getElementById("clientProfileConceito").value = conceito;
-  const totals = { fgts, lance, renda, conceito, holderSummary, titulares };
+  const totals = { fgts, lance, lanceManual, renda, conceito, holderSummary, titulares };
   renderClientPreliminaryAnalysis(calculateClientPreliminaryAnalysis(titulares, holderSummary));
   return totals;
 }
@@ -2670,6 +2671,9 @@ function collectClientProfile() {
     prazo_desejado: Number(document.getElementById("clientProfilePrazo").value),
     conceito_ia: totals.conceito,
     lance_proprio: totals.lance,
+    lance_proprio_participantes: totals.lance,
+    lance_proprio_manual: totals.lanceManual,
+    own_resources_source: totals.lance > 0 ? "participants" : "manual",
     lance_recursos_proprios: summary.lance_recursos_proprios || 0,
     fgts_titular: summary.fgts_titular,
     fgts_conjuge: summary.fgts_conjuge,
@@ -2684,6 +2688,7 @@ function collectClientProfile() {
     data_nascimento_conjuge: summary.data_nascimento_conjuge,
     objetivo: document.getElementById("clientProfileObjetivo").value,
     tipo_bem: document.getElementById("clientProfileTipoBem").value,
+    tipo_bem_explicit: Boolean(document.getElementById("clientProfileTipoBem").value),
     estado_bem: document.getElementById("clientProfileEstadoBem").value,
   };
 }
@@ -2720,7 +2725,6 @@ function saveClientProfile({ silent = false } = {}) {
   renderSmartEngine();
   loadScenarioAnalysis();
   loadInvestorAnalysis();
-  loadContemplarAnalysis();
   if (!silent) showToast("Perfil do cliente salvo.", "success");
   return profile;
 }
@@ -2758,17 +2762,8 @@ function resetClientProfile() {
 }
 
 function advanceClientProfile() {
-  const profile = saveClientProfile({ silent: true });
-  const nextScreen = isInvestorObjective(profile.objetivo)
-    ? "investidor"
-    : isContemplarObjective(profile.objetivo)
-      ? "contemplar"
-      : "viabilidade";
-  activateScreen(nextScreen);
-  if (nextScreen === "viabilidade") {
-    renderSmartEngine();
-    loadScenarioAnalysis();
-  }
+  saveClientProfile({ silent: true });
+  activateScreen("investidor");
 }
 
 function setStudyState(state) {
