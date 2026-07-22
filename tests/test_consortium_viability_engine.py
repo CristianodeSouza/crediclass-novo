@@ -117,6 +117,35 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertIn("moderate", item["compatible_contemplation_strategies"])
         self.assertFalse(item["destaque_preferencia"])
 
+    def test_contemplation_never_eliminates_a_credit_and_term_preselected_group(self):
+        result = analyze_client_consortium_viability(payload(), [
+            group(
+                percentual_lance_embutido=None,
+                lance_super_agressivo_3m="99%",
+                lance_agressivo_6m="99%",
+                lance_moderado_12m="99%",
+                lance_conservador_24m="99%",
+                lance_investidor="99%",
+            ),
+        ])
+        self.assertEqual(result["total_grupos_credito_compativeis"], 1)
+        self.assertEqual(result["total_grupos_preselecionados"], 1)
+        self.assertEqual(result["items"][0]["selection_stage"], "preselection")
+
+    def test_golden_preselection_split_keeps_credit_and_term_stages_separate(self):
+        approved = ["40112", "40174", "40105", "40098", "40090", "40086", "1820", "1038", "1031", "1026", "1019"]
+        term_rejected = ["1176", "1011", "1770", "1006"]
+        groups = [group(identifier, prazo_restante=240, percentual_lance_embutido=None) for identifier in approved]
+        groups.extend(group(identifier, prazo_restante=1, percentual_lance_embutido=None) for identifier in term_rejected)
+        result = analyze_client_consortium_viability(
+            payload(credito_desejado=600000, lance_proprio=100000, fgts=100000, renda_total=40000, parcela_desejada=6000, parcela_limite=12000),
+            groups,
+        )
+        self.assertEqual(result["total_grupos_credito_compativeis"], 15)
+        self.assertEqual(result["total_grupos_preselecionados"], 11)
+        self.assertEqual({item["grupo"] for item in result["items"]}, set(approved))
+        self.assertEqual(result["audit"]["summary"]["total_term_income_rejected"], 4)
+
     def test_missing_operational_data_excludes_instead_of_becoming_zero(self):
         result = analyze_client_consortium_viability(payload(), [group(taxa_adm=None)])
         self.assertEqual(result["items"], [])
