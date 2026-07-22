@@ -410,6 +410,7 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
             for field, header, index in selected:
                 relative_index = index - min_index
                 row[header] = fixed_column_value(field, row_values, min_index) if field in MAPA_GRUPOS_COLUMN_INDEXES else row_values[relative_index] if relative_index < len(row_values) else ""
+            row["__source_row"] = offset + 2
             if not any(str(value).strip() for value in row.values()):
                 continue
             rows.append(row)
@@ -444,6 +445,7 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
                         fallback_cell = columns[fallback_index][offset] if offset < len(columns[fallback_index]) else []
                         value = fallback_cell[0] if fallback_cell else ""
                 row[header] = value
+            row["__source_row"] = offset + 2
             if not any(str(value).strip() for value in row.values()):
                 continue
             rows.append(row)
@@ -965,10 +967,12 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
     }
     updated_month = latest_updated_history_month(historico)
     return {
+        "source_row": row.get("__source_row"),
         "grupo_id": build_grupo_id(row),
         "administradora_id": build_administradora_id(row),
         "administradora": clean_text(get_field(row, "administradora")),
         "grupo": clean_text(get_field(row, "grupo")),
+        "grupo_raw": str(get_field(row, "grupo") or ""),
         "tipo_bem": clean_text(get_field(row, "tipo_bem")),
         "credito_minimo": parse_credit(get_field(row, "credito_minimo")),
         "credito_maximo": parse_credit(get_field(row, "credito_maximo")),

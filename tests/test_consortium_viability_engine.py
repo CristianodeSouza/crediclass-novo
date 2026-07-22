@@ -146,6 +146,42 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual({item["grupo"] for item in result["items"]}, set(approved))
         self.assertEqual(result["audit"]["summary"]["total_term_income_rejected"], 4)
 
+    def test_term_rejection_keeps_only_the_consolidated_term_reason(self):
+        result = analyze_client_consortium_viability(payload(), [
+            group("1770", credito_minimo=400000, credito_maximo=1100000, prazo_restante=1),
+        ])
+        audit_entry = result["audit"]["group_results"][0]
+        self.assertEqual(audit_entry["result"], "excluded_term_income")
+        self.assertEqual(audit_entry["justification"], ["prazo_remanescente_insuficiente"])
+
+    def test_audit_reports_raw_identifier_source_row_and_decision_usage(self):
+        result = analyze_client_consortium_viability(payload(), [
+            group("I176", source_row=148, grupo_raw="I176", percentual_lance_embutido=None),
+        ])
+        entry = result["audit"]["group_results"][0]
+        self.assertEqual(entry["source_row"], 148)
+        self.assertEqual(entry["grupo_raw"], "I176")
+        tipo_column = next(column for column in result["audit"]["columns_used"] if column["column"] == "C")
+        self.assertTrue(tipo_column["loaded"])
+        self.assertFalse(tipo_column["used_in_decision"])
+
+    def test_contemplation_classification_ignores_credit_incompatible_scenario(self):
+        result = analyze_client_consortium_viability(payload(), [
+            group(
+                credito_minimo=100000,
+                credito_maximo=1100000,
+                lance_super_agressivo_3m="30%",
+                lance_agressivo_6m="30%",
+                lance_moderado_12m="30%",
+                lance_conservador_24m="30%",
+                lance_investidor="30%",
+            ),
+        ])
+        classification = result["items"][0]["contemplation_classification"]
+        self.assertEqual(classification["strategies"], [])
+        self.assertEqual(classification["ignored_scenarios"][0]["scenario_id"], "with_embedded")
+        self.assertEqual(classification["ignored_scenarios"][0]["reason"], "credito_fora_da_faixa")
+
     def test_missing_operational_data_excludes_instead_of_becoming_zero(self):
         result = analyze_client_consortium_viability(payload(), [group(taxa_adm=None)])
         self.assertEqual(result["items"], [])
