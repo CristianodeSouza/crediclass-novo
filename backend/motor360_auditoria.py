@@ -63,6 +63,14 @@ def audit_to_markdown(audit: dict[str, Any]) -> str:
         "## Dados consolidados do perfil",
         "",
     ]
+    source = audit.get("data_source", {})
+    snapshot = source.get("base_snapshot", {})
+    if snapshot:
+        lines.extend([
+            f"- **Linhas da base na execucao:** {snapshot.get('row_count', source.get('total_rows', 0))}",
+            f"- **Hash da base ({snapshot.get('fingerprint_algorithm', 'sha256')}):** `{snapshot.get('fingerprint', '-')}`",
+            "",
+        ])
     for key, value in client.get("consolidated_values", {}).items():
         lines.append(f"- **{key}:** {value}")
     lines.extend(["", "## Etapas de filtro", ""])
@@ -81,13 +89,25 @@ def audit_to_markdown(audit: dict[str, Any]) -> str:
         f"- Grupos carregados: {summary.get('total_loaded', 0)}",
         f"- Grupos analisados: {summary.get('total_analyzed', 0)}",
         f"- Compatíveis por crédito: {summary.get('total_credit_compatible', 0)}",
-        f"- Dados incompletos: {summary.get('total_incomplete', 0)}",
+        f"- Pré-selecionados: {summary.get('total_preselected', 0)}",
+        f"- Eliminados por crédito: {summary.get('total_credit_rejected', 0)}",
+        f"- Eliminados por prazo/renda: {summary.get('total_term_income_rejected', 0)}",
+        f"- Grupos com dados incompletos: {summary.get('groups_with_incomplete_data', 0)}",
+        f"- Ocorrências de campos incompletos: {summary.get('incomplete_field_occurrences', 0)}",
         f"- Excluídos: {summary.get('total_rejected', 0)}",
         "",
         "## Ordenação",
         "",
     ])
     lines.extend(f"{index}. {rule}" for index, rule in enumerate(audit.get("final_ordering", {}).get("rules", []), 1))
+    column_notes = audit.get("schema_notes", {}).get("columns_used", {})
+    lines.extend([
+        "",
+        "## Contrato das colunas",
+        "",
+        f"- Campo oficial para uso em decisão: `{column_notes.get('official_decision_field', 'used_in_decision')}`.",
+        f"- Campo de compatibilidade: `{column_notes.get('compatibility_field', 'used')}`. {column_notes.get('compatibility_note', '')}",
+    ])
     lines.extend(["", "## Alertas", ""])
     warnings = audit.get("warnings", [])
     lines.extend(f"- [{item.get('level', 'info')}] {item.get('message', '-') }" for item in warnings) if warnings else lines.append("- Nenhum alerta global registrado.")

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime, timezone
+import hashlib
+import json
 import math
 import re
 import time
@@ -451,6 +453,21 @@ def analyze_client_consortium_viability(
     decision_columns = {"A", "B", "F", "O", "U", "X", "AA", "AC"}
     if explicit_type:
         decision_columns.add("C")
+    source_snapshot = [
+        {
+            "source_row": group.get("source_row"),
+            "administradora": group.get("administradora"),
+            "grupo_raw": group.get("grupo_raw", group.get("grupo")),
+            "credito_minimo": group.get("credito_minimo"),
+            "credito_maximo": group.get("credito_maximo"),
+            "prazo_restante": group.get("prazo_restante"),
+        }
+        for group in groups
+    ]
+    source_fingerprint = hashlib.sha256(
+        json.dumps(source_snapshot, ensure_ascii=True, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()
+
     audit = {
         "metadata": {"audit_id": new_audit_id(completed_at), "started_at": started_at.isoformat(), "completed_at": completed_at.isoformat(), "duration_ms": round((time.perf_counter() - started_clock) * 1000, 2), "engine_version": MOTOR_VERSION, "rules_version": RULES_VERSION, "application_version": settings.version, "environment": settings.environment},
         "client_snapshot": {"raw_fields": [
@@ -462,7 +479,7 @@ def analyze_client_consortium_viability(
             _audit_field("Parcela desejada", "parcela_desejada", money(desired_installment), "client_profile", "Decimal"),
             _audit_field("Parcela maxima", "parcela_maxima", money(income_limit), "system_configuration", "Renda x comprometimento"),
         ], "consolidated_values": client, "participants": getattr(payload, "titulares", []) or []},
-        "data_source": {"source_name": "Tabela de Grupos 3.0", "current_or_historical": "historical" if mode == "historical_audit" else "current", "loaded_at": completed_at.isoformat(), "total_rows": len(groups)},
+        "data_source": {"source_name": "Tabela de Grupos 3.0", "current_or_historical": "historical" if mode == "historical_audit" else "current", "loaded_at": completed_at.isoformat(), "total_rows": len(groups), "base_snapshot": {"row_count": len(groups), "fingerprint_algorithm": "sha256", "fingerprint": source_fingerprint}},
         "columns_used": [{"column": column, "header": header, "technical_field": field, "purpose": purpose, "loaded": True, "used_in_decision": column in decision_columns, "used": column in decision_columns} for column, header, field, purpose in columns],
         "execution_steps": [
             {"order": 1, "id": "status", "name": "Status", "formula_or_rule": "Somente status Ativo", "input_count": len(groups), "approved_count": counters["active"], "rejected_count": counters["status_rejected"], "incomplete_count": 0, "duration_ms": round(durations["status"] * 1000, 3)},
@@ -487,7 +504,8 @@ def analyze_client_consortium_viability(
         "incomplete_groups": incomplete_groups,
         "excluded_groups": excluded,
         "final_ordering": {"rules": ["Maior prazo remanescente", "Menor taxa administrativa total", "Administradora", "Numero do grupo"], "selected_preferences": [], "execution_summary": "Esta e uma ordem preliminar da pre-selecao; ranking definitivo sera aplicado em etapa posterior."},
-        "summary": {"total_loaded": len(groups), "total_analyzed": len(groups), "total_preselected": len(eligible_items), "total_credit_compatible": len(credit_eligible_items), "total_credit_rejected": counters["credit_rejected"], "total_term_income_rejected": counters["term_rejected"], "groups_with_incomplete_data": len(incomplete_groups), "incomplete_field_occurrences": incomplete_field_occurrences, "total_incomplete": len(incomplete_groups), "total_rejected": len(excluded)},
+        "summary": {"total_loaded": len(groups), "total_analyzed": len(groups), "total_preselected": len(eligible_items), "total_credit_compatible": len(credit_eligible_items), "total_credit_rejected": counters["credit_rejected"], "total_term_income_rejected": counters["term_rejected"], "groups_with_incomplete_data": len(incomplete_groups), "incomplete_field_occurrences": incomplete_field_occurrences, "total_rejected": len(excluded)},
+        "schema_notes": {"columns_used": {"official_decision_field": "used_in_decision", "compatibility_field": "used", "compatibility_note": "The used field mirrors used_in_decision for compatibility with prior consumers."}},
         "warnings": [
             {"level": "info", "message": "O/U participa exclusivamente da elegibilidade de crédito. AJ, AK e AL são referências e não aprovam nem eliminam grupos nesta fase."},
             {"level": "info", "message": "As fórmulas de crédito contratado, saldo devedor e prazo são registradas por cenário e por grupo na auditoria."},
