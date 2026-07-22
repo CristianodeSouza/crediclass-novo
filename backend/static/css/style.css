@@ -4173,6 +4173,109 @@ body[data-theme="escuro"] .btn-outline-secondary {
   line-height: 1.45;
 }
 
+.motor360-audit-panel {
+  margin-top: 16px;
+  border: 1px solid var(--border-color, #d9d4cc);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.motor360-audit-panel > summary,
+.motor360-audit-content details > summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.motor360-audit-panel > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+}
+
+.motor360-audit-panel > summary::-webkit-details-marker,
+.motor360-audit-content details > summary::-webkit-details-marker { display: none; }
+
+.motor360-audit-panel summary small {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-muted, #6c757d);
+  font-size: 12px;
+}
+
+.audit-summary-action {
+  color: #ec7b19;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.motor360-audit-content {
+  border-top: 1px solid var(--border-color, #d9d4cc);
+  padding: 14px 16px 16px;
+}
+
+.motor360-audit-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.motor360-audit-meta span {
+  padding: 8px 10px;
+  background: #f7f8fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+.motor360-audit-meta small,
+.motor360-audit-meta b { display: block; }
+.motor360-audit-meta small { color: #6c757d; font-size: 11px; }
+.motor360-audit-meta b { margin-top: 2px; font-size: 12px; }
+.motor360-audit-actions { display: flex; gap: 8px; justify-content: flex-end; margin-bottom: 12px; }
+
+.motor360-audit-content details {
+  border-top: 1px solid #e7e4df;
+  padding: 10px 0;
+}
+
+.motor360-audit-content details > summary { color: #1e4f9a; font-size: 13px; font-weight: 700; }
+.motor360-audit-content details > p { margin: 10px 0 0; font-size: 12px; }
+.motor360-audit-table { margin: 10px 0 0; font-size: 11px; }
+.motor360-audit-table th, .motor360-audit-table td { padding: 7px 8px; vertical-align: top; }
+.motor360-audit-formulas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.motor360-audit-formula { padding: 10px; border: 1px solid #e5e7eb; border-radius: 6px; background: #fbfbfc; font-size: 12px; }
+.motor360-audit-formula strong, .motor360-audit-formula code, .motor360-audit-formula span { display: block; }
+.motor360-audit-formula code { margin: 6px 0; white-space: normal; color: #43515f; font-size: 11px; }
+.motor360-audit-warnings { margin: 10px 0 0; padding-left: 18px; font-size: 12px; }
+.motor360-audit-warnings li { margin: 4px 0; }
+.audit-warning-warning { color: #9a6500; }
+
+.motor360-group-audit-dialog {
+  width: min(760px, calc(100vw - 32px));
+  border: 1px solid #d8dce2;
+  border-radius: 8px;
+  padding: 0;
+  color: #24323d;
+}
+
+.motor360-group-audit-dialog::backdrop { background: rgb(15 23 42 / 48%); }
+.motor360-group-audit-dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px; border-bottom: 1px solid #e5e7eb; }
+.motor360-group-audit-dialog-header h3 { margin: 0; font-size: 17px; }
+.motor360-group-audit-dialog-header p { margin: 4px 0 0; color: #6c757d; font-size: 12px; }
+.motor360-group-audit-scenarios { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 16px 18px; }
+.motor360-group-audit-scenarios article, .motor360-group-audit-alerts { border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; background: #fafbfc; font-size: 12px; }
+.motor360-group-audit-scenarios strong, .motor360-group-audit-scenarios span { display: block; }
+.motor360-group-audit-scenarios span { margin-top: 5px; }
+.motor360-group-audit-alerts { margin: 0 18px 18px; }
+.motor360-group-audit-alerts p { margin: 5px 0 0; }
+
+@media (max-width: 900px) {
+  .motor360-audit-meta, .motor360-audit-formulas { grid-template-columns: 1fr 1fr; }
+  .motor360-group-audit-scenarios { grid-template-columns: 1fr; }
+}
+
 .investor-engine-audit {
   margin: 12px 0 0;
   background: #fffaf0;

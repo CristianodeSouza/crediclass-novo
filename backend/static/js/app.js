@@ -87,7 +87,7 @@ const investorPreferenceFlags = [
   { id: "maior_prazo_remanescente", label: "Maior Prazo Remanescente" },
   { id: "maior_lance_embutido", label: "Maior Lance Embutido" },
 ];
-const investorState = { result: null, preferences: [] };
+const investorState = { result: null, preferences: [], audit: null };
 const HISTORY_START_MONTH = "2024-01";
 const CLIENT_PROFILE_STORAGE_KEY = "crediclass.clientProfile.v1";
 const CLIENT_OBJECTIVE_RULES = {
@@ -2144,7 +2144,7 @@ function applyInvestorPreferences(items, selectedFlags) {
 
 function renderCreditScenarioCell(item) {
   if (Array.isArray(item.cenarios)) {
-    return `<div class="credit-scenario-cell">${item.cenarios.map((scenario) => `<span>${escapeHtml(scenario.label)}: ${formatMoney(scenario.credito_contratado)} - ${scenario.compativel_credito ? "OK" : "não atende"}</span><small>Lance: ${formatPercent(scenario.percentual_lance)} | Saldo: ${formatMoney(scenario.saldo_devedor)} | Prazo após lance: ${scenario.prazo_apos_lance_limite_renda ?? "-"} meses</small>`).join("")}</div>`;
+    return `<div class="credit-scenario-cell">${item.cenarios.map((scenario) => `<span>${escapeHtml(scenario.label)}: ${formatMoney(scenario.credito_contratado)} - ${scenario.credit_compatible ? "OK" : "não atende"}</span><small>Lance: ${formatPercent(scenario.percentual_lance)} | Saldo: ${formatMoney(scenario.saldo_devedor)} | Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</small>`).join("")}</div>`;
   }
   const percent = item.percentual_lance_embutido;
   const withoutStatus = item.compativel_sem_embutido ? "OK" : "nao atende";
@@ -2157,6 +2157,76 @@ function renderCreditScenarioCell(item) {
     ? "Saldo com emb.: indisponivel"
     : `Saldo com emb.: ${formatMoney(item.saldo_devedor_com_embutido)}`;
   return `<div class="credit-scenario-cell"><span>Sem emb.: ${formatMoney(item.credito_necessario_sem_embutido)} - ${withoutStatus}</span><span>${withEmbedded}</span><small>${withoutBalance}</small><small>${withBalance}</small></div>`;
+}
+
+function auditDateTime(value) {
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date.toLocaleString("pt-BR") : "-";
+}
+
+function renderMotor360Audit(audit) {
+  if (!audit) return "";
+  const metadata = audit.metadata || {};
+  const summary = audit.summary || {};
+  const client = audit.client_snapshot || {};
+  const fieldRows = (client.raw_fields || []).map((field) => `
+    <tr><td>${escapeHtml(field.field_name || "-")}</td><td>${escapeHtml(field.technical_name || "-")}</td><td>${escapeHtml(String(field.normalized_value ?? "-"))}</td><td>${escapeHtml(field.source_reference || field.source || "-")}</td></tr>`).join("");
+  const filterRows = (audit.execution_steps || []).map((step) => `
+    <tr><td>${escapeHtml(String(step.order))}</td><td>${escapeHtml(step.name)}</td><td>${escapeHtml(step.formula_or_rule)}</td><td>${step.input_count ?? 0}</td><td>${step.approved_count ?? 0}</td><td>${step.rejected_count ?? 0}</td><td>${step.incomplete_count ?? 0}</td></tr>`).join("");
+  const columnRows = (audit.columns_used || []).map((column) => `<tr><td>${escapeHtml(column.column)}</td><td>${escapeHtml(column.header)}</td><td>${escapeHtml(column.technical_field)}</td><td>${escapeHtml(column.purpose)}</td></tr>`).join("");
+  const formulaRows = (audit.formulas || []).map((formula) => `<article class="motor360-audit-formula"><strong>${escapeHtml(formula.name)}</strong><code>${escapeHtml(formula.expression)}</code><span>Resultado: ${escapeHtml(String(formula.result ?? "calculado por grupo"))}</span></article>`).join("");
+  const excluded = audit.excluded_groups || [];
+  const excludedRows = excluded.map((item) => `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${escapeHtml(item.reason)}</td><td>${escapeHtml(item.detail)}</td></tr>`).join("");
+  const warnings = (audit.warnings || []).map((warning) => `<li class="audit-warning-${escapeHtml(warning.level || "info")}">${escapeHtml(warning.message)}</li>`).join("");
+  return `
+    <details class="motor360-audit-panel">
+      <summary><span><strong>Auditoria da Análise</strong><small>Entenda como o Motor 360 chegou aos grupos exibidos.</small></span><span class="audit-summary-action">Exibir auditoria completa</span></summary>
+      <div class="motor360-audit-content">
+        <div class="motor360-audit-meta">
+          <span><small>Execução</small><b>${auditDateTime(metadata.completed_at)}</b></span>
+          <span><small>Identificador</small><b>${escapeHtml(metadata.audit_id || "-")}</b></span>
+          <span><small>Duração</small><b>${escapeHtml(String(metadata.duration_ms ?? 0))} ms</b></span>
+          <span><small>Motor</small><b>${escapeHtml(metadata.engine_version || "-")}</b></span>
+        </div>
+        <div class="motor360-audit-actions"><a class="btn btn-outline-secondary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}" target="_blank" rel="noopener">Exportar JSON</a><a class="btn btn-outline-secondary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}/exportar.md">Exportar Markdown</a></div>
+        <details open><summary>1. Dados recebidos e consolidados</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Campo</th><th>Técnico</th><th>Valor usado</th><th>Origem</th></tr></thead><tbody>${fieldRows}</tbody></table></div></details>
+        <details><summary>2. Base e colunas utilizadas</summary><p>Origem: <strong>${escapeHtml(audit.data_source?.source_name || "-")}</strong> | Modo: <strong>${escapeHtml(audit.data_source?.current_or_historical || "-")}</strong> | Linhas lidas: <strong>${audit.data_source?.total_rows ?? 0}</strong></p><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Coluna</th><th>Campo</th><th>Técnico</th><th>Uso</th></tr></thead><tbody>${columnRows}</tbody></table></div></details>
+        <details><summary>3. Sequência de filtros</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>#</th><th>Filtro</th><th>Regra</th><th>Entrada</th><th>Aprovados</th><th>Eliminados</th><th>Incompletos</th></tr></thead><tbody>${filterRows}</tbody></table></div></details>
+        <details><summary>4. Fórmulas e cálculos</summary><div class="motor360-audit-formulas">${formulaRows}</div></details>
+        <details><summary>5. Ordenação e resultado final</summary><ol>${(audit.final_ordering?.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ol><p>Compatíveis por crédito: <strong>${summary.total_credit_compatible ?? 0}</strong> | Incompletos: <strong>${summary.total_incomplete ?? 0}</strong> | Excluídos: <strong>${summary.total_rejected ?? 0}</strong></p></details>
+        <details><summary>6. Grupos excluídos e motivos (${excluded.length})</summary>${excluded.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th><th>Detalhe</th></tr></thead><tbody>${excludedRows}</tbody></table></div>` : "<p>Nenhum grupo foi excluído.</p>"}</details>
+        <details><summary>7. Alertas e regras pendentes</summary><ul class="motor360-audit-warnings">${warnings}</ul></details>
+      </div>
+    </details>`;
+}
+
+function renderMotor360GroupAudit(groupId) {
+  const audit = investorState.audit;
+  if (!audit) return;
+  const entry = (audit.group_results || []).find((item) => String(item.grupo) === String(groupId));
+  if (!entry) return;
+  document.getElementById("motor360GroupAuditDialog")?.remove();
+  const scenarios = (entry.scenarios || []).map((scenario) => `<article><strong>${escapeHtml(scenario.label)}</strong><span>Crédito contratado: ${formatMoney(scenario.credito_contratado)}</span><span>Lance total: ${formatMoney(scenario.lance_total)} (${formatPercent(scenario.percentual_lance)})</span><span>Saldo devedor: ${formatMoney(scenario.saldo_devedor)}</span><span>Prazo: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</span></article>`).join("");
+  const dialog = document.createElement("dialog");
+  dialog.id = "motor360GroupAuditDialog";
+  dialog.className = "motor360-group-audit-dialog";
+  dialog.innerHTML = `<div class="motor360-group-audit-dialog-header"><div><h3>Justificativa do grupo ${escapeHtml(entry.grupo)}</h3><p>${escapeHtml(entry.administradora || "-")} · Resultado: ${escapeHtml(entry.result || "-")} · Ranking ${escapeHtml(String(entry.ranking || "-"))}</p></div><button class="btn btn-outline-secondary btn-sm" type="button">Fechar</button></div><div class="motor360-group-audit-scenarios">${scenarios}</div><div class="motor360-group-audit-alerts"><strong>Alertas</strong><p>${escapeHtml((entry.justification || []).join(", ") || "Nenhum alerta registrado.")}</p></div>`;
+  dialog.querySelector("button")?.addEventListener("click", () => dialog.close());
+  dialog.addEventListener("close", () => dialog.remove());
+  document.body.append(dialog);
+  dialog.showModal();
+}
+
+async function loadMotor360Audit(auditId) {
+  if (!auditId) return;
+  try {
+    const response = await fetch(`/api/viabilidade-360/auditorias/${encodeURIComponent(auditId)}`, { credentials: "same-origin" });
+    if (!response.ok) throw new Error("Auditoria não encontrada.");
+    investorState.audit = await response.json();
+    if (investorState.result) renderInvestorAnalysis(investorState.result);
+  } catch (error) {
+    showToast(error.message || "Não foi possível carregar a auditoria.", "warning");
+  }
 }
 
 function renderInvestorAnalysis(result) {
@@ -2181,7 +2251,7 @@ function renderInvestorAnalysis(result) {
   )).join("");
   status.textContent = `${items.length} grupos viáveis exibidos`;
   if (!items.length) {
-    results.innerHTML = `<div class="table-state">Nenhum grupo possui uma faixa de crédito compatível com os cenários calculados.</div>`;
+    results.innerHTML = `<div class="table-state">Nenhum grupo possui uma faixa de crédito compatível com os cenários calculados.</div>${renderMotor360Audit(investorState.audit)}`;
     setInvestorAnalysisState("results");
     return;
   }
@@ -2191,7 +2261,7 @@ function renderInvestorAnalysis(result) {
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">
-        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Faixa de crédito</th><th>Cenários financeiros</th><th>Parcela de referência</th><th>Prazo restante</th><th>Melhor contemplação</th><th>Status</th></tr></thead>
+        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Faixa de crédito</th><th>Cenários financeiros</th><th>Parcela de referência</th><th>Prazo restante</th><th>Melhor contemplação</th><th>Status</th><th>Auditoria</th></tr></thead>
         <tbody>${items.map((item) => `
           <tr>
             <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
@@ -2203,11 +2273,14 @@ function renderInvestorAnalysis(result) {
             <td>${escapeHtml(String(item.prazo_remanescente ?? "-"))}</td>
             <td>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</td>
             <td><span class="investor-distance ${item.recommendable ? "" : "investor-distance-sem-referencia"}">${item.recommendable ? "Recomendável" : item.data_completeness === "incomplete" ? "Dados incompletos" : "Compatível por crédito"}</span></td>
+            <td><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${escapeHtml(item.grupo || item.grupo_id || "")}">Ver justificativa</button></td>
           </tr>`).join("")}</tbody>
       </table>
     </div>
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
+    ${renderMotor360Audit(investorState.audit)}
   `;
+  results.querySelectorAll(".motor360-group-audit-btn").forEach((button) => button.addEventListener("click", () => renderMotor360GroupAudit(button.dataset.groupId)));
   setInvestorAnalysisState("results");
 }
 
@@ -2258,7 +2331,9 @@ async function loadInvestorAnalysis() {
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "Falha ao calcular a viabilidade dos grupos.");
     investorState.result = result;
+    investorState.audit = null;
     renderInvestorAnalysis(result);
+    loadMotor360Audit(result.audit_id);
   } catch (error) {
     status.textContent = "Erro no cálculo";
     setInvestorAnalysisState("error");

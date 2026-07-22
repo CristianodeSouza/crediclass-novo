@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import math
 import re
+import time
+from datetime import datetime, timezone
 from decimal import Decimal, ROUND_HALF_UP
 from typing import Any
 
 from .credit_liquidity import build_credit_liquidity_scenarios, normalize_cost_percent
+from .config import get_settings
+from .motor360_auditoria import new_audit_id
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
@@ -92,6 +96,7 @@ def _scenario(base: dict[str, Any], identifier: str, credit_min: Decimal | None,
 
 
 def analyze_client_consortium_viability(payload: Any, groups: list[dict[str, Any]], commitment_percent: float = 0.30, mode: str = "current") -> dict[str, Any]:
+    started_at, started_clock = datetime.now(timezone.utc), time.perf_counter()
     desired = _decimal(getattr(payload, "credito_desejado", 0))
     own, fgts = _decimal(getattr(payload, "lance_proprio", 0)) or Decimal(0), _decimal(getattr(payload, "fgts", 0)) or Decimal(0)
     income, desired_installment = _decimal(getattr(payload, "renda_total", 0)) or Decimal(0), _decimal(getattr(payload, "parcela_desejada", 0) or getattr(payload, "parcela_ideal", 0)) or Decimal(0)
@@ -105,17 +110,25 @@ def analyze_client_consortium_viability(payload: Any, groups: list[dict[str, Any
     objective, preference = str(getattr(payload, "objetivo", "") or ""), map_declared_objective_to_preference(str(getattr(payload, "objetivo", "") or ""))
     explicit_type = bool(getattr(payload, "tipo_bem_explicit", False))
     requested_type = str(getattr(payload, "tipo_bem", "") or "") if explicit_type else ""
-    items, counters = [], {"ativos": 0, "inativos": 0, "status_incompleto": 0, "tipo_incompativel": 0, "credito_incompativel": 0, "dados_incompletos": 0}
+    items, excluded_groups = [], []
+    counters = {"ativos": 0, "inativos": 0, "status_incompleto": 0, "tipo_incompativel": 0, "credito_incompativel": 0, "dados_incompletos": 0}
     for group in groups:
+        group_ref = {"grupo": str(group.get("grupo") or group.get("grupo_id") or "-"), "administradora": str(group.get("administradora") or "-")}
         allowed, status_kind = _active_status(group.get("status"))
         if not allowed:
-            counters["status_incompleto" if status_kind == "incomplete" else "inativos"] += 1; continue
+            counters["status_incompleto" if status_kind == "incomplete" else "inativos"] += 1
+            excluded_groups.append({**group_ref, "reason": "status_nao_informado" if status_kind == "incomplete" else "status_inativo", "detail": f"Status recebido: {group.get('status') or '-'}"})
+            continue
         counters["ativos"] += 1
         if explicit_type and not compatible_tipo_bem("", str(group.get("tipo_bem") or ""), requested_type):
-            counters["tipo_incompativel"] += 1; continue
+            counters["tipo_incompativel"] += 1
+            excluded_groups.append({**group_ref, "reason": "tipo_bem_incompativel", "detail": f"Tipo solicitado: {requested_type}; grupo: {group.get('tipo_bem') or '-'}"})
+            continue
         minimum, maximum = _decimal(group.get("credito_minimo")), _decimal(group.get("credito_maximo"))
         if maximum is None or maximum <= 0:
-            counters["credito_incompativel"] += 1; continue
+            counters["credito_incompativel"] += 1
+            excluded_groups.append({**group_ref, "reason": "credito_maximo_invalido", "detail": "Coluna U sem crédito máximo positivo."})
+            continue
         raw_fee, raw_fund = group.get("taxa_adm"), group.get("fundo_reserva")
         fee = Decimal(str(normalize_cost_percent(raw_fee))) if raw_fee not in (None, "") else None
         fund = Decimal(str(normalize_cost_percent(raw_fund))) if raw_fund not in (None, "") else None
@@ -123,7 +136,10 @@ def analyze_client_consortium_viability(payload: Any, groups: list[dict[str, Any
         term = int(_decimal(group.get("prazo_remanescente")) or 0) or None
         scenarios = [item for item in (_scenario(base, "without_embedded", minimum, maximum, fee, fund, desired_installment, income_limit, term), _scenario(base, "with_embedded", minimum, maximum, fee, fund, desired_installment, income_limit, term)) if item]
         credit_scenarios = [item for item in scenarios if item["credit_compatible"]]
-        if not credit_scenarios: counters["credito_incompativel"] += 1; continue
+        if not credit_scenarios:
+            counters["credito_incompativel"] += 1
+            excluded_groups.append({**group_ref, "reason": "credito_fora_da_faixa", "detail": f"Faixa de crédito: {minimum or '-'} a {maximum}."})
+            continue
         incomplete_fields = [field for field, value in (("taxa_administracao", fee), ("fundo_reserva", fund), ("prazo_remanescente", term)) if value is None]
         financial_complete = not incomplete_fields
         if not financial_complete: counters["dados_incompletos"] += 1
@@ -143,4 +159,21 @@ def analyze_client_consortium_viability(payload: Any, groups: list[dict[str, Any
         return (not item["financial_data_complete"], not item["recommendable"], not both, not item["installment_affordable_reference"], not item["term_compatible"], not item["destaque_preferencia"], margin, number)
     items.sort(key=key)
     for rank, item in enumerate(items, 1): item["ranking"] = rank
-    return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "cliente": {"credito_liquido_desejado": _money(desired), "own_resources_total": _money(own), "own_resources_source": own_source, "own_resources_conflict": conflict, "fgts": _money(fgts), "renda_total": _money(income), "parcela_desejada": _money(desired_installment), "parcela_maxima": _money(income_limit), "percentual_comprometimento": commitment_percent, "tipo_bem_source": "explicit" if explicit_type else "not_provided"}, "total_grupos_analisados": len(groups), "total_grupos_viaveis": len(items), "contadores": counters, "passos": ["Base atual carregada em modo current.", "Objetivo declarado é preferência e não elimina estratégias.", "Cenários são avaliados sem e com embutido, com crédito na faixa O/U.", "AJ é parcela de referência e não aprova financeiramente o cenário.", "Seguro e idade permanecem não analisados."], "items": items}
+    client = {"credito_liquido_desejado": _money(desired), "own_resources_total": _money(own), "own_resources_source": own_source, "own_resources_conflict": conflict, "fgts": _money(fgts), "renda_total": _money(income), "parcela_desejada": _money(desired_installment), "parcela_maxima": _money(income_limit), "percentual_comprometimento": commitment_percent, "tipo_bem_source": "explicit" if explicit_type else "not_provided"}
+    completed_at = datetime.now(timezone.utc)
+    settings = get_settings()
+    active_after_type = counters["ativos"] - counters["tipo_incompativel"]
+    audit = {
+        "metadata": {"audit_id": new_audit_id(completed_at), "analysis_id": None, "study_id": None, "client_id": None, "started_at": started_at.isoformat(), "completed_at": completed_at.isoformat(), "duration_ms": round((time.perf_counter() - started_clock) * 1000, 2), "engine_version": "3.0.0", "rules_version": "motor-360-v1", "application_version": settings.version, "environment": settings.environment, "executed_by_user_id": None, "executed_by_user_name": None, "data_source_version": None},
+        "client_snapshot": {"raw_fields": [{"field_name": key, "technical_name": key, "raw_value": getattr(payload, key, None), "normalized_value": value, "source": "client_profile", "source_reference": "Perfil do Cliente", "transformation": "Normalização monetária" if isinstance(value, (int, float)) else None, "validation_status": "valid", "warnings": []} for key, value in client.items()], "consolidated_values": client, "participants": getattr(payload, "titulares", []) or []},
+        "data_source": {"source_name": "Mapa de Grupos", "current_or_historical": "historical" if mode == "historical_audit" else "current", "loaded_at": completed_at.isoformat(), "total_rows": len(groups), "source_version": None},
+        "columns_used": [{"column": column, "header": header, "technical_field": field, "purpose": purpose, "used": True} for column, header, field, purpose in [("A", "Administradora", "administradora", "Identificação"), ("B", "Grupo", "grupo", "Identificação e desempate"), ("C", "Tipo de bem", "tipo_bem", "Filtro opcional"), ("F", "Prazo remanescente", "prazo_remanescente", "Cálculo de prazo"), ("O", "Crédito mínimo", "credito_minimo", "Limite inferior"), ("U", "Crédito máximo", "credito_maximo", "Limite superior"), ("X", "Lance embutido", "percentual_lance_embutido", "Cenário com embutido"), ("AA", "Fundo de reserva", "fundo_reserva", "Saldo devedor"), ("AC", "Taxa ADM", "taxa_adm", "Saldo devedor"), ("AJ", "Parcela inicial", "parcela_inicial_grupo", "Referência de ordenação"), ("BL", "Lance investidor", "lance_investidor", "Estratégia longo prazo"), ("BM", "Lance conservador", "lance_conservador_24m", "Estratégia 24 meses"), ("BN", "Lance moderado", "lance_moderado_12m", "Estratégia 12 meses"), ("BO", "Lance rápido", "lance_agressivo_6m", "Estratégia 6 meses"), ("BP", "Lance urgente", "lance_super_agressivo_3m", "Estratégia 3 meses")] ],
+        "execution_steps": [{"order": 1, "id": "status", "name": "Status do grupo", "description": "Mantém somente grupos ativos.", "formula_or_rule": "status normalizado = Ativo", "fields_used": ["status"], "columns_used": [], "input_count": len(groups), "approved_count": counters["ativos"], "rejected_count": counters["inativos"] + counters["status_incompleto"], "incomplete_count": counters["status_incompleto"], "duration_ms": 0, "rejection_reasons": {"status_inativo": counters["inativos"], "status_nao_informado": counters["status_incompleto"]}}, {"order": 2, "id": "tipo_bem", "name": "Tipo de bem", "description": "Filtro somente quando declarado explicitamente.", "formula_or_rule": "compatibilidade de tipo quando tipo_bem_explicit = true", "fields_used": ["tipo_bem"], "columns_used": ["C"], "input_count": counters["ativos"], "approved_count": active_after_type, "rejected_count": counters["tipo_incompativel"], "incomplete_count": 0, "duration_ms": 0, "rejection_reasons": {"tipo_bem_incompativel": counters["tipo_incompativel"]}}, {"order": 3, "id": "credito", "name": "Compatibilidade de crédito", "description": "Avalia cenários sem e com embutido na faixa O/U.", "formula_or_rule": "O <= crédito contratado <= U, quando O informado; crédito contratado <= U quando O ausente", "fields_used": ["credito_minimo", "credito_maximo", "percentual_lance_embutido"], "columns_used": ["O", "U", "X"], "input_count": active_after_type, "approved_count": len(items), "rejected_count": counters["credito_incompativel"], "incomplete_count": 0, "duration_ms": 0, "rejection_reasons": {"credito_incompativel": counters["credito_incompativel"]}}, {"order": 4, "id": "dados_financeiros", "name": "Completude financeira", "description": "Taxa ADM, fundo de reserva e prazo restante são exigidos para cálculo completo.", "formula_or_rule": "AC, AA e F devem estar preenchidas", "fields_used": ["taxa_adm", "fundo_reserva", "prazo_remanescente"], "columns_used": ["AC", "AA", "F"], "input_count": len(items), "approved_count": len(items) - counters["dados_incompletos"], "rejected_count": 0, "incomplete_count": counters["dados_incompletos"], "duration_ms": 0, "rejection_reasons": {}}],
+        "formulas": [{"id": "credito_sem_embutido", "name": "Crédito contratado sem embutido", "expression": "crédito desejado + recurso próprio + FGTS", "inputs": {"credito_desejado": _money(desired), "recurso_proprio": _money(own), "fgts": _money(fgts)}, "result": _money(desired + own + fgts), "rounding_rule": "Decimal para 2 casas, ROUND_HALF_UP"}, {"id": "parcela_limite", "name": "Parcela máxima pela renda", "expression": "parcela limite informada ou renda total x 30%", "inputs": {"renda_total": _money(income), "percentual": commitment_percent}, "result": _money(income_limit), "rounding_rule": "Decimal para 2 casas, ROUND_HALF_UP"}, {"id": "saldo_devedor", "name": "Saldo devedor por cenário", "expression": "crédito contratado + (crédito x taxa ADM) + (crédito x fundo de reserva)", "inputs": {}, "result": None, "rounding_rule": "Decimal para 2 casas, ROUND_HALF_UP"}],
+        "group_results": [{"grupo": item["grupo"], "administradora": item["administradora"], "result": "incompleto" if item["data_completeness"] == "incomplete" else "compativel_por_credito", "justification": item["alerts"], "scenarios": item["cenarios"], "ranking": item["ranking"], "source_values": {"credito_minimo": item["credito_minimo"], "credito_maximo": item["credito_maximo"], "prazo_remanescente": item["prazo_remanescente"], "parcela_inicial_referencia": item["reference_installment"]}} for item in items],
+        "excluded_groups": excluded_groups,
+        "final_ordering": {"rules": ["Dados financeiros completos", "Cenário recomendável", "Compatibilidade nos dois cenários", "Parcela AJ dentro do limite de renda como referência", "Compatibilidade de prazo", "Preferência declarada", "Menor margem de crédito", "Número do grupo"], "selected_preferences": []},
+        "summary": {"total_loaded": len(groups), "total_analyzed": len(groups), "total_recommended": sum(1 for item in items if item["recommendable"]), "total_credit_compatible": len(items), "total_incomplete": counters["dados_incompletos"], "total_rejected": len(excluded_groups)},
+        "warnings": [{"level": "warning", "message": "Parcela da coluna AJ é somente referência até a seleção da carta."}, {"level": "info", "message": "Seguro e idade ainda não são critérios de aprovação nesta fase."}],
+    }
+    return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_viaveis": len(items), "contadores": counters, "passos": ["Base atual carregada em modo current.", "Objetivo declarado é preferência e não elimina estratégias.", "Cenários são avaliados sem e com embutido, com crédito na faixa O/U.", "AJ é parcela de referência e não aprova financeiramente o cenário.", "Seguro e idade permanecem não analisados."], "items": items, "audit": audit}

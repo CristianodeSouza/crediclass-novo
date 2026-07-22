@@ -9,10 +9,11 @@ import time
 from typing import Annotated
 
 from fastapi import FastAPI, Query, Request, Response
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from .auditoria import list_auditoria, record_auditoria
+from .motor360_auditoria import audit_to_markdown, get_motor360_audit, save_motor360_audit
 from .administrator_feasibility import analyze_administradoras
 from .administrator_rules import normalize_admin_name, rules_by_administradora
 from .config import get_settings
@@ -535,12 +536,32 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest):
     logger.info("POST /api/viabilidade-360/analisar credito=%s", payload.credito_desejado)
     try:
         groups = list_grupos(include_history=payload.base_mode == "historical_audit")
-        return analyze_client_consortium_viability(payload, groups, mode=payload.base_mode)
+        result = analyze_client_consortium_viability(payload, groups, mode=payload.base_mode)
+        audit = save_motor360_audit(result.pop("audit"))
+        result["audit_id"] = audit["metadata"]["audit_id"]
+        return result
     except ValueError as error:
         return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
     except Exception as error:
         logger.exception("Erro no motor 360 de viabilidade")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+
+@app.get("/api/viabilidade-360/auditorias/{audit_id}")
+def viabilidade_360_auditoria(audit_id: str):
+    audit = get_motor360_audit(audit_id)
+    if audit is None:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Auditoria não encontrada."})
+    return audit
+
+
+@app.get("/api/viabilidade-360/auditorias/{audit_id}/exportar.md")
+def viabilidade_360_auditoria_markdown(audit_id: str):
+    audit = get_motor360_audit(audit_id)
+    if audit is None:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Auditoria não encontrada."})
+    headers = {"Content-Disposition": f'attachment; filename="{audit_id}.md"'}
+    return PlainTextResponse(audit_to_markdown(audit), headers=headers)
 
 
 @app.post("/api/auth/login")
