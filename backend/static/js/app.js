@@ -2256,7 +2256,7 @@ function renderInvestorAnalysis(result) {
     ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
     ["Estratégia declarada", result.preferencia_declarada === "investment" ? "Investimento" : result.preferencia_declarada || "Não classificada"],
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
-    ["Viáveis por crédito", result.total_grupos_viaveis ?? 0],
+    ["Grupos elegíveis", result.total_grupos_viaveis ?? 0],
     ["Dados incompletos", totals.dados_incompletos ?? 0],
     ["Grupos exibidos", items.length],
   ];
@@ -2265,13 +2265,13 @@ function renderInvestorAnalysis(result) {
   )).join("");
   status.textContent = `${items.length} grupos viáveis exibidos`;
   if (!items.length) {
-    results.innerHTML = `<div class="table-state">Nenhum grupo possui uma faixa de crédito compatível com os cenários calculados.</div>${renderMotor360Audit(investorState.audit)}`;
+    results.innerHTML = `<div class="table-state">Nenhum grupo atende simultaneamente aos critérios de crédito, prazo, renda e lance.</div>${renderMotor360Audit(investorState.audit)}`;
     setInvestorAnalysisState("results");
     return;
   }
   results.innerHTML = `
     <div class="investor-engine-note">
-      <strong>Grupos preliminarmente compatíveis pelo crédito:</strong> o objetivo do cliente é preferência, não bloqueio. Crédito é validado por cenário na faixa O a U. AJ é apenas parcela de referência até a seleção da carta exata; taxa (AC), fundo (AA) e prazo (F) precisam estar completos para uma recomendação financeira.
+      <strong>Grupos elegíveis pelo Motor 360:</strong> o objetivo do cliente é preferência, não bloqueio. Cada cenário independente precisa preservar o crédito líquido e atender à faixa O/U, ao prazo F, à capacidade de renda e a uma faixa de lance BL:BP. AJ, AK e AL são apenas referências até a seleção da carta exata.
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">

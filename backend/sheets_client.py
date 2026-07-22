@@ -42,8 +42,10 @@ SUMMARY_FIELDS = [
     "tipo_bem",
     "credito_minimo",
     "credito_maximo",
+    "indexador",
     "taxa_adm",
     "fundo_reserva",
+    "fundo_reserva_ano",
     "modalidades_assembleia",
     "base_calculo_embutido",
     "modalidades_embutido",
@@ -62,6 +64,12 @@ SUMMARY_FIELDS = [
     "fgts",
     "percentual_lance_embutido",
     "percentual_lance_fixo",
+    # BL:BP are the official historical thresholds used by Motor 360.
+    "lance_investidor",
+    "lance_conservador_24m",
+    "lance_moderado_12m",
+    "lance_agressivo_6m",
+    "lance_super_agressivo_3m",
     "lance_super_conservador",
     "lance_conservador",
     "lance_moderado",
@@ -86,11 +94,13 @@ MAPA_GRUPOS_COLUMN_INDEXES = {
     "aliquota_seguro": 13,  # N
     "credito_minimo": 14,  # O
     "credito_maximo": 20,  # U
+    "indexador": 21,  # V
     "modalidades_assembleia": 22,  # W
     "percentual_lance_embutido": 23,  # X
     "base_calculo_embutido": 24,  # Y
     "modalidades_embutido": 25,  # Z
     "fundo_reserva": 26,  # AA
+    "fundo_reserva_ano": 27,  # AB
     "taxa_adm": 28,  # AC
     "taxa_adm_ano": 29,  # AD
     "parcela_inicial_grupo": 35,  # AJ
@@ -156,9 +166,11 @@ FIELD_ALIASES = {
     "tipo_bem": ["tipo de bem", "tipo bem", "bem", "segmento", "categoria bem"],
     "credito_minimo": ["credito minimo", "menor credito", "credito min", "carta minima", "valor minimo"],
     "credito_maximo": ["credito maximo", "maior credito", "credito max", "carta maxima", "valor maximo"],
+    "indexador": ["indexador"],
     "taxa_adm": ["taxa administracao", "taxa adm", "taxa adm original", "taxa de administracao", "taxa administrativa", "tx adm", "tx administracao"],
     "taxa_adm_ano": ["taxa administracao ao ano", "taxa adm ao ano", "taxa adm ano", "taxa anual administracao"],
     "fundo_reserva": ["fundo reserva", "fundo de reserva", "fundo rsv"],
+    "fundo_reserva_ano": ["fundo reserva ao ano", "fundo rsv ao ano"],
     "modalidades_assembleia": ["assembleias modalidades", "modalidades assembleia", "permite participar do lance fixo fidelidade e livre"],
     "base_calculo_embutido": ["base calculo embutido", "calculo do embutido", "lance embutido calculo"],
     "modalidades_embutido": ["modalidades embutido", "permite utilizar em quais modalidades"],
@@ -960,9 +972,11 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "tipo_bem": clean_text(get_field(row, "tipo_bem")),
         "credito_minimo": parse_credit(get_field(row, "credito_minimo")),
         "credito_maximo": parse_credit(get_field(row, "credito_maximo")),
+        "indexador": clean_text(get_optional_field(row, "indexador")),
         "taxa_adm": parse_percent(get_field(row, "taxa_adm")),
         "taxa_adm_ano": parse_percent(get_optional_field(row, "taxa_adm_ano")),
         "fundo_reserva": parse_percent(get_optional_field(row, "fundo_reserva")),
+        "fundo_reserva_ano": parse_percent(get_optional_field(row, "fundo_reserva_ano")),
         "modalidades_assembleia": clean_text(get_optional_field(row, "modalidades_assembleia")),
         "base_calculo_embutido": clean_text(get_optional_field(row, "base_calculo_embutido")),
         "modalidades_embutido": clean_text(get_optional_field(row, "modalidades_embutido")),
