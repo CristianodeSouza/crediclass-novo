@@ -130,7 +130,16 @@ def analyze_client_consortium_viability(
     """Execute the single Motor 360 flow from RFC 001 and Architecture v4.0."""
     started_at, started_clock = datetime.now(timezone.utc), time.perf_counter()
     desired = parse_decimal(getattr(payload, "credito_desejado", None))
-    own = parse_decimal(getattr(payload, "lance_proprio", None)) or parse_decimal(getattr(payload, "lance_proprio_participantes", None)) or parse_decimal(getattr(payload, "lance_proprio_manual", None)) or parse_decimal(0)
+    participants = parse_decimal(getattr(payload, "lance_proprio_participantes", None))
+    manual = parse_decimal(getattr(payload, "lance_proprio_manual", None))
+    declared_own = parse_decimal(getattr(payload, "lance_proprio", None))
+    own_source = str(getattr(payload, "own_resources_source", "") or "").strip().lower()
+    if own_source == "participants":
+        own = participants if participants is not None else (declared_own or parse_decimal(0))
+    elif own_source == "manual":
+        own = manual if manual is not None else (declared_own or parse_decimal(0))
+    else:
+        own = declared_own or participants or manual or parse_decimal(0)
     fgts = parse_decimal(getattr(payload, "fgts", None)) or parse_decimal(0)
     income = parse_decimal(getattr(payload, "renda_total", None))
     desired_installment = parse_decimal(getattr(payload, "parcela_desejada", None)) or parse_decimal(getattr(payload, "parcela_ideal", None))
@@ -146,9 +155,12 @@ def analyze_client_consortium_viability(
     if income_limit <= 0:
         raise ValueError("parcela_maxima_invalida")
 
-    manual = parse_decimal(getattr(payload, "lance_proprio_manual", None))
-    participants = parse_decimal(getattr(payload, "lance_proprio_participantes", None))
-    if manual is not None and participants is not None and manual != participants:
+    if (
+        own_source not in {"participants", "manual"}
+        and manual is not None
+        and participants is not None
+        and manual != participants
+    ):
         raise ValueError("conflito_recurso_proprio")
 
     objective = str(getattr(payload, "objetivo", "") or "")

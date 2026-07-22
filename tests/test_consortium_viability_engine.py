@@ -122,6 +122,18 @@ class Motor360RfcTest(unittest.TestCase):
         ])
         self.assertEqual([item["grupo"] for item in result["items"]], ["auto"])
 
+    def test_participant_resources_are_used_when_manual_field_is_zero(self):
+        result = analyze_client_consortium_viability(
+            payload(
+                lance_proprio=100000,
+                lance_proprio_participantes=100000,
+                lance_proprio_manual=0,
+                own_resources_source="participants",
+            ),
+            [group(percentual_lance_embutido=None)],
+        )
+        self.assertEqual(result["cliente"]["own_resources_total"], 100000.0)
+
     def test_percent_normalization_preserves_null_and_accepts_brazilian_formats(self):
         self.assertIsNone(normalize_percent(None))
         self.assertEqual(float(normalize_percent("52,25")), 0.5225)
