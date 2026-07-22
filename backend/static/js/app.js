@@ -2164,6 +2164,19 @@ function auditDateTime(value) {
   return date && !Number.isNaN(date.getTime()) ? date.toLocaleString("pt-BR") : "-";
 }
 
+function formatMotor360Reason(reason) {
+  const labels = {
+    prazo_restante_nao_informado: "Prazo restante não informado",
+    taxa_administracao_nao_informada: "Taxa de administração não informada",
+    fundo_reserva_nao_informado: "Fundo de reserva não informado",
+    faixas_contemplacao_inconsistentes: "Faixas de lance incompletas ou inconsistentes",
+    percentual_x_ausente: "Percentual de lance embutido não informado",
+    percentual_x_zero: "Percentual de lance embutido igual a zero",
+    percentual_x_invalido: "Percentual de lance embutido inválido",
+  };
+  return labels[reason] || String(reason || "-").replaceAll("_", " ");
+}
+
 function renderMotor360Audit(audit) {
   if (!audit) return "";
   const metadata = audit.metadata || {};
@@ -2193,7 +2206,7 @@ function renderMotor360Audit(audit) {
         <details><summary>2. Base e colunas utilizadas</summary><p>Origem: <strong>${escapeHtml(audit.data_source?.source_name || "-")}</strong> | Modo: <strong>${escapeHtml(audit.data_source?.current_or_historical || "-")}</strong> | Linhas lidas: <strong>${audit.data_source?.total_rows ?? 0}</strong></p><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Coluna</th><th>Campo</th><th>Técnico</th><th>Uso</th></tr></thead><tbody>${columnRows}</tbody></table></div></details>
         <details><summary>3. Sequência de filtros</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>#</th><th>Filtro</th><th>Regra</th><th>Entrada</th><th>Aprovados</th><th>Eliminados</th><th>Incompletos</th></tr></thead><tbody>${filterRows}</tbody></table></div></details>
         <details><summary>4. Fórmulas e cálculos</summary><div class="motor360-audit-formulas">${formulaRows}</div></details>
-        <details><summary>5. Ordenação e resultado final</summary><ol>${(audit.final_ordering?.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ol><p>Compatíveis por crédito: <strong>${summary.total_credit_compatible ?? 0}</strong> | Incompletos: <strong>${summary.total_incomplete ?? 0}</strong> | Excluídos: <strong>${summary.total_rejected ?? 0}</strong></p></details>
+        <details><summary>5. Ordenação e resultado final</summary><p>${escapeHtml(audit.final_ordering?.execution_summary || "")}</p><ol>${(audit.final_ordering?.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ol><p>Compatíveis por crédito: <strong>${summary.total_credit_compatible ?? 0}</strong> | Incompletos: <strong>${summary.total_incomplete ?? 0}</strong> | Excluídos: <strong>${summary.total_rejected ?? 0}</strong></p></details>
         <details><summary>6. Grupos excluídos e motivos (${excluded.length})</summary>${excluded.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th><th>Detalhe</th></tr></thead><tbody>${excludedRows}</tbody></table></div>` : "<p>Nenhum grupo foi excluído.</p>"}</details>
         <details><summary>7. Alertas e regras pendentes</summary><ul class="motor360-audit-warnings">${warnings}</ul></details>
       </div>
@@ -2206,11 +2219,12 @@ function renderMotor360GroupAudit(groupId) {
   const entry = (audit.group_results || []).find((item) => String(item.grupo) === String(groupId));
   if (!entry) return;
   document.getElementById("motor360GroupAuditDialog")?.remove();
-  const scenarios = (entry.scenarios || []).map((scenario) => `<article><strong>${escapeHtml(scenario.label)}</strong><span>Crédito contratado: ${formatMoney(scenario.credito_contratado)}</span><span>Lance total: ${formatMoney(scenario.lance_total)} (${formatPercent(scenario.percentual_lance)})</span><span>Saldo devedor: ${formatMoney(scenario.saldo_devedor)}</span><span>Prazo: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</span></article>`).join("");
+  const scenarios = (entry.scenarios || []).map((scenario) => `<article><strong>${escapeHtml(scenario.label)}</strong><span>Status: ${scenario.creation_status === "not_created" ? formatMotor360Reason(scenario.creation_reason) : "calculado"}</span><span>Crédito contratado: ${formatMoney(scenario.credito_contratado)}</span><span>Lance total: ${formatMoney(scenario.lance_total)} (${formatPercent(scenario.percentual_lance)})</span><span>Saldo devedor: ${formatMoney(scenario.saldo_devedor)}</span><span>Prazo: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</span></article>`).join("");
   const dialog = document.createElement("dialog");
   dialog.id = "motor360GroupAuditDialog";
   dialog.className = "motor360-group-audit-dialog";
-  dialog.innerHTML = `<div class="motor360-group-audit-dialog-header"><div><h3>Justificativa do grupo ${escapeHtml(entry.grupo)}</h3><p>${escapeHtml(entry.administradora || "-")} · Resultado: ${escapeHtml(entry.result || "-")} · Ranking ${escapeHtml(String(entry.ranking || "-"))}</p></div><button class="btn btn-outline-secondary btn-sm" type="button">Fechar</button></div><div class="motor360-group-audit-scenarios">${scenarios}</div><div class="motor360-group-audit-alerts"><strong>Alertas</strong><p>${escapeHtml((entry.justification || []).join(", ") || "Nenhum alerta registrado.")}</p></div>`;
+  const reasons = [...(entry.incomplete_reasons || []), ...(entry.strategy_warnings || [])].map(formatMotor360Reason).join(", ");
+  dialog.innerHTML = `<div class="motor360-group-audit-dialog-header"><div><h3>Justificativa do grupo ${escapeHtml(entry.grupo)}</h3><p>${escapeHtml(entry.administradora || "-")} · Resultado: ${escapeHtml(entry.result || "-")} · Ordem preliminar ${escapeHtml(String(entry.ranking || "-"))}</p></div><button class="btn btn-outline-secondary btn-sm" type="button">Fechar</button></div><div class="motor360-group-audit-scenarios">${scenarios}</div><div class="motor360-group-audit-alerts"><strong>Dados da base utilizados</strong><p>Prazo restante: ${escapeHtml(String(entry.source_values?.prazo_restante ?? "-"))} | Embutido (X): ${escapeHtml(String(entry.source_values?.percentual_lance_embutido_raw ?? "-"))}</p><strong>Motivos e alertas</strong><p>${escapeHtml(reasons || "Nenhum alerta registrado.")}</p></div>`;
   dialog.querySelector("button")?.addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => dialog.remove());
   document.body.append(dialog);
@@ -2239,8 +2253,8 @@ function renderInvestorAnalysis(result) {
   const items = applyInvestorPreferences(result.items || [], investorState.preferences);
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
-    ["Crédito líquido desejado", formatMoney(client.credito_desejado_liquido)],
-    ["Estratégia declarada", result.estrategia_preferida === "investment" ? "Investimento" : "Contemplação"],
+    ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
+    ["Estratégia declarada", result.preferencia_declarada === "investment" ? "Investimento" : result.preferencia_declarada || "Não classificada"],
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
     ["Viáveis por crédito", result.total_grupos_viaveis ?? 0],
     ["Dados incompletos", totals.dados_incompletos ?? 0],
@@ -2257,11 +2271,11 @@ function renderInvestorAnalysis(result) {
   }
   results.innerHTML = `
     <div class="investor-engine-note">
-      <strong>Visão 360:</strong> o objetivo do cliente é preferência, não bloqueio. Crédito é validado por cenário na faixa O a U. AJ é apenas parcela de referência até a seleção da carta exata; taxa (AC), fundo (AA) e prazo (F) precisam estar completos para uma recomendação financeira.
+      <strong>Grupos preliminarmente compatíveis pelo crédito:</strong> o objetivo do cliente é preferência, não bloqueio. Crédito é validado por cenário na faixa O a U. AJ é apenas parcela de referência até a seleção da carta exata; taxa (AC), fundo (AA) e prazo (F) precisam estar completos para uma recomendação financeira.
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">
-        <thead><tr><th>Rank</th><th>Grupo</th><th>Adm.</th><th>Faixa de crédito</th><th>Cenários financeiros</th><th>Parcela de referência</th><th>Prazo restante</th><th>Melhor contemplação</th><th>Status</th><th>Auditoria</th></tr></thead>
+        <thead><tr><th>Ordem preliminar</th><th>Grupo</th><th>Adm.</th><th>Faixa de crédito</th><th>Cenários financeiros</th><th>Parcela de referência</th><th>Prazo restante</th><th>Melhor contemplação</th><th>Status</th><th>Auditoria</th></tr></thead>
         <tbody>${items.map((item) => `
           <tr>
             <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
@@ -2270,9 +2284,9 @@ function renderInvestorAnalysis(result) {
             <td>${formatMoney(item.credito_minimo)} a ${formatMoney(item.credito_maximo)}</td>
             <td>${renderCreditScenarioCell(item)}</td>
             <td>${formatMoney(item.reference_installment)}</td>
-            <td>${escapeHtml(String(item.prazo_remanescente ?? "-"))}</td>
-            <td>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</td>
-            <td><span class="investor-distance ${item.recommendable ? "" : "investor-distance-sem-referencia"}">${item.recommendable ? "Recomendável" : item.data_completeness === "incomplete" ? "Dados incompletos" : "Compatível por crédito"}</span></td>
+            <td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td>
+            <td>${escapeHtml(item.best_contemplation_strategy || (item.strategy_warnings?.length ? "Faixas não classificadas" : "Não classificada"))}</td>
+            <td><span class="investor-distance ${item.recommendable ? "" : "investor-distance-sem-referencia"}">${item.recommendable ? "Recomendável" : item.data_completeness === "incomplete" ? `Dados incompletos: ${formatMotor360Reason(item.incomplete_reasons?.[0])}` : "Compatível por crédito"}</span></td>
             <td><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${escapeHtml(item.grupo || item.grupo_id || "")}">Ver justificativa</button></td>
           </tr>`).join("")}</tbody>
       </table>

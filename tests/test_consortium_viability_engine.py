@@ -77,12 +77,20 @@ class ConsortiumViabilityEngineTest(unittest.TestCase):
         self.assertFalse(item["recommendable"])
 
     def test_term_compatibility_uses_ceil_against_remaining_term(self):
-        base = group("equal", 100000, 1700000, prazo_remanescente=202)
+        base = group("equal", 100000, 1700000, prazo_restante=202)
         result = analyze_client_consortium_viability(payload(), [base])
         scenario = result["items"][0]["cenarios"][0]
         self.assertTrue(scenario["term_compatible_desired_before_bid"])
-        lower = analyze_client_consortium_viability(payload(), [group("below", 100000, 1700000, prazo_remanescente=201)])
+        lower = analyze_client_consortium_viability(payload(), [group("below", 100000, 1700000, prazo_restante=201)])
         self.assertFalse(lower["items"][0]["cenarios"][0]["term_compatible_desired_before_bid"])
+
+    def test_records_missing_term_and_embedded_reason_separately(self):
+        result = analyze_client_consortium_viability(payload(), [group("audit", 100000, 1700000, percentual_lance_embutido="", prazo_restante=None)])
+        item = result["items"][0]
+        self.assertIn("prazo_restante_nao_informado", item["incomplete_reasons"])
+        self.assertEqual(item["embedded_scenario_reason"], "percentual_x_ausente")
+        self.assertIn("with_embedded", [scenario["id"] for scenario in item["cenarios"]])
+        self.assertFalse(item["financial_data_complete"])
 
     def test_inconsistent_contemplation_ranges_do_not_classify_strategy(self):
         result = analyze_client_consortium_viability(payload(), [group("bad-ranges", 100000, 1700000, lance_super_agressivo_3m="10%", lance_agressivo_6m="30%", lance_conservador_24m="5%", lance_investidor="2%")])
