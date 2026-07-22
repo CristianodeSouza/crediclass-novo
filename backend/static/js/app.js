@@ -2174,6 +2174,11 @@ function formatMotor360Reason(reason) {
     percentual_x_ausente: "Percentual de lance embutido não informado",
     percentual_x_zero: "Percentual de lance embutido igual a zero",
     percentual_x_invalido: "Percentual de lance embutido inválido",
+    credito_fora_da_faixa: "Crédito fora da faixa O/U",
+    lance_abaixo_das_faixas: "Lance abaixo das faixas BL:BP",
+    prazo_remanescente_insuficiente: "Prazo remanescente insuficiente",
+    credito_minimo_nao_informado: "Crédito mínimo (O) não informado",
+    credito_maximo_nao_informado: "Crédito máximo (U) não informado",
   };
   return labels[reason] || String(reason || "-").replaceAll("_", " ");
 }
@@ -2191,6 +2196,14 @@ function renderMotor360Audit(audit) {
   const formulaRows = (audit.formulas || []).map((formula) => `<article class="motor360-audit-formula"><strong>${escapeHtml(formula.name)}</strong><code>${escapeHtml(formula.expression)}</code><span>Resultado: ${escapeHtml(String(formula.result ?? "calculado por grupo"))}</span></article>`).join("");
   const excluded = audit.excluded_groups || [];
   const excludedRows = excluded.map((item) => `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${escapeHtml(item.reason)}</td><td>${escapeHtml(item.detail)}</td></tr>`).join("");
+  const incompleteGroups = audit.incomplete_groups || [];
+  const incompleteRows = incompleteGroups.map((item) => `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${escapeHtml((item.missing_fields || []).map((field) => `${field.field} (${field.column})`).join(", "))}</td></tr>`).join("");
+  const groupRows = (audit.group_results || []).map((item) => {
+    const scenario = (item.scenarios || []).find((entry) => entry.id === "without_embedded") || item.scenarios?.[0] || {};
+    const stages = item.stage_results || {};
+    const mark = (stage) => stages[stage]?.approved ? "Aprovado" : "Reprovado";
+    return `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${formatMoney(scenario.credito_contratado)}</td><td>${formatMoney(scenario.credito_minimo)} a ${formatMoney(scenario.credito_maximo)}</td><td>${mark("credito")}</td><td>${escapeHtml(String(scenario.prazo_apos_lance_limite_renda_meses ?? "-"))} / ${escapeHtml(String(item.source_values?.prazo_restante ?? "-"))}</td><td>${mark("prazo")}</td><td>${mark("contemplacao")}</td><td>${item.result === "eligible" ? "Aprovado" : "Eliminado"}</td></tr>`;
+  }).join("");
   const warnings = (audit.warnings || []).map((warning) => `<li class="audit-warning-${escapeHtml(warning.level || "info")}">${escapeHtml(warning.message)}</li>`).join("");
   return `
     <details class="motor360-audit-panel">
@@ -2209,7 +2222,9 @@ function renderMotor360Audit(audit) {
         <details><summary>4. Fórmulas e cálculos</summary><div class="motor360-audit-formulas">${formulaRows}</div></details>
         <details><summary>5. Ordenação e resultado final</summary><p>${escapeHtml(audit.final_ordering?.execution_summary || "")}</p><ol>${(audit.final_ordering?.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ol><p>Compatíveis por crédito: <strong>${summary.total_credit_compatible ?? 0}</strong> | Incompletos: <strong>${summary.total_incomplete ?? 0}</strong> | Excluídos: <strong>${summary.total_rejected ?? 0}</strong></p></details>
         <details><summary>6. Grupos excluídos e motivos (${excluded.length})</summary>${excluded.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th><th>Detalhe</th></tr></thead><tbody>${excludedRows}</tbody></table></div>` : "<p>Nenhum grupo foi excluído.</p>"}</details>
-        <details><summary>7. Alertas e regras pendentes</summary><ul class="motor360-audit-warnings">${warnings}</ul></details>
+        <details><summary>7. Dados incompletos por grupo (${incompleteGroups.length})</summary>${incompleteGroups.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Campo/coluna ausente</th></tr></thead><tbody>${incompleteRows}</tbody></table></div>` : "<p>Nenhum dado obrigatório ausente.</p>"}</details>
+        <details><summary>8. Auditoria por grupo (${(audit.group_results || []).length})</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Crédito contratado</th><th>Faixa O/U</th><th>Crédito</th><th>Prazo calculado / F</th><th>Prazo</th><th>Contemplação</th><th>Resultado</th></tr></thead><tbody>${groupRows}</tbody></table></div></details>
+        <details><summary>9. Alertas e regras pendentes</summary><ul class="motor360-audit-warnings">${warnings}</ul></details>
       </div>
     </details>`;
 }
@@ -2224,8 +2239,8 @@ function renderMotor360GroupAudit(groupId) {
   const dialog = document.createElement("dialog");
   dialog.id = "motor360GroupAuditDialog";
   dialog.className = "motor360-group-audit-dialog";
-  const reasons = [...(entry.incomplete_reasons || []), ...(entry.strategy_warnings || [])].map(formatMotor360Reason).join(", ");
-  dialog.innerHTML = `<div class="motor360-group-audit-dialog-header"><div><h3>Justificativa do grupo ${escapeHtml(entry.grupo)}</h3><p>${escapeHtml(entry.administradora || "-")} · Resultado: ${escapeHtml(entry.result || "-")} · Ordem preliminar ${escapeHtml(String(entry.ranking || "-"))}</p></div><button class="btn btn-outline-secondary btn-sm" type="button">Fechar</button></div><div class="motor360-group-audit-scenarios">${scenarios}</div><div class="motor360-group-audit-alerts"><strong>Dados da base utilizados</strong><p>Prazo restante: ${escapeHtml(String(entry.source_values?.prazo_restante ?? "-"))} | Embutido (X): ${escapeHtml(String(entry.source_values?.percentual_lance_embutido_raw ?? "-"))}</p><strong>Motivos e alertas</strong><p>${escapeHtml(reasons || "Nenhum alerta registrado.")}</p></div>`;
+  const reasons = (entry.justification || []).map(formatMotor360Reason).join(", ");
+  dialog.innerHTML = `<div class="motor360-group-audit-dialog-header"><div><h3>Justificativa do grupo ${escapeHtml(entry.grupo)}</h3><p>${escapeHtml(entry.administradora || "-")} · Resultado: ${escapeHtml(entry.result || "-")} · Ordem preliminar ${escapeHtml(String(entry.ranking || "-"))}</p></div><button class="btn btn-outline-secondary btn-sm" type="button">Fechar</button></div><div class="motor360-group-audit-scenarios">${scenarios}</div><div class="motor360-group-audit-alerts"><strong>Dados da base utilizados</strong><p>Prazo restante (F): ${escapeHtml(String(entry.source_values?.prazo_restante ?? "-"))} | Embutido (X): ${escapeHtml(String(entry.source_values?.percentual_lance_embutido ?? "-"))}</p><strong>Motivos e alertas</strong><p>${escapeHtml(reasons || "Nenhum alerta registrado.")}</p></div>`;
   dialog.querySelector("button")?.addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => dialog.remove());
   document.body.append(dialog);
@@ -2251,28 +2266,34 @@ function renderInvestorAnalysis(result) {
   if (!status || !summary || !results) return;
   const client = result.cliente || {};
   const totals = result.contadores || {};
-  const items = applyInvestorPreferences(result.items || [], investorState.preferences);
+  const finalItems = result.items || [];
+  const creditItems = result.credit_items || [];
+  const showingCreditStage = !finalItems.length && creditItems.length > 0;
+  const items = applyInvestorPreferences(showingCreditStage ? creditItems : finalItems, investorState.preferences);
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
     ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
     ["Estratégia declarada", result.preferencia_declarada === "investment" ? "Investimento" : result.preferencia_declarada || "Não classificada"],
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
-    ["Grupos elegíveis", result.total_grupos_viaveis ?? 0],
+    ["Compatíveis por crédito", result.total_grupos_credito_compativeis ?? 0],
+    ["Elegíveis finais", result.total_grupos_viaveis ?? 0],
     ["Dados incompletos", totals.dados_incompletos ?? 0],
     ["Grupos exibidos", items.length],
   ];
   summary.innerHTML = summaryItems.map(([label, value]) => (
     `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`
   )).join("");
-  status.textContent = `${items.length} grupos viáveis exibidos`;
+  status.textContent = showingCreditStage
+    ? `${items.length} grupos compatíveis por crédito exibidos`
+    : `${items.length} grupos viáveis exibidos`;
   if (!items.length) {
-    results.innerHTML = `<div class="table-state">Nenhum grupo atende simultaneamente aos critérios de crédito, prazo, renda e lance.</div>${renderMotor360Audit(investorState.audit)}`;
+    results.innerHTML = `<div class="table-state">Nenhum grupo atende à faixa de crédito contratada nos cenários calculados.</div>${renderMotor360Audit(investorState.audit)}`;
     setInvestorAnalysisState("results");
     return;
   }
   results.innerHTML = `
     <div class="investor-engine-note">
-      <strong>Grupos elegíveis pelo Motor 360:</strong> o objetivo do cliente é preferência, não bloqueio. Cada cenário independente precisa preservar o crédito líquido e atender à faixa O/U, ao prazo F, à capacidade de renda e a uma faixa de lance BL:BP. AJ, AK e AL são apenas referências até a seleção da carta exata.
+      <strong>${showingCreditStage ? "Etapa 1 - Compatíveis por crédito:" : "Grupos elegíveis pelo Motor 360:"}</strong> ${showingCreditStage ? "estes grupos atendem à faixa O/U para pelo menos um cenário. Prazo F, renda e lance BL:BP aparecem no status para a próxima etapa." : "cada cenário independente preserva o crédito líquido e atende à faixa O/U, ao prazo F, à capacidade de renda e a uma faixa de lance BL:BP."} AJ, AK e AL são apenas referências até a seleção da carta exata.
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">
@@ -2287,7 +2308,7 @@ function renderInvestorAnalysis(result) {
             <td>${formatMoney(item.reference_installment)}</td>
             <td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td>
             <td>${escapeHtml(item.best_contemplation_strategy || (item.strategy_warnings?.length ? "Faixas não classificadas" : "Não classificada"))}</td>
-            <td><span class="investor-distance ${item.recommendable ? "" : "investor-distance-sem-referencia"}">${item.recommendable ? "Recomendável" : item.data_completeness === "incomplete" ? `Dados incompletos: ${formatMotor360Reason(item.incomplete_reasons?.[0])}` : "Compatível por crédito"}</span></td>
+            <td><span class="investor-distance ${item.recommendable ? "" : "investor-distance-sem-referencia"}">${item.recommendable ? "Elegível final" : item.alerts?.length ? `Pendente: ${formatMotor360Reason(item.alerts[0])}` : "Compatível por crédito"}</span></td>
             <td><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${escapeHtml(item.grupo || item.grupo_id || "")}">Ver justificativa</button></td>
           </tr>`).join("")}</tbody>
       </table>

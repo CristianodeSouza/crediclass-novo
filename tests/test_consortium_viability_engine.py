@@ -101,6 +101,14 @@ class Motor360RfcTest(unittest.TestCase):
         reasons = result["audit"]["excluded_groups"][0]["detail"]
         self.assertIn("prazo_remanescente_insuficiente", reasons)
 
+    def test_credit_stage_remains_visible_when_later_rules_reject_group(self):
+        result = analyze_client_consortium_viability(payload(), [
+            group("credit-only", prazo_restante=1, percentual_lance_embutido=None),
+        ])
+        self.assertEqual(result["items"], [])
+        self.assertEqual(result["total_grupos_credito_compativeis"], 1)
+        self.assertEqual([item["grupo"] for item in result["credit_items"]], ["credit-only"])
+
     def test_objective_is_priority_not_an_exclusion_rule(self):
         result = analyze_client_consortium_viability(payload(objetivo="Contemplar - urgente - 3 meses"), [
             group(percentual_lance_embutido=None, lance_super_agressivo_3m="90%", lance_agressivo_6m="80%", lance_moderado_12m="10%"),

@@ -32,7 +32,11 @@ class Motor360AuditoriaTest(unittest.TestCase):
 
         self.assertTrue(audit["metadata"]["audit_id"].startswith("AUD-"))
         self.assertEqual(audit["summary"]["total_loaded"], 2)
-        self.assertEqual(len(audit["execution_steps"]), 4)
+        self.assertEqual(
+            [step["id"] for step in audit["execution_steps"]],
+            ["status", "type", "credit", "term", "administrator_rules", "contemplation", "ranking"],
+        )
+        self.assertEqual(audit["execution_steps"][2]["approved_count"], 1)
         self.assertEqual(audit["formulas"][0]["result"], 1100000.0)
         self.assertEqual(audit["excluded_groups"][0]["reason"], "status_inativo")
 
