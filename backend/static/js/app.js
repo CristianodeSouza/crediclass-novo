@@ -285,6 +285,7 @@ async function initializeDashboardData() {
   appBootstrapped = true;
   loadHealth().catch(() => {
     document.getElementById("environmentLabel").textContent = "indisponivel";
+    document.getElementById("systemVersionLabel").textContent = "indisponivel";
   });
   loadMapaGrupos();
   loadClientProfile();
@@ -3957,6 +3958,7 @@ async function restartSystemSync() {
 async function loadHealth() {
   const health = await apiGet("/health");
   document.getElementById("environmentLabel").textContent = health.environment;
+  document.getElementById("systemVersionLabel").textContent = health.version;
 }
 
 document.querySelectorAll(".nav-item").forEach((item) => {
