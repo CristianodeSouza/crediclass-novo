@@ -12,6 +12,7 @@ from typing import Any
 
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 
 from .config import get_settings
 
@@ -19,6 +20,7 @@ logger = logging.getLogger("crediclass.sheets")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 CACHE_TTL_SECONDS = 300
 METADATA_CACHE_TTL_SECONDS = 900
+SHEETS_READ_ATTEMPTS = 3
 MAX_CREDIT_VALUE = 100_000_000
 _grupos_cache: dict[str, Any] = {
     "with_history": {"expires_at": 0.0, "items": None},
@@ -267,6 +269,32 @@ def get_service():
     return build("sheets", "v4", credentials=credentials, cache_discovery=False)
 
 
+def execute_sheets_read(request_factory, operation: str) -> dict[str, Any]:
+    """Execute a read request with a fresh Sheets client after transient failures."""
+    last_error: Exception | None = None
+    for attempt in range(1, SHEETS_READ_ATTEMPTS + 1):
+        try:
+            return request_factory().execute()
+        except (AttributeError, OSError, TimeoutError, HttpError) as error:
+            last_error = error
+            is_server_error = isinstance(error, HttpError) and getattr(error.resp, "status", 0) >= 500
+            is_transient = not isinstance(error, HttpError) or is_server_error
+            if not is_transient or attempt == SHEETS_READ_ATTEMPTS:
+                break
+            logger.warning(
+                "Falha temporaria ao %s na planilha (tentativa %s/%s): %s",
+                operation,
+                attempt,
+                SHEETS_READ_ATTEMPTS,
+                error,
+            )
+            get_service.cache_clear()
+            time.sleep(0.25 * attempt)
+    if last_error:
+        raise last_error
+    raise RuntimeError(f"Falha inesperada ao {operation} na planilha")
+
+
 def clear_rows_cache() -> None:
     with _cache_lock:
         for cache in _grupos_cache.values():
@@ -310,10 +338,13 @@ def read_sheet_headers(force_reload: bool = False) -> list[str]:
             return list(headers)
 
         settings = get_settings()
-        result = get_service().spreadsheets().values().get(
-            spreadsheetId=settings.google_sheets_id,
-            range=f"'{settings.google_sheet_name}'!A1:ZZ1",
-        ).execute()
+        result = execute_sheets_read(
+            lambda: get_service().spreadsheets().values().get(
+                spreadsheetId=settings.google_sheets_id,
+                range=f"'{settings.google_sheet_name}'!A1:ZZ1",
+            ),
+            "ler os cabecalhos",
+        )
         values = result.get("values", [])
         headers = [str(header).strip() for header in (values[0] if values else [])]
         _sheet_metadata_cache["headers"] = headers
@@ -354,10 +385,13 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
     if include_history:
         min_index = min(index for _, _, index in selected)
         max_index = max(index for _, _, index in selected)
-        result = get_service().spreadsheets().values().get(
-            spreadsheetId=settings.google_sheets_id,
-            range=f"'{settings.google_sheet_name}'!{column_letter(min_index)}2:{column_letter(max_index)}",
-        ).execute()
+        result = execute_sheets_read(
+            lambda: get_service().spreadsheets().values().get(
+                spreadsheetId=settings.google_sheets_id,
+                range=f"'{settings.google_sheet_name}'!{column_letter(min_index)}2:{column_letter(max_index)}",
+            ),
+            "ler a base resumida",
+        )
         values = result.get("values", [])
         for offset, row_values in enumerate(values):
             row: dict[str, Any] = {}
@@ -375,10 +409,13 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
             f"'{settings.google_sheet_name}'!{column_letter(index)}2:{column_letter(index)}"
             for _, _, index in selected
         ]
-        result = get_service().spreadsheets().values().batchGet(
-            spreadsheetId=settings.google_sheets_id,
-            ranges=ranges,
-        ).execute()
+        result = execute_sheets_read(
+            lambda: get_service().spreadsheets().values().batchGet(
+                spreadsheetId=settings.google_sheets_id,
+                ranges=ranges,
+            ),
+            "ler a base resumida",
+        )
         value_ranges = result.get("valueRanges", [])
         columns = [item.get("values", []) for item in value_ranges]
         row_count = max((len(column) for column in columns), default=0)
@@ -1014,11 +1051,18 @@ def list_grupos(include_history: bool = True) -> list[dict[str, Any]]:
     cache_key = "with_history" if include_history else "light"
     with _cache_lock:
         cache = _grupos_cache[cache_key]
-        if cache["items"] is not None and now < cache["expires_at"]:
+        cached_items = cache["items"]
+        if cached_items is not None and now < cache["expires_at"]:
             logger.info("Usando cache de grupos (%s)", cache_key)
-            return list(cache["items"])
+            return list(cached_items)
 
-    items = [row_to_grupo(row) for row in read_summary_rows(include_history=include_history)]
+    try:
+        items = [row_to_grupo(row) for row in read_summary_rows(include_history=include_history)]
+    except (AttributeError, OSError, TimeoutError, HttpError):
+        if cached_items is None:
+            raise
+        logger.exception("Falha ao atualizar grupos; mantendo o ultimo cache valido (%s)", cache_key)
+        return list(cached_items)
     with _cache_lock:
         cache = _grupos_cache[cache_key]
         cache["items"] = items
