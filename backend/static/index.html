@@ -262,10 +262,11 @@
         <section id="screen-perfil" class="screen-panel">
           <div class="client-profile-layout">
             <div class="content-card client-profile-card">
-              <div class="table-toolbar">
+              <div class="table-toolbar client-profile-toolbar">
                 <div>
+                  <span class="client-profile-eyebrow">Etapa 1</span>
                   <h2>Perfil do Cliente</h2>
-                  <p>Dados de entrada da entrevista, capacidade financeira e necessidade de credito</p>
+                  <p>Estruture os participantes, a capacidade financeira e o objetivo da operação.</p>
                 </div>
                 <div class="toolbar-actions">
                   <button id="clearClientProfileBtn" class="btn btn-outline-secondary" type="button">Limpar Perfil</button>
@@ -274,8 +275,8 @@
               </div>
 
               <form id="clientProfileForm" class="client-profile-form">
-                  <div class="client-profile-section">
-                  <h3>Identificacao</h3>
+                  <div class="client-profile-section profile-identity-section">
+                  <h3><span>01</span> Participantes</h3>
                   <label class="profile-contracting-field">
                     <span>Tipo de contratacao</span>
                     <select id="clientProfileTipoContratacao" class="form-select">
@@ -296,8 +297,8 @@
                   <input id="clientProfileRendaConjuge" type="hidden">
                 </div>
 
-                <div class="client-profile-section">
-                  <h3>Credito e Objetivo</h3>
+                <div class="client-profile-section profile-financial-section">
+                  <h3><span>02</span> Crédito e objetivo</h3>
                   <label><span>Credito Desejado Liquido</span><input id="clientProfileCredito" class="form-control" inputmode="decimal"></label>
                   <label><span>Parcela maxima desejada</span><input id="clientProfileParcelaIdeal" class="form-control" inputmode="decimal"></label>
                   <label><span>Lance maximo com recurso proprio</span><input id="clientProfileLanceProprio" class="form-control" inputmode="decimal"></label>
@@ -323,14 +324,14 @@
                   <input id="clientProfileParcelaLimite" type="hidden">
                 </div>
 
-                <div class="client-profile-section">
-                  <h3>Capacidade Financeira</h3>
+                <div class="client-profile-section profile-capacity-section">
+                  <h3><span>03</span> Capacidade financeira</h3>
                   <label><span>Total FGTS</span><input id="clientProfileFgtsTotal" class="form-control client-calculated" readonly></label>
                   <label><span>Total Disponivel Cliente + FGTS</span><input id="clientProfileTotalDisponivel" class="form-control client-calculated client-success" readonly></label>
                   <label><span>Renda Total</span><input id="clientProfileRendaTotal" class="form-control client-calculated" readonly></label>
                 </div>
                 <div class="client-preliminary-section">
-                  <h3>Analise Preliminar - Titular(es)</h3>
+                  <h3><span>04</span> Análise preliminar dos titulares</h3>
                   <div id="clientPreliminaryAnalysis" class="client-preliminary-grid"></div>
                 </div>
                 <div class="client-profile-actions">
