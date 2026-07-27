@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260716-02", index_html)
+        self.assertIn("/static/css/style.css?v=20260727-01", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260716-08", index_html)
+        self.assertIn("/static/js/app.js?v=20260722-01", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -135,7 +135,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("creditoDesejado / (1 - embeddedPercent)", app_js)
         self.assertIn("creditoDesejado * Number(rule.fundo_reserva || 0)", app_js)
         self.assertIn("Number(profile.renda_total || 0) * 0.30", app_js)
-        self.assertIn('primaryAction.classList.toggle("d-none", screenName === "viabilidade")', app_js)
+        self.assertIn('primaryAction.classList.toggle("d-none", screenName === "viabilidade" || screenName === "investidor" || screenName === "contemplar")', app_js)
         for removed in [
             "selectionPipeline",
             "Motor de Elegibilidade das Administradoras",
@@ -175,7 +175,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn('data-screen-jump="perfil"', index_html)
         self.assertNotIn('id="addAdministratorPlanBtn"', index_html)
         self.assertNotIn('id="saveAdministratorPlansBtn"', index_html)
-        self.assertIn('primaryAction.classList.toggle("d-none", screenName === "viabilidade")', app_js)
+        self.assertIn('primaryAction.classList.toggle("d-none", screenName === "viabilidade" || screenName === "investidor" || screenName === "contemplar")', app_js)
         self.assertNotIn("Aguardando selecao dos melhores grupos", index_html)
         self.assertNotIn("Top 10 exibido", app_js)
         self.assertNotIn("await analyzeViability({ silent: true })", app_js)
@@ -203,8 +203,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("clientProfileCredito", index_html)
         self.assertIn("clientProfileTotalDisponivel", index_html)
         self.assertIn("clientProfileConceito", index_html)
-        self.assertIn("Analise Preliminar - Titular(es)", index_html)
-        self.assertNotIn("3 - Analise Preliminar - Titular(es)", index_html)
+        self.assertIn("Análise preliminar dos titulares", index_html)
+        self.assertNotIn("3 - Análise preliminar dos titulares", index_html)
         self.assertIn('id="clientPreliminaryAnalysis"', index_html)
         self.assertIn("function calculateClientPreliminaryAnalysis", app_js)
         self.assertIn("function renderClientPreliminaryAnalysis", app_js)
@@ -515,7 +515,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('id="clientProfileTipoBem"', index_html)
         self.assertIn('tipo_bem: document.getElementById("clientProfileTipoBem").value', app_js)
         self.assertNotIn('tipo_bem: "Imovel"', app_js)
-        self.assertIn('lance_proprio: toNumber(document.getElementById("clientProfileLanceProprio").value)', app_js)
+        self.assertIn('const lanceManual = toNumber(document.getElementById("clientProfileLanceProprio").value);', app_js)
 
     def test_perfil_cliente_suporta_titulares_pf_pj(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -648,7 +648,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260716-02", index_html)
+        self.assertIn("/static/css/style.css?v=20260727-01", index_html)
         self.assertNotIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

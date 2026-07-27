@@ -18,6 +18,11 @@
   --surface: #fdfbf9;
   --surface-soft: #edeae5;
   --table-head: #edeae5;
+  --line: var(--border);
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --shadow-card: 0 12px 28px rgba(27, 41, 50, 0.05);
+  --shadow-raised: 0 18px 38px rgba(27, 41, 50, 0.09);
   --success: #16a34a;
   --warning: #f59e0b;
   --danger: #dc2626;
@@ -38,6 +43,7 @@ body[data-theme="escuro"] {
   --surface: #243138;
   --surface-soft: #1f2d38;
   --table-head: #2c3d46;
+  --line: var(--border);
 }
 
 * {
@@ -94,6 +100,20 @@ h6,
 .form-select:focus {
   border-color: rgba(230, 126, 34, 0.55);
   box-shadow: 0 0 0 0.18rem rgba(230, 126, 34, 0.14);
+}
+
+.form-control,
+.form-select {
+  border-color: var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+
+.form-control:disabled,
+.form-control[readonly] {
+  background: var(--surface-soft);
+  color: var(--text);
+  opacity: 1;
 }
 
 body.auth-pending,
@@ -1011,7 +1031,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .client-preliminary-audit h4 {
   margin: 0;
-  color: #174c9a;
+  color: var(--brand-navy);
   font-size: 0.78rem;
   font-weight: 900;
 }
@@ -2395,10 +2415,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
   gap: 12px;
   margin-top: 10px;
   padding: 8px 10px;
-  border: 1px solid #bfdbfe;
+  border: 1px solid rgba(230, 126, 34, 0.32);
   border-radius: 6px;
-  background: #eff6ff;
-  color: #1e3a8a;
+  background: var(--primary-soft);
+  color: var(--brand-bronze-dark);
   font-size: 0.78rem;
   font-weight: 800;
 }
@@ -4055,7 +4075,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .smart-engine-generic-table thead th {
-  background: #174c9a;
+  background: var(--brand-navy);
   color: #fff;
   font-weight: 800;
   text-align: center;
@@ -4074,7 +4094,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .smart-engine-generic-table tbody th {
-  background: #f1f5f9;
+  background: var(--surface-soft);
   color: var(--text);
   font-weight: 800;
   text-align: center;
@@ -4082,7 +4102,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .smart-engine-generic-table tbody td:nth-child(2) {
-  background: #f8fafc;
+  background: var(--surface);
   font-weight: 700;
   color: #334155;
 }
@@ -4096,7 +4116,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .smart-engine-generic-table tbody tr:hover td,
 .smart-engine-generic-table tbody tr:hover th {
-  background: #f8fbff;
+  background: var(--primary-soft);
 }
 
 .smart-engine-phase-two-card {
@@ -4117,9 +4137,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .contemplar-engine-audit {
   margin: 0 0 12px;
   padding: 10px 12px;
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #f8fafc;
+  background: var(--surface-soft);
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.45;
@@ -4153,7 +4173,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .contemplar-engine-table tbody tr:nth-child(even) td {
-  background: #f8fafc;
+  background: var(--surface-soft);
 }
 
 .contemplar-engine-table tbody tr:hover td {
@@ -4199,7 +4219,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .investor-preferences-toolbar {
   align-items: center;
-  background: #f6f8fa;
+  background: var(--surface-soft);
   border: 1px solid var(--line);
   border-radius: 8px;
   display: flex;
@@ -4280,9 +4300,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .investor-engine-audit {
   margin: 0 0 12px;
   padding: 10px 12px;
-  border: 1px solid #dbe4ef;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #f8fafc;
+  background: var(--surface-soft);
   color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.45;
@@ -4422,7 +4442,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .investor-engine-table tbody tr:nth-child(even) td {
-  background: #f8fafc;
+  background: var(--surface-soft);
 }
 
 .investor-engine-table tbody tr:hover td {
@@ -4469,7 +4489,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .smart-engine-summary-item {
-  background: #f8fafc;
+  background: var(--surface-soft);
   border: 1px solid var(--line);
   border-radius: 8px;
   min-height: 68px;
@@ -4575,5 +4595,142 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
   .investor-preferences-options {
     gap: 8px 14px;
+  }
+}
+
+/* Shared product language: keeps every operational screen aligned with the institutional DS. */
+.content-card,
+.summary-card,
+.placeholder-card,
+.smart-engine-card,
+.smart-engine-generic-card,
+.investor-engine-card,
+.contemplar-engine-card,
+.study-v4-card {
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+}
+
+.page-header h1,
+.table-toolbar h2,
+.smart-engine-header h2,
+.study-v4-toolbar h2 {
+  color: var(--brand-navy);
+  font-weight: 800;
+}
+
+.page-header p:last-child,
+.table-toolbar p,
+.smart-engine-header p,
+.study-v4-toolbar p {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.table-responsive,
+.smart-engine-table-wrap,
+.administrator-plan-wrap,
+.motor360-audit-panel {
+  border-radius: var(--radius-sm);
+}
+
+.table thead th,
+.smart-engine-table thead th,
+.investor-engine-table thead th,
+.contemplar-engine-table thead th {
+  background: var(--brand-navy);
+  color: #fff;
+  font-weight: 800;
+}
+
+.table tbody tr:nth-child(even) > td,
+.table tbody tr:nth-child(even) > th {
+  background-color: color-mix(in srgb, var(--surface-soft) 62%, transparent);
+}
+
+.table tbody tr:hover > td,
+.table tbody tr:hover > th {
+  background-color: var(--primary-soft);
+}
+
+.nav-tabs {
+  border-bottom-color: var(--border);
+}
+
+.nav-tabs .nav-link {
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link.active {
+  border-color: var(--border) var(--border) var(--surface);
+  color: var(--primary);
+}
+
+.modal-content,
+.group-form-dialog .modal-content,
+#groupDetailsModal .modal-content,
+#defasagemModal .modal-content {
+  border-color: var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-raised);
+}
+
+.alert,
+.business-rules-note,
+.administrator-plan-help,
+.smart-engine-filter-note,
+.contemplar-engine-audit,
+.investor-engine-audit {
+  border-radius: var(--radius-sm);
+}
+
+.state-badge,
+.eligibility-status,
+.scenario-status-ok,
+.scenario-status-error,
+.investor-distance,
+.contemplar-compatible {
+  letter-spacing: 0;
+}
+
+@media (max-width: 900px) {
+  .main-content {
+    padding: 16px;
+  }
+
+  .page-header,
+  .table-toolbar,
+  .client-profile-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .toolbar-actions,
+  .client-profile-toolbar .toolbar-actions {
+    justify-content: flex-start;
+  }
+
+  .profile-holder-group {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-holder-band {
+    min-height: auto;
+  }
+
+  .profile-holder-list,
+  .profile-financial-section,
+  .profile-capacity-section,
+  .client-preliminary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .client-profile-section .profile-contracting-field {
+    grid-column: 1 / -1;
   }
 }
