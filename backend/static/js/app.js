@@ -88,6 +88,8 @@ const investorPreferenceFlags = [
   { id: "maior_lance_embutido", label: "Maior Lance Embutido" },
 ];
 const investorState = { result: null, preferences: [], audit: null };
+let investorAnalysisController = null;
+let investorAnalysisRequestId = 0;
 const HISTORY_START_MONTH = "2024-01";
 const CLIENT_PROFILE_STORAGE_KEY = "crediclass.clientProfile.v1";
 const CLIENT_OBJECTIVE_RULES = {
@@ -2352,6 +2354,10 @@ function syncInvestorPreferencesFromInputs() {
 async function loadInvestorAnalysis() {
   const status = document.getElementById("investorAnalysisStatus");
   if (!status) return;
+  investorAnalysisController?.abort();
+  const requestId = ++investorAnalysisRequestId;
+  const controller = new AbortController();
+  investorAnalysisController = controller;
   const profile = collectClientProfile();
   if (!(Number(profile.credito_desejado) > 0)) {
     status.textContent = "Aguardando perfil do cliente";
@@ -2366,18 +2372,23 @@ async function loadInvestorAnalysis() {
       cache: "no-store",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
       body: JSON.stringify(profile),
     });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(result.error || "Falha ao calcular a viabilidade dos grupos.");
+    if (requestId !== investorAnalysisRequestId) return;
     investorState.result = result;
     investorState.audit = null;
     renderInvestorAnalysis(result);
     loadMotor360Audit(result.audit_id);
   } catch (error) {
+    if (error.name === "AbortError" || requestId !== investorAnalysisRequestId) return;
     status.textContent = "Erro no cálculo";
     setInvestorAnalysisState("error");
     showToast(error.message || "Não foi possível calcular a viabilidade dos grupos.", "danger");
+  } finally {
+    if (requestId === investorAnalysisRequestId) investorAnalysisController = null;
   }
 }
 
@@ -2839,7 +2850,6 @@ function saveClientProfile({ silent = false } = {}) {
   applyClientProfileToFlow(profile);
   renderSmartEngine();
   loadScenarioAnalysis();
-  loadInvestorAnalysis();
   if (!silent) showToast("Perfil do cliente salvo.", "success");
   return profile;
 }

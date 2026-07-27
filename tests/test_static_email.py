@@ -21,7 +21,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260727-02", index_html)
+        self.assertIn("/static/js/app.js?v=20260727-04", index_html)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -132,6 +132,9 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('if (screenName === "viabilidade") loadConfiguracoes();', app_js)
         self.assertIn("function renderSmartEngine()", app_js)
         self.assertIn("function calculateSmartEngineScenario", app_js)
+        self.assertIn("const controller = new AbortController();", app_js)
+        self.assertIn("signal: controller.signal", app_js)
+        self.assertIn('if (error.name === "AbortError" || requestId !== investorAnalysisRequestId) return;', app_js)
         self.assertIn("creditoDesejado / (1 - embeddedPercent)", app_js)
         self.assertIn("creditoDesejado * Number(rule.fundo_reserva || 0)", app_js)
         self.assertIn("Number(profile.renda_total || 0) * 0.30", app_js)
