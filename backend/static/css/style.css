@@ -1,26 +1,26 @@
 :root {
-  --bg: #f9f5f0;
-  --sidebar: #1b2932;
-  --primary: #e67e22;
-  --primary-hover: #b8753d;
-  --primary-soft: #fff1e6;
-  --brand-navy: #243138;
-  --brand-navy-deep: #1b2932;
-  --brand-navy-light: #3d4f5d;
-  --brand-bronze: #e67e22;
-  --brand-bronze-dark: #b8753d;
-  --brand-gold: #d4a853;
-  --brand-gold-light: #e5ba6f;
-  --brand-ice: #f9f5f0;
-  --border: #ddd9d3;
-  --text: #243138;
-  --muted: #6f7a81;
-  --surface: #fdfbf9;
-  --surface-soft: #edeae5;
-  --table-head: #edeae5;
+  --bg: #f9f8f6;
+  --sidebar: #1f2d33;
+  --primary: #e06c1f;
+  --primary-hover: #b4552d;
+  --primary-soft: #fff2e8;
+  --brand-navy: #2e3f47;
+  --brand-navy-deep: #1f2d33;
+  --brand-navy-light: #495f69;
+  --brand-bronze: #e06c1f;
+  --brand-bronze-dark: #b4552d;
+  --brand-gold: #df9253;
+  --brand-gold-light: #ebad70;
+  --brand-ice: #f9f8f6;
+  --border: #e3e1dd;
+  --text: #2e3f47;
+  --muted: #567381;
+  --surface: #fdfdfc;
+  --surface-soft: #efeeeb;
+  --table-head: #2e3f47;
   --line: var(--border);
-  --radius-sm: 6px;
-  --radius-md: 8px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
   --shadow-card: 0 12px 28px rgba(27, 41, 50, 0.05);
   --shadow-raised: 0 18px 38px rgba(27, 41, 50, 0.09);
   --success: #16a34a;
@@ -35,14 +35,14 @@
 }
 
 body[data-theme="escuro"] {
-  --bg: #1b2932;
-  --sidebar: #14232c;
-  --border: #3d4f5d;
-  --text: #f9f5f0;
-  --muted: #c8c2bb;
-  --surface: #243138;
-  --surface-soft: #1f2d38;
-  --table-head: #2c3d46;
+  --bg: #1f2d33;
+  --sidebar: #17242a;
+  --border: #495f69;
+  --text: #f9f8f6;
+  --muted: #b8c4c8;
+  --surface: #2e3f47;
+  --surface-soft: #243138;
+  --table-head: #17242a;
   --line: var(--border);
 }
 
@@ -85,6 +85,12 @@ h6,
   --bs-btn-active-border-color: var(--brand-bronze-dark);
   --bs-btn-disabled-bg: var(--brand-gold);
   --bs-btn-disabled-border-color: var(--brand-gold);
+}
+
+.btn {
+  border-radius: 9999px;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 .btn-outline-primary {
@@ -310,7 +316,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   flex-direction: column;
   width: 248px;
   padding: 16px 14px;
-  background: linear-gradient(180deg, var(--sidebar), #14232c);
+  background: var(--sidebar);
   color: #fff;
 }
 
@@ -372,7 +378,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   gap: 10px;
   padding: 0 10px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 12px;
   background: transparent;
   color: rgba(249, 245, 240, 0.88);
   font-size: 0.78rem;
