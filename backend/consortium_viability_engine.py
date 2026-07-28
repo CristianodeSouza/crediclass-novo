@@ -242,6 +242,8 @@ def analyze_client_consortium_viability(
             scenario = calculate_scenario(scenario_input, with_embedded=with_embedded).to_dict()
             scenario["credito_minimo"] = money(minimum)
             scenario["credito_maximo"] = money(maximum)
+            scenario["parcela_inicial"] = _parcela_inicial_por_cenario(scenario)
+            scenario["parcela_inicial_formula"] = "saldo devedor / prazo remanescente (coluna F)"
             matches = _strategy_matches(scenario["percentual_lance"], ranges)
             scenario["compatible_contemplation_strategies"] = matches
             scenario["contemplation_compatible"] = bool(matches) if has_ranges else None
@@ -519,6 +521,8 @@ def analyze_client_consortium_viability(
             {"id": "taxa", "name": "Taxa", "expression": "credito contratado x AC", "result": "calculado por cenario"},
             {"id": "fundo", "name": "Fundo", "expression": "credito contratado x AA", "result": "calculado por cenario"},
             {"id": "saldo", "name": "Saldo devedor", "expression": "credito + taxa + fundo", "result": "calculado por cenario"},
+            {"id": "parcela_inicial_sem_embutido", "name": "Parcela inicial sem lance embutido", "expression": "saldo devedor sem lance embutido / prazo remanescente (coluna F)", "result": "calculado por grupo"},
+            {"id": "parcela_inicial_com_embutido", "name": "Parcela inicial com lance embutido", "expression": "saldo devedor com lance embutido / prazo remanescente (coluna F)", "result": "calculado por grupo"},
             {"id": "lance", "name": "Lance", "expression": "RP + FGTS (+ embutido)", "result": "calculado por cenario"},
             {"id": "prazo", "name": "Prazo", "expression": "ceil(saldo ou saldo apos lance / parcela)", "result": "calculado por cenario"},
         ],

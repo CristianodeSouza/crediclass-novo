@@ -2147,19 +2147,24 @@ function applyInvestorPreferences(items, selectedFlags) {
 
 function renderCreditScenarioCell(item) {
   if (Array.isArray(item.cenarios)) {
-    return `<div class="credit-scenario-cell">${item.cenarios.map((scenario) => `<span>${escapeHtml(scenario.label)}: ${formatMoney(scenario.credito_contratado)} - ${scenario.credit_compatible ? "OK" : "não atende"}</span><small>Lance: ${formatPercent(scenario.percentual_lance)} | Saldo: ${formatMoney(scenario.saldo_devedor)} | Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</small>`).join("")}</div>`;
+    return `<div class="credit-scenario-cell">${item.cenarios.map((scenario) => {
+      const title = scenario.id === "with_embedded"
+        ? "Crédito contratado com lance embutido"
+        : "Crédito contratado sem lance embutido";
+      return `<div class="credit-scenario-block"><strong>${title}</strong><span>${formatMoney(scenario.credito_contratado)} - ${scenario.credit_compatible ? "OK" : "não atende"}</span><small>Lance: ${formatPercent(scenario.percentual_lance)} | Saldo devedor: ${formatMoney(scenario.saldo_devedor)} | Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</small></div>`;
+    }).join("")}</div>`;
   }
   const percent = item.percentual_lance_embutido;
   const withoutStatus = item.compativel_sem_embutido ? "OK" : "nao atende";
   const withStatus = item.compativel_com_embutido ? "OK" : "nao atende";
   const withEmbedded = percent === null || percent === undefined
-    ? "Com emb.: indisponivel"
-    : `Com emb. (${formatPercent(percent)}): ${formatMoney(item.credito_necessario_com_embutido)} - ${withStatus}`;
-  const withoutBalance = `Saldo sem emb.: ${formatMoney(item.saldo_devedor_sem_embutido)}`;
+    ? "Crédito contratado com lance embutido: indisponível"
+    : `Crédito contratado com lance embutido (${formatPercent(percent)}): ${formatMoney(item.credito_necessario_com_embutido)} - ${withStatus}`;
+  const withoutBalance = `Saldo devedor sem lance embutido: ${formatMoney(item.saldo_devedor_sem_embutido)}`;
   const withBalance = item.saldo_devedor_com_embutido === null || item.saldo_devedor_com_embutido === undefined
-    ? "Saldo com emb.: indisponivel"
-    : `Saldo com emb.: ${formatMoney(item.saldo_devedor_com_embutido)}`;
-  return `<div class="credit-scenario-cell"><span>Sem emb.: ${formatMoney(item.credito_necessario_sem_embutido)} - ${withoutStatus}</span><span>${withEmbedded}</span><small>${withoutBalance}</small><small>${withBalance}</small></div>`;
+    ? "Saldo devedor com lance embutido: indisponível"
+    : `Saldo devedor com lance embutido: ${formatMoney(item.saldo_devedor_com_embutido)}`;
+  return `<div class="credit-scenario-cell"><div class="credit-scenario-block"><strong>Crédito contratado sem lance embutido</strong><span>${formatMoney(item.credito_necessario_sem_embutido)} - ${withoutStatus}</span><small>${withoutBalance}</small></div><div class="credit-scenario-block"><strong>${withEmbedded}</strong><small>${withBalance}</small></div></div>`;
 }
 
 function auditDateTime(value) {
@@ -2202,9 +2207,10 @@ function renderMotor360Audit(audit) {
   const incompleteRows = incompleteGroups.flatMap((item) => (item.missing_fields || []).map((field) => `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${escapeHtml(field.column || "-")}</td><td>${escapeHtml(field.field || "-")}</td><td>${escapeHtml(String(field.raw_value ?? "-"))}</td><td>${escapeHtml(field.reason || "-")}</td><td>${escapeHtml(field.impact || "-")}</td></tr>`)).join("");
   const groupRows = (audit.group_results || []).map((item) => {
     const scenario = (item.scenarios || []).find((entry) => entry.id === "without_embedded") || item.scenarios?.[0] || {};
+    const embeddedScenario = (item.scenarios || []).find((entry) => entry.id === "with_embedded") || {};
     const stages = item.stage_results || {};
     const mark = (stage) => stages[stage]?.approved ? "Aprovado" : "Reprovado";
-    return `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${formatMoney(scenario.credito_contratado)}</td><td>${formatMoney(scenario.credito_minimo)} a ${formatMoney(scenario.credito_maximo)}</td><td>${mark("credito")}</td><td>${escapeHtml(String(scenario.prazo_apos_lance_limite_renda_meses ?? "-"))} / ${escapeHtml(String(item.source_values?.prazo_restante ?? "-"))}</td><td>${mark("prazo")}</td><td>${mark("contemplacao")}</td><td>${item.result === "preselected" ? "Pré-selecionado" : item.result === "excluded_term_income" ? "Eliminado em prazo/renda" : "Eliminado na faixa de crédito"}</td></tr>`;
+    return `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${formatMoney(scenario.credito_contratado)}</td><td>${formatMoney(scenario.credito_minimo)} a ${formatMoney(scenario.credito_maximo)}</td><td>${mark("credito")}</td><td>${formatMoney(scenario.parcela_inicial)}<br><small>com emb.: ${formatMoney(embeddedScenario.parcela_inicial)}</small></td><td>${escapeHtml(String(scenario.prazo_apos_lance_limite_renda_meses ?? "-"))} / ${escapeHtml(String(item.source_values?.prazo_restante ?? "-"))}</td><td>${mark("prazo")}</td><td>${mark("contemplacao")}</td><td>${item.result === "preselected" ? "Pré-selecionado" : item.result === "excluded_term_income" ? "Eliminado em prazo/renda" : "Eliminado na faixa de crédito"}</td></tr>`;
   }).join("");
   const warnings = (audit.warnings || []).map((warning) => `<li class="audit-warning-${escapeHtml(warning.level || "info")}">${escapeHtml(warning.message)}</li>`).join("");
   return `
@@ -2225,7 +2231,7 @@ function renderMotor360Audit(audit) {
         <details><summary>5. Ordem e pré-seleção</summary><p>${escapeHtml(audit.final_ordering?.execution_summary || "")}</p><ol>${(audit.final_ordering?.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ol><p>Compatíveis por crédito: <strong>${summary.total_credit_compatible ?? 0}</strong> | Pré-selecionados: <strong>${summary.total_preselected ?? 0}</strong> | Eliminados por crédito: <strong>${summary.total_credit_rejected ?? 0}</strong> | Eliminados por prazo/renda: <strong>${summary.total_term_income_rejected ?? 0}</strong> | Grupos incompletos: <strong>${summary.groups_with_incomplete_data ?? 0}</strong> | Ocorrências incompletas: <strong>${summary.incomplete_field_occurrences ?? 0}</strong></p></details>
         <details><summary>6. Grupos excluídos e motivos (${excluded.length})</summary>${excluded.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th><th>Detalhe</th></tr></thead><tbody>${excludedRows}</tbody></table></div>` : "<p>Nenhum grupo foi excluído.</p>"}</details>
         <details><summary>7. Dados incompletos por grupo (${incompleteGroups.length})</summary>${incompleteGroups.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Coluna</th><th>Campo</th><th>Valor original</th><th>Motivo</th><th>Impacto</th></tr></thead><tbody>${incompleteRows}</tbody></table></div>` : "<p>Nenhum dado obrigatório ausente.</p>"}</details>
-        <details><summary>8. Auditoria por grupo (${(audit.group_results || []).length})</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Crédito contratado</th><th>Faixa O/U</th><th>Crédito</th><th>Prazo calculado / F</th><th>Prazo</th><th>Contemplação</th><th>Resultado</th></tr></thead><tbody>${groupRows}</tbody></table></div></details>
+        <details><summary>8. Auditoria por grupo (${(audit.group_results || []).length})</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Crédito contratado</th><th>Faixa O/U</th><th>Crédito</th><th>Parcela inicial<br><small>sem / com embutido</small></th><th>Prazo calculado / F</th><th>Prazo</th><th>Contemplação</th><th>Resultado</th></tr></thead><tbody>${groupRows}</tbody></table></div></details>
         <details><summary>9. Alertas e regras pendentes</summary><ul class="motor360-audit-warnings">${warnings}</ul></details>
       </div>
     </details>`;
@@ -2237,7 +2243,15 @@ function renderMotor360GroupAudit(groupId) {
   const entry = (audit.group_results || []).find((item) => String(item.grupo) === String(groupId));
   if (!entry) return;
   document.getElementById("motor360GroupAuditDialog")?.remove();
-  const scenarios = (entry.scenarios || []).map((scenario) => `<article><strong>${escapeHtml(scenario.label)}</strong><span>Status: ${scenario.creation_status === "not_created" ? formatMotor360Reason(scenario.creation_reason) : "calculado"}</span><span>Crédito contratado: ${formatMoney(scenario.credito_contratado)}</span><span>Lance total: ${formatMoney(scenario.lance_total)} (${formatPercent(scenario.percentual_lance)})</span><span>Saldo devedor: ${formatMoney(scenario.saldo_devedor)}</span><span>Prazo: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</span></article>`).join("");
+  const scenarios = (entry.scenarios || []).map((scenario) => {
+    const scenarioTitle = scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido";
+    const installment = scenario.parcela_inicial;
+    const formula = scenario.parcela_inicial_formula || "saldo devedor / prazo remanescente (coluna F)";
+    const calculation = installment === null || installment === undefined
+      ? "Não calculada: dados insuficientes"
+      : `${formatMoney(scenario.saldo_devedor)} / ${escapeHtml(String(scenario.prazo_remanescente ?? "-"))} = ${formatMoney(installment)}`;
+    return `<article><strong>${scenarioTitle}</strong><span>Status: ${scenario.creation_status === "not_created" ? formatMotor360Reason(scenario.creation_reason) : "calculado"}</span><span>Crédito contratado: ${formatMoney(scenario.credito_contratado)}</span><span>Lance total: ${formatMoney(scenario.lance_total)} (${formatPercent(scenario.percentual_lance)})</span><span>Saldo devedor: ${formatMoney(scenario.saldo_devedor)}</span><span>Parcela inicial: ${formatMoney(installment)}</span><small>Fórmula: ${escapeHtml(formula)}</small><small>Cálculo: ${calculation}</small><span>Prazo: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</span></article>`;
+  }).join("");
   const dialog = document.createElement("dialog");
   dialog.id = "motor360GroupAuditDialog";
   dialog.className = "motor360-group-audit-dialog";

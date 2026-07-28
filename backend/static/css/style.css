@@ -4502,6 +4502,33 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.62rem;
   line-height: 1.2;
 }
+
+.credit-scenario-block {
+  display: grid;
+  gap: 2px;
+  padding: 2px 0;
+}
+
+.credit-scenario-block + .credit-scenario-block {
+  margin-top: 3px;
+  padding-top: 5px;
+  border-top: 1px solid var(--line);
+}
+
+.credit-scenario-block strong {
+  color: var(--brand-navy);
+  font-size: 0.66rem;
+  line-height: 1.2;
+}
+
+.credit-scenario-block > span {
+  color: #147a48;
+  font-weight: 700;
+}
+
+.credit-scenario-block small {
+  color: var(--muted);
+}
 .investor-engine-table .motor360-group-audit-btn {
   width: 100%;
   min-width: 0;
