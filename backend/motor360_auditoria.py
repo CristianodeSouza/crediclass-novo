@@ -201,15 +201,55 @@ def audit_to_pdf(audit: dict[str, Any]) -> bytes:
     objects: list[bytes] = [b"<< /Type /Catalog /Pages 2 0 R >>", b"", b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>"]
     page_refs: list[int] = []
     content_refs: list[int] = []
-    for page in pages:
-        commands = ["BT"]
+    audit_id = audit.get("metadata", {}).get("audit_id", "-")
+    for page_number, page in enumerate(pages, 1):
+        commands = [
+            "q",
+            "0.976 0.973 0.965 rg",
+            f"0 0 {page_width} {page_height} re f",
+            "Q",
+        ]
         y = top
-        for text, size, is_heading in page:
-            commands.append(f"/F1 {size} Tf")
+        for line_number, (text, size, is_heading) in enumerate(page):
+            if page_number == 1 and line_number == 0:
+                commands.extend([
+                    "q",
+                    "0.122 0.176 0.2 rg",
+                    f"0 {y - 16} {page_width} 46 re f",
+                    "Q",
+                    "BT",
+                    "/F2 15 Tf",
+                    "1 1 1 rg",
+                    f"1 0 0 1 {left} {y} Tm",
+                    f"({_pdf_escape(text)}) Tj",
+                    "ET",
+                ])
+                y -= 28
+                continue
+            if is_heading:
+                commands.extend([
+                    "q",
+                    "0.976 0.949 0.91 rg",
+                    f"{left - 6} {y - 5} {page_width - 2 * (left - 6)} 17 re f",
+                    "Q",
+                ])
+            commands.append("BT")
+            if is_heading:
+                commands.extend(["0.878 0.424 0.122 rg", "/F2 10 Tf"])
+            else:
+                commands.extend(["0.18 0.247 0.278 rg", f"/F1 {size} Tf"])
             commands.append(f"1 0 0 1 {left} {y} Tm")
             commands.append(f"({_pdf_escape(text)}) Tj")
+            commands.append("ET")
             y -= 18 if is_heading else line_height
-        commands.append("ET")
+        commands.extend([
+            "BT",
+            "0.337 0.451 0.51 rg",
+            "/F1 7 Tf",
+            f"1 0 0 1 {left} 16 Tm",
+            f"(Crediclass | Auditoria { _pdf_escape(audit_id) } | Pagina {page_number}/{len(pages)}) Tj",
+            "ET",
+        ])
         stream = "\n".join(commands).encode("latin1", "replace")
         content_refs.append(len(objects) + 1)
         objects.append(b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream")
