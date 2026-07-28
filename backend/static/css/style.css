@@ -4459,8 +4459,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   background: #fff7ed;
 }
 
-.investor-engine-table tbody td:nth-child(6),
-.investor-engine-table tbody td:nth-child(7) {
+.investor-engine-table tbody td:nth-child(7),
+.investor-engine-table tbody td:nth-child(8) {
   color: #9a3412;
   font-weight: 700;
 }
@@ -4479,17 +4479,19 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .investor-engine-table th:nth-child(3),
 .investor-engine-table td:nth-child(3) { width: 7%; }
 .investor-engine-table th:nth-child(4),
-.investor-engine-table td:nth-child(4) { width: 34%; }
+.investor-engine-table td:nth-child(4) { width: 11%; }
 .investor-engine-table th:nth-child(5),
-.investor-engine-table td:nth-child(5) { width: 10%; }
+.investor-engine-table td:nth-child(5) { width: 25%; }
 .investor-engine-table th:nth-child(6),
-.investor-engine-table td:nth-child(6) { width: 8%; }
+.investor-engine-table td:nth-child(6) { width: 10%; }
 .investor-engine-table th:nth-child(7),
-.investor-engine-table td:nth-child(7) { width: 13%; }
+.investor-engine-table td:nth-child(7) { width: 8%; }
 .investor-engine-table th:nth-child(8),
-.investor-engine-table td:nth-child(8) { width: 9%; }
+.investor-engine-table td:nth-child(8) { width: 13%; }
 .investor-engine-table th:nth-child(9),
-.investor-engine-table td:nth-child(9) { width: 7%; }
+.investor-engine-table td:nth-child(9) { width: 9%; }
+.investor-engine-table th:nth-child(10),
+.investor-engine-table td:nth-child(10) { width: 7%; }
 .investor-engine-table .credit-scenario-cell {
   min-width: 0;
   gap: 2px;

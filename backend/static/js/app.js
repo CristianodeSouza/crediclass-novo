@@ -2302,12 +2302,13 @@ function renderInvestorAnalysis(result) {
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">
-        <thead><tr><th>Ordem</th><th>Grupo</th><th>Adm.</th><th>Cenários financeiros</th><th>Parcela de referência</th><th>Prazo restante</th><th>Classificação de contemplação</th><th>Status</th><th>Auditoria</th></tr></thead>
+        <thead><tr><th>Ordem</th><th>Grupo</th><th>Adm.</th><th>Crédito máximo</th><th>Cenários financeiros</th><th>Parcela de referência</th><th>Prazo restante</th><th>Classificação de contemplação</th><th>Status</th><th>Auditoria</th></tr></thead>
         <tbody>${items.map((item) => `
           <tr>
             <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
             <td>${escapeHtml(item.grupo || item.grupo_id || "-")}</td>
             <td>${escapeHtml(item.administradora || "-")}</td>
+            <td>${formatMoney(item.credito_maximo)}</td>
             <td>${renderCreditScenarioCell(item)}</td>
             <td>${formatMoney(item.reference_installment)}</td>
             <td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td>
