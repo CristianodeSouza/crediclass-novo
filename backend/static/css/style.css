@@ -4427,15 +4427,19 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .investor-engine-table {
   border: 1px solid var(--line);
   margin: 0;
-  font-size: 0.8rem;
+  width: 100%;
+  min-width: 0;
+  table-layout: fixed;
+  font-size: 0.76rem;
 }
 
 .investor-engine-table th,
 .investor-engine-table td {
-  padding: 10px 9px;
+  padding: 7px 6px;
   text-align: center;
   vertical-align: middle;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .investor-engine-table thead th {
@@ -4455,8 +4459,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   background: #fff7ed;
 }
 
-.investor-engine-table tbody td:nth-child(7),
-.investor-engine-table tbody td:nth-child(8) {
+.investor-engine-table tbody td:nth-child(6),
+.investor-engine-table tbody td:nth-child(7) {
   color: #9a3412;
   font-weight: 700;
 }
@@ -4465,6 +4469,50 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .investor-engine-table tbody td:nth-child(2),
 .investor-engine-table tbody td:nth-child(3) {
   text-align: left;
+}
+
+/* The Motor 360 result must remain readable without a desktop-wide scroll. */
+.investor-engine-table th:nth-child(1),
+.investor-engine-table td:nth-child(1) { width: 5%; }
+.investor-engine-table th:nth-child(2),
+.investor-engine-table td:nth-child(2) { width: 7%; }
+.investor-engine-table th:nth-child(3),
+.investor-engine-table td:nth-child(3) { width: 7%; }
+.investor-engine-table th:nth-child(4),
+.investor-engine-table td:nth-child(4) { width: 34%; }
+.investor-engine-table th:nth-child(5),
+.investor-engine-table td:nth-child(5) { width: 10%; }
+.investor-engine-table th:nth-child(6),
+.investor-engine-table td:nth-child(6) { width: 8%; }
+.investor-engine-table th:nth-child(7),
+.investor-engine-table td:nth-child(7) { width: 13%; }
+.investor-engine-table th:nth-child(8),
+.investor-engine-table td:nth-child(8) { width: 9%; }
+.investor-engine-table th:nth-child(9),
+.investor-engine-table td:nth-child(9) { width: 7%; }
+.investor-engine-table .credit-scenario-cell {
+  min-width: 0;
+  gap: 2px;
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+.investor-engine-table .credit-scenario-cell small {
+  font-size: 0.62rem;
+  line-height: 1.2;
+}
+.investor-engine-table .motor360-group-audit-btn {
+  width: 100%;
+  min-width: 0;
+  padding: 4px 5px;
+  font-size: 0.65rem;
+  white-space: normal;
+}
+
+@media (max-width: 900px) {
+  .investor-engine-table {
+    min-width: 760px;
+    table-layout: auto;
+  }
 }
 
 .investor-distance {
