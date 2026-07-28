@@ -68,7 +68,7 @@ class InvestorEngineTest(unittest.TestCase):
         result = analyze_investor_groups(payload(lance_proprio=100000, fgts=100000), [
             group("sem", 1150000, 6000, percentual_lance_embutido="30%"),
             group("ambos", 1642857.14, 6000, percentual_lance_embutido="0.30"),
-            group("nenhum", 1149999, 6000, percentual_lance_embutido="30"),
+            group("nenhum", 949999, 6000, percentual_lance_embutido="30"),
         ])
 
         self.assertEqual(result["total_grupos_compativeis"], 2)

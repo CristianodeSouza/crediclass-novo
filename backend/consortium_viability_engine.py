@@ -491,8 +491,8 @@ def analyze_client_consortium_viability(
             {"order": 7, "id": "ranking", "name": "Ranking", "formula_or_rule": "Preferências configuráveis apenas reordenam os grupos finais", "input_count": counters["contemplation_approved"], "approved_count": len(eligible_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
         ],
         "formulas": [
-            {"id": "base_liquida", "name": "Base liquida", "expression": "credito liquido desejado + recurso proprio + FGTS", "result": money(desired + own + fgts)},
-            {"id": "credito_sem_embutido", "name": "Credito sem embutido", "expression": "base liquida", "result": money(desired + own + fgts)},
+            {"id": "base_liquida", "name": "Base liquida", "expression": "credito liquido desejado", "result": money(desired)},
+            {"id": "credito_sem_embutido", "name": "Credito sem embutido", "expression": "base liquida", "result": money(desired)},
             {"id": "credito_com_embutido", "name": "Credito com embutido", "expression": "base liquida / (1 - X)", "result": "calculado por grupo"},
             {"id": "taxa", "name": "Taxa", "expression": "credito contratado x AC", "result": "calculado por cenario"},
             {"id": "fundo", "name": "Fundo", "expression": "credito contratado x AA", "result": "calculado por cenario"},

@@ -54,24 +54,24 @@ class Motor360RfcTest(unittest.TestCase):
         without = next(item for item in scenarios if item["id"] == "without_embedded")
         embedded = next(item for item in scenarios if item["id"] == "with_embedded")
 
-        self.assertEqual(without["credito_contratado"], 1100000.0)
-        self.assertEqual(without["taxa_administracao"], 176000.0)
-        self.assertEqual(without["fundo_reserva"], 33000.0)
-        self.assertEqual(without["saldo_devedor"], 1309000.0)
+        self.assertEqual(without["credito_contratado"], 950000.0)
+        self.assertEqual(without["taxa_administracao"], 152000.0)
+        self.assertEqual(without["fundo_reserva"], 28500.0)
+        self.assertEqual(without["saldo_devedor"], 1130500.0)
         self.assertEqual(without["lance_total"], 150000.0)
-        self.assertEqual(without["saldo_apos_lance"], 1159000.0)
-        self.assertEqual(without["prazo_inicial_desejada_meses"], 202)
-        self.assertEqual(without["prazo_apos_lance_limite_renda_meses"], 78)
+        self.assertEqual(without["saldo_apos_lance"], 980500.0)
+        self.assertEqual(without["prazo_inicial_desejada_meses"], 174)
+        self.assertEqual(without["prazo_apos_lance_limite_renda_meses"], 66)
         self.assertTrue(without["liquidez_preservada"])
 
-        self.assertEqual(embedded["credito_contratado"], 1571428.57)
-        self.assertEqual(embedded["valor_lance_embutido"], 471428.57)
-        self.assertEqual(embedded["taxa_administracao"], 251428.57)
-        self.assertEqual(embedded["fundo_reserva"], 47142.86)
-        self.assertEqual(embedded["saldo_devedor"], 1870000.0)
-        self.assertEqual(embedded["lance_total"], 621428.57)
-        self.assertEqual(embedded["saldo_apos_lance"], 1248571.43)
-        self.assertEqual(embedded["prazo_apos_lance_limite_renda_meses"], 84)
+        self.assertEqual(embedded["credito_contratado"], 1357142.86)
+        self.assertEqual(embedded["valor_lance_embutido"], 407142.86)
+        self.assertEqual(embedded["taxa_administracao"], 217142.86)
+        self.assertEqual(embedded["fundo_reserva"], 40714.29)
+        self.assertEqual(embedded["saldo_devedor"], 1615000.0)
+        self.assertEqual(embedded["lance_total"], 557142.86)
+        self.assertEqual(embedded["saldo_apos_lance"], 1057857.14)
+        self.assertEqual(embedded["prazo_apos_lance_limite_renda_meses"], 71)
         self.assertTrue(embedded["liquidez_preservada"])
 
     def test_null_percentage_remains_null_and_only_embedded_scenario_is_not_created(self):
@@ -86,16 +86,16 @@ class Motor360RfcTest(unittest.TestCase):
 
     def test_credit_range_uses_nominal_contracted_credit_not_debt(self):
         result = analyze_client_consortium_viability(payload(fgts=0), [
-            group("outside", credito_minimo=100000, credito_maximo=1049999),
+            group("outside", credito_minimo=100000, credito_maximo=949999),
             group("inside", credito_minimo=900000, credito_maximo=1100000, percentual_lance_embutido=None, lance_moderado_12m="5%"),
         ])
         self.assertEqual([item["grupo"] for item in result["items"]], ["inside"])
-        self.assertEqual(result["items"][0]["cenarios"][0]["saldo_devedor"], 1249500.0)
+        self.assertEqual(result["items"][0]["cenarios"][0]["saldo_devedor"], 1130500.0)
 
     def test_remaining_term_is_compared_to_ceil_after_bid_income_term(self):
         result = analyze_client_consortium_viability(payload(), [
-            group("enough", prazo_restante=78, percentual_lance_embutido=None),
-            group("short", prazo_restante=77, percentual_lance_embutido=None),
+            group("enough", prazo_restante=66, percentual_lance_embutido=None),
+            group("short", prazo_restante=65, percentual_lance_embutido=None),
         ])
         self.assertEqual([item["grupo"] for item in result["items"]], ["enough"])
         reasons = result["audit"]["excluded_groups"][0]["detail"]

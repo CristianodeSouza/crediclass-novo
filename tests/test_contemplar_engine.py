@@ -35,14 +35,14 @@ class ContemplarEngineTest(unittest.TestCase):
         self.assertTrue(is_contemplar_objective("Contemplar - moderado - 12 meses"))
         self.assertFalse(is_contemplar_objective("Investidor - Vender carta contemplada"))
 
-    def test_calculates_required_gross_credit_from_the_three_client_values(self):
-        self.assertEqual(calculate_required_gross_credit(950000, 100000, 50000), 1100000)
-        self.assertEqual(calculate_required_gross_credit("950.000,00", "100.000,00", "50.000,00"), 1100000)
+    def test_calculates_credit_from_desired_value_only(self):
+        self.assertEqual(calculate_required_gross_credit(950000, 100000, 50000), 950000)
+        self.assertEqual(calculate_required_gross_credit("950.000,00", "100.000,00", "50.000,00"), 950000)
 
     def test_filters_only_by_credit_maximum_and_uses_credit_minimum_as_information(self):
         result = analyze_contemplar_groups(payload(), [
-            group("below", 1099999),
-            group("equal", 1100000, credito_minimo=1099999),
+            group("below", 949999),
+            group("equal", 950000, credito_minimo=949999),
             group("above", 1200000, credito_minimo=1200000),
             group("missing", None),
         ])
@@ -52,7 +52,7 @@ class ContemplarEngineTest(unittest.TestCase):
         self.assertEqual(result["total_grupos_incompativeis_credito"], 1)
         self.assertEqual(result["total_grupos_incompletos"], 1)
         self.assertEqual([item["grupo"] for item in result["items"]], ["equal", "above"])
-        self.assertEqual(result["items"][0]["credito_minimo"], 1099999)
+        self.assertEqual(result["items"][0]["credito_minimo"], 949999)
 
     def test_returns_all_compatible_groups_ordered_by_smallest_margin_then_group(self):
         result = analyze_contemplar_groups(payload(lance_proprio=0, fgts=0), [
@@ -69,7 +69,7 @@ class ContemplarEngineTest(unittest.TestCase):
         result = analyze_contemplar_groups(payload(fgts=100000), [
             group("sem", 1150000, percentual_lance_embutido="30%"),
             group("ambos", 1642857.14, percentual_lance_embutido="0,30"),
-            group("nenhum", 1149999, percentual_lance_embutido="30"),
+            group("nenhum", 949999, percentual_lance_embutido="30"),
         ])
 
         self.assertEqual(result["total_grupos_compativeis"], 2)

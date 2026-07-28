@@ -37,7 +37,7 @@ class Motor360AuditoriaTest(unittest.TestCase):
             ["status", "type", "credit", "term", "preselection", "contemplation_information", "preliminary_order"],
         )
         self.assertEqual(audit["execution_steps"][2]["approved_count"], 1)
-        self.assertEqual(audit["formulas"][0]["result"], 1100000.0)
+        self.assertEqual(audit["formulas"][0]["result"], 950000.0)
         self.assertEqual(audit["excluded_groups"][0]["reason"], "status_inativo")
 
         motor360_auditoria.save_motor360_audit(audit)

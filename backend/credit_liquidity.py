@@ -69,7 +69,9 @@ def build_credit_liquidity_scenarios(
     desired = max(Decimal("0"), _decimal_money(desired_net_credit))
     own = max(Decimal("0"), _decimal_money(own_resources))
     fgts_value = max(Decimal("0"), _decimal_money(fgts))
-    required_without = desired + own + fgts_value
+    # RP and FGTS are bid resources. They must not increase the desired
+    # credit or the credit cut used to select groups.
+    required_without = desired
     percent = normalize_embedded_bid_percent(embedded_bid_percent)
     administration_fee_percent = normalize_cost_percent(administration_fee_percent)
     reserve_fund_percent = normalize_cost_percent(reserve_fund_percent)
@@ -88,7 +90,7 @@ def build_credit_liquidity_scenarios(
         else None
     )
     projected_with = (
-        required_with - embedded_amount - own - fgts_value
+        required_with - embedded_amount
         if required_with is not None and embedded_amount is not None
         else None
     )
@@ -108,7 +110,7 @@ def build_credit_liquidity_scenarios(
         "taxa_administracao_com_embutido": _money(administration_fee_with),
         "fundo_reserva_com_embutido": _money(reserve_fund_with),
         "saldo_devedor_com_embutido": _money(debtor_balance_with),
-        "credito_liquido_projetado_sem_embutido": _money(required_without - own - fgts_value),
+        "credito_liquido_projetado_sem_embutido": _money(required_without),
         "credito_liquido_projetado_com_embutido": _money(projected_with),
     }
 

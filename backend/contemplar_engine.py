@@ -43,9 +43,10 @@ def calculate_required_gross_credit(
     fgts: Any = 0,
 ) -> float:
     desired = normalize_money(desired_net_credit, "credito_desejado", positive=True)
-    own = normalize_money(own_resources, "lance_proprio")
-    fgts_value = normalize_money(fgts, "fgts")
-    return round(desired + own + fgts_value, 2)
+    # RP and FGTS are lance resources and do not increase the credit needed.
+    normalize_money(own_resources, "lance_proprio")
+    normalize_money(fgts, "fgts")
+    return round(desired, 2)
 
 
 def _group_sort_key(item: dict[str, Any]) -> tuple[float, int, str]:
@@ -136,14 +137,14 @@ def analyze_contemplar_groups(payload: Any, groups: list[dict[str, Any]]) -> dic
         "total_grupos_incompativeis_credito": incompatible_credit,
         "total_grupos_incompletos": incomplete,
         "filtros": {
-            "regra_sem_embutido": "credito_maximo >= credito_liquido_desejado + recurso_proprio + fgts",
-            "regra_com_embutido": "credito_maximo >= (credito_liquido_desejado + recurso_proprio + fgts) / (1 - percentual_lance_embutido)",
+            "regra_sem_embutido": "credito_maximo >= credito_liquido_desejado",
+            "regra_com_embutido": "credito_maximo >= credito_liquido_desejado / (1 - percentual_lance_embutido)",
             "ordem": "margem_credito ASC, grupo ASC",
             "sem_limite_de_resultados": True,
         },
         "passos": [
             "Identificado o perfil Contemplar pelo objetivo selecionado.",
-            f"Credito necessario sem embutido = credito liquido desejado ({desired_credit:,.2f}) + recurso proprio ({own_resources:,.2f}) + FGTS ({fgts:,.2f}) = {required_credit:,.2f}.",
+            f"Credito necessario sem embutido = credito liquido desejado ({desired_credit:,.2f}) = {required_credit:,.2f}; recurso proprio ({own_resources:,.2f}) e FGTS ({fgts:,.2f}) sao considerados somente no lance.",
             "Para cada grupo, o sistema tambem calcula o cenario com embutido usando o percentual da coluna X e mantem o grupo se passar em pelo menos um cenario.",
             "Taxa administrativa total (coluna AC) e fundo de reserva total (coluna AA) compoem o saldo devedor de cada cenario, sem alterar a comparacao da coluna U.",
             "Credito minimo (coluna O) e exibido apenas como informacao e nao elimina grupos.",

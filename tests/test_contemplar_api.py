@@ -9,7 +9,7 @@ from backend.main import app
 class ContemplarApiTest(unittest.TestCase):
     def test_returns_only_groups_with_credit_maximum_above_required_credit(self):
         groups = [
-            {"grupo_id": "1", "grupo": "1", "administradora": "ITAU", "credito_minimo": 100000, "credito_maximo": 1000000},
+            {"grupo_id": "1", "grupo": "1", "administradora": "ITAU", "credito_minimo": 100000, "credito_maximo": 949999},
             {"grupo_id": "2", "grupo": "2", "administradora": "ITAU", "credito_minimo": 100000, "credito_maximo": 1100000},
             {"grupo_id": "3", "grupo": "3", "administradora": "ITAU", "credito_minimo": 100000, "credito_maximo": 1200000},
         ]
@@ -30,7 +30,7 @@ class ContemplarApiTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         result = response.json()
-        self.assertEqual(result["cliente"]["credito_bruto_necessario"], 1100000)
+        self.assertEqual(result["cliente"]["credito_bruto_necessario"], 950000)
         self.assertEqual(result["total_grupos_compativeis"], 2)
         self.assertEqual([item["grupo"] for item in result["items"]], ["2", "3"])
 

@@ -195,14 +195,14 @@ def analyze_investor_groups(payload: Any, groups: list[dict[str, Any]], commitme
             "credito_desejado_liquido": round(desired_credit, 2),
             "recurso_proprio": round(own_resources, 2),
             "fgts": round(fgts, 2),
-            "credito_necessario_sem_embutido": round(desired_credit + own_resources + fgts, 2),
+            "credito_necessario_sem_embutido": round(desired_credit, 2),
             "parcela_desejada": round(desired_installment, 2),
             "parcela_maxima": round(income_limit, 2),
             "renda_total": round(float(payload.renda_total), 2),
         },
         "filtros": {
-            "credito_minimo_sem_embutido": round(desired_credit + own_resources + fgts, 2),
-            "credito_minimo_com_embutido": "(credito liquido + RP + FGTS) / (1 - percentual da coluna X)",
+            "credito_minimo_sem_embutido": round(desired_credit, 2),
+            "credito_minimo_com_embutido": "credito liquido / (1 - percentual da coluna X)",
             "parcela_inicial_maxima": round(income_limit, 2),
             "ordem": "desvio_percentual ASC",
             "classificacao": {
@@ -223,7 +223,7 @@ def analyze_investor_groups(payload: Any, groups: list[dict[str, Any]], commitme
         },
         "passos": [
             "Identificado o perfil Investidor pelo objetivo selecionado.",
-            f"Calculado o credito necessario sem embutido: R$ {desired_credit + own_resources + fgts:,.2f}.",
+            f"Calculado o credito necessario sem embutido: R$ {desired_credit:,.2f}; RP e FGTS foram mantidos somente como recursos de lance.",
             "Para cada grupo, foi calculado tambem o credito necessario com embutido usando o percentual da coluna X.",
             "Foram mantidos grupos compativeis em pelo menos um dos cenarios de credito.",
             "Taxa administrativa (coluna AC) e fundo de reserva (coluna AA) foram somados ao credito contratado para formar o saldo devedor de cada cenario.",

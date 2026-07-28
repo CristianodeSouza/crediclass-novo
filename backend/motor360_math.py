@@ -145,7 +145,9 @@ def _divide(value: Decimal | None, divisor: Decimal) -> Decimal | None:
 
 def calculate_scenario(data: ScenarioInput, *, with_embedded: bool) -> CalculatedScenario:
     """Generate one independent RFC 001 scenario without reading external state."""
-    base_liquida = data.credito_liquido_desejado + data.recurso_proprio + data.fgts
+    # The desired credit is the only base for the group credit cut. Own
+    # resources and FGTS are used later as bid resources.
+    base_liquida = data.credito_liquido_desejado
     scenario_id = "with_embedded" if with_embedded else "without_embedded"
     label = "Com lance embutido" if with_embedded else "Sem lance embutido"
     embedded = data.percentual_embutido if with_embedded else Decimal("0")
@@ -179,7 +181,7 @@ def calculate_scenario(data: ScenarioInput, *, with_embedded: bool) -> Calculate
     inicial_renda = _divide(saldo, data.parcela_maxima_renda)
     apos_desejada = _divide(saldo_apos_lance, data.parcela_desejada)
     apos_renda = _divide(saldo_apos_lance, data.parcela_maxima_renda)
-    credito_liquido = credito - valor_embutido - data.recurso_proprio - data.fgts
+    credito_liquido = credito - valor_embutido
     credit_compatible = (
         data.credito_minimo is not None
         and data.credito_maximo is not None

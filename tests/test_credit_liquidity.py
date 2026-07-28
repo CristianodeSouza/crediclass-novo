@@ -20,28 +20,36 @@ class CreditLiquidityTest(unittest.TestCase):
     def test_preserves_desired_liquidity_in_both_scenarios(self):
         scenarios = build_credit_liquidity_scenarios(950000, 100000, 100000, "30%", "16%", "3%")
 
-        self.assertEqual(scenarios["credito_necessario_sem_embutido"], 1150000)
-        self.assertEqual(scenarios["credito_necessario_com_embutido"], 1642857.14)
-        self.assertEqual(scenarios["valor_lance_embutido"], 492857.14)
-        self.assertEqual(scenarios["taxa_administracao_sem_embutido"], 184000)
-        self.assertEqual(scenarios["fundo_reserva_sem_embutido"], 34500)
-        self.assertEqual(scenarios["saldo_devedor_sem_embutido"], 1368500)
-        self.assertEqual(scenarios["taxa_administracao_com_embutido"], 262857.14)
-        self.assertEqual(scenarios["fundo_reserva_com_embutido"], 49285.71)
-        self.assertEqual(scenarios["saldo_devedor_com_embutido"], 1955000)
+        self.assertEqual(scenarios["credito_necessario_sem_embutido"], 950000)
+        self.assertEqual(scenarios["credito_necessario_com_embutido"], 1357142.86)
+        self.assertEqual(scenarios["valor_lance_embutido"], 407142.86)
+        self.assertEqual(scenarios["taxa_administracao_sem_embutido"], 152000)
+        self.assertEqual(scenarios["fundo_reserva_sem_embutido"], 28500)
+        self.assertEqual(scenarios["saldo_devedor_sem_embutido"], 1130500)
+        self.assertEqual(scenarios["taxa_administracao_com_embutido"], 217142.86)
+        self.assertEqual(scenarios["fundo_reserva_com_embutido"], 40714.29)
+        self.assertEqual(scenarios["saldo_devedor_com_embutido"], 1615000)
         self.assertEqual(scenarios["credito_liquido_projetado_sem_embutido"], 950000)
         self.assertEqual(scenarios["credito_liquido_projetado_com_embutido"], 950000)
 
     def test_classifies_the_two_credit_compatibility_scenarios(self):
         scenarios = build_credit_liquidity_scenarios(950000, 100000, 100000, 0.30)
 
-        sem = evaluate_group_credit_liquidity(1150000, scenarios)
-        ambos = evaluate_group_credit_liquidity(1642857.14, scenarios)
-        nenhum = evaluate_group_credit_liquidity(1000000, scenarios)
+        sem = evaluate_group_credit_liquidity(950000, scenarios)
+        ambos = evaluate_group_credit_liquidity(1357142.86, scenarios)
+        nenhum = evaluate_group_credit_liquidity(900000, scenarios)
 
         self.assertEqual(sem["classificacao_credito"], "Compativel sem embutido")
         self.assertEqual(ambos["classificacao_credito"], "Compativel nos dois cenarios")
         self.assertEqual(nenhum["classificacao_credito"], "Incompativel nos dois cenarios")
+
+    def test_resources_do_not_increase_credit_cut(self):
+        scenarios = build_credit_liquidity_scenarios(600000, 100000, 100000, "30%")
+
+        self.assertEqual(scenarios["credito_necessario_sem_embutido"], 600000)
+        self.assertEqual(scenarios["credito_necessario_com_embutido"], 857142.86)
+        self.assertEqual(scenarios["valor_lance_embutido"], 257142.86)
+        self.assertEqual(scenarios["credito_liquido_projetado_com_embutido"], 600000)
 
 
 if __name__ == "__main__":
