@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from .auditoria import list_auditoria, record_auditoria
-from .motor360_auditoria import audit_to_markdown, get_motor360_audit, save_motor360_audit
+from .motor360_auditoria import audit_to_markdown, audit_to_pdf, get_motor360_audit, save_motor360_audit
 from .administrator_feasibility import analyze_administradoras
 from .administrator_rules import normalize_admin_name, rules_by_administradora
 from .config import get_settings
@@ -562,6 +562,15 @@ def viabilidade_360_auditoria_markdown(audit_id: str):
         return JSONResponse(status_code=404, content={"success": False, "error": "Auditoria não encontrada."})
     headers = {"Content-Disposition": f'attachment; filename="{audit_id}.md"'}
     return PlainTextResponse(audit_to_markdown(audit), headers=headers)
+
+
+@app.get("/api/viabilidade-360/auditorias/{audit_id}/exportar.pdf")
+def viabilidade_360_auditoria_pdf(audit_id: str):
+    audit = get_motor360_audit(audit_id)
+    if audit is None:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Auditoria não encontrada."})
+    headers = {"Content-Disposition": f'attachment; filename="{audit_id}-motor-360.pdf"'}
+    return Response(content=audit_to_pdf(audit), media_type="application/pdf", headers=headers)
 
 
 @app.post("/api/auth/login")
