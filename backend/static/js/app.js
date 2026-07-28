@@ -2313,7 +2313,7 @@ function renderInvestorAnalysis(result) {
             <td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td>
             <td>${escapeHtml(item.best_contemplation_strategy || (item.strategy_warnings?.length ? "Faixas não classificadas" : "Não classificada"))}</td>
             <td><span class="investor-distance ${item.recommendable ? "" : "investor-distance-sem-referencia"}">${item.recommendable ? "Pré-selecionado" : item.alerts?.length ? `Pendente: ${formatMotor360Reason(item.alerts[0])}` : "Compatível por crédito"}</span></td>
-            <td><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${escapeHtml(item.grupo || item.grupo_id || "")}">Ver justificativa</button></td>
+            <td><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${escapeHtml(item.grupo || item.grupo_id || "")}">Ver</button></td>
           </tr>`).join("")}</tbody>
       </table>
     </div>
