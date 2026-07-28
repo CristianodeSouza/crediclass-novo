@@ -139,40 +139,47 @@ def _audit_pdf_lines(audit: dict[str, Any]) -> list[tuple[str, int, bool]]:
         for part in textwrap.wrap(_pdf_text(value), width=142, break_long_words=False, break_on_hyphens=False) or [""]:
             lines.append((part, size, False))
 
-    heading("CREDICLASS - RELATORIO DA ANALISE DO MOTOR 360")
-    line(f"Auditoria: {metadata.get('audit_id', '-')} | Executada em: {metadata.get('completed_at', '-')} | Motor: {metadata.get('engine_version', '-')} | Regras: {metadata.get('rules_version', '-')} | Ambiente: {metadata.get('environment', '-')}")
-    heading("1. Dados do cliente")
+    selected_groups = [item for item in audit.get("group_results", []) if item.get("result") == "preselected"]
+    heading("CREDICLASS | RELATORIO EXECUTIVO DO MOTOR 360")
+    line(f"Auditoria {metadata.get('audit_id', '-')} | {metadata.get('completed_at', '-')} | Motor {metadata.get('engine_version', '-')} | Regras {metadata.get('rules_version', '-')} | Ambiente {metadata.get('environment', '-')}")
+    line("Documento destinado a conferencia operacional. Apresenta somente os grupos pre-selecionados para o perfil analisado.", 9)
+    heading("1. Resumo executivo do cliente")
     for field in client.get("raw_fields", []):
         line(f"{field.get('field_name', '-')}: {field.get('normalized_value', '-')} | Origem: {field.get('source_reference', field.get('source', '-'))}")
-    line(f"Valores consolidados: {client.get('consolidated_values', {})}")
-    heading("2. Base e resumo da execucao")
-    line(f"Base: {source.get('source_name', '-')} | Linhas lidas: {source.get('total_rows', 0)} | Hash: {source.get('base_snapshot', {}).get('fingerprint', '-')}")
-    for key, value in summary.items():
-        line(f"{key}: {value}")
+    consolidated = client.get("consolidated_values", {})
+    for key in ("credito_liquido_desejado", "own_resources_total", "fgts", "renda_total", "parcela_desejada", "parcela_maxima"):
+        if key in consolidated:
+            line(f"{key}: {consolidated[key]}")
+    line(f"Grupos pre-selecionados no documento: {len(selected_groups)}", 9)
+    heading("2. Base e criterios aplicados")
+    line(f"Base: {source.get('source_name', '-')} | Linhas analisadas: {source.get('total_rows', 0)} | Hash: {source.get('base_snapshot', {}).get('fingerprint', '-')}")
+    line("Filtro aplicado: somente grupos aprovados na pre-selecao, preservando o mesmo cenario para credito e prazo/renda.")
     heading("3. Sequencia de filtros")
     for step in audit.get("execution_steps", []):
         line(f"{step.get('order', '-')}. {step.get('name', '-')}: {step.get('formula_or_rule', '-')} | Entrada {step.get('input_count', 0)} | Aprovados {step.get('approved_count', 0)} | Eliminados {step.get('rejected_count', 0)} | Incompletos {step.get('incomplete_count', 0)}")
     heading("4. Formulas utilizadas")
     for formula in audit.get("formulas", []):
         line(f"{formula.get('name', '-')}: {formula.get('expression', '-')} | Resultado: {formula.get('result', 'calculado por grupo')}")
-    heading("5. Auditoria detalhada dos grupos")
-    line("Cada grupo abaixo preserva os dois cenarios e os mesmos dados apresentados no botao Ver.")
-    for item in audit.get("group_results", []):
-        heading(f"Grupo {item.get('grupo', '-')} | {item.get('administradora', '-')} | Resultado: {item.get('result', '-')}")
+    heading("5. Grupos selecionados")
+    line("Os grupos rejeitados, excluidos e com dados incompletos nao sao apresentados nesta exportacao.")
+    for item in selected_groups:
+        heading(f"#{item.get('ranking', '-')} | Grupo {item.get('grupo', '-')} | Administradora {item.get('administradora', '-')}")
         line(f"Linha de origem: {item.get('source_row', '-')} | Identificador original: {item.get('grupo_raw', item.get('grupo', '-'))}")
+        stage = item.get("stage_results", {})
+        line(f"Faixa de credito: {stage.get('credito', {}).get('rule', '-')} | Prazo: {stage.get('prazo', {}).get('rule', '-')}")
         for scenario in item.get("scenarios", []):
             title = "Credito contratado com lance embutido" if scenario.get("id") == "with_embedded" else "Credito contratado sem lance embutido"
-            line(f"{title}: status {scenario.get('creation_status', '-')} | Credito contratado {scenario.get('credito_contratado', '-')} | Lance total {scenario.get('lance_total', '-')} ({scenario.get('percentual_lance', '-')})")
+            line(f"{title} | Credito contratado: {scenario.get('credito_contratado', '-')} | Lance total: {scenario.get('lance_total', '-')} ({scenario.get('percentual_lance', '-')})")
             line(f"Saldo devedor: {scenario.get('saldo_devedor', '-')} | Prazo remanescente: {scenario.get('prazo_remanescente', '-')} | Prazo apos lance: {scenario.get('prazo_apos_lance_limite_renda_meses', '-')}")
             parcela = scenario.get("parcela_inicial")
             line(f"Parcela inicial: {parcela if parcela is not None else '-'} | Formula: {scenario.get('parcela_inicial_formula', 'saldo devedor / prazo remanescente (coluna F)')}")
             if parcela is not None:
                 line(f"Calculo auditavel: {scenario.get('saldo_devedor', '-')} / {scenario.get('prazo_remanescente', '-')} = {parcela}")
-            line(f"Credito: {'Aprovado' if scenario.get('credit_compatible') else 'Reprovado'} | Prazo: {'Compativel' if scenario.get('term_compatible') else 'Nao compativel'} | Liquidez: {'Preservada' if scenario.get('liquidez_preservada') else 'Nao preservada'}")
-        line(f"Justificativa: {', '.join(item.get('justification', [])) or 'Nenhuma'}")
-    heading("6. Regras e alertas")
-    for warning in audit.get("warnings", []):
-        line(f"[{warning.get('level', 'info')}] {warning.get('message', '-')}")
+            line(f"Resultado do cenario: credito {'aprovado' if scenario.get('credit_compatible') else 'reprovado'} | prazo {'compativel' if scenario.get('term_compatible') else 'nao compativel'} | liquidez {'preservada' if scenario.get('liquidez_preservada') else 'nao preservada'}")
+        strategies = item.get("contemplation_classification", {}).get("strategies", [])
+        line(f"Classificacao de contemplacao: {', '.join(strategies) or 'informativa'}")
+    heading("6. Observacao de auditoria")
+    line("Os valores acima sao uma fotografia da execucao registrada. A Parcela Inicial e calculada por cenario usando o saldo devedor dividido pelo prazo remanescente da coluna F.")
     return lines
 
 
