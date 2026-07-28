@@ -13,6 +13,7 @@ import json
 import math
 import re
 import time
+from decimal import Decimal
 from typing import Any
 
 from .config import get_settings
@@ -105,6 +106,19 @@ def _scenario_reasons(scenario: dict[str, Any], matches: list[str], has_ranges: 
 
 def _reference_name(strategy: str | None) -> str | None:
     return next((label for key, _, _, label in STRATEGY_TARGETS if key == strategy), None)
+
+
+def _parcela_inicial_por_cenario(scenario: dict[str, Any]) -> float | None:
+    """Calculate the initial installment from the client's contracted credit.
+
+    AJ is a later card reference. It must not replace this preliminary
+    calculation, which uses the scenario debt balance and column F.
+    """
+    saldo = parse_decimal(scenario.get("saldo_devedor"))
+    prazo = scenario.get("prazo_remanescente")
+    if saldo is None or prazo is None or int(prazo) <= 0:
+        return None
+    return money(saldo / Decimal(str(int(prazo))))
 
 
 def _audit_field(name: str, technical: str, value: Any, source: str, transformation: str) -> dict[str, Any]:
@@ -241,6 +255,10 @@ def analyze_client_consortium_viability(
             )
             scenario["recommendable"] = scenario["eligible"]
             scenarios.append(scenario)
+        parcelas_iniciais = {
+            scenario["id"]: _parcela_inicial_por_cenario(scenario)
+            for scenario in scenarios
+        }
         durations["scenario"] += time.perf_counter() - step_started
         credit_scenarios = [
             scenario for scenario in scenarios
@@ -314,8 +332,10 @@ def analyze_client_consortium_viability(
                 "taxa_ano": money(normalize_percent(group.get("taxa_adm_ano"))),
                 "lance_embutido": money(embedded),
                 "parcela_reduzida": money(parse_decimal(group.get("parcela_reduzida"))),
-                "reference_installment": money(parse_decimal(group.get("parcela_inicial_grupo"))),
-                "installment_source": "planilha coluna AJ (referencia)",
+                "reference_installment": parcelas_iniciais.get("without_embedded"),
+                "parcela_inicial_sem_embutido": parcelas_iniciais.get("without_embedded"),
+                "parcela_inicial_com_embutido": parcelas_iniciais.get("with_embedded"),
+                "installment_source": "saldo devedor da categoria / prazo remanescente (coluna F)",
                 "cenarios": scenarios,
                 "eligible_scenarios": [scenario["id"] for scenario in approved_scenarios],
                 "credit_compatible": True,
@@ -376,8 +396,10 @@ def analyze_client_consortium_viability(
             "taxa_ano": money(normalize_percent(group.get("taxa_adm_ano"))),
             "lance_embutido": money(embedded),
             "parcela_reduzida": money(parse_decimal(group.get("parcela_reduzida"))),
-            "reference_installment": money(parse_decimal(group.get("parcela_inicial_grupo"))),
-            "installment_source": "planilha coluna AJ (referencia)",
+            "reference_installment": parcelas_iniciais.get("without_embedded"),
+            "parcela_inicial_sem_embutido": parcelas_iniciais.get("without_embedded"),
+            "parcela_inicial_com_embutido": parcelas_iniciais.get("with_embedded"),
+            "installment_source": "saldo devedor da categoria / prazo remanescente (coluna F)",
             "cenarios": scenarios,
             "eligible_scenarios": [scenario["id"] for scenario in approved_scenarios],
             "credit_compatible": True,

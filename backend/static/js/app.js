@@ -2302,7 +2302,7 @@ function renderInvestorAnalysis(result) {
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">
-        <thead><tr><th>Ordem</th><th>Grupo</th><th>Adm.</th><th>Crédito máximo</th><th>Cenários financeiros</th><th>Parcela de referência</th><th>Prazo restante</th><th>Classificação de contemplação</th><th>Status</th><th>Auditoria</th></tr></thead>
+        <thead><tr><th>Ordem</th><th>Grupo</th><th>Adm.</th><th>Crédito máximo</th><th>Cenários financeiros</th><th>Parcela Inicial</th><th>Prazo restante</th><th>Classificação de contemplação</th><th>Status</th><th>Auditoria</th></tr></thead>
         <tbody>${items.map((item) => `
           <tr>
             <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
@@ -2310,7 +2310,7 @@ function renderInvestorAnalysis(result) {
             <td>${escapeHtml(item.administradora || "-")}</td>
             <td>${formatMoney(item.credito_maximo)}</td>
             <td>${renderCreditScenarioCell(item)}</td>
-            <td>${formatMoney(item.reference_installment)}</td>
+            <td><div class="investor-installment-cell"><span>Sem emb.: ${formatMoney(item.parcela_inicial_sem_embutido ?? item.reference_installment)}</span><span>Com emb.: ${formatMoney(item.parcela_inicial_com_embutido)}</span></div></td>
             <td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td>
             <td>${escapeHtml(item.best_contemplation_strategy || (item.strategy_warnings?.length ? "Faixas não classificadas" : "Não classificada"))}</td>
             <td><span class="investor-distance ${item.recommendable ? "" : "investor-distance-sem-referencia"}">${item.recommendable ? "Pré-selecionado" : item.alerts?.length ? `Pendente: ${formatMotor360Reason(item.alerts[0])}` : "Compatível por crédito"}</span></td>

@@ -4509,6 +4509,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.65rem;
   white-space: normal;
 }
+.investor-installment-cell {
+  display: grid;
+  gap: 2px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+.investor-installment-cell span:last-child {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
 
 @media (max-width: 900px) {
   .investor-engine-table {

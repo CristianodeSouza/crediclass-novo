@@ -73,6 +73,9 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(embedded["saldo_apos_lance"], 1057857.14)
         self.assertEqual(embedded["prazo_apos_lance_limite_renda_meses"], 71)
         self.assertTrue(embedded["liquidez_preservada"])
+        item = result["items"][0]
+        self.assertEqual(item["parcela_inicial_sem_embutido"], 3768.33)
+        self.assertEqual(item["parcela_inicial_com_embutido"], 5383.33)
 
     def test_null_percentage_remains_null_and_only_embedded_scenario_is_not_created(self):
         result = analyze_client_consortium_viability(payload(), [group(percentual_lance_embutido=None)])
