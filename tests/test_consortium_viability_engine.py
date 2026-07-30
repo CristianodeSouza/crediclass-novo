@@ -153,6 +153,10 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertAlmostEqual(embedded["percentual_lance_cliente"], 200000 / (600000 / 0.7), places=6)
         self.assertIn("moderate", without["compatible_contemplation_strategies"])
         self.assertNotIn("moderate", embedded["compatible_contemplation_strategies"])
+        moderate = next(profile for profile in without["perfis_contemplacao"] if profile["id"] == "moderate")
+        self.assertEqual(moderate["percentual_referencia"], 0.25)
+        self.assertEqual(moderate["lance_ideal"], 150000.0)
+        self.assertEqual(moderate["falta_para_ideal"], 0)
 
     def test_contemplation_never_eliminates_a_credit_and_term_preselected_group(self):
         result = analyze_client_consortium_viability(payload(), [

@@ -4411,6 +4411,14 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-audit-scenarios span { margin-top: 5px; }
 .motor360-group-audit-alerts { margin: 0 18px 18px; }
 .motor360-group-audit-alerts p { margin: 5px 0 0; }
+.motor360-profile-cell { min-width: 300px; font-size: 10px; }
+.motor360-profile-head, .motor360-profile-row { display: grid; grid-template-columns: 1.05fr 1fr 1fr; gap: 5px; align-items: center; }
+.motor360-profile-head { color: #6c757d; font-size: 9px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; }
+.motor360-profile-row { padding: 3px 0; border-bottom: 1px solid #f0f1f2; }
+.motor360-profile-row strong { color: #263746; font-size: 10px; }
+.motor360-profile-row span { white-space: nowrap; color: #536572; }
+.motor360-profile-row span:first-of-type { color: #16834d; }
+.motor360-profile-cell small { display: block; margin-top: 4px; color: #6c757d; }
 
 @media (max-width: 900px) {
   .motor360-audit-meta, .motor360-audit-formulas { grid-template-columns: 1fr 1fr; }

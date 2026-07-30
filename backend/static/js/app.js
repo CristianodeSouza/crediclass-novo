@@ -2167,6 +2167,20 @@ function renderCreditScenarioCell(item) {
   return `<div class="credit-scenario-cell"><div class="credit-scenario-block"><strong>Crédito contratado sem lance embutido</strong><span>${formatMoney(item.credito_necessario_sem_embutido)} - ${withoutStatus}</span><small>${withoutBalance}</small></div><div class="credit-scenario-block"><strong>${withEmbedded}</strong><small>${withBalance}</small></div></div>`;
 }
 
+function renderContemplationProfilesCell(item) {
+  const scenarios = Array.isArray(item.cenarios) ? item.cenarios : [];
+  const byId = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
+  const profiles = byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [];
+  if (!profiles.length) return "-";
+  const scenarioValue = (scenario, profileId) => {
+    const profile = (scenario?.perfis_contemplacao || []).find((item) => item.id === profileId);
+    if (!profile || profile.percentual_referencia === null || profile.percentual_referencia === undefined) return "-";
+    const status = profile.atinge_perfil ? "atinge" : `faltam ${formatMoney(profile.falta_para_ideal)}`;
+    return `${formatPercent(profile.percentual_referencia)} · ${status}`;
+  };
+  return `<div class="motor360-profile-cell"><div class="motor360-profile-head"><span>Perfil</span><span>Sem</span><span>Com</span></div>${profiles.map((profile) => `<div class="motor360-profile-row"><strong>${escapeHtml(profile.label)}</strong><span>${scenarioValue(byId.without_embedded, profile.id)}</span><span>${scenarioValue(byId.with_embedded, profile.id)}</span></div>`).join("")}<small>Lance cliente: ${formatMoney(byId.without_embedded?.lance_cliente_total ?? byId.with_embedded?.lance_cliente_total)}</small></div>`;
+}
+
 function auditDateTime(value) {
   const date = value ? new Date(value) : null;
   return date && !Number.isNaN(date.getTime()) ? date.toLocaleString("pt-BR") : "-";
@@ -2292,6 +2306,7 @@ function renderInvestorAnalysis(result) {
     ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
     ["Estratégia declarada", result.preferencia_declarada === "investment" ? "Investimento" : result.preferencia_declarada || "Não classificada"],
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
+    ["Lance ofertado", formatMoney(client.lance_cliente_total)],
     ["Compatíveis por crédito", result.total_grupos_credito_compativeis ?? 0],
     ["Pré-selecionados", result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0],
     ["Eliminados por crédito", result.audit?.summary?.total_credit_rejected ?? 0],
@@ -2316,7 +2331,7 @@ function renderInvestorAnalysis(result) {
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">
-        <thead><tr><th>Ordem</th><th>Grupo</th><th>Adm.</th><th>Crédito máximo</th><th>Cenários financeiros</th><th>Parcela Inicial</th><th>Prazo restante</th><th>Classificação de contemplação</th><th>Status</th><th>Auditoria</th></tr></thead>
+        <thead><tr><th>Ordem</th><th>Grupo</th><th>Adm.</th><th>Crédito máximo</th><th>Cenários financeiros</th><th>Parcela Inicial</th><th>Prazo restante</th><th>Perfis de contemplação<br><small>referência · comparação</small></th><th>Classificação</th><th>Status</th><th>Auditoria</th></tr></thead>
         <tbody>${items.map((item) => `
           <tr>
             <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
@@ -2326,6 +2341,7 @@ function renderInvestorAnalysis(result) {
             <td>${renderCreditScenarioCell(item)}</td>
             <td><div class="investor-installment-cell"><span>Sem emb.: ${formatMoney(item.parcela_inicial_sem_embutido ?? item.reference_installment)}</span><span>Com emb.: ${formatMoney(item.parcela_inicial_com_embutido)}</span></div></td>
             <td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td>
+            <td>${renderContemplationProfilesCell(item)}</td>
             <td>${escapeHtml(item.best_contemplation_strategy || (item.strategy_warnings?.length ? "Faixas não classificadas" : "Não classificada"))}</td>
             <td><span class="investor-distance ${item.recommendable ? "" : "investor-distance-sem-referencia"}">${item.recommendable ? "Pré-selecionado" : item.alerts?.length ? `Pendente: ${formatMotor360Reason(item.alerts[0])}` : "Compatível por crédito"}</span></td>
             <td><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${escapeHtml(item.grupo || item.grupo_id || "")}">Ver</button></td>

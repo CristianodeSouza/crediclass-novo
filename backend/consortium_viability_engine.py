@@ -32,6 +32,13 @@ STRATEGY_TARGETS = (
     ("long_term", "lance_investidor", "BL", "Investidor - 36 meses"),
 )
 
+CONTEMPLATION_PROFILE_TARGETS = (
+    ("conservative", "Conservador", "conservative"),
+    ("moderate", "Moderado", "moderate"),
+    ("aggressive", "Agressivo", "fast"),
+    ("super_aggressive", "Super Agressivo", "urgent"),
+)
+
 
 def map_declared_objective_to_preference(objective: str) -> str | None:
     """Map the declared objective only for presentation and ranking priority."""
@@ -256,6 +263,21 @@ def analyze_client_consortium_viability(
             )
             scenario["lance_cliente_total"] = money(client_bid)
             scenario["percentual_lance_cliente"] = float(client_bid_percent) if client_bid_percent is not None else None
+            profile_rows = []
+            for profile_id, label, strategy_key in CONTEMPLATION_PROFILE_TARGETS:
+                threshold = ranges.get(strategy_key)
+                threshold_decimal = Decimal(str(threshold)) if threshold is not None else None
+                ideal_bid = contracted_credit * threshold_decimal if contracted_credit is not None and threshold_decimal is not None else None
+                profile_rows.append({
+                    "id": profile_id,
+                    "label": label,
+                    "percentual_referencia": threshold,
+                    "lance_ideal": money(ideal_bid),
+                    "lance_cliente": money(client_bid),
+                    "falta_para_ideal": money(max(Decimal("0"), ideal_bid - client_bid)) if ideal_bid is not None else None,
+                    "atinge_perfil": client_bid_percent is not None and threshold is not None and client_bid_percent >= threshold,
+                })
+            scenario["perfis_contemplacao"] = profile_rows
             matches = _strategy_matches(client_bid_percent, ranges)
             scenario["compatible_contemplation_strategies"] = matches
             scenario["contemplation_compatible"] = bool(matches) if has_ranges else None
