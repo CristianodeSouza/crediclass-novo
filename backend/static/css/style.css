@@ -1677,6 +1677,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-select { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--brand-navy); cursor: pointer; font-size: 0.7rem; font-weight: 700; }
 .motor360-group-select:hover { border-color: var(--brand-orange); background: #fff8f2; }
 .motor360-group-select-input { width: 15px; height: 15px; accent-color: var(--brand-orange); }
+.motor360-quota-control { display: inline-flex; align-items: center; gap: 4px; min-height: 30px; padding: 3px 5px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-bronze-dark); font-size: 0.68rem; font-weight: 800; }
+.motor360-quota-step { display: grid; width: 22px; height: 22px; place-items: center; padding: 0; border: 1px solid #e2b17d; border-radius: 4px; background: #fff; color: var(--brand-bronze-dark); font-size: 0.9rem; line-height: 1; cursor: pointer; }
+.motor360-quota-step:hover { background: var(--brand-orange); color: #fff; }
+.motor360-quota-input { width: 28px; height: 22px; padding: 0 2px; border: 1px solid #e2b17d; border-radius: 4px; background: #fff; color: var(--brand-navy); font-size: 0.72rem; font-weight: 800; text-align: center; }
+.motor360-quota-input::-webkit-inner-spin-button, .motor360-quota-input::-webkit-outer-spin-button { opacity: 1; }
 .motor360-group-card.is-selected { border-color: #f0a15e; box-shadow: 0 0 0 2px rgb(229 121 27 / 12%); }
 .motor360-group-card.is-selected .motor360-group-order { background: var(--brand-orange); }
 .motor360-selection-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; padding: 10px 12px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-navy); font-size: 0.75rem; }
