@@ -2250,12 +2250,14 @@ function renderMotor360ChanceChart(items) {
         const value = byScenario(item, scenarioId).percentual_lance_cliente;
         return value == null ? null : value * 100;
       }),
-      borderColor: "#263f4a",
-      backgroundColor: "#263f4a",
+      backgroundColor: "#c84b3a",
+      borderColor: "#c84b3a",
+      borderWidth: 2,
+      borderDash: [2, 4],
       pointStyle: "circle",
-      pointRadius: 5,
-      pointHoverRadius: 7,
-      showLine: false,
+      pointRadius: 2,
+      pointHoverRadius: 4,
+      showLine: true,
     },
     ...profileIds.map((profileId) => ({
       label: profileLabels[profileId],
@@ -2307,7 +2309,7 @@ function renderMotor360ChanceChart(items) {
         <div><h3>Comparativo de chances de contemplação</h3><p>Os cenários financeiros são analisados separadamente. O círculo representa o lance do cliente; o triângulo representa o percentual de referência de cada perfil.</p></div>
         <span class="motor360-chance-legend-note">${groups.length} grupos comparados</span>
       </div>
-      <div class="motor360-chance-symbol-legend"><span><i class="motor360-symbol-circle" aria-hidden="true"></i>Lance do cliente</span><span><i class="motor360-symbol-triangle" aria-hidden="true"></i>Referência do perfil</span></div>
+      <div class="motor360-chance-symbol-legend"><span><i class="motor360-symbol-client-bid" aria-hidden="true"></i>Lance do cliente</span><span><i class="motor360-symbol-triangle" aria-hidden="true"></i>Referência do perfil</span></div>
       <div class="motor360-chance-scenarios">
         <section class="motor360-chance-scenario"><header><h4>Crédito contratado sem lance embutido</h4><span>Cenário 1</span></header>${scenarioSummary("without_embedded")}<div class="motor360-chance-chart"><canvas id="${canvasIds.without_embedded}" aria-label="Chances por grupo no cenário sem lance embutido"></canvas></div></section>
         <section class="motor360-chance-scenario"><header><h4>Crédito contratado com lance embutido</h4><span>Cenário 2</span></header>${scenarioSummary("with_embedded")}<div class="motor360-chance-chart"><canvas id="${canvasIds.with_embedded}" aria-label="Chances por grupo no cenário com lance embutido"></canvas></div></section>

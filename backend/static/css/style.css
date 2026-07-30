@@ -1714,8 +1714,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-chance-legend-note { flex: 0 0 auto; padding: 5px 9px; border-radius: 999px; background: #fff4e8; color: var(--brand-bronze-dark); font-size: 0.68rem; font-weight: 800; }
 .motor360-chance-symbol-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 12px; color: var(--muted); font-size: 0.68rem; }
 .motor360-chance-symbol-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.motor360-symbol-circle, .motor360-symbol-triangle { display: inline-block; width: 10px; height: 10px; }
-.motor360-symbol-circle { border-radius: 50%; background: var(--brand-navy); }
+.motor360-symbol-client-bid { display: inline-block; width: 18px; border-top: 2px dashed #c84b3a; }
 .motor360-symbol-triangle { width: 0; height: 0; border-right: 6px solid transparent; border-bottom: 10px solid var(--brand-bronze); border-left: 6px solid transparent; }
 .motor360-chance-scenarios { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .motor360-chance-scenario { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfc; }
