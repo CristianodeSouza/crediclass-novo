@@ -87,7 +87,12 @@ const investorPreferenceFlags = [
   { id: "maior_prazo_remanescente", label: "Maior Prazo Remanescente" },
   { id: "maior_lance_embutido", label: "Maior Lance Embutido" },
 ];
-const investorState = { result: null, preferences: [], audit: null };
+const investorState = {
+  result: null,
+  preferences: [],
+  audit: null,
+  selectedGroupIds: new Set(JSON.parse(localStorage.getItem("crediclass.motor360.selectedGroups") || "[]")),
+};
 let investorAnalysisController = null;
 let investorAnalysisRequestId = 0;
 const HISTORY_START_MONTH = "2024-01";
@@ -2207,7 +2212,17 @@ function renderMotor360GroupCard(item) {
   }).join("");
   const status = item.result === "preselected" ? "Pré-selecionado" : item.alerts?.length ? formatMotor360Reason(item.alerts[0]) : "Compatível por crédito";
   const auditId = escapeHtml(item.grupo || item.grupo_id || "");
-  return `<article class="motor360-group-card"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3><p>${escapeHtml(item.administradora || "-")}</p></div></div><div class="motor360-group-summary"><div><small>Crédito máximo</small><b>${formatMoney(item.credito_maximo)}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status">${escapeHtml(status)}</span><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros</h4><div class="motor360-scenario-list">${scenarioCards}</div></section><section class="motor360-group-section"><div class="motor360-profile-section-title"><h4>Perfis de contemplação</h4><small>Referência comparada ao lance ofertado pelo cliente: ${formatMoney(byId.without_embedded?.lance_cliente_total ?? byId.with_embedded?.lance_cliente_total)}</small></div><div class="motor360-profile-card-list">${profileCards || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div></article>`;
+  const selected = investorState.selectedGroupIds.has(String(item.grupo || item.grupo_id || ""));
+  return `<article class="motor360-group-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3><p>${escapeHtml(item.administradora || "-")}</p></div></div><div class="motor360-group-summary"><div><small>Crédito máximo</small><b>${formatMoney(item.credito_maximo)}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status">${escapeHtml(status)}</span><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${auditId}" ${selected ? "checked" : ""}><span>Selecionar</span></label><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros</h4><div class="motor360-scenario-list">${scenarioCards}</div></section><section class="motor360-group-section"><div class="motor360-profile-section-title"><h4>Perfis de contemplação</h4><small>Referência comparada ao lance ofertado pelo cliente: ${formatMoney(byId.without_embedded?.lance_cliente_total ?? byId.with_embedded?.lance_cliente_total)}</small></div><div class="motor360-profile-card-list">${profileCards || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div></article>`;
+}
+
+function persistMotor360Selection() {
+  localStorage.setItem("crediclass.motor360.selectedGroups", JSON.stringify([...investorState.selectedGroupIds]));
+}
+
+function updateMotor360SelectionSummary() {
+  const summary = document.getElementById("motor360SelectionSummary");
+  if (summary) summary.textContent = `${investorState.selectedGroupIds.size} grupo(s) selecionado(s) para a próxima etapa`;
 }
 
 function renderMotor360ChanceChart(items) {
@@ -2457,6 +2472,7 @@ function renderInvestorAnalysis(result) {
   summary.innerHTML = summaryItems.map(([label, value]) => (
     `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`
   )).join("");
+  updateMotor360SelectionSummary();
   status.textContent = showingCreditStage
     ? `${items.length} grupos compatíveis por crédito exibidos`
     : `${items.length} grupos pré-selecionados exibidos`;
@@ -2469,12 +2485,21 @@ function renderInvestorAnalysis(result) {
     <div class="investor-engine-note">
       <strong>${showingCreditStage ? "Compatíveis por crédito:" : "Pré-seleção de grupos:"}</strong> ${showingCreditStage ? "estes grupos atendem à faixa O/U para pelo menos um cenário." : "cada cenário preserva o crédito líquido, atende à faixa O/U e ao prazo/renda no mesmo cenário financeiro."} A classificação BL:BP é informativa e não elimina nesta etapa. AJ, AK e AL são apenas referências até a seleção da carta exata.
     </div>
+    <div class="motor360-selection-toolbar"><strong>Próxima etapa</strong><span id="motor360SelectionSummary">${investorState.selectedGroupIds.size} grupo(s) selecionado(s) para a próxima etapa</span></div>
     <div class="motor360-group-list">${items.map(renderMotor360GroupCard).join("")}</div>
     ${creditRejectedByTerm.length ? `<details class="motor360-credit-excluded"><summary>Compatíveis por crédito, mas eliminados por prazo/renda (${creditRejectedByTerm.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Prazo restante</th><th>Motivo</th></tr></thead><tbody>${creditRejectedByTerm.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td><td>Prazo/renda insuficiente no cenário compatível por crédito.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
     ${renderMotor360ChanceChart(items)}
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
     ${renderMotor360Audit(investorState.audit)}
   `;
+  results.querySelectorAll(".motor360-group-select-input").forEach((input) => input.addEventListener("change", (event) => {
+    const groupId = String(event.target.dataset.groupId || "");
+    if (event.target.checked) investorState.selectedGroupIds.add(groupId);
+    else investorState.selectedGroupIds.delete(groupId);
+    persistMotor360Selection();
+    event.target.closest(".motor360-group-card")?.classList.toggle("is-selected", event.target.checked);
+    updateMotor360SelectionSummary();
+  }));
   results.querySelectorAll(".motor360-group-audit-btn").forEach((button) => button.addEventListener("click", () => renderMotor360GroupAudit(button.dataset.groupId)));
   setInvestorAnalysisState("results");
 }

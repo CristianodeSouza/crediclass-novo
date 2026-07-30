@@ -1674,6 +1674,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-summary small, .motor360-scenario-grid small, .motor360-profile-card-value small { color: var(--muted); font-size: 0.68rem; }
 .motor360-group-summary b { color: var(--brand-navy); font-size: 0.82rem; }
 .motor360-group-status { padding: 5px 9px; border-radius: 999px; background: #e9f8ef; color: #147a48; font-size: 0.7rem; font-weight: 800; }
+.motor360-group-select { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--brand-navy); cursor: pointer; font-size: 0.7rem; font-weight: 700; }
+.motor360-group-select:hover { border-color: var(--brand-orange); background: #fff8f2; }
+.motor360-group-select-input { width: 15px; height: 15px; accent-color: var(--brand-orange); }
+.motor360-group-card.is-selected { border-color: #f0a15e; box-shadow: 0 0 0 2px rgb(229 121 27 / 12%); }
+.motor360-group-card.is-selected .motor360-group-order { background: var(--brand-orange); }
+.motor360-selection-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; padding: 10px 12px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-navy); font-size: 0.75rem; }
+.motor360-selection-toolbar span { color: var(--brand-bronze-dark); font-weight: 700; }
 .motor360-group-section { padding: 13px 16px 0; }
 .motor360-group-section h4 { margin: 0 0 9px; color: var(--brand-navy); font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; }
 .motor360-scenario-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
