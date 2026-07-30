@@ -2183,6 +2183,30 @@ function renderContemplationProfilesCell(item) {
   return `<div class="motor360-profile-cell"><div class="motor360-profile-head"><span>Perfil</span><span>Sem embutido</span><span>Com embutido</span></div>${profiles.map((profile) => `<div class="motor360-profile-row"><strong>${escapeHtml(profile.label)}</strong>${scenarioValue(byId.without_embedded, profile.id)}${scenarioValue(byId.with_embedded, profile.id)}</div>`).join("")}<div class="motor360-profile-client-bid"><span>Lance ofertado</span><b>${formatMoney(byId.without_embedded?.lance_cliente_total ?? byId.with_embedded?.lance_cliente_total)}</b></div></div>`;
 }
 
+function renderMotor360GroupCard(item) {
+  const scenarios = Array.isArray(item.cenarios) ? item.cenarios : [];
+  const byId = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
+  const profiles = byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [];
+  const scenarioCards = scenarios.map((scenario) => {
+    const title = scenario.id === "with_embedded"
+      ? "Crédito contratado com lance embutido"
+      : "Crédito contratado sem lance embutido";
+    const compatible = scenario.credit_compatible;
+    return `<article class="motor360-scenario-card ${compatible ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${compatible ? "Crédito OK" : "Fora da faixa"}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado</small><b>${formatMoney(scenario.credito_contratado)}</b></div><div><small>Lance do cliente</small><b>${formatMoney(scenario.lance_cliente_total)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(scenario.saldo_devedor)}</b></div><div><small>Parcela inicial</small><b>${formatMoney(scenario.parcela_inicial)}</b></div></div><small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
+  }).join("");
+  const profileCards = profiles.map((profile) => {
+    const values = ["without_embedded", "with_embedded"].map((scenarioId) => {
+      const value = (byId[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profile.id);
+      if (!value || value.percentual_referencia === null || value.percentual_referencia === undefined) return `<div class="motor360-profile-card-value is-empty"><small>Não informado</small></div>`;
+      return `<div class="motor360-profile-card-value ${value.atinge_perfil ? "is-hit" : "is-gap"}"><small>${scenarioId === "without_embedded" ? "Sem embutido" : "Com embutido"}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${value.atinge_perfil ? "Atinge o perfil" : `Faltam ${formatMoney(value.falta_para_ideal)}`}</span><em>Lance ideal: ${formatMoney(value.lance_ideal)}</em></div>`;
+    }).join("");
+    return `<div class="motor360-profile-card"><strong>${escapeHtml(profile.label)}</strong><div class="motor360-profile-card-values">${values}</div></div>`;
+  }).join("");
+  const status = item.result === "preselected" ? "Pré-selecionado" : item.alerts?.length ? formatMotor360Reason(item.alerts[0]) : "Compatível por crédito";
+  const auditId = escapeHtml(item.grupo || item.grupo_id || "");
+  return `<article class="motor360-group-card"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3><p>${escapeHtml(item.administradora || "-")}</p></div></div><div class="motor360-group-summary"><div><small>Crédito máximo</small><b>${formatMoney(item.credito_maximo)}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status">${escapeHtml(status)}</span><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros</h4><div class="motor360-scenario-list">${scenarioCards}</div></section><section class="motor360-group-section"><div class="motor360-profile-section-title"><h4>Perfis de contemplação</h4><small>Referência comparada ao lance ofertado pelo cliente: ${formatMoney(byId.without_embedded?.lance_cliente_total ?? byId.with_embedded?.lance_cliente_total)}</small></div><div class="motor360-profile-card-list">${profileCards || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div></article>`;
+}
+
 function auditDateTime(value) {
   const date = value ? new Date(value) : null;
   return date && !Number.isNaN(date.getTime()) ? date.toLocaleString("pt-BR") : "-";
@@ -2331,25 +2355,7 @@ function renderInvestorAnalysis(result) {
     <div class="investor-engine-note">
       <strong>${showingCreditStage ? "Compatíveis por crédito:" : "Pré-seleção de grupos:"}</strong> ${showingCreditStage ? "estes grupos atendem à faixa O/U para pelo menos um cenário." : "cada cenário preserva o crédito líquido, atende à faixa O/U e ao prazo/renda no mesmo cenário financeiro."} A classificação BL:BP é informativa e não elimina nesta etapa. AJ, AK e AL são apenas referências até a seleção da carta exata.
     </div>
-    <div class="table-responsive">
-      <table class="table table-hover align-middle investor-engine-table">
-        <thead><tr><th>Ordem</th><th>Grupo</th><th>Adm.</th><th>Crédito máximo</th><th>Cenários financeiros</th><th>Parcela inicial</th><th>Prazo restante</th><th>Perfis de contemplação<br><small>referência x lance</small></th><th>Classificação</th><th>Status</th><th>Auditoria</th></tr></thead>
-        <tbody>${items.map((item) => `
-          <tr>
-            <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
-            <td>${escapeHtml(item.grupo || item.grupo_id || "-")}</td>
-            <td>${escapeHtml(item.administradora || "-")}</td>
-            <td>${formatMoney(item.credito_maximo)}</td>
-            <td>${renderCreditScenarioCell(item)}</td>
-            <td><div class="investor-installment-cell"><span>Sem emb.: ${formatMoney(item.parcela_inicial_sem_embutido ?? item.reference_installment)}</span><span>Com emb.: ${formatMoney(item.parcela_inicial_com_embutido)}</span></div></td>
-            <td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td>
-            <td>${renderContemplationProfilesCell(item)}</td>
-            <td>${escapeHtml(item.best_contemplation_strategy || (item.strategy_warnings?.length ? "Faixas não classificadas" : "Não classificada"))}</td>
-            <td><span class="investor-distance ${item.recommendable ? "" : "investor-distance-sem-referencia"}">${item.recommendable ? "Pré-selecionado" : item.alerts?.length ? `Pendente: ${formatMotor360Reason(item.alerts[0])}` : "Compatível por crédito"}</span></td>
-            <td><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${escapeHtml(item.grupo || item.grupo_id || "")}">Ver</button></td>
-          </tr>`).join("")}</tbody>
-      </table>
-    </div>
+    <div class="motor360-group-list">${items.map(renderMotor360GroupCard).join("")}</div>
     ${creditRejectedByTerm.length ? `<details class="motor360-credit-excluded"><summary>Compatíveis por crédito, mas eliminados por prazo/renda (${creditRejectedByTerm.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Prazo restante</th><th>Motivo</th></tr></thead><tbody>${creditRejectedByTerm.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td><td>Prazo/renda insuficiente no cenário compatível por crédito.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
     ${renderMotor360Audit(investorState.audit)}

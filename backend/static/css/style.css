@@ -1661,6 +1661,63 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 }
 
+/* Vertical group cards keep the Motor 360 readable at normal desktop widths. */
+.motor360-group-list { display: grid; gap: 14px; }
+.motor360-group-card { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 2px 8px rgb(31 45 51 / 6%); }
+.motor360-group-card-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 16px; border-bottom: 1px solid var(--line); background: #f7f9f9; }
+.motor360-group-identity { display: flex; align-items: center; gap: 11px; min-width: 150px; }
+.motor360-group-order { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: var(--brand-navy); color: #fff; font-weight: 800; }
+.motor360-group-identity h3 { margin: 0; color: var(--brand-navy); font-size: 0.95rem; }
+.motor360-group-identity p { margin: 2px 0 0; color: var(--muted); font-size: 0.75rem; }
+.motor360-group-summary { display: flex; align-items: center; justify-content: flex-end; gap: 20px; }
+.motor360-group-summary div { display: grid; gap: 3px; }
+.motor360-group-summary small, .motor360-scenario-grid small, .motor360-profile-card-value small { color: var(--muted); font-size: 0.68rem; }
+.motor360-group-summary b { color: var(--brand-navy); font-size: 0.82rem; }
+.motor360-group-status { padding: 5px 9px; border-radius: 999px; background: #e9f8ef; color: #147a48; font-size: 0.7rem; font-weight: 800; }
+.motor360-group-section { padding: 13px 16px 0; }
+.motor360-group-section h4 { margin: 0 0 9px; color: var(--brand-navy); font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.motor360-scenario-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.motor360-scenario-card { padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid #aab8bd; border-radius: 6px; background: #fff; }
+.motor360-scenario-card.is-compatible { border-left-color: #1d9b59; }
+.motor360-scenario-card.is-incompatible { border-left-color: var(--brand-bronze); }
+.motor360-scenario-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.motor360-scenario-title strong { color: var(--brand-navy); font-size: 0.76rem; }
+.motor360-scenario-title span { color: #147a48; font-size: 0.68rem; font-weight: 800; }
+.motor360-scenario-card.is-incompatible .motor360-scenario-title span { color: var(--brand-bronze-dark); }
+.motor360-scenario-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 12px; }
+.motor360-scenario-grid div { display: grid; gap: 2px; }
+.motor360-scenario-grid b { color: #147a48; font-size: 0.8rem; }
+.motor360-scenario-grid em { color: var(--muted); font-size: 0.65rem; font-style: normal; font-weight: 400; }
+.motor360-scenario-note { display: block; margin-top: 8px; color: var(--muted); font-size: 0.68rem; }
+.motor360-profile-section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.motor360-profile-section-title small { color: var(--muted); font-size: 0.68rem; }
+.motor360-profile-card-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.motor360-profile-card { padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: #fbfcfc; }
+.motor360-profile-card > strong { display: block; margin-bottom: 7px; color: var(--brand-navy); font-size: 0.74rem; }
+.motor360-profile-card-values { display: grid; gap: 5px; }
+.motor360-profile-card-value { display: grid; gap: 2px; padding: 6px; border-radius: 5px; background: #f2f5f5; }
+.motor360-profile-card-value b { color: var(--brand-navy); font-size: 0.84rem; }
+.motor360-profile-card-value span, .motor360-profile-card-value em { color: #687980; font-size: 0.66rem; font-style: normal; }
+.motor360-profile-card-value em { margin-top: 2px; }
+.motor360-profile-card-value.is-hit { border-left: 3px solid #1d9b59; background: #effaf3; }
+.motor360-profile-card-value.is-hit b { color: #147a48; }
+.motor360-profile-card-value.is-gap { border-left: 3px solid var(--brand-bronze); background: #fff8f2; }
+.motor360-profile-card-value.is-gap b { color: var(--brand-bronze-dark); }
+.motor360-profile-card-value.is-empty { color: var(--muted); }
+.motor360-group-classification { margin: 12px 16px 14px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.72rem; }
+.motor360-group-classification strong { color: var(--brand-navy); }
+.motor360-empty-inline { color: var(--muted); font-size: 0.75rem; }
+
+@media (max-width: 900px) {
+  .motor360-group-card-header, .motor360-profile-section-title { align-items: flex-start; flex-direction: column; }
+  .motor360-group-summary { justify-content: flex-start; flex-wrap: wrap; gap: 12px; }
+  .motor360-scenario-list, .motor360-profile-card-list { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 560px) {
+  .motor360-scenario-list, .motor360-profile-card-list { grid-template-columns: 1fr; }
+}
+
 .details-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
