@@ -112,6 +112,7 @@ class CalculatedScenario:
             if isinstance(value, Decimal):
                 data[key] = money(value) if key not in {
                     "percentual_lance",
+                    "percentual_lance_cliente",
                 } and not key.endswith("_decimal") else decimal_value(value)
         # Backward-compatible aliases used by the current presentation layer.
         data["financial_cost_data_complete"] = self.taxa_administracao is not None and self.fundo_reserva is not None

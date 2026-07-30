@@ -244,7 +244,19 @@ def analyze_client_consortium_viability(
             scenario["credito_maximo"] = money(maximum)
             scenario["parcela_inicial"] = _parcela_inicial_por_cenario(scenario)
             scenario["parcela_inicial_formula"] = "saldo devedor / prazo remanescente (coluna F)"
-            matches = _strategy_matches(scenario["percentual_lance"], ranges)
+            # Contemplation is evaluated with the client's own offer only.
+            # The embedded bid remains part of the financial scenario, but it
+            # is not a client resource and must not inflate this comparison.
+            client_bid = own + fgts
+            contracted_credit = parse_decimal(scenario.get("credito_contratado"))
+            client_bid_percent = (
+                client_bid / contracted_credit
+                if contracted_credit is not None and contracted_credit > 0
+                else None
+            )
+            scenario["lance_cliente_total"] = money(client_bid)
+            scenario["percentual_lance_cliente"] = float(client_bid_percent) if client_bid_percent is not None else None
+            matches = _strategy_matches(client_bid_percent, ranges)
             scenario["compatible_contemplation_strategies"] = matches
             scenario["contemplation_compatible"] = bool(matches) if has_ranges else None
             scenario["eligibility_reasons"] = _scenario_reasons(scenario, matches, has_ranges)
@@ -458,6 +470,7 @@ def analyze_client_consortium_viability(
         "credito_liquido_desejado": money(desired),
         "own_resources_total": money(own),
         "fgts": money(fgts),
+        "lance_cliente_total": money(own + fgts),
         "renda_total": money(income),
         "parcela_desejada": money(desired_installment),
         "parcela_maxima": money(income_limit),
@@ -523,7 +536,8 @@ def analyze_client_consortium_viability(
             {"id": "saldo", "name": "Saldo devedor", "expression": "credito + taxa + fundo", "result": "calculado por cenario"},
             {"id": "parcela_inicial_sem_embutido", "name": "Parcela inicial sem lance embutido", "expression": "saldo devedor sem lance embutido / prazo remanescente (coluna F)", "result": "calculado por grupo"},
             {"id": "parcela_inicial_com_embutido", "name": "Parcela inicial com lance embutido", "expression": "saldo devedor com lance embutido / prazo remanescente (coluna F)", "result": "calculado por grupo"},
-            {"id": "lance", "name": "Lance", "expression": "RP + FGTS (+ embutido)", "result": "calculado por cenario"},
+            {"id": "lance_cliente", "name": "Lance ofertado pelo cliente", "expression": "RP + FGTS", "result": money(own + fgts)},
+            {"id": "lance_cenario", "name": "Lance financeiro do cenario", "expression": "RP + FGTS + lance embutido quando aplicavel", "result": "calculado por cenario"},
             {"id": "prazo", "name": "Prazo", "expression": "ceil(saldo ou saldo apos lance / parcela)", "result": "calculado por cenario"},
         ],
         "group_results": group_results,

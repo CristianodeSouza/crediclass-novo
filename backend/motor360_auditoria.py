@@ -169,7 +169,8 @@ def _audit_pdf_lines(audit: dict[str, Any]) -> list[tuple[str, int, bool]]:
         line(f"Faixa de credito: {stage.get('credito', {}).get('rule', '-')} | Prazo: {stage.get('prazo', {}).get('rule', '-')}")
         for scenario in item.get("scenarios", []):
             title = "Credito contratado com lance embutido" if scenario.get("id") == "with_embedded" else "Credito contratado sem lance embutido"
-            line(f"{title} | Credito contratado: {scenario.get('credito_contratado', '-')} | Lance total: {scenario.get('lance_total', '-')} ({scenario.get('percentual_lance', '-')})")
+            line(f"{title} | Credito contratado: {scenario.get('credito_contratado', '-')} | Lance ofertado pelo cliente: {scenario.get('lance_cliente_total', '-')} ({scenario.get('percentual_lance_cliente', '-')})")
+            line(f"Lance financeiro do cenario: {scenario.get('lance_total', '-')} ({scenario.get('percentual_lance', '-')})")
             line(f"Saldo devedor: {scenario.get('saldo_devedor', '-')} | Prazo remanescente: {scenario.get('prazo_remanescente', '-')} | Prazo apos lance: {scenario.get('prazo_apos_lance_limite_renda_meses', '-')}")
             parcela = scenario.get("parcela_inicial")
             line(f"Parcela inicial: {parcela if parcela is not None else '-'} | Formula: {scenario.get('parcela_inicial_formula', 'saldo devedor / prazo remanescente (coluna F)')}")

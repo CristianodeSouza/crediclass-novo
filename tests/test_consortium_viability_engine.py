@@ -59,6 +59,8 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(without["fundo_reserva"], 28500.0)
         self.assertEqual(without["saldo_devedor"], 1130500.0)
         self.assertEqual(without["lance_total"], 150000.0)
+        self.assertEqual(without["lance_cliente_total"], 150000.0)
+        self.assertAlmostEqual(without["percentual_lance_cliente"], 150000 / 950000, places=6)
         self.assertEqual(without["saldo_apos_lance"], 980500.0)
         self.assertEqual(without["prazo_inicial_desejada_meses"], 174)
         self.assertEqual(without["prazo_apos_lance_limite_renda_meses"], 66)
@@ -70,6 +72,8 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(embedded["fundo_reserva"], 40714.29)
         self.assertEqual(embedded["saldo_devedor"], 1615000.0)
         self.assertEqual(embedded["lance_total"], 557142.86)
+        self.assertEqual(embedded["lance_cliente_total"], 150000.0)
+        self.assertAlmostEqual(embedded["percentual_lance_cliente"], 150000 / 1357142.86, places=6)
         self.assertEqual(embedded["saldo_apos_lance"], 1057857.14)
         self.assertEqual(embedded["prazo_apos_lance_limite_renda_meses"], 71)
         self.assertTrue(embedded["liquidez_preservada"])
@@ -119,6 +123,36 @@ class Motor360RfcTest(unittest.TestCase):
         item = result["items"][0]
         self.assertIn("moderate", item["compatible_contemplation_strategies"])
         self.assertFalse(item["destaque_preferencia"])
+
+    def test_contemplation_uses_only_client_bid_in_both_scenarios(self):
+        result = analyze_client_consortium_viability(
+            payload(
+                credito_desejado=600000,
+                lance_proprio=100000,
+                fgts=100000,
+                parcela_desejada=6000,
+                parcela_limite=12000,
+                renda_total=40000,
+            ),
+            [group(
+                percentual_lance_embutido="30%",
+                lance_super_agressivo_3m="99%",
+                lance_agressivo_6m="99%",
+                lance_moderado_12m="25%",
+                lance_conservador_24m="99%",
+                lance_investidor="99%",
+            )],
+        )
+        scenarios = result["items"][0]["cenarios"]
+        without = next(item for item in scenarios if item["id"] == "without_embedded")
+        embedded = next(item for item in scenarios if item["id"] == "with_embedded")
+
+        self.assertEqual(without["lance_cliente_total"], 200000.0)
+        self.assertAlmostEqual(without["percentual_lance_cliente"], 200000 / 600000, places=6)
+        self.assertEqual(embedded["lance_cliente_total"], 200000.0)
+        self.assertAlmostEqual(embedded["percentual_lance_cliente"], 200000 / (600000 / 0.7), places=6)
+        self.assertIn("moderate", without["compatible_contemplation_strategies"])
+        self.assertNotIn("moderate", embedded["compatible_contemplation_strategies"])
 
     def test_contemplation_never_eliminates_a_credit_and_term_preselected_group(self):
         result = analyze_client_consortium_viability(payload(), [
