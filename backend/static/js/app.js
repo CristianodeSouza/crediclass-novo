@@ -2174,11 +2174,13 @@ function renderContemplationProfilesCell(item) {
   if (!profiles.length) return "-";
   const scenarioValue = (scenario, profileId) => {
     const profile = (scenario?.perfis_contemplacao || []).find((item) => item.id === profileId);
-    if (!profile || profile.percentual_referencia === null || profile.percentual_referencia === undefined) return "-";
-    const status = profile.atinge_perfil ? "atinge" : `faltam ${formatMoney(profile.falta_para_ideal)}`;
-    return `${formatPercent(profile.percentual_referencia)} · ${status}`;
+    if (!profile || profile.percentual_referencia === null || profile.percentual_referencia === undefined) {
+      return `<span class="motor360-profile-value is-empty">Não informado</span>`;
+    }
+    const status = profile.atinge_perfil ? "Atinge" : `Faltam ${formatMoney(profile.falta_para_ideal)}`;
+    return `<span class="motor360-profile-value ${profile.atinge_perfil ? "is-hit" : "is-gap"}"><b>${formatPercent(profile.percentual_referencia)}</b><small>${status}</small></span>`;
   };
-  return `<div class="motor360-profile-cell"><div class="motor360-profile-head"><span>Perfil</span><span>Sem</span><span>Com</span></div>${profiles.map((profile) => `<div class="motor360-profile-row"><strong>${escapeHtml(profile.label)}</strong><span>${scenarioValue(byId.without_embedded, profile.id)}</span><span>${scenarioValue(byId.with_embedded, profile.id)}</span></div>`).join("")}<small>Lance cliente: ${formatMoney(byId.without_embedded?.lance_cliente_total ?? byId.with_embedded?.lance_cliente_total)}</small></div>`;
+  return `<div class="motor360-profile-cell"><div class="motor360-profile-head"><span>Perfil</span><span>Sem embutido</span><span>Com embutido</span></div>${profiles.map((profile) => `<div class="motor360-profile-row"><strong>${escapeHtml(profile.label)}</strong>${scenarioValue(byId.without_embedded, profile.id)}${scenarioValue(byId.with_embedded, profile.id)}</div>`).join("")}<div class="motor360-profile-client-bid"><span>Lance ofertado</span><b>${formatMoney(byId.without_embedded?.lance_cliente_total ?? byId.with_embedded?.lance_cliente_total)}</b></div></div>`;
 }
 
 function auditDateTime(value) {
@@ -2331,7 +2333,7 @@ function renderInvestorAnalysis(result) {
     </div>
     <div class="table-responsive">
       <table class="table table-hover align-middle investor-engine-table">
-        <thead><tr><th>Ordem</th><th>Grupo</th><th>Adm.</th><th>Crédito máximo</th><th>Cenários financeiros</th><th>Parcela Inicial</th><th>Prazo restante</th><th>Perfis de contemplação<br><small>referência · comparação</small></th><th>Classificação</th><th>Status</th><th>Auditoria</th></tr></thead>
+        <thead><tr><th>Ordem</th><th>Grupo</th><th>Adm.</th><th>Crédito máximo</th><th>Cenários financeiros</th><th>Parcela inicial</th><th>Prazo restante</th><th>Perfis de contemplação<br><small>referência x lance</small></th><th>Classificação</th><th>Status</th><th>Auditoria</th></tr></thead>
         <tbody>${items.map((item) => `
           <tr>
             <td><strong>${escapeHtml(String(item.ranking))}</strong></td>

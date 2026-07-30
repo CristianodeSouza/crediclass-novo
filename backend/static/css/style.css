@@ -4411,14 +4411,22 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-audit-scenarios span { margin-top: 5px; }
 .motor360-group-audit-alerts { margin: 0 18px 18px; }
 .motor360-group-audit-alerts p { margin: 5px 0 0; }
-.motor360-profile-cell { min-width: 300px; font-size: 10px; }
-.motor360-profile-head, .motor360-profile-row { display: grid; grid-template-columns: 1.05fr 1fr 1fr; gap: 5px; align-items: center; }
-.motor360-profile-head { color: #6c757d; font-size: 9px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; }
-.motor360-profile-row { padding: 3px 0; border-bottom: 1px solid #f0f1f2; }
-.motor360-profile-row strong { color: #263746; font-size: 10px; }
-.motor360-profile-row span { white-space: nowrap; color: #536572; }
-.motor360-profile-row span:first-of-type { color: #16834d; }
-.motor360-profile-cell small { display: block; margin-top: 4px; color: #6c757d; }
+.motor360-profile-cell { min-width: 0; font-size: 0.72rem; text-align: left; }
+.motor360-profile-head, .motor360-profile-row { display: grid; grid-template-columns: 0.9fr 1fr 1fr; gap: 6px; align-items: stretch; }
+.motor360-profile-head { color: #60727b; font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.02em; border-bottom: 1px solid var(--line); padding-bottom: 5px; }
+.motor360-profile-head span:not(:first-child) { text-align: center; }
+.motor360-profile-row { padding: 5px 0; border-bottom: 1px solid #edf0f1; }
+.motor360-profile-row strong { color: var(--brand-navy); font-size: 0.68rem; line-height: 1.15; align-self: center; }
+.motor360-profile-value { display: flex; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 3px; border: 1px solid #e4e9e9; border-radius: 5px; background: #f8faf9; text-align: center; white-space: normal; }
+.motor360-profile-value b { color: var(--brand-navy); font-size: 0.75rem; line-height: 1; }
+.motor360-profile-value small { color: #687980; font-size: 0.62rem; line-height: 1.15; }
+.motor360-profile-value.is-hit { border-color: #b9e4cc; background: #effaf3; }
+.motor360-profile-value.is-hit b { color: #147a48; }
+.motor360-profile-value.is-gap { border-color: #f1d2bc; background: #fff8f2; }
+.motor360-profile-value.is-gap b { color: var(--brand-bronze-dark); }
+.motor360-profile-value.is-empty { color: #87959b; font-size: 0.64rem; }
+.motor360-profile-client-bid { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); color: #60727b; font-size: 0.66rem; }
+.motor360-profile-client-bid b { color: var(--brand-navy); font-size: 0.72rem; }
 
 @media (max-width: 900px) {
   .motor360-audit-meta, .motor360-audit-formulas { grid-template-columns: 1fr 1fr; }
@@ -4443,9 +4451,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .investor-engine-table th,
 .investor-engine-table td {
-  padding: 7px 6px;
+  padding: 10px 7px;
   text-align: center;
-  vertical-align: middle;
+  vertical-align: top;
   white-space: normal;
   overflow-wrap: anywhere;
 }
@@ -4489,13 +4497,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .investor-engine-table th:nth-child(4),
 .investor-engine-table td:nth-child(4) { width: 11%; }
 .investor-engine-table th:nth-child(5),
-.investor-engine-table td:nth-child(5) { width: 25%; }
+.investor-engine-table td:nth-child(5) { width: 23%; }
 .investor-engine-table th:nth-child(6),
-.investor-engine-table td:nth-child(6) { width: 10%; }
+.investor-engine-table td:nth-child(6) { width: 9%; }
 .investor-engine-table th:nth-child(7),
 .investor-engine-table td:nth-child(7) { width: 8%; }
 .investor-engine-table th:nth-child(8),
-.investor-engine-table td:nth-child(8) { width: 13%; }
+.investor-engine-table td:nth-child(8) { width: 19%; }
 .investor-engine-table th:nth-child(9),
 .investor-engine-table td:nth-child(9) { width: 9%; }
 .investor-engine-table th:nth-child(10),
