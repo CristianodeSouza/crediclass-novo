@@ -124,7 +124,7 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertIn("moderate", item["compatible_contemplation_strategies"])
         self.assertFalse(item["destaque_preferencia"])
 
-    def test_contemplation_uses_only_client_bid_in_both_scenarios(self):
+    def test_embedded_bid_reduces_required_client_resources_and_counts_in_profile(self):
         result = analyze_client_consortium_viability(
             payload(
                 credito_desejado=600000,
@@ -151,12 +151,20 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertAlmostEqual(without["percentual_lance_cliente"], 200000 / 600000, places=6)
         self.assertEqual(embedded["lance_cliente_total"], 200000.0)
         self.assertAlmostEqual(embedded["percentual_lance_cliente"], 200000 / (600000 / 0.7), places=6)
+        self.assertEqual(embedded["lance_embutido"], 257142.86)
+        self.assertEqual(embedded["lance_total_cenario"], 457142.86)
+        self.assertAlmostEqual(embedded["percentual_lance_efetivo"], 457142.86 / (600000 / 0.7), places=6)
         self.assertIn("moderate", without["compatible_contemplation_strategies"])
-        self.assertNotIn("moderate", embedded["compatible_contemplation_strategies"])
+        self.assertIn("moderate", embedded["compatible_contemplation_strategies"])
         moderate = next(profile for profile in without["perfis_contemplacao"] if profile["id"] == "moderate")
         self.assertEqual(moderate["percentual_referencia"], 0.25)
         self.assertEqual(moderate["lance_ideal"], 150000.0)
         self.assertEqual(moderate["falta_para_ideal"], 0)
+        embedded_moderate = next(profile for profile in embedded["perfis_contemplacao"] if profile["id"] == "moderate")
+        self.assertEqual(embedded_moderate["lance_ideal_total"], 214285.72)
+        self.assertEqual(embedded_moderate["lance_embutido"], 257142.86)
+        self.assertEqual(embedded_moderate["lance_ideal"], 0.0)
+        self.assertEqual(embedded_moderate["falta_para_ideal"], 0.0)
 
     def test_contemplation_never_eliminates_a_credit_and_term_preselected_group(self):
         result = analyze_client_consortium_viability(payload(), [
@@ -258,7 +266,7 @@ class Motor360RfcTest(unittest.TestCase):
     def test_audit_records_rfc_version_calculations_and_group_columns(self):
         result = analyze_client_consortium_viability(payload(), [group()])
         audit = result["audit"]
-        self.assertEqual(audit["metadata"]["engine_version"], "4.0.2")
+        self.assertEqual(audit["metadata"]["engine_version"], "4.0.3")
         self.assertEqual(audit["metadata"]["rules_version"], "RFC-001-architecture-v4.0")
         self.assertIn("X", [item["column"] for item in audit["columns_used"]])
         self.assertIn("BL", [item["column"] for item in audit["columns_used"]])

@@ -2152,7 +2152,7 @@ function renderCreditScenarioCell(item) {
       const title = scenario.id === "with_embedded"
         ? "Crédito contratado com lance embutido"
         : "Crédito contratado sem lance embutido";
-      return `<div class="credit-scenario-block"><strong>${title}</strong><span>${formatMoney(scenario.credito_contratado)} - ${scenario.credit_compatible ? "OK" : "não atende"}</span><small>Lance do cliente: ${formatMoney(scenario.lance_cliente_total)} (${formatPercent(scenario.percentual_lance_cliente)}) | Saldo devedor: ${formatMoney(scenario.saldo_devedor)} | Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</small></div>`;
+      return `<div class="credit-scenario-block"><strong>${title}</strong><span>${formatMoney(scenario.credito_contratado)} - ${scenario.credit_compatible ? "OK" : "não atende"}</span><small>Lance do cliente: ${formatMoney(scenario.lance_cliente_total)} (${formatPercent(scenario.percentual_lance_cliente)}) | Lance embutido: ${formatMoney(scenario.lance_embutido)} | Lance total: ${formatMoney(scenario.lance_total_cenario)} | Saldo devedor: ${formatMoney(scenario.saldo_devedor)} | Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</small></div>`;
     }).join("")}</div>`;
   }
   const percent = item.percentual_lance_embutido;
@@ -2193,13 +2193,15 @@ function renderMotor360GroupCard(item) {
       ? "Crédito contratado com lance embutido"
       : "Crédito contratado sem lance embutido";
     const compatible = scenario.credit_compatible;
-    return `<article class="motor360-scenario-card ${compatible ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${compatible ? "Crédito OK" : "Fora da faixa"}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado</small><b>${formatMoney(scenario.credito_contratado)}</b></div><div><small>Lance do cliente</small><b>${formatMoney(scenario.lance_cliente_total)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(scenario.saldo_devedor)}</b></div><div><small>Parcela inicial</small><b>${formatMoney(scenario.parcela_inicial)}</b></div></div><small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
+    return `<article class="motor360-scenario-card ${compatible ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${compatible ? "Crédito OK" : "Fora da faixa"}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado</small><b>${formatMoney(scenario.credito_contratado)}</b></div><div><small>Lance do cliente</small><b>${formatMoney(scenario.lance_cliente_total)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Lance embutido</small><b>${formatMoney(scenario.lance_embutido)}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(scenario.lance_total_cenario)} <em>(${formatPercent(scenario.percentual_lance_efetivo)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(scenario.saldo_devedor)}</b></div><div><small>Parcela inicial</small><b>${formatMoney(scenario.parcela_inicial)}</b></div></div><small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
   }).join("");
   const profileCards = profiles.map((profile) => {
     const values = ["without_embedded", "with_embedded"].map((scenarioId) => {
       const value = (byId[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profile.id);
       if (!value || value.percentual_referencia === null || value.percentual_referencia === undefined) return `<div class="motor360-profile-card-value is-empty"><small>Não informado</small></div>`;
-      return `<div class="motor360-profile-card-value ${value.atinge_perfil ? "is-hit" : "is-gap"}"><small>${scenarioId === "without_embedded" ? "Sem embutido" : "Com embutido"}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${value.atinge_perfil ? "Atinge o perfil" : `Faltam ${formatMoney(value.falta_para_ideal)}`}</span><em>Lance ideal: ${formatMoney(value.lance_ideal)}</em></div>`;
+      const idealLabel = scenarioId === "with_embedded" ? "Lance ideal em recursos do cliente" : "Lance ideal";
+      const embeddedNote = scenarioId === "with_embedded" ? `<small>Embutido considerado: ${formatMoney(value.lance_embutido)}</small>` : "";
+      return `<div class="motor360-profile-card-value ${value.atinge_perfil ? "is-hit" : "is-gap"}"><small>${scenarioId === "without_embedded" ? "Sem embutido" : "Com embutido"}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${value.atinge_perfil ? "Atinge o perfil" : `Faltam ${formatMoney(value.falta_para_ideal)}`}</span><em>${idealLabel}: ${formatMoney(value.lance_ideal)}</em>${embeddedNote}</div>`;
     }).join("");
     return `<div class="motor360-profile-card"><strong>${escapeHtml(profile.label)}</strong><div class="motor360-profile-card-values">${values}</div></div>`;
   }).join("");
@@ -2247,7 +2249,8 @@ function renderMotor360ChanceChart(items) {
     {
       label: "Lance ofertado pelo cliente",
       data: groups.map((item) => {
-        const value = byScenario(item, scenarioId).percentual_lance_cliente;
+        const scenario = byScenario(item, scenarioId);
+        const value = scenario.percentual_lance_efetivo ?? scenario.percentual_lance_cliente;
         return value == null ? null : value * 100;
       }),
       backgroundColor: "#c84b3a",
@@ -2401,7 +2404,7 @@ function renderMotor360GroupAudit(groupId) {
     const calculation = installment === null || installment === undefined
       ? "Não calculada: dados insuficientes"
       : `${formatMoney(scenario.saldo_devedor)} / ${escapeHtml(String(scenario.prazo_remanescente ?? "-"))} = ${formatMoney(installment)}`;
-    return `<article><strong>${scenarioTitle}</strong><span>Status: ${scenario.creation_status === "not_created" ? formatMotor360Reason(scenario.creation_reason) : "calculado"}</span><span>Crédito contratado: ${formatMoney(scenario.credito_contratado)}</span><span>Lance ofertado pelo cliente: ${formatMoney(scenario.lance_cliente_total)} (${formatPercent(scenario.percentual_lance_cliente)})</span><span>Lance financeiro do cenário: ${formatMoney(scenario.lance_total)} (${formatPercent(scenario.percentual_lance)})</span><span>Saldo devedor: ${formatMoney(scenario.saldo_devedor)}</span><span>Parcela inicial: ${formatMoney(installment)}</span><small>Fórmula: ${escapeHtml(formula)}</small><small>Cálculo: ${calculation}</small><span>Prazo: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</span></article>`;
+    return `<article><strong>${scenarioTitle}</strong><span>Status: ${scenario.creation_status === "not_created" ? formatMotor360Reason(scenario.creation_reason) : "calculado"}</span><span>Crédito contratado: ${formatMoney(scenario.credito_contratado)}</span><span>Lance ofertado pelo cliente: ${formatMoney(scenario.lance_cliente_total)} (${formatPercent(scenario.percentual_lance_cliente)})</span><span>Lance embutido: ${formatMoney(scenario.lance_embutido)}</span><span>Lance total do cenário: ${formatMoney(scenario.lance_total_cenario)} (${formatPercent(scenario.percentual_lance_efetivo)})</span><span>Saldo devedor: ${formatMoney(scenario.saldo_devedor)}</span><span>Parcela inicial: ${formatMoney(installment)}</span><small>Fórmula: ${escapeHtml(formula)}</small><small>Cálculo: ${calculation}</small><span>Prazo: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</span></article>`;
   }).join("");
   const dialog = document.createElement("dialog");
   dialog.id = "motor360GroupAuditDialog";

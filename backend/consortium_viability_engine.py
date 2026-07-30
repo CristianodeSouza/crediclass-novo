@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.2"
+MOTOR_VERSION = "4.0.3"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -251,34 +251,51 @@ def analyze_client_consortium_viability(
             scenario["credito_maximo"] = money(maximum)
             scenario["parcela_inicial"] = _parcela_inicial_por_cenario(scenario)
             scenario["parcela_inicial_formula"] = "saldo devedor / prazo remanescente (coluna F)"
-            # Contemplation is evaluated with the client's own offer only.
-            # The embedded bid remains part of the financial scenario, but it
-            # is not a client resource and must not inflate this comparison.
             client_bid = own + fgts
             contracted_credit = parse_decimal(scenario.get("credito_contratado"))
+            embedded_amount = parse_decimal(scenario.get("valor_lance_embutido")) or Decimal("0")
+            total_bid = client_bid + embedded_amount
             client_bid_percent = (
                 client_bid / contracted_credit
                 if contracted_credit is not None and contracted_credit > 0
                 else None
             )
+            total_bid_percent = (
+                total_bid / contracted_credit
+                if contracted_credit is not None and contracted_credit > 0
+                else None
+            )
             scenario["lance_cliente_total"] = money(client_bid)
+            scenario["lance_embutido"] = money(embedded_amount)
+            scenario["lance_total_cenario"] = money(total_bid)
             scenario["percentual_lance_cliente"] = float(client_bid_percent) if client_bid_percent is not None else None
+            scenario["percentual_lance_efetivo"] = float(total_bid_percent) if total_bid_percent is not None else None
             profile_rows = []
             for profile_id, label, strategy_key in CONTEMPLATION_PROFILE_TARGETS:
                 threshold = ranges.get(strategy_key)
                 threshold_decimal = Decimal(str(threshold)) if threshold is not None else None
-                ideal_bid = contracted_credit * threshold_decimal if contracted_credit is not None and threshold_decimal is not None else None
+                ideal_total_bid = contracted_credit * threshold_decimal if contracted_credit is not None and threshold_decimal is not None else None
+                required_client_bid = (
+                    max(Decimal("0"), ideal_total_bid - embedded_amount)
+                    if ideal_total_bid is not None
+                    else None
+                )
                 profile_rows.append({
                     "id": profile_id,
                     "label": label,
                     "percentual_referencia": threshold,
-                    "lance_ideal": money(ideal_bid),
+                    # The ideal client bid is the total profile bid less the
+                    # embedded portion already financed by the credit.
+                    "lance_ideal": money(required_client_bid),
+                    "lance_ideal_total": money(ideal_total_bid),
+                    "lance_embutido": money(embedded_amount),
                     "lance_cliente": money(client_bid),
-                    "falta_para_ideal": money(max(Decimal("0"), ideal_bid - client_bid)) if ideal_bid is not None else None,
-                    "atinge_perfil": client_bid_percent is not None and threshold is not None and client_bid_percent >= threshold,
+                    "percentual_lance_efetivo": float(total_bid_percent) if total_bid_percent is not None else None,
+                    "falta_para_ideal": money(max(Decimal("0"), required_client_bid - client_bid)) if required_client_bid is not None else None,
+                    "atinge_perfil": total_bid_percent is not None and threshold is not None and total_bid_percent >= threshold,
                 })
             scenario["perfis_contemplacao"] = profile_rows
-            matches = _strategy_matches(client_bid_percent, ranges)
+            matches = _strategy_matches(total_bid_percent, ranges)
             scenario["compatible_contemplation_strategies"] = matches
             scenario["contemplation_compatible"] = bool(matches) if has_ranges else None
             scenario["eligibility_reasons"] = _scenario_reasons(scenario, matches, has_ranges)
