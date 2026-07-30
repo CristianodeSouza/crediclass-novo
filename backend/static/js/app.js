@@ -2206,7 +2206,7 @@ function renderMotor360GroupCard(item) {
   const selected = investorState.selectedGroupIds.has(groupId);
   const quotaCount = selected ? Math.min(10, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1))) : 1;
   const scaleMoney = (value) => value === null || value === undefined ? value : Number(value) * quotaCount;
-  const quotaControl = selected ? `<div class="motor360-quota-control"><span>Cotas</span><button type="button" class="motor360-quota-step" data-quota-action="decrease" data-group-id="${auditId}" aria-label="Diminuir cotas" title="Diminuir cotas">&#8595;</button><input class="motor360-quota-input" type="number" min="1" max="10" value="${quotaCount}" data-quota-action="input" data-group-id="${auditId}" aria-label="Quantidade de cotas do grupo ${auditId}"><button type="button" class="motor360-quota-step" data-quota-action="increase" data-group-id="${auditId}" aria-label="Aumentar cotas" title="Aumentar cotas">&#8593;</button></div>` : "";
+  const quotaControl = selected ? `<div class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="10" value="${quotaCount}" data-quota-action="input" data-group-id="${auditId}" aria-label="Quantidade de cotas do grupo ${auditId}"></div>` : "";
   const scaledScenarioCards = scenarios.map((scenario) => {
     const title = scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido";
     const compatible = scenario.credit_compatible;
