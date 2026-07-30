@@ -2879,7 +2879,11 @@ function saveClientProfile({ silent = false } = {}) {
   window.localStorage.setItem(CLIENT_PROFILE_STORAGE_KEY, JSON.stringify(profile));
   applyClientProfileToFlow(profile);
   renderSmartEngine();
-  loadScenarioAnalysis();
+  // Do not run the legacy scenario engine in the background while the user
+  // is on another motor. Each motor owns its own analysis request.
+  if (document.getElementById("screen-viabilidade")?.classList.contains("active")) {
+    loadScenarioAnalysis();
+  }
   if (!silent) showToast("Perfil do cliente salvo.", "success");
   return profile;
 }
