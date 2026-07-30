@@ -2225,95 +2225,93 @@ function renderMotor360ChanceChart(items) {
     super_aggressive: "#b84f32",
   };
   const byScenario = (item, id) => (item.cenarios || []).find((scenario) => scenario.id === id) || {};
-  const profilesFor = (item) => byScenario(item, "without_embedded").perfis_contemplacao || byScenario(item, "with_embedded").perfis_contemplacao || [];
   const countHits = (scenarioId, profileId) => groups.reduce((total, item) => {
     const scenario = byScenario(item, scenarioId);
     const profile = (scenario.perfis_contemplacao || []).find((entry) => entry.id === profileId);
     return total + (profile?.atinge_perfil ? 1 : 0);
   }, 0);
   const scenarioLabels = { without_embedded: "Sem embutido", with_embedded: "Com embutido" };
-  const summary = profileIds.map((profileId) => `
-    <div class="motor360-chance-summary-card">
-      <strong>${profileLabels[profileId]}</strong>
-      <span><b>${countHits("without_embedded", profileId)}</b>/${groups.length} sem</span>
-      <span><b>${countHits("with_embedded", profileId)}</b>/${groups.length} com</span>
+  const scenarioSummary = (scenarioId) => `
+    <div class="motor360-chance-scenario-summary">
+      <div class="motor360-chance-scenario-label">${scenarioLabels[scenarioId]}</div>
+      <div class="motor360-chance-summary">
+        ${profileIds.map((profileId) => `<div class="motor360-chance-summary-card"><span class="motor360-profile-marker motor360-profile-marker-${profileId}" aria-hidden="true"></span><strong>${profileLabels[profileId]}</strong><b>${countHits(scenarioId, profileId)}/${groups.length}</b><small>grupos que atingem</small></div>`).join("")}
+      </div>
     </div>
-  `).join("");
-  const canvasId = `motor360ChanceChart-${Date.now()}`;
+  `;
+  const canvasIds = {
+    without_embedded: `motor360ChanceChart-without-${Date.now()}`,
+    with_embedded: `motor360ChanceChart-with-${Date.now() + 1}`,
+  };
+  const buildDatasets = (scenarioId) => [
+    {
+      label: "Lance ofertado pelo cliente",
+      data: groups.map((item) => {
+        const value = byScenario(item, scenarioId).percentual_lance_cliente;
+        return value == null ? null : value * 100;
+      }),
+      borderColor: "#263f4a",
+      backgroundColor: "#263f4a",
+      pointStyle: "circle",
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      showLine: false,
+    },
+    ...profileIds.map((profileId) => ({
+      label: profileLabels[profileId],
+      data: groups.map((item) => {
+        const profile = (byScenario(item, scenarioId).perfis_contemplacao || []).find((entry) => entry.id === profileId);
+        return profile?.percentual_referencia == null ? null : profile.percentual_referencia * 100;
+      }),
+      borderColor: profileColors[profileId],
+      backgroundColor: profileColors[profileId],
+      pointStyle: "triangle",
+      pointRadius: 5,
+      pointHoverRadius: 7,
+      showLine: false,
+    })),
+  ];
   setTimeout(() => {
-    const canvas = document.getElementById(canvasId);
-    if (!canvas || typeof Chart === "undefined") return;
-    if (motor360ChanceChart) motor360ChanceChart.destroy();
+    if (typeof Chart === "undefined") return;
+    if (motor360ChanceChart) {
+      if (Array.isArray(motor360ChanceChart)) motor360ChanceChart.forEach((chart) => chart.destroy());
+      else motor360ChanceChart.destroy();
+    }
     const labels = groups.map((item) => String(item.grupo || item.grupo_id || "-"));
-    const datasets = [
-      {
-        label: scenarioLabels.without_embedded,
-        data: groups.map((item) => {
-          const value = byScenario(item, "without_embedded").percentual_lance_cliente;
-          return value == null ? null : value * 100;
-        }),
-        borderColor: "#147a48",
-        backgroundColor: "#147a48",
-        borderWidth: 3,
-        pointRadius: 3,
-        tension: 0.2,
-      },
-      {
-        label: scenarioLabels.with_embedded,
-        data: groups.map((item) => {
-          const value = byScenario(item, "with_embedded").percentual_lance_cliente;
-          return value == null ? null : value * 100;
-        }),
-        borderColor: "#e5791b",
-        backgroundColor: "#e5791b",
-        borderWidth: 3,
-        pointRadius: 3,
-        tension: 0.2,
-      },
-      ...profileIds.map((profileId) => ({
-        label: profileLabels[profileId],
-        data: groups.map((item) => {
-          const profile = profilesFor(item).find((entry) => entry.id === profileId);
-          return profile?.percentual_referencia == null ? null : profile.percentual_referencia * 100;
-        }),
-        borderColor: profileColors[profileId],
-        backgroundColor: profileColors[profileId],
-        borderWidth: 1.5,
-        borderDash: [5, 4],
-        pointRadius: 2,
-        tension: 0.2,
-      })),
-    ];
-    motor360ChanceChart = new Chart(canvas, {
-      type: "line",
-      data: { labels, datasets },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: "index", intersect: false },
-        plugins: {
-          legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } },
-          tooltip: {
-            callbacks: {
-              label: (context) => `${context.dataset.label}: ${formatPercent((context.raw || 0) / 100)}`,
-            },
+    const charts = ["without_embedded", "with_embedded"].map((scenarioId) => {
+      const canvas = document.getElementById(canvasIds[scenarioId]);
+      if (!canvas) return null;
+      return new Chart(canvas, {
+        type: "line",
+        data: { labels, datasets: buildDatasets(scenarioId) },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: "index", intersect: false },
+          plugins: {
+            legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } },
+            tooltip: { callbacks: { label: (context) => `${context.dataset.label}: ${formatPercent((context.raw || 0) / 100)}` } },
+          },
+          scales: {
+            y: { beginAtZero: true, suggestedMax: 100, ticks: { callback: (value) => `${value}%` } },
+            x: { ticks: { maxRotation: 45, minRotation: 0, autoSkip: groups.length > 14 } },
           },
         },
-        scales: {
-          y: { beginAtZero: true, suggestedMax: 100, ticks: { callback: (value) => `${value}%` } },
-          x: { ticks: { maxRotation: 45, minRotation: 0, autoSkip: groups.length > 14 } },
-        },
-      },
-    });
+      });
+    }).filter(Boolean);
+    motor360ChanceChart = charts;
   }, 0);
   return `
     <section class="motor360-chance-panel">
       <div class="motor360-chance-header">
-        <div><h3>Comparativo de chances de contemplação</h3><p>O lance do cliente é comparado com as faixas de cada grupo. Linhas contínuas mostram o lance ofertado; linhas tracejadas mostram o lance de referência.</p></div>
+        <div><h3>Comparativo de chances de contemplação</h3><p>Os cenários financeiros são analisados separadamente. O círculo representa o lance do cliente; o triângulo representa o percentual de referência de cada perfil.</p></div>
         <span class="motor360-chance-legend-note">${groups.length} grupos comparados</span>
       </div>
-      <div class="motor360-chance-summary">${summary}</div>
-      <div class="motor360-chance-chart"><canvas id="${canvasId}" aria-label="Comparativo percentual de lance por grupo e perfil"></canvas></div>
+      <div class="motor360-chance-symbol-legend"><span><i class="motor360-symbol-circle" aria-hidden="true"></i>Lance do cliente</span><span><i class="motor360-symbol-triangle" aria-hidden="true"></i>Referência do perfil</span></div>
+      <div class="motor360-chance-scenarios">
+        <section class="motor360-chance-scenario"><header><h4>Crédito contratado sem lance embutido</h4><span>Cenário 1</span></header>${scenarioSummary("without_embedded")}<div class="motor360-chance-chart"><canvas id="${canvasIds.without_embedded}" aria-label="Chances por grupo no cenário sem lance embutido"></canvas></div></section>
+        <section class="motor360-chance-scenario"><header><h4>Crédito contratado com lance embutido</h4><span>Cenário 2</span></header>${scenarioSummary("with_embedded")}<div class="motor360-chance-chart"><canvas id="${canvasIds.with_embedded}" aria-label="Chances por grupo no cenário com lance embutido"></canvas></div></section>
+      </div>
     </section>
   `;
 }
