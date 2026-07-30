@@ -1707,15 +1707,30 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-classification { margin: 12px 16px 14px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.72rem; }
 .motor360-group-classification strong { color: var(--brand-navy); }
 .motor360-empty-inline { color: var(--muted); font-size: 0.75rem; }
+.motor360-chance-panel { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.motor360-chance-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.motor360-chance-header h3 { margin: 0; color: var(--brand-navy); font-size: 0.95rem; }
+.motor360-chance-header p { margin: 4px 0 0; max-width: 760px; color: var(--muted); font-size: 0.72rem; line-height: 1.45; }
+.motor360-chance-legend-note { flex: 0 0 auto; padding: 5px 9px; border-radius: 999px; background: #fff4e8; color: var(--brand-bronze-dark); font-size: 0.68rem; font-weight: 800; }
+.motor360-chance-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 14px; }
+.motor360-chance-summary-card { display: grid; gap: 4px; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; background: #f7f9f9; color: var(--muted); font-size: 0.68rem; }
+.motor360-chance-summary-card strong { color: var(--brand-navy); font-size: 0.75rem; }
+.motor360-chance-summary-card span { display: flex; justify-content: space-between; gap: 8px; }
+.motor360-chance-summary-card b { color: #147a48; }
+.motor360-chance-chart { position: relative; height: 310px; }
 
 @media (max-width: 900px) {
   .motor360-group-card-header, .motor360-profile-section-title { align-items: flex-start; flex-direction: column; }
   .motor360-group-summary { justify-content: flex-start; flex-wrap: wrap; gap: 12px; }
   .motor360-scenario-list, .motor360-profile-card-list { grid-template-columns: 1fr 1fr; }
+  .motor360-chance-header { flex-direction: column; }
+  .motor360-chance-summary { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 560px) {
   .motor360-scenario-list, .motor360-profile-card-list { grid-template-columns: 1fr; }
+  .motor360-chance-summary { grid-template-columns: 1fr; }
+  .motor360-chance-chart { height: 260px; }
 }
 
 .details-grid {

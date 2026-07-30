@@ -185,6 +185,7 @@ let detailsChart = null;
 let studyChart = null;
 let historyStrategyChart = null;
 let historyEvolutionChart = null;
+let motor360ChanceChart = null;
 let currentStudy = null;
 let groupFormModal = null;
 let groupFormMode = "create";
@@ -2207,6 +2208,116 @@ function renderMotor360GroupCard(item) {
   return `<article class="motor360-group-card"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3><p>${escapeHtml(item.administradora || "-")}</p></div></div><div class="motor360-group-summary"><div><small>Crédito máximo</small><b>${formatMoney(item.credito_maximo)}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status">${escapeHtml(status)}</span><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros</h4><div class="motor360-scenario-list">${scenarioCards}</div></section><section class="motor360-group-section"><div class="motor360-profile-section-title"><h4>Perfis de contemplação</h4><small>Referência comparada ao lance ofertado pelo cliente: ${formatMoney(byId.without_embedded?.lance_cliente_total ?? byId.with_embedded?.lance_cliente_total)}</small></div><div class="motor360-profile-card-list">${profileCards || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div></article>`;
 }
 
+function renderMotor360ChanceChart(items) {
+  const groups = (items || []).filter((item) => Array.isArray(item.cenarios) && item.cenarios.length);
+  if (!groups.length) return "";
+  const profileIds = ["conservative", "moderate", "aggressive", "super_aggressive"];
+  const profileLabels = {
+    conservative: "Conservador",
+    moderate: "Moderado",
+    aggressive: "Agressivo",
+    super_aggressive: "Super Agressivo",
+  };
+  const profileColors = {
+    conservative: "#4f6872",
+    moderate: "#1d9b59",
+    aggressive: "#e5791b",
+    super_aggressive: "#b84f32",
+  };
+  const byScenario = (item, id) => (item.cenarios || []).find((scenario) => scenario.id === id) || {};
+  const profilesFor = (item) => byScenario(item, "without_embedded").perfis_contemplacao || byScenario(item, "with_embedded").perfis_contemplacao || [];
+  const countHits = (scenarioId, profileId) => groups.reduce((total, item) => {
+    const scenario = byScenario(item, scenarioId);
+    const profile = (scenario.perfis_contemplacao || []).find((entry) => entry.id === profileId);
+    return total + (profile?.atinge_perfil ? 1 : 0);
+  }, 0);
+  const scenarioLabels = { without_embedded: "Sem embutido", with_embedded: "Com embutido" };
+  const summary = profileIds.map((profileId) => `
+    <div class="motor360-chance-summary-card">
+      <strong>${profileLabels[profileId]}</strong>
+      <span><b>${countHits("without_embedded", profileId)}</b>/${groups.length} sem</span>
+      <span><b>${countHits("with_embedded", profileId)}</b>/${groups.length} com</span>
+    </div>
+  `).join("");
+  const canvasId = `motor360ChanceChart-${Date.now()}`;
+  setTimeout(() => {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || typeof Chart === "undefined") return;
+    if (motor360ChanceChart) motor360ChanceChart.destroy();
+    const labels = groups.map((item) => String(item.grupo || item.grupo_id || "-"));
+    const datasets = [
+      {
+        label: scenarioLabels.without_embedded,
+        data: groups.map((item) => {
+          const value = byScenario(item, "without_embedded").percentual_lance_cliente;
+          return value == null ? null : value * 100;
+        }),
+        borderColor: "#147a48",
+        backgroundColor: "#147a48",
+        borderWidth: 3,
+        pointRadius: 3,
+        tension: 0.2,
+      },
+      {
+        label: scenarioLabels.with_embedded,
+        data: groups.map((item) => {
+          const value = byScenario(item, "with_embedded").percentual_lance_cliente;
+          return value == null ? null : value * 100;
+        }),
+        borderColor: "#e5791b",
+        backgroundColor: "#e5791b",
+        borderWidth: 3,
+        pointRadius: 3,
+        tension: 0.2,
+      },
+      ...profileIds.map((profileId) => ({
+        label: profileLabels[profileId],
+        data: groups.map((item) => {
+          const profile = profilesFor(item).find((entry) => entry.id === profileId);
+          return profile?.percentual_referencia == null ? null : profile.percentual_referencia * 100;
+        }),
+        borderColor: profileColors[profileId],
+        backgroundColor: profileColors[profileId],
+        borderWidth: 1.5,
+        borderDash: [5, 4],
+        pointRadius: 2,
+        tension: 0.2,
+      })),
+    ];
+    motor360ChanceChart = new Chart(canvas, {
+      type: "line",
+      data: { labels, datasets },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { position: "bottom", labels: { usePointStyle: true, boxWidth: 8, font: { size: 10 } } },
+          tooltip: {
+            callbacks: {
+              label: (context) => `${context.dataset.label}: ${formatPercent((context.raw || 0) / 100)}`,
+            },
+          },
+        },
+        scales: {
+          y: { beginAtZero: true, suggestedMax: 100, ticks: { callback: (value) => `${value}%` } },
+          x: { ticks: { maxRotation: 45, minRotation: 0, autoSkip: groups.length > 14 } },
+        },
+      },
+    });
+  }, 0);
+  return `
+    <section class="motor360-chance-panel">
+      <div class="motor360-chance-header">
+        <div><h3>Comparativo de chances de contemplação</h3><p>O lance do cliente é comparado com as faixas de cada grupo. Linhas contínuas mostram o lance ofertado; linhas tracejadas mostram o lance de referência.</p></div>
+        <span class="motor360-chance-legend-note">${groups.length} grupos comparados</span>
+      </div>
+      <div class="motor360-chance-summary">${summary}</div>
+      <div class="motor360-chance-chart"><canvas id="${canvasId}" aria-label="Comparativo percentual de lance por grupo e perfil"></canvas></div>
+    </section>
+  `;
+}
+
 function auditDateTime(value) {
   const date = value ? new Date(value) : null;
   return date && !Number.isNaN(date.getTime()) ? date.toLocaleString("pt-BR") : "-";
@@ -2357,6 +2468,7 @@ function renderInvestorAnalysis(result) {
     </div>
     <div class="motor360-group-list">${items.map(renderMotor360GroupCard).join("")}</div>
     ${creditRejectedByTerm.length ? `<details class="motor360-credit-excluded"><summary>Compatíveis por crédito, mas eliminados por prazo/renda (${creditRejectedByTerm.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Prazo restante</th><th>Motivo</th></tr></thead><tbody>${creditRejectedByTerm.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td><td>Prazo/renda insuficiente no cenário compatível por crédito.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
+    ${renderMotor360ChanceChart(items)}
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
     ${renderMotor360Audit(investorState.audit)}
   `;
