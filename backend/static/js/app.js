@@ -2037,25 +2037,28 @@ function selectedMotor360Items() {
   return [...investorState.selectedGroupIds].map((id) => currentItems.get(id) || investorState.selectedGroupData.get(id)).filter(Boolean);
 }
 
-function renderSelectedGroupCard(item, index) {
+function renderSelectedGroupComparisonColumn(item, index) {
   const groupId = String(item.grupo || item.grupo_id || "-");
   const quotaCount = Math.min(10, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
   const scale = (value) => value === null || value === undefined ? value : Number(value) * quotaCount;
   const scenarios = Array.isArray(item.cenarios) ? item.cenarios : [];
-  const scenarioCards = scenarios.map((scenario) => {
-    const embedded = scenario.id === "with_embedded";
-    return `<article class="selected-group-scenario"><div class="selected-group-scenario-title"><strong>${embedded ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido"}</strong><span>${scenario.credit_compatible ? "Crédito OK" : "Fora da faixa"}</span></div><div class="selected-group-scenario-grid"><div><small>Crédito contratado</small><b>${formatMoney(scale(scenario.credito_contratado))}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(scale(scenario.lance_total_cenario))}</b></div><div><small>Saldo devedor</small><b>${formatMoney(scale(scenario.saldo_devedor))}</b></div><div><small>Parcela inicial</small><b>${formatMoney(scale(scenario.parcela_inicial))}</b></div></div><small>Prazo após lance: ${scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
+  const byScenario = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
+  const scenarioRows = ["without_embedded", "with_embedded"].map((scenarioId) => {
+    const scenario = byScenario[scenarioId];
+    if (!scenario) return "";
+    const embedded = scenarioId === "with_embedded";
+    return `<article class="selected-comparison-scenario"><div class="selected-comparison-scenario-title"><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><span>${scenario.credit_compatible ? "Crédito OK" : "Fora da faixa"}</span></div><dl><div><dt>Crédito contratado</dt><dd>${formatMoney(scale(scenario.credito_contratado))}</dd></div><div><dt>Lance total</dt><dd>${formatMoney(scale(scenario.lance_total_cenario))}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div></dl><small>Prazo após lance: ${scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
   }).join("");
-  const profiles = scenarios[0]?.perfis_contemplacao || [];
-  const profileCards = profiles.map((profile) => {
-    const values = scenarios.map((scenario) => {
-      const value = (scenario.perfis_contemplacao || []).find((entry) => entry.id === profile.id);
+  const profiles = byScenario.without_embedded?.perfis_contemplacao || byScenario.with_embedded?.perfis_contemplacao || [];
+  const profileRows = profiles.map((profile) => {
+    const values = ["without_embedded", "with_embedded"].map((scenarioId) => {
+      const value = (byScenario[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profile.id);
       if (!value) return "";
-      return `<div class="selected-group-profile-value ${value.atinge_perfil ? "is-hit" : "is-gap"}"><small>${scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${value.atinge_perfil ? "Atinge o perfil" : `Faltam ${formatMoney(scale(value.falta_para_ideal))}`}</span></div>`;
+      return `<div class="selected-comparison-profile-value ${value.atinge_perfil ? "is-hit" : "is-gap"}><small>${scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${value.atinge_perfil ? "Atinge o perfil" : `Faltam ${formatMoney(scale(value.falta_para_ideal))}`}</span></div>`;
     }).join("");
-    return `<div class="selected-group-profile"><strong>${escapeHtml(profile.label)}</strong>${values}</div>`;
+    return `<article class="selected-comparison-profile"><strong>${escapeHtml(profile.label)}</strong>${values}</article>`;
   }).join("");
-  return `<article class="selected-group-item"><header><div class="selected-group-number">${index + 1}</div><div><h3>Grupo ${escapeHtml(groupId)}</h3><p>${escapeHtml(item.administradora || "-")} · ${quotaCount} ${quotaCount === 1 ? "cota" : "cotas"}</p></div><div class="selected-group-header-metrics"><span><small>Crédito máximo</small><b>${formatMoney(scale(item.credito_maximo))}</b></span><span><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></span></div></header><section><h4>Cenários financeiros</h4><div class="selected-group-scenarios">${scenarioCards}</div></section><section><h4>Perfis de contemplação</h4><div class="selected-group-profiles">${profileCards || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section></article>`;
+  return `<article class="selected-comparison-column"><header><div class="selected-group-number">${index + 1}</div><div><h3>Grupo ${escapeHtml(groupId)}</h3><p>${escapeHtml(item.administradora || "-")} · ${quotaCount} ${quotaCount === 1 ? "cota" : "cotas"}</p></div></header><div class="selected-comparison-key-metrics"><span><small>Crédito máximo</small><b>${formatMoney(scale(item.credito_maximo))}</b></span><span><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></span></div><section><h4>Cenários financeiros</h4><div class="selected-comparison-scenarios">${scenarioRows}</div></section><section><h4>Perfis de contemplação</h4><div class="selected-comparison-profiles">${profileRows || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section></article>`;
 }
 
 function renderSelectedGroupsScreen() {
@@ -2069,7 +2072,7 @@ function renderSelectedGroupsScreen() {
   summary.innerHTML = [["Grupos selecionados", items.length], ["Cotas totais", items.reduce((total, item) => total + Math.min(10, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1))), 0)], ["Comparação", "Sem e com embutido"], ["Perfis", "Conservador a Super Agressivo"]].map(([label, value]) => `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`).join("");
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
-  results.innerHTML = items.length ? `<div class="selected-groups-note">Os grupos abaixo foram importados do Motor 360. Os valores respeitam a quantidade de cotas selecionada em cada grupo.</div>${items.map(renderSelectedGroupCard).join("")}` : "";
+  results.innerHTML = items.length ? `<div class="selected-groups-note">Os grupos abaixo foram importados do Motor 360. Cada coluna representa um grupo para comparação lado a lado; os valores respeitam a quantidade de cotas selecionada.</div><div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div>` : "";
 }
 
 function persistMotor360Selection() {
