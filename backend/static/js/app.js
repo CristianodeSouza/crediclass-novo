@@ -533,7 +533,7 @@ function renderMotor360ExecutionLogs() {
         ${item.detail ? `<small>${escapeHtml(item.detail)}</small>` : ""}
       </li>
     `).join("")
-    : '<li class="motor360-execution-log-empty">Nenhum evento registrado nesta sessÃ£o.</li>';
+    : '<li class="motor360-execution-log-empty">Nenhum evento registrado nesta sessão.</li>';
 }
 
 function addMotor360ExecutionLog(message, detail = "", level = "info") {
@@ -2201,7 +2201,7 @@ function renderMotor360Audit(audit) {
         </div>
         <div class="motor360-audit-actions"><a class="btn btn-primary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}/exportar.pdf">Baixar PDF</a><a class="btn btn-outline-secondary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}" target="_blank" rel="noopener">Exportar JSON</a><a class="btn btn-outline-secondary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}/exportar.md">Exportar Markdown</a></div>
         <details open><summary>1. Dados recebidos e consolidados</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Campo</th><th>Técnico</th><th>Valor usado</th><th>Origem</th></tr></thead><tbody>${fieldRows}</tbody></table></div></details>
-        <details><summary>2. Base e colunas utilizadas</summary><p>Origem: <strong>${escapeHtml(audit.data_source?.source_name || "-")}</strong> | Modo: <strong>${escapeHtml(audit.data_source?.current_or_historical || "-")}</strong> | Linhas lidas: <strong>${audit.data_source?.total_rows ?? 0}</strong></p><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Coluna</th><th>Campo</th><th>Técnico</th><th>Uso</th></tr></thead><tbody>${columnRows}</tbody></table></div></details>
+        <details><summary>2. Base, parâmetros e colunas utilizadas</summary><p>Origem: <strong>${escapeHtml(audit.data_source?.source_name || "-")}</strong> | Modo: <strong>${escapeHtml(audit.data_source?.current_or_historical || "-")}</strong> | Linhas lidas: <strong>${audit.data_source?.total_rows ?? 0}</strong> | Hash: <strong>${escapeHtml(String(audit.data_source?.base_snapshot?.fingerprint || "-").slice(0, 16))}...</strong></p><p>Parâmetros aplicados: <strong>${escapeHtml(JSON.stringify(audit.parameters || {}))}</strong></p><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Coluna</th><th>Campo</th><th>Técnico</th><th>Uso</th></tr></thead><tbody>${columnRows}</tbody></table></div></details>
         <details><summary>3. Sequência de filtros</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>#</th><th>Filtro</th><th>Regra</th><th>Entrada</th><th>Aprovados</th><th>Eliminados</th><th>Incompletos</th></tr></thead><tbody>${filterRows}</tbody></table></div></details>
         <details><summary>4. Fórmulas e cálculos</summary><div class="motor360-audit-formulas">${formulaRows}</div></details>
         <details><summary>5. Ordem e pré-seleção</summary><p>${escapeHtml(audit.final_ordering?.execution_summary || "")}</p><ol>${(audit.final_ordering?.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ol><p>Compatíveis por crédito: <strong>${summary.total_credit_compatible ?? 0}</strong> | Pré-selecionados: <strong>${summary.total_preselected ?? 0}</strong> | Eliminados por crédito: <strong>${summary.total_credit_rejected ?? 0}</strong> | Eliminados por prazo/renda: <strong>${summary.total_term_income_rejected ?? 0}</strong> | Grupos incompletos: <strong>${summary.groups_with_incomplete_data ?? 0}</strong> | Ocorrências incompletas: <strong>${summary.incomplete_field_occurrences ?? 0}</strong></p></details>
@@ -2245,6 +2245,16 @@ async function loadMotor360Audit(auditId) {
     const response = await fetch(`/api/viabilidade-360/auditorias/${encodeURIComponent(auditId)}`, { credentials: "same-origin" });
     if (!response.ok) throw new Error("Auditoria não encontrada.");
     investorState.audit = await response.json();
+    const audit = investorState.audit;
+    const metadata = audit.metadata || {};
+    const snapshot = audit.data_source?.base_snapshot || {};
+    addMotor360ExecutionLog("Auditoria técnica carregada", `${metadata.audit_id || auditId} · ${metadata.duration_ms ?? 0} ms.`);
+    addMotor360ExecutionLog("Base identificada", `${audit.data_source?.total_rows ?? 0} linhas · SHA-256 ${String(snapshot.fingerprint || "não disponível").slice(0, 16)}...`);
+    addMotor360ExecutionLog("Rastreabilidade preparada", `${(audit.columns_used || []).filter((column) => column.used_in_decision).length} colunas usadas na decisão · ${(audit.formulas || []).length} fórmulas registradas.`);
+    (audit.execution_steps || []).forEach((step) => {
+      addMotor360ExecutionLog(`Etapa ${step.order}: ${step.name}`, `Entrada ${step.input_count ?? 0} · aprovados ${step.approved_count ?? step.evaluated_count ?? 0} · eliminados ${step.rejected_count ?? 0} · ${step.duration_ms ?? 0} ms.`);
+    });
+    addMotor360ExecutionLog("Auditoria por grupo disponível", `${(audit.group_results || []).length} grupos com decisão, cenários, colunas e motivos registrados.`);
     if (investorState.result) renderInvestorAnalysis(investorState.result);
   } catch (error) {
     showToast(error.message || "Não foi possível carregar a auditoria.", "warning");
@@ -2386,17 +2396,17 @@ async function loadInvestorAnalysis() {
   const startedAt = performance.now();
   const controller = new AbortController();
   investorAnalysisController = controller;
-  addMotor360ExecutionLog("Execução do Motor 360 iniciada", `RequisiÃ§Ã£o ${requestId}.`);
+  addMotor360ExecutionLog("Execução do Motor 360 iniciada", `Requisição ${requestId}.`);
   const profile = collectClientProfile();
   if (!(Number(profile.credito_desejado) > 0)) {
-    addMotor360ExecutionLog("Perfil não disponível para análise", "CrÃ©dito desejado ausente ou igual a zero.", "warning");
+    addMotor360ExecutionLog("Perfil não disponível para análise", "Crédito desejado ausente ou igual a zero.", "warning");
     status.textContent = "Aguardando perfil do cliente";
     setInvestorAnalysisState("empty");
     return;
   }
   status.textContent = "Processando...";
   setInvestorAnalysisState("loading");
-  addMotor360ExecutionLog("Requisição enviada", `CrÃ©dito ${formatMoney(profile.credito_desejado)} · parcela ${formatMoney(profile.parcela_desejada)}.`);
+  addMotor360ExecutionLog("Requisição enviada", `Crédito ${formatMoney(profile.credito_desejado)} · parcela ${formatMoney(profile.parcela_desejada)} · RP ${formatMoney(profile.lance_recursos_proprios ?? profile.lance_maximo_recursos_proprios)} · FGTS ${formatMoney(profile.fgts_total)} · renda ${formatMoney(profile.renda_total)}.`);
   try {
     const response = await fetch("/api/viabilidade-360/analisar", {
       method: "POST",
@@ -2407,7 +2417,7 @@ async function loadInvestorAnalysis() {
       body: JSON.stringify(profile),
     });
     const result = await response.json().catch(() => ({}));
-    addMotor360ExecutionLog("Resposta recebida", `HTTP ${response.status} · ${Math.round(performance.now() - startedAt)} ms.`);
+    addMotor360ExecutionLog("Resposta recebida", `HTTP ${response.status} · ${Math.round(performance.now() - startedAt)} ms · ${result.request_id || "sem ID"}.`);
     if (!response.ok) throw new Error(result.error || "Falha ao calcular a viabilidade dos grupos.");
     if (requestId !== investorAnalysisRequestId) return;
     investorState.result = result;

@@ -7,6 +7,7 @@ import math
 import os
 import time
 from typing import Annotated
+from uuid import uuid4
 
 from fastapi import FastAPI, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
@@ -343,18 +344,21 @@ def grupo_historico_lote_atualizar(grupo_id: str, payload: HistoricoBatchUpdateR
 @app.post("/api/viabilidade-360/analisar")
 def viabilidade_360_analisar(payload: ViabilidadeRequest):
     """Single entry point: declared objective is a presentation preference, never an exclusion."""
-    logger.info("POST /api/viabilidade-360/analisar credito=%s", payload.credito_desejado)
+    request_id = f"REQ-{uuid4().hex[:12].upper()}"
+    logger.info("POST /api/viabilidade-360/analisar request_id=%s credito=%s", request_id, payload.credito_desejado)
     try:
         groups = list_grupos(include_history=payload.base_mode == "historical_audit")
-        result = analyze_client_consortium_viability(payload, groups, mode=payload.base_mode)
+        result = analyze_client_consortium_viability(payload, groups, mode=payload.base_mode, request_id=request_id)
         audit = save_motor360_audit(result.pop("audit"))
         result["audit_id"] = audit["metadata"]["audit_id"]
+        result["request_id"] = request_id
         return result
     except ValueError as error:
-        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
+        logger.warning("Motor 360 recusou a entrada request_id=%s error=%s", request_id, error)
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error), "request_id": request_id})
     except Exception as error:
-        logger.exception("Erro no motor 360 de viabilidade")
-        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+        logger.exception("Erro no motor 360 de viabilidade request_id=%s", request_id)
+        return JSONResponse(status_code=503, content={"success": False, "error": "Falha interna ao calcular o Motor 360.", "request_id": request_id})
 
 
 @app.get("/api/viabilidade-360/auditorias/{audit_id}")
