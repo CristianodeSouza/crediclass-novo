@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260731-19" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260731-20" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -56,6 +56,10 @@
             <button class="nav-item" type="button" data-screen="motor360">
               <span class="nav-icon">MI</span>
               <span>Motor 360 de Viabilidade</span>
+            </button>
+            <button class="nav-item" type="button" data-screen="grupos-selecionados">
+              <span class="nav-icon">GS</span>
+              <span>Grupos Selecionados</span>
             </button>
             <button class="nav-item" type="button" data-screen="historico">
               <span class="nav-icon">HE</span>
@@ -374,6 +378,24 @@
               <p>Salve o Perfil do Cliente para analisar todas as estratégias de consórcio.</p>
             </div>
             <div id="investorAnalysisResults" class="investor-engine-results d-none"></div>
+          </div>
+        </section>
+
+        <section id="screen-grupos-selecionados" class="screen-panel">
+          <div class="content-card selected-groups-card">
+            <div class="selected-groups-header">
+              <div>
+                <h2>Grupos Selecionados</h2>
+                <p>Comparativo dos grupos escolhidos pelo consultor para a próxima etapa do estudo.</p>
+              </div>
+              <span id="selectedGroupsCount" class="state-badge">0 grupos</span>
+            </div>
+            <div id="selectedGroupsSummary" class="smart-engine-phase-two-summary"></div>
+            <div id="selectedGroupsEmpty" class="placeholder-card compact-placeholder">
+              <p>Nenhum grupo selecionado. Volte ao Motor 360 e marque os grupos que deseja comparar.</p>
+              <button class="btn btn-primary" type="button" data-screen-jump="motor360">Voltar ao Motor 360</button>
+            </div>
+            <div id="selectedGroupsResults" class="selected-groups-list d-none"></div>
           </div>
         </section>
 
@@ -1148,6 +1170,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260731-19"></script>
+    <script src="/static/js/app.js?v=20260731-20"></script>
   </body>
 </html>

@@ -1731,6 +1731,42 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-classification { margin: 12px 16px 14px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.72rem; }
 .motor360-group-classification strong { color: var(--brand-navy); }
 .motor360-empty-inline { color: var(--muted); font-size: 0.75rem; }
+.selected-groups-card { padding: 18px; }
+.selected-groups-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+.selected-groups-header h2 { margin: 0; color: var(--brand-navy); font-size: 1.1rem; }
+.selected-groups-header p { margin: 4px 0 0; color: var(--muted); font-size: 0.76rem; }
+.selected-groups-header .state-badge { flex: 0 0 auto; }
+.selected-groups-list { display: grid; gap: 14px; }
+.selected-groups-note { padding: 10px 12px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-bronze-dark); font-size: 0.72rem; }
+.selected-group-item { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 2px 8px rgb(31 45 51 / 6%); }
+.selected-group-item > header { display: grid; grid-template-columns: auto minmax(180px, 1fr) auto; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid var(--line); background: #f7f9f9; }
+.selected-group-number { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: var(--brand-navy); color: #fff; font-size: 0.78rem; font-weight: 800; }
+.selected-group-item h3 { margin: 0; color: var(--brand-navy); font-size: 0.95rem; }
+.selected-group-item header p { margin: 2px 0 0; color: var(--muted); font-size: 0.72rem; }
+.selected-group-header-metrics { display: flex; gap: 20px; }
+.selected-group-header-metrics span { display: grid; gap: 2px; min-width: 110px; }
+.selected-group-header-metrics small, .selected-group-scenario small, .selected-group-profile-value small { color: var(--muted); font-size: 0.66rem; }
+.selected-group-header-metrics b { color: var(--brand-navy); font-size: 0.78rem; }
+.selected-group-item > section { padding: 13px 16px 0; }
+.selected-group-item > section:last-child { padding-bottom: 15px; }
+.selected-group-item h4 { margin: 0 0 9px; color: var(--brand-navy); font-size: 0.76rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.selected-group-scenarios { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.selected-group-scenario { padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid #1d9b59; border-radius: 6px; background: #fff; }
+.selected-group-scenario-title { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.selected-group-scenario-title strong { color: var(--brand-navy); font-size: 0.74rem; }
+.selected-group-scenario-title span { color: #147a48; font-size: 0.66rem; font-weight: 800; }
+.selected-group-scenario-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px 12px; }
+.selected-group-scenario-grid div { display: grid; gap: 2px; }
+.selected-group-scenario-grid b { color: #147a48; font-size: 0.8rem; }
+.selected-group-scenario > small { display: block; margin-top: 8px; color: var(--muted); font-size: 0.66rem; }
+.selected-group-profiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.selected-group-profile { display: grid; gap: 6px; padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: #fbfcfc; }
+.selected-group-profile > strong { color: var(--brand-navy); font-size: 0.72rem; }
+.selected-group-profile-value { display: grid; gap: 2px; padding: 7px; border-left: 3px solid var(--brand-bronze); border-radius: 5px; background: #fff8f2; }
+.selected-group-profile-value.is-hit { border-left-color: #1d9b59; background: #effaf3; }
+.selected-group-profile-value b { color: var(--brand-bronze-dark); font-size: 0.8rem; }
+.selected-group-profile-value.is-hit b { color: #147a48; }
+.selected-group-profile-value span { color: var(--muted); font-size: 0.66rem; }
 .motor360-chance-panel { margin-top: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
 .motor360-chance-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
 .motor360-chance-header h3 { margin: 0; color: var(--brand-navy); font-size: 0.95rem; }
@@ -1765,12 +1801,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .motor360-scenario-list, .motor360-profile-card-list { grid-template-columns: 1fr 1fr; }
   .motor360-chance-header { flex-direction: column; }
   .motor360-chance-scenarios { grid-template-columns: 1fr; }
+  .selected-group-item > header { grid-template-columns: auto 1fr; }
+  .selected-group-header-metrics { grid-column: 1 / -1; flex-wrap: wrap; }
+  .selected-group-scenarios, .selected-group-profiles { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 560px) {
   .motor360-scenario-list, .motor360-profile-card-list { grid-template-columns: 1fr; }
   .motor360-chance-summary { grid-template-columns: 1fr 1fr; }
   .motor360-chance-chart { height: 260px; }
+  .selected-group-scenarios, .selected-group-profiles { grid-template-columns: 1fr; }
 }
 
 .details-grid {
