@@ -1663,6 +1663,20 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 /* Vertical group cards keep the Motor 360 readable at normal desktop widths. */
 .motor360-group-list { display: grid; gap: 14px; }
+.motor360-execution-panel { margin: 12px 0 14px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfc; }
+.motor360-execution-panel summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; color: var(--brand-navy); cursor: pointer; font-size: 0.78rem; font-weight: 800; list-style-position: inside; }
+.motor360-execution-panel summary span:last-child { color: var(--muted); font-size: 0.68rem; font-weight: 600; }
+.motor360-execution-panel[open] summary { border-bottom: 1px solid var(--line); }
+.motor360-execution-panel-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+.motor360-execution-panel-toolbar p { margin: 0; color: var(--muted); font-size: 0.7rem; }
+.motor360-execution-logs { display: grid; gap: 0; max-height: 260px; margin: 0; padding: 0; overflow: auto; list-style: none; }
+.motor360-execution-log { display: grid; grid-template-columns: 150px minmax(170px, 0.7fr) minmax(0, 1.3fr); gap: 10px; align-items: baseline; padding: 8px 12px; border-bottom: 1px solid var(--line); color: var(--brand-navy); font-size: 0.7rem; }
+.motor360-execution-log:last-child { border-bottom: 0; }
+.motor360-execution-log-time, .motor360-execution-log small { color: var(--muted); }
+.motor360-execution-log small { min-width: 0; }
+.motor360-execution-log-warning strong { color: var(--brand-bronze-dark); }
+.motor360-execution-log-error strong { color: #b42318; }
+.motor360-execution-log-empty { padding: 12px; color: var(--muted); font-size: 0.72rem; }
 .motor360-group-card { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 2px 8px rgb(31 45 51 / 6%); }
 .motor360-group-card-header { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: #f7f9f9; }
 .motor360-group-identity { display: flex; align-items: center; gap: 11px; min-width: 150px; }

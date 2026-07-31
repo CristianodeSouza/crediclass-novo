@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260731-16" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260731-18" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -359,6 +359,14 @@
                 </div>
               </div>
             </aside>
+            <details class="motor360-execution-panel">
+              <summary><span>Auditoria da execução</span><span id="motor360ExecutionLogsCount">0 evento(s)</span></summary>
+              <div class="motor360-execution-panel-toolbar">
+                <p>Registros técnicos desta sessão para acompanhar o acionamento, a requisição e o retorno do Motor 360.</p>
+                <button id="clearMotor360ExecutionLogsBtn" class="btn btn-outline-secondary btn-sm" type="button">Limpar registros</button>
+              </div>
+              <ul id="motor360ExecutionLogsList" class="motor360-execution-logs"></ul>
+            </details>
             <div id="investorAnalysisSummary" class="smart-engine-phase-two-summary"></div>
             <div id="investorAnalysisLoading" class="table-state d-none">Calculando grupos para o Motor 360...</div>
             <div id="investorAnalysisError" class="table-state table-state-error d-none">Não foi possível calcular os grupos do Motor 360.</div>
@@ -1140,6 +1148,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260731-16"></script>
+    <script src="/static/js/app.js?v=20260731-18"></script>
   </body>
 </html>

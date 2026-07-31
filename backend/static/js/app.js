@@ -68,6 +68,7 @@ const configState = {
 };
 
 const operationalLogs = [];
+const motor360ExecutionLogs = [];
 const investorPreferenceFlags = [
   { id: "menor_taxa_total", label: "Menor Taxa Total" },
   { id: "menor_taxa_ano", label: "Menor Taxa Ano" },
@@ -517,6 +518,33 @@ async function exportGroupsCsv() {
   } finally {
     if (button) button.disabled = false;
   }
+}
+
+function renderMotor360ExecutionLogs() {
+  const list = document.getElementById("motor360ExecutionLogsList");
+  const counter = document.getElementById("motor360ExecutionLogsCount");
+  if (!list) return;
+  counter && (counter.textContent = `${motor360ExecutionLogs.length} evento(s)`);
+  list.innerHTML = motor360ExecutionLogs.length
+    ? motor360ExecutionLogs.map((item) => `
+      <li class="motor360-execution-log motor360-execution-log-${escapeHtml(item.level)}">
+        <span class="motor360-execution-log-time">${escapeHtml(item.time)}</span>
+        <strong>${escapeHtml(item.message)}</strong>
+        ${item.detail ? `<small>${escapeHtml(item.detail)}</small>` : ""}
+      </li>
+    `).join("")
+    : '<li class="motor360-execution-log-empty">Nenhum evento registrado nesta sessÃ£o.</li>';
+}
+
+function addMotor360ExecutionLog(message, detail = "", level = "info") {
+  motor360ExecutionLogs.unshift({
+    message,
+    detail,
+    level,
+    time: new Date().toLocaleString("pt-BR"),
+  });
+  motor360ExecutionLogs.splice(100);
+  renderMotor360ExecutionLogs();
 }
 
 function exportStudiesCsv() {
@@ -2315,6 +2343,32 @@ function updateInvestorPreferenceSummary() {
     : "Nenhuma preferência selecionada";
 }
 
+function setInvestorAnalysisState(state) {
+  const status = document.getElementById("investorAnalysisStatus");
+  const loading = document.getElementById("investorAnalysisLoading");
+  const error = document.getElementById("investorAnalysisError");
+  const empty = document.getElementById("investorAnalysisEmpty");
+  const results = document.getElementById("investorAnalysisResults");
+  const summary = document.getElementById("investorAnalysisSummary");
+  const normalizedState = ["loading", "error", "results", "empty"].includes(state) ? state : "empty";
+
+  loading?.classList.toggle("d-none", normalizedState !== "loading");
+  error?.classList.toggle("d-none", normalizedState !== "error");
+  empty?.classList.toggle("d-none", normalizedState !== "empty");
+  results?.classList.toggle("d-none", normalizedState !== "results");
+  if (normalizedState !== "results" && summary) summary.innerHTML = "";
+
+  if (!status) return;
+  const labels = {
+    loading: "Processando...",
+    error: "Erro no cálculo",
+    results: "Análise concluída",
+    empty: "Aguardando perfil",
+  };
+  status.textContent = labels[normalizedState];
+  status.dataset.state = normalizedState;
+}
+
 function syncInvestorPreferencesFromInputs() {
   investorState.preferences = Array.from(
     document.querySelectorAll("#investorPreferencesOptions input:checked"),
@@ -2329,16 +2383,20 @@ async function loadInvestorAnalysis() {
   if (!status) return;
   investorAnalysisController?.abort();
   const requestId = ++investorAnalysisRequestId;
+  const startedAt = performance.now();
   const controller = new AbortController();
   investorAnalysisController = controller;
+  addMotor360ExecutionLog("Execução do Motor 360 iniciada", `RequisiÃ§Ã£o ${requestId}.`);
   const profile = collectClientProfile();
   if (!(Number(profile.credito_desejado) > 0)) {
+    addMotor360ExecutionLog("Perfil não disponível para análise", "CrÃ©dito desejado ausente ou igual a zero.", "warning");
     status.textContent = "Aguardando perfil do cliente";
     setInvestorAnalysisState("empty");
     return;
   }
   status.textContent = "Processando...";
   setInvestorAnalysisState("loading");
+  addMotor360ExecutionLog("Requisição enviada", `CrÃ©dito ${formatMoney(profile.credito_desejado)} · parcela ${formatMoney(profile.parcela_desejada)}.`);
   try {
     const response = await fetch("/api/viabilidade-360/analisar", {
       method: "POST",
@@ -2349,14 +2407,17 @@ async function loadInvestorAnalysis() {
       body: JSON.stringify(profile),
     });
     const result = await response.json().catch(() => ({}));
+    addMotor360ExecutionLog("Resposta recebida", `HTTP ${response.status} · ${Math.round(performance.now() - startedAt)} ms.`);
     if (!response.ok) throw new Error(result.error || "Falha ao calcular a viabilidade dos grupos.");
     if (requestId !== investorAnalysisRequestId) return;
     investorState.result = result;
     investorState.audit = null;
+    addMotor360ExecutionLog("Análise concluída", `${result.total_grupos_analisados ?? 0} analisados · ${result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0} pré-selecionados.`);
     renderInvestorAnalysis(result);
     loadMotor360Audit(result.audit_id);
   } catch (error) {
     if (error.name === "AbortError" || requestId !== investorAnalysisRequestId) return;
+    addMotor360ExecutionLog("Falha na análise", error.message || "Erro não identificado.", "error");
     status.textContent = "Erro no cálculo";
     setInvestorAnalysisState("error");
     showToast(error.message || "Não foi possível calcular a viabilidade dos grupos.", "danger");
@@ -4237,6 +4298,11 @@ document.getElementById("configUsersBody").addEventListener("click", (event) => 
 });
 
 document.getElementById("clearSystemCacheBtn").addEventListener("click", clearSystemCache);
+
+document.getElementById("clearMotor360ExecutionLogsBtn")?.addEventListener("click", () => {
+  motor360ExecutionLogs.length = 0;
+  renderMotor360ExecutionLogs();
+});
 
 document.getElementById("reindexSystemBtn").addEventListener("click", () => {
   reindexSystemData().catch(() => showToast("Nao foi possivel reindexar os dados.", "danger"));
