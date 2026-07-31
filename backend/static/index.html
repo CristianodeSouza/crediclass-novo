@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=20260730-15" rel="stylesheet">
+    <link href="/static/css/style.css?v=20260731-16" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -53,17 +53,9 @@
               <span class="nav-icon">PC</span>
               <span>Perfil do Cliente</span>
             </button>
-            <button class="nav-item" type="button" data-screen="viabilidade">
-              <span class="nav-icon">VC</span>
-              <span>Motor Inteligente de Seleção</span>
-            </button>
-            <button class="nav-item" type="button" data-screen="investidor">
+            <button class="nav-item" type="button" data-screen="motor360">
               <span class="nav-icon">MI</span>
               <span>Motor 360 de Viabilidade</span>
-            </button>
-            <button class="nav-item" type="button" data-screen="estudo">
-              <span class="nav-icon">EF</span>
-              <span>Estudo Financeiro</span>
             </button>
             <button class="nav-item" type="button" data-screen="historico">
               <span class="nav-icon">HE</span>
@@ -342,163 +334,7 @@
           </div>
         </section>
 
-        <section id="screen-viabilidade" class="screen-panel">
-          <div class="content-card smart-engine-card">
-            <div class="smart-engine-header">
-              <div>
-                <h2>Motor Inteligente de Seleção</h2>
-                <p>Cálculos do Itaú traduzidos da planilha para o sistema, usando os dados do Perfil do Cliente.</p>
-              </div>
-              <span class="state-badge">ITAÚ</span>
-            </div>
-            <div class="smart-engine-table-wrap">
-              <table class="smart-engine-table">
-                <thead>
-                  <tr>
-                    <th class="smart-engine-section-col">Etapa</th>
-                    <th class="smart-engine-field-col">Campo</th>
-                    <th>Sem Embutido</th>
-                    <th>Com Embutido</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="smart-engine-group-row">
-                    <td>Calculo A</td>
-                    <td>Credito a ser contratado</td>
-                    <td data-engine-field="itau-a-sem">-</td>
-                    <td data-engine-field="itau-a-com">-</td>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td>Taxa adm</td>
-                    <td data-engine-field="itau-a-taxa-sem">-</td>
-                    <td data-engine-field="itau-a-taxa-com">-</td>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td>Fundo reserva</td>
-                    <td data-engine-field="itau-a-fundo-sem">-</td>
-                    <td data-engine-field="itau-a-fundo-com">-</td>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td>Saldo devedor / categoria</td>
-                    <td data-engine-field="itau-a-saldo-sem">-</td>
-                    <td data-engine-field="itau-a-saldo-com">-</td>
-                  </tr>
-                  <tr class="smart-engine-group-row">
-                    <td>Calculo B</td>
-                    <td>Lance Maximo Cliente</td>
-                    <td data-engine-field="itau-b-sem">-</td>
-                    <td data-engine-field="itau-b-com">-</td>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td>Total Lance: FGTS + RP</td>
-                    <td data-engine-field="itau-b-total-sem">-</td>
-                    <td data-engine-field="itau-b-total-com">-</td>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td>Recurso Proprio</td>
-                    <td data-engine-field="itau-b-rp-sem">-</td>
-                    <td data-engine-field="itau-b-rp-com">-</td>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td>FGTS</td>
-                    <td data-engine-field="itau-b-fgts-sem">-</td>
-                    <td data-engine-field="itau-b-fgts-com">-</td>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td>Embutido</td>
-                    <td data-engine-field="itau-b-embutido-sem">-</td>
-                    <td data-engine-field="itau-b-embutido-com">-</td>
-                  </tr>
-                  <tr class="smart-engine-group-row">
-                    <td>Calculo C</td>
-                    <td>Prazo minimo grupos - Investidor</td>
-                    <td data-engine-field="itau-c-sem">-</td>
-                    <td data-engine-field="itau-c-com">-</td>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td>Parcela Inicial - Desejada</td>
-                    <td data-engine-field="itau-c-desejada-sem">-</td>
-                    <td data-engine-field="itau-c-desejada-com">-</td>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td>Parcela Inicial - Limite Renda</td>
-                    <td data-engine-field="itau-c-renda-sem">-</td>
-                    <td data-engine-field="itau-c-renda-com">-</td>
-                  </tr>
-                  <tr class="smart-engine-group-row">
-                    <td>Calculo D</td>
-                    <td>Prazo minimo grupos - Contemplacao</td>
-                    <td data-engine-field="itau-d-sem">-</td>
-                    <td data-engine-field="itau-d-com">-</td>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td>Parcela Apos Lance - Desejada</td>
-                    <td data-engine-field="itau-d-desejada-sem">-</td>
-                    <td data-engine-field="itau-d-desejada-com">-</td>
-                  </tr>
-                  <tr>
-                    <td></td>
-                    <td>Parcela Apos Lance - Limite Renda</td>
-                    <td data-engine-field="itau-d-renda-sem">-</td>
-                    <td data-engine-field="itau-d-renda-com">-</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div class="content-card smart-engine-generic-card">
-            <div class="smart-engine-header">
-              <div>
-                <h2>Base genérica para filtro - Itaú</h2>
-                <p>Parâmetros gerais usados na primeira análise de elegibilidade dos grupos.</p>
-              </div>
-              <span class="state-badge">FASE 1</span>
-            </div>
-            <div class="smart-engine-filter-note">
-              O percentual de lance embutido abaixo é uma referência genérica do Itaú. Na segunda checagem, o sistema validará o percentual real de cada grupo individualmente.
-            </div>
-            <div class="smart-engine-table-wrap">
-              <table class="smart-engine-generic-table">
-                <thead><tr><th>Temática</th><th>Filtros dos Grupos por</th><th>ITAU</th></tr></thead>
-                <tbody>
-                  <tr><th rowspan="4">Taxas</th><td>Taxa administração (total)</td><td data-generic-filter="taxa_adm">-</td></tr>
-                  <tr><td>Taxa administração (ao ano)</td><td data-generic-filter="taxa_adm_ano">-</td></tr>
-                  <tr><td>Fundo de reserva (total)</td><td data-generic-filter="fundo_reserva">-</td></tr>
-                  <tr><td>Fundo de reserva (ao ano)</td><td data-generic-filter="fundo_reserva_ano">-</td></tr>
-                  <tr><th>Lance embutido</th><td>Lance embutido</td><td data-generic-filter="lance_embutido">-</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <div class="content-card smart-engine-phase-two-card">
-            <div class="smart-engine-header">
-              <div>
-                <h2>Fase 2 - Seleção dos Melhores Grupos</h2>
-                <p>Compatibilidade por prazo remanescente, lance histórico, parcela e composição de cartas.</p>
-              </div>
-              <span id="scenarioAnalysisStatus" class="state-badge">Aguardando perfil</span>
-            </div>
-            <div id="scenarioAnalysisSummary" class="smart-engine-phase-two-summary"></div>
-            <div id="scenarioAnalysisLoading" class="table-state d-none">Calculando os melhores grupos...</div>
-            <div id="scenarioAnalysisError" class="table-state table-state-error d-none">Não foi possível calcular os melhores grupos.</div>
-            <div id="scenarioAnalysisEmpty" class="placeholder-card compact-placeholder">
-              <p>Salve ou avance o Perfil do Cliente para executar a seleção.</p>
-            </div>
-            <div id="scenarioAnalysisResults" class="smart-engine-scenarios d-none"></div>
-          </div>
-        </section>
-
-        <section id="screen-investidor" class="screen-panel">
+        <section id="screen-motor360" class="screen-panel">
           <div class="content-card investor-engine-card">
             <div class="smart-engine-header">
               <div>
@@ -530,25 +366,6 @@
               <p>Salve o Perfil do Cliente para analisar todas as estratégias de consórcio.</p>
             </div>
             <div id="investorAnalysisResults" class="investor-engine-results d-none"></div>
-          </div>
-        </section>
-
-        <section id="screen-contemplar" class="screen-panel">
-          <div class="content-card contemplar-engine-card">
-            <div class="smart-engine-header">
-              <div>
-                <h2>Motor Grupos Perfil Contemplar</h2>
-                <p>Etapa inicial: elegibilidade exclusivamente pelo credito necessario para a carta.</p>
-              </div>
-              <span id="contemplarAnalysisStatus" class="state-badge">Aguardando perfil</span>
-            </div>
-            <div id="contemplarAnalysisSummary" class="smart-engine-phase-two-summary"></div>
-            <div id="contemplarAnalysisLoading" class="table-state d-none">Calculando compatibilidade de credito...</div>
-            <div id="contemplarAnalysisError" class="table-state table-state-error d-none">Nao foi possivel calcular os grupos do perfil contemplar.</div>
-            <div id="contemplarAnalysisEmpty" class="placeholder-card compact-placeholder">
-              <p>Selecione um objetivo Contemplar e salve o Perfil do Cliente para executar este motor.</p>
-            </div>
-            <div id="contemplarAnalysisResults" class="contemplar-engine-results d-none"></div>
           </div>
         </section>
 
@@ -1323,6 +1140,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=20260730-15"></script>
+    <script src="/static/js/app.js?v=20260731-16"></script>
   </body>
 </html>

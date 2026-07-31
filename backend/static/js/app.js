@@ -11,27 +11,15 @@
     subtitle: "Entrevista, capacidade financeira e necessidade de crédito",
     action: "Salvar Perfil",
   },
-  viabilidade: {
-    letter: "C) MOTOR INTELIGENTE DE SELEÇÃO",
-    title: "Motor Inteligente de Seleção",
-    subtitle: "",
-    action: "",
-  },
-  investidor: {
+  motor360: {
     letter: "C) MOTOR 360 DE VIABILIDADE",
     title: "Motor 360 de Viabilidade do Consórcio",
     subtitle: "Todas as estratégias viáveis, com destaque para a preferência declarada",
     action: "",
   },
-  contemplar: {
-    letter: "C) MOTOR GRUPOS PERFIL CONTEMPLAR",
-    title: "Motor Grupos Perfil Contemplar",
-    subtitle: "Elegibilidade inicial por crédito bruto necessário",
-    action: "",
-  },
   administradoras: {
-    letter: "C) MOTOR INTELIGENTE DE SELEÇÃO",
-    title: "Motor Inteligente de Seleção",
+    letter: "D) ADMINISTRADORAS",
+    title: "Administradoras",
     subtitle: "Parâmetros por administradora integrados à seleção de grupos",
     action: "Salvar Parâmetros",
   },
@@ -213,7 +201,6 @@ let configUserModal = null;
 let configUserMode = "create";
 let configUserIndex = null;
 let configAdministratorRuleIndex = null;
-let scenarioAnalysisRequestId = 0;
 
 function setLoginError(message) {
   const errorBox = document.getElementById("loginError");
@@ -353,16 +340,13 @@ function activateScreen(screenName) {
   document.getElementById("screenSubtitle").textContent = meta.subtitle;
   const primaryAction = document.getElementById("primaryAction");
   primaryAction.textContent = meta.action;
-  primaryAction.classList.toggle("d-none", screenName === "viabilidade" || screenName === "investidor" || screenName === "contemplar");
+  primaryAction.classList.toggle("d-none", screenName === "motor360");
   document.getElementById("reloadMapDataBtn").classList.toggle("d-none", screenName !== "mapa");
 
   if (screenName === "historico") {
     loadHistoryStudies();
   }
-  if (screenName === "viabilidade") loadConfiguracoes();
-  if (screenName === "viabilidade") loadScenarioAnalysis();
-  if (screenName === "investidor") loadInvestorAnalysis();
-  if (screenName === "contemplar") loadContemplarAnalysis();
+  if (screenName === "motor360") loadInvestorAnalysis();
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
@@ -1880,222 +1864,6 @@ function administratorRuleCommitment(rule, key, defaultValue) {
   return percent > 0 ? percent : defaultValue;
 }
 
-const SMART_ENGINE_ITAU_DEFAULTS = {
-  administradora: "ITAU",
-  taxa_adm_ano: 0.0417,
-  fundo_reserva_ano: 0.0078,
-  taxa_adm: 0.16,
-  fundo_reserva: 0.03,
-  percentual_lance_embutido: 0.30,
-  saldo_embutido_modo: "coerente",
-  tipo_lance_embutido: "Credito",
-  aceita_fgts: true,
-};
-
-function smartEngineField(id, value) {
-  const target = document.querySelector(`[data-engine-field="${id}"]`);
-  if (target) target.textContent = value;
-}
-
-function smartEngineGenericField(id, value) {
-  const target = document.querySelector(`[data-generic-filter="${id}"]`);
-  if (target) target.textContent = value;
-}
-
-function formatSmartEngineMoney(value) {
-  if (!Number.isFinite(Number(value))) return "-";
-  return formatMoney(Number(value));
-}
-
-function formatSmartEngineMonths(value) {
-  if (!Number.isFinite(Number(value))) return "-";
-  return String(Math.max(0, Math.round(Number(value))));
-}
-
-function findSmartEngineAdministratorRule(administradora) {
-  const normalized = normalizeText(administradora);
-  return (configState.data?.administradoras_regras || []).find((rule) => (
-    normalizeText(rule.administradora) === normalized
-  )) || null;
-}
-
-function smartEngineItauRule() {
-  const rule = findSmartEngineAdministratorRule("ITAU") || {};
-  return {
-    ...SMART_ENGINE_ITAU_DEFAULTS,
-    ...rule,
-    taxa_adm: rulePercentValue(rule, "taxa_adm") || SMART_ENGINE_ITAU_DEFAULTS.taxa_adm,
-    fundo_reserva: rulePercentValue(rule, "fundo_reserva") || SMART_ENGINE_ITAU_DEFAULTS.fundo_reserva,
-    percentual_lance_embutido: rulePercentValue(rule, "percentual_lance_embutido") || SMART_ENGINE_ITAU_DEFAULTS.percentual_lance_embutido,
-    aceita_fgts: administratorRuleBoolean(rule, "aceita_fgts", SMART_ENGINE_ITAU_DEFAULTS.aceita_fgts),
-  };
-}
-
-function calculateSmartEngineScenario(profile, rule, withEmbedded) {
-  const creditoDesejado = Number(profile.credito_desejado || 0);
-  const parcelaDesejada = Number(profile.parcela_desejada || profile.parcela_ideal || 0);
-  // Antes era Number(profile.renda_total || 0) * 0.30; agora respeita o limite informado no perfil.
-  const parcelaLimiteRenda = Number(profile.parcela_limite || profile.parcela_ideal || profile.parcela_desejada || 0);
-  const recursoProprio = Number(profile.lance_proprio || 0);
-  const fgts = rule.aceita_fgts ? Number(profile.fgts || 0) : 0;
-  const embeddedPercent = withEmbedded ? Number(rule.percentual_lance_embutido || 0) : 0;
-  const creditoContratado = embeddedPercent > 0 && embeddedPercent < 1
-    ? creditoDesejado / (1 - embeddedPercent)
-    : creditoDesejado;
-  const taxaAdm = creditoContratado * Number(rule.taxa_adm || 0);
-  const fundoReserva = withEmbedded
-    ? creditoDesejado * Number(rule.fundo_reserva || 0)
-    : creditoContratado * Number(rule.fundo_reserva || 0);
-  const saldoCoerente = creditoContratado + taxaAdm + fundoReserva;
-  const saldoLegado = creditoContratado + taxaAdm + (creditoContratado * Number(rule.fundo_reserva || 0));
-  const saldoDevedor = withEmbedded && rule.saldo_embutido_modo === "legado" ? saldoLegado : saldoCoerente;
-  const valorEmbutido = creditoContratado * embeddedPercent;
-  const lanceTotal = recursoProprio + fgts + valorEmbutido;
-  const saldoAposLance = saldoDevedor - lanceTotal;
-  return {
-    creditoContratado,
-    taxaAdm,
-    fundoReserva,
-    saldoDevedor,
-    saldoCoerente,
-    saldoLegado,
-    saldoEmbutidoModo: rule.saldo_embutido_modo || "coerente",
-    percentualLance: creditoContratado > 0 ? lanceTotal / creditoContratado : 0,
-    lanceTotal,
-    recursoProprio,
-    fgts,
-    valorEmbutido,
-    prazoInicialDesejada: parcelaDesejada > 0 ? saldoDevedor / parcelaDesejada : null,
-    prazoInicialLimiteRenda: parcelaLimiteRenda > 0 ? saldoDevedor / parcelaLimiteRenda : null,
-    prazoAposLanceDesejada: parcelaDesejada > 0 ? saldoAposLance / parcelaDesejada : null,
-    prazoAposLanceLimiteRenda: parcelaLimiteRenda > 0 ? saldoAposLance / parcelaLimiteRenda : null,
-  };
-}
-
-function renderSmartEngine() {
-  if (!document.querySelector("[data-engine-field]")) return;
-  const profile = collectClientProfile();
-  const rule = smartEngineItauRule();
-  const semEmbutido = calculateSmartEngineScenario(profile, rule, false);
-  const comEmbutido = calculateSmartEngineScenario(profile, rule, true);
-  const values = {
-    "itau-a-sem": formatSmartEngineMoney(semEmbutido.creditoContratado),
-    "itau-a-com": formatSmartEngineMoney(comEmbutido.creditoContratado),
-    "itau-a-taxa-sem": formatSmartEngineMoney(semEmbutido.taxaAdm),
-    "itau-a-taxa-com": formatSmartEngineMoney(comEmbutido.taxaAdm),
-    "itau-a-fundo-sem": formatSmartEngineMoney(semEmbutido.fundoReserva),
-    "itau-a-fundo-com": formatSmartEngineMoney(comEmbutido.fundoReserva),
-    "itau-a-saldo-sem": formatSmartEngineMoney(semEmbutido.saldoDevedor),
-    "itau-a-saldo-com": formatSmartEngineMoney(comEmbutido.saldoDevedor),
-    "itau-b-sem": formatPercent(semEmbutido.percentualLance),
-    "itau-b-com": formatPercent(comEmbutido.percentualLance),
-    "itau-b-total-sem": formatSmartEngineMoney(semEmbutido.lanceTotal),
-    "itau-b-total-com": formatSmartEngineMoney(comEmbutido.lanceTotal),
-    "itau-b-rp-sem": formatSmartEngineMoney(semEmbutido.recursoProprio),
-    "itau-b-rp-com": formatSmartEngineMoney(comEmbutido.recursoProprio),
-    "itau-b-fgts-sem": formatSmartEngineMoney(semEmbutido.fgts),
-    "itau-b-fgts-com": formatSmartEngineMoney(comEmbutido.fgts),
-    "itau-b-embutido-sem": formatSmartEngineMoney(semEmbutido.valorEmbutido),
-    "itau-b-embutido-com": formatSmartEngineMoney(comEmbutido.valorEmbutido),
-    "itau-c-sem": "Se - Investidor",
-    "itau-c-com": "Se - Investidor",
-    "itau-c-desejada-sem": formatSmartEngineMonths(semEmbutido.prazoInicialDesejada),
-    "itau-c-desejada-com": formatSmartEngineMonths(comEmbutido.prazoInicialDesejada),
-    "itau-c-renda-sem": formatSmartEngineMonths(semEmbutido.prazoInicialLimiteRenda),
-    "itau-c-renda-com": formatSmartEngineMonths(comEmbutido.prazoInicialLimiteRenda),
-    "itau-d-sem": "Se - Contemplação",
-    "itau-d-com": "Se - Contemplação",
-    "itau-d-desejada-sem": formatSmartEngineMonths(semEmbutido.prazoAposLanceDesejada),
-    "itau-d-desejada-com": formatSmartEngineMonths(comEmbutido.prazoAposLanceDesejada),
-    "itau-d-renda-sem": formatSmartEngineMonths(semEmbutido.prazoAposLanceLimiteRenda),
-    "itau-d-renda-com": formatSmartEngineMonths(comEmbutido.prazoAposLanceLimiteRenda),
-  };
-  Object.entries(values).forEach(([id, value]) => smartEngineField(id, value));
-  const genericValues = {
-    taxa_adm: formatPercent(rule.taxa_adm),
-    taxa_adm_ano: formatPercent(rule.taxa_adm_ano),
-    fundo_reserva: formatPercent(rule.fundo_reserva),
-    fundo_reserva_ano: formatPercent(rule.fundo_reserva_ano),
-    lance_embutido: formatPercent(rule.percentual_lance_embutido),
-  };
-  Object.entries(genericValues).forEach(([id, value]) => smartEngineGenericField(id, value));
-}
-
-function setScenarioAnalysisState(state) {
-  const loading = document.getElementById("scenarioAnalysisLoading");
-  const error = document.getElementById("scenarioAnalysisError");
-  const empty = document.getElementById("scenarioAnalysisEmpty");
-  const results = document.getElementById("scenarioAnalysisResults");
-  if (!loading || !error || !empty || !results) return;
-  loading.classList.toggle("d-none", state !== "loading");
-  error.classList.toggle("d-none", state !== "error");
-  empty.classList.toggle("d-none", state !== "empty");
-  results.classList.toggle("d-none", state !== "ready");
-}
-
-function renderScenarioAnalysis(result) {
-  const status = document.getElementById("scenarioAnalysisStatus");
-  const summary = document.getElementById("scenarioAnalysisSummary");
-  const results = document.getElementById("scenarioAnalysisResults");
-  if (!status || !summary || !results) return;
-
-  const summaryItems = [
-    ["Grupos na base", result.total_grupos_base ?? result.total_grupos_analisados ?? 0],
-    ["Elegíveis", result.total_grupos_elegiveis ?? 0],
-    ["Após filtro do objetivo", result.total_grupos_pos_filtro_1 ?? 0],
-    ["Cenários montados", result.total_cenarios ?? 0],
-    ["Cenários viáveis", result.total_cenarios_viaveis ?? 0],
-  ];
-  summary.innerHTML = summaryItems.map(([label, value]) => `
-    <div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>
-  `).join("");
-
-  const scenarios = Array.isArray(result.cenarios) ? result.cenarios.slice(0, 10) : [];
-  if (!scenarios.length) {
-    status.textContent = "Nenhum cenário compatível";
-    results.innerHTML = `<div class="table-state">Nenhum grupo atendeu aos filtros financeiros e de objetivo.</div>`;
-    setScenarioAnalysisState("ready");
-    return;
-  }
-
-  status.textContent = `${scenarios.length} cenário(s) exibido(s)`;
-  results.innerHTML = scenarios.map((scenario, index) => {
-    const cards = Array.isArray(scenario.cartas) ? scenario.cartas : [];
-    const groupNames = cards.map((card) => `${card.administradora || "-"} / ${card.grupo || "-"}`).join(", ") || "-";
-    const statusLabel = scenario.status === "viavel" ? "Viável" : scenario.status === "viavel_com_alertas" ? "Viável com alertas" : "Inviável";
-    const statusClass = scenario.status === "inviavel" ? "scenario-status-error" : "scenario-status-ok";
-    return `
-      <article class="smart-engine-scenario-row">
-        <div class="smart-engine-scenario-heading">
-          <strong>#${index + 1} · ${escapeHtml(groupNames)}</strong>
-          <span class="${statusClass}">${escapeHtml(statusLabel)}</span>
-        </div>
-        <div class="smart-engine-scenario-metrics">
-          <span><small>Crédito líquido</small><b>${formatMoney(scenario.credito_liquido_total)}</b></span>
-          <span><small>Crédito contratado</small><b>${formatMoney(scenario.credito_contratado_total)}</b></span>
-          <span><small>Parcela total</small><b>${formatMoney(scenario.parcela_total)}</b></span>
-          <span><small>Lance total</small><b>${formatMoney(scenario.lance_total)}</b></span>
-          <span><small>Prazo mínimo</small><b>${escapeHtml(String(cards.map((card) => card.prazo_minimo).filter(Number.isFinite).map((value) => Math.ceil(value)).join(" / ") || "-"))}</b></span>
-          <span><small>Score</small><b>${formatPercent((Number(scenario.score_cenario) || 0) / 100)}</b></span>
-        </div>
-        ${scenario.alertas?.length ? `<p class="smart-engine-scenario-alert">Alertas: ${escapeHtml(scenario.alertas.join(", "))}</p>` : ""}
-      </article>
-    `;
-  }).join("");
-  setScenarioAnalysisState("ready");
-}
-
-function isInvestorObjective(objective) {
-  return normalizeText(objective).startsWith("investidor");
-}
-
-function setInvestorAnalysisState(state) {
-  ["Loading", "Error", "Empty", "Results"].forEach((suffix) => {
-    const element = document.getElementById(`investorAnalysis${suffix}`);
-    if (element) element.classList.toggle("d-none", state !== suffix.toLowerCase());
-  });
-}
-
 function investorPreferenceNumber(value, isPercent = false) {
   if (value === null || value === undefined || value === "") return null;
   const normalized = String(value).replace("%", "").replace(/\s/g, "").replace(/\./g, "").replace(",", ".");
@@ -2597,132 +2365,6 @@ async function loadInvestorAnalysis() {
   }
 }
 
-function isContemplarObjective(objective) {
-  return normalizeText(objective).startsWith("contemplar");
-}
-
-function setContemplarAnalysisState(state) {
-  ["Loading", "Error", "Empty", "Results"].forEach((suffix) => {
-    const element = document.getElementById(`contemplarAnalysis${suffix}`);
-    if (element) element.classList.toggle("d-none", state !== suffix.toLowerCase());
-  });
-}
-
-function renderContemplarAnalysis(result) {
-  const status = document.getElementById("contemplarAnalysisStatus");
-  const summary = document.getElementById("contemplarAnalysisSummary");
-  const results = document.getElementById("contemplarAnalysisResults");
-  if (!status || !summary || !results) return;
-
-  const client = result.cliente || {};
-  const summaryItems = [
-    ["Credito liquido desejado", formatMoney(client.credito_liquido_desejado)],
-    ["Recurso proprio", formatMoney(client.recurso_proprio)],
-    ["FGTS", formatMoney(client.fgts)],
-    ["Credito necessario sem embutido", formatMoney(client.credito_bruto_necessario_sem_embutido)],
-    ["Grupos analisados", result.total_grupos_analisados ?? 0],
-    ["Compativeis", result.total_grupos_compativeis ?? 0],
-    ["Incompativeis por credito", result.total_grupos_incompativeis_credito ?? 0],
-    ["Dados incompletos", result.total_grupos_incompletos ?? 0],
-  ];
-  summary.innerHTML = summaryItems.map(([label, value]) => (
-    `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`
-  )).join("");
-
-  const items = result.items || [];
-  status.textContent = `${items.length} grupos compativeis`;
-  if (!items.length) {
-    results.innerHTML = `<div class="table-state">Nenhum grupo possui Maior Credito suficiente para o valor necessario.</div>`;
-    setContemplarAnalysisState("results");
-    return;
-  }
-  results.innerHTML = `
-    <div class="contemplar-engine-note">
-      <strong>Regra aplicada:</strong> o sistema calcula os cenarios sem e com embutido. O segundo usa o percentual da coluna X. O grupo e exibido quando o Maior Credito (coluna U) atende a pelo menos um cenario. Credito minimo (coluna O) e apenas informativo.
-    </div>
-    <div class="table-responsive">
-      <table class="table table-hover align-middle contemplar-engine-table">
-        <thead><tr><th>Rank</th><th>Grupo</th><th>Administradora</th><th>Credito minimo</th><th>Credito maximo</th><th>Cenarios de credito</th><th>Margem de credito</th><th>Compatibilidade</th></tr></thead>
-        <tbody>${items.map((item) => `
-          <tr>
-            <td><strong>${escapeHtml(String(item.ranking))}</strong></td>
-            <td>${escapeHtml(item.grupo || item.grupo_id || "-")}</td>
-            <td>${escapeHtml(item.administradora || "-")}</td>
-            <td>${formatMoney(item.credito_minimo)}</td>
-            <td>${formatMoney(item.credito_maximo)}</td>
-            <td>${renderCreditScenarioCell(item)}</td>
-            <td>${formatMoney(item.margem_credito)}</td>
-            <td><span class="contemplar-compatible">${escapeHtml(item.compatibilidade || "Compativel")}</span></td>
-          </tr>`).join("")}</tbody>
-      </table>
-    </div>
-    <div class="contemplar-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
-  `;
-  setContemplarAnalysisState("results");
-}
-
-async function loadContemplarAnalysis() {
-  const status = document.getElementById("contemplarAnalysisStatus");
-  if (!status) return;
-  const profile = collectClientProfile();
-  if (!isContemplarObjective(profile.objetivo) || !(Number(profile.credito_desejado) > 0)) {
-    status.textContent = "Aguardando perfil contemplar";
-    setContemplarAnalysisState("empty");
-    return;
-  }
-  status.textContent = "Processando...";
-  setContemplarAnalysisState("loading");
-  try {
-    const response = await fetch("/api/contemplar/analisar", {
-      method: "POST",
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(profile),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || "Falha ao calcular grupos do perfil contemplar.");
-    renderContemplarAnalysis(result);
-  } catch (error) {
-    status.textContent = "Erro no calculo";
-    setContemplarAnalysisState("error");
-    showToast(error.message || "Nao foi possivel calcular os grupos do perfil contemplar.", "danger");
-  }
-}
-
-async function loadScenarioAnalysis() {
-  const status = document.getElementById("scenarioAnalysisStatus");
-  if (!status) return;
-  const profile = collectClientProfile();
-  if (!(Number(profile.credito_desejado) > 0) || !(Number(profile.renda_total) > 0)) {
-    status.textContent = "Aguardando perfil";
-    setScenarioAnalysisState("empty");
-    return;
-  }
-
-  const requestId = ++scenarioAnalysisRequestId;
-  status.textContent = "Processando...";
-  setScenarioAnalysisState("loading");
-  try {
-    const response = await fetch("/api/cenarios/analisar", {
-      method: "POST",
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...profile, considerar_lance_embutido: true, saldo_embutido_modo: "coerente" }),
-    });
-    const result = await response.json().catch(() => ({}));
-    if (requestId !== scenarioAnalysisRequestId) return;
-    if (!response.ok) throw new Error(result.error || "Falha ao calcular cenários.");
-    renderScenarioAnalysis(result);
-  } catch (error) {
-    if (requestId !== scenarioAnalysisRequestId) return;
-    status.textContent = "Erro no cálculo";
-    setScenarioAnalysisState("error");
-    showToast(error.message || "Não foi possível calcular os melhores grupos.", "danger");
-  }
-}
-
 function evaluatePjCapacityScenarios({
   faturamento,
   rendaSocios,
@@ -3053,12 +2695,6 @@ function saveClientProfile({ silent = false } = {}) {
   const profile = collectClientProfile();
   window.localStorage.setItem(CLIENT_PROFILE_STORAGE_KEY, JSON.stringify(profile));
   applyClientProfileToFlow(profile);
-  renderSmartEngine();
-  // Do not run the legacy scenario engine in the background while the user
-  // is on another motor. Each motor owns its own analysis request.
-  if (document.getElementById("screen-viabilidade")?.classList.contains("active")) {
-    loadScenarioAnalysis();
-  }
   if (!silent) showToast("Perfil do cliente salvo.", "success");
   return profile;
 }
@@ -3073,7 +2709,6 @@ function loadClientProfile() {
   if (!profile) {
     renderClientProfileTitulares({ tipo_contratacao: "pf_individual" });
     updateClientProfileTotals();
-    renderSmartEngine();
     return;
   }
   renderClientProfileTitulares(profile);
@@ -3084,7 +2719,6 @@ function loadClientProfile() {
   setInputValue("clientProfileObjetivo", objective);
   updateClientProfileTotals();
   applyClientProfileToFlow(collectClientProfile());
-  renderSmartEngine();
 }
 
 function resetClientProfile() {
@@ -3097,7 +2731,7 @@ function resetClientProfile() {
 
 function advanceClientProfile() {
   saveClientProfile({ silent: true });
-  activateScreen("investidor");
+  activateScreen("motor360");
 }
 
 function setStudyState(state) {
@@ -4089,7 +3723,6 @@ async function loadConfiguracoes() {
   try {
     const data = await apiGet("/configuracoes");
     renderConfiguracoes(data);
-    renderSmartEngine();
     setConfigState("ready");
     addOperationalLog("Configuracoes carregadas");
   } catch (error) {
@@ -4463,7 +4096,7 @@ document.getElementById("historyUpdateForm").addEventListener("submit", (event) 
 
 document.querySelector('[data-bs-target="#detailsHistory"]').addEventListener("shown.bs.tab", () => detailsChart?.resize());
 
-document.getElementById("studyChangeGroupBtn").addEventListener("click", () => activateScreen("viabilidade"));
+document.getElementById("studyChangeGroupBtn").addEventListener("click", () => activateScreen("motor360"));
 document.getElementById("studyViewStrategyBtn").addEventListener("click", () => {
   document.querySelector(".study-v4-strategy")?.scrollIntoView({ behavior: "smooth", block: "start" });
 });
@@ -4482,7 +4115,7 @@ studyOperatorFields.forEach(([, , id]) => {
   });
 });
 document.getElementById("studyNewSimulationBtn").addEventListener("click", () => {
-  activateScreen("viabilidade");
+  activateScreen("motor360");
 });
 document.getElementById("studyStrategyTabs").addEventListener("click", (event) => {
   const button = event.target.closest("[data-study-strategy]");

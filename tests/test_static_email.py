@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260730-15", index_html)
+        self.assertIn("/static/css/style.css?v=20260731-16", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=20260730-15", index_html)
+        self.assertIn("/static/js/app.js?v=20260731-16", index_html)
         self.assertIn('<button class="nav-item active" type="button" data-screen="perfil">', index_html)
         self.assertIn('<section id="screen-perfil" class="screen-panel active">', index_html)
 
@@ -109,38 +109,26 @@ class StaticEmailTest(unittest.TestCase):
         self.assertNotIn("cdn.jsdelivr.net", index_html)
         self.assertIn(".d-none", style_css)
 
-    def test_motor_inteligente_mantem_apenas_a_aba_para_refatoracao(self):
+    def test_motor_360_e_o_unico_motor_de_selecao_exposto(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
         self.assertNotIn('data-screen="administradoras"', index_html)
         self.assertNotIn('id="screen-administradoras"', index_html)
-        self.assertIn("Motor Inteligente de Seleção", index_html)
-        self.assertIn('id="screen-viabilidade"', index_html)
-        self.assertIn("smart-engine-table", index_html)
-        self.assertIn("ITAÚ", index_html)
-        self.assertIn("Cálculos do Itaú traduzidos da planilha", index_html)
-        for field in [
-            "Calculo A",
-            "Calculo B",
-            "Calculo C",
-            "Calculo D",
-            "Credito a ser contratado",
-            "Lance Maximo Cliente",
-            "Prazo minimo grupos - Investidor",
-            "Prazo minimo grupos - Contemplacao",
-        ]:
-            self.assertIn(field, index_html)
-        self.assertIn('if (screenName === "viabilidade") loadConfiguracoes();', app_js)
-        self.assertIn("function renderSmartEngine()", app_js)
-        self.assertIn("function calculateSmartEngineScenario", app_js)
+        self.assertNotIn("Motor Inteligente de Seleção", index_html)
+        self.assertNotIn("Motor Inteligente de Seleção", app_js)
+        self.assertIn('data-screen="motor360"', index_html)
+        self.assertIn('id="screen-motor360"', index_html)
+        self.assertIn('if (screenName === "motor360") loadInvestorAnalysis();', app_js)
+        self.assertIn('/api/viabilidade-360/analisar', app_js)
         self.assertIn("const controller = new AbortController();", app_js)
         self.assertIn("signal: controller.signal", app_js)
         self.assertIn('if (error.name === "AbortError" || requestId !== investorAnalysisRequestId) return;', app_js)
-        self.assertIn("creditoDesejado / (1 - embeddedPercent)", app_js)
-        self.assertIn("creditoDesejado * Number(rule.fundo_reserva || 0)", app_js)
-        self.assertIn("Number(profile.renda_total || 0) * 0.30", app_js)
-        self.assertIn('primaryAction.classList.toggle("d-none", screenName === "viabilidade" || screenName === "investidor" || screenName === "contemplar")', app_js)
+        self.assertNotIn('data-screen="viabilidade"', index_html)
+        self.assertNotIn('id="screen-viabilidade"', index_html)
+        self.assertNotIn('screenName === "viabilidade"', app_js)
+        self.assertNotIn("renderSmartEngine", app_js)
+        self.assertNotIn("scenarioAnalysis", app_js)
         for removed in [
             "selectionPipeline",
             "Motor de Elegibilidade das Administradoras",
@@ -171,16 +159,16 @@ class StaticEmailTest(unittest.TestCase):
             self.assertNotIn(removed, app_js)
         self.assertNotIn("function exportAdministratorsCsv()", app_js)
         self.assertNotIn("function syncAdministratorInterviewToGroups()", app_js)
-    def test_viabilidade_nao_expoe_fluxo_antigo(self):
+    def test_fluxos_legados_do_motor_foram_removidos(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn('id="screen-viabilidade"', index_html)
+        self.assertNotIn('id="screen-viabilidade"', index_html)
         self.assertNotIn('id="analyzeViabilityBtn"', index_html)
         self.assertNotIn('data-screen-jump="perfil"', index_html)
         self.assertNotIn('id="addAdministratorPlanBtn"', index_html)
         self.assertNotIn('id="saveAdministratorPlansBtn"', index_html)
-        self.assertIn('primaryAction.classList.toggle("d-none", screenName === "viabilidade" || screenName === "investidor" || screenName === "contemplar")', app_js)
+        self.assertNotIn('primaryAction.classList.toggle("d-none", screenName === "viabilidade"', app_js)
         self.assertNotIn("Aguardando selecao dos melhores grupos", index_html)
         self.assertNotIn("Top 10 exibido", app_js)
         self.assertNotIn("await analyzeViability({ silent: true })", app_js)
@@ -252,8 +240,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("Lance Recursos Proprios", app_js)
         self.assertIn("Renda do Cliente", app_js)
         self.assertIn("function calculateAgeFromDateText", app_js)
-        self.assertIn("function smartEngineGenericField", app_js)
-        self.assertIn('data-generic-filter="lance_embutido"', index_html)
+        self.assertNotIn("function smartEngineGenericField", app_js)
+        self.assertNotIn('data-generic-filter="lance_embutido"', index_html)
         self.assertIn("function formatMoneyInputValue(value)", app_js)
         self.assertIn("const moneyInputIds", app_js)
         self.assertIn(".client-profile-layout", style_css)
@@ -653,7 +641,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=20260730-15", index_html)
+        self.assertIn("/static/css/style.css?v=20260731-16", index_html)
         self.assertNotIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

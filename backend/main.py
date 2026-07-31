@@ -14,19 +14,14 @@ from fastapi.staticfiles import StaticFiles
 
 from .auditoria import list_auditoria, record_auditoria
 from .motor360_auditoria import audit_to_markdown, audit_to_pdf, get_motor360_audit, save_motor360_audit
-from .administrator_feasibility import analyze_administradoras
 from .administrator_rules import normalize_admin_name, rules_by_administradora
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .consortium_viability_engine import analyze_client_consortium_viability
-from .contemplar_engine import analyze_contemplar_groups, is_contemplar_objective
 from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
-from .investor_engine import analyze_investor_groups, is_investor_objective
-from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest, ViabilidadeResponse
-from .scenario_builder import analyze_scenarios
+from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
-from .viabilidade import analyze_viabilidade, compatible_tipo_bem, normalize_text
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -342,191 +337,6 @@ def grupo_historico_lote_atualizar(grupo_id: str, payload: HistoricoBatchUpdateR
         return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
     except Exception as error:
         logger.exception("Erro ao atualizar historico mensal em lote")
-        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
-
-
-@app.post("/api/viabilidade/analisar", response_model=ViabilidadeResponse)
-def viabilidade_analisar(payload: ViabilidadeRequest):
-    logger.info(
-        "POST /api/viabilidade/analisar credito=%s prazo=%s",
-        payload.credito_desejado,
-        payload.prazo_desejado,
-    )
-    try:
-        summary_groups = list_grupos(include_history=True)
-        config = get_configuracoes()
-        administrator_rules = config.get("administradoras_regras") or []
-        administradoras = sorted({item["administradora"] for item in summary_groups if item.get("administradora")})
-        administradoras_viabilidade = analyze_administradoras(payload, administradoras, administrator_rules)
-        administradoras_com_regra = {
-            normalize_admin_name(item["administradora"])
-            for item in administradoras_viabilidade
-        }
-        administradoras_elegiveis = {
-            normalize_admin_name(item["administradora"])
-            for item in administradoras_viabilidade
-            if item["elegivel"]
-        }
-        administradoras_sem_regra = {
-            normalize_admin_name(administradora)
-            for administradora in administradoras
-            if normalize_admin_name(administradora) not in administradoras_com_regra
-        }
-        modo_preliminar = bool(administradoras_sem_regra)
-        administradoras_para_busca = administradoras_elegiveis | administradoras_sem_regra
-        candidate_ids = [
-            item["grupo_id"]
-            for item in summary_groups
-            if normalize_admin_name(item.get("administradora", "")) in administradoras_para_busca
-            and (item.get("credito_maximo") or 0) >= payload.credito_desejado
-            and normalize_text(str(item.get("status") or "")) == "ativo"
-            and compatible_tipo_bem(payload.objetivo, str(item.get("tipo_bem") or ""), payload.tipo_bem)
-        ]
-        groups = list_grupos_detalhe_by_ids(candidate_ids) if candidate_ids else []
-        rules_map = rules_by_administradora(administrator_rules)
-        for group in groups:
-            rule = rules_map.get(normalize_admin_name(str(group.get("administradora") or "")))
-            if rule and rule.idade_maxima is not None and group.get("idade_maxima") is None:
-                group["idade_maxima"] = rule.idade_maxima
-        result = analyze_viabilidade(payload, groups, modo_preliminar=modo_preliminar)
-        result["total_grupos_analisados"] = len(summary_groups)
-        result["total_administradoras_analisadas"] = len(administradoras_viabilidade)
-        result["total_administradoras_elegiveis"] = len(administradoras_para_busca)
-        result["administradoras_viabilidade"] = administradoras_viabilidade
-        if administradoras_sem_regra:
-            result["motivos_reprovacao"].append("regras_administradoras_pendentes_analise_humana")
-    except Exception as error:
-        logger.exception("Erro ao analisar viabilidade")
-        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
-
-    logger.info(
-        "POST /api/viabilidade/analisar retornou total=%s perfil=%s",
-        result["total_grupos_encontrados"],
-        result["perfil"],
-    )
-    return result
-
-
-@app.post("/api/viabilidade/administradoras")
-def viabilidade_administradoras(payload: ViabilidadeRequest):
-    logger.info(
-        "POST /api/viabilidade/administradoras credito=%s prazo=%s",
-        payload.credito_desejado,
-        payload.prazo_desejado,
-    )
-    try:
-        summary_groups = list_grupos(include_history=False)
-        config = get_configuracoes()
-        administrator_rules = config.get("administradoras_regras") or []
-        administradoras = sorted({item["administradora"] for item in summary_groups if item.get("administradora")})
-        items = analyze_administradoras(payload, administradoras, administrator_rules)
-    except Exception as error:
-        logger.exception("Erro ao analisar administradoras")
-        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
-
-    return {
-        "total": len(items),
-        "total_elegiveis": len([item for item in items if item["elegivel"]]),
-        "items": items,
-    }
-
-
-@app.post("/api/cenarios/analisar")
-def cenarios_analisar(payload: ViabilidadeRequest):
-    logger.info(
-        "POST /api/cenarios/analisar credito_liquido=%s prazo=%s",
-        payload.credito_desejado,
-        payload.prazo_desejado,
-    )
-    try:
-        summary_groups = list_grupos(include_history=True)
-        config = get_configuracoes()
-        administrator_rules = config.get("administradoras_regras") or []
-        administradoras = sorted({item["administradora"] for item in summary_groups if item.get("administradora")})
-        administradoras_viabilidade = analyze_administradoras(payload, administradoras, administrator_rules)
-        administradoras_com_regra = {
-            normalize_admin_name(item["administradora"])
-            for item in administradoras_viabilidade
-        }
-        administradoras_elegiveis = {
-            normalize_admin_name(item["administradora"])
-            for item in administradoras_viabilidade
-            if item["elegivel"]
-        }
-        administradoras_sem_regra = {
-            normalize_admin_name(administradora)
-            for administradora in administradoras
-            if normalize_admin_name(administradora) not in administradoras_com_regra
-        }
-        administradoras_para_busca = administradoras_elegiveis | administradoras_sem_regra
-        summary_candidates = [
-            item
-            for item in summary_groups
-            if normalize_admin_name(item.get("administradora", "")) == "ITAU"
-            and normalize_text(str(item.get("status") or "")) == "ativo"
-            and compatible_tipo_bem(payload.objetivo, str(item.get("tipo_bem") or ""), payload.tipo_bem)
-        ]
-        result = analyze_scenarios(payload, summary_candidates)
-        result["total_grupos_base"] = len(summary_groups)
-        result["total_administradoras_analisadas"] = len(administradoras_viabilidade)
-        result["total_administradoras_elegiveis"] = 1 if summary_candidates else 0
-        result["administradoras_viabilidade"] = administradoras_viabilidade
-        if administradoras_sem_regra:
-            result.setdefault("motivos_reprovacao", []).append("regras_administradoras_pendentes_analise_humana")
-    except Exception as error:
-        logger.exception("Erro ao montar cenarios")
-        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
-    return result
-
-
-@app.post("/api/investidor/analisar")
-def investidor_analisar(payload: ViabilidadeRequest):
-    logger.info("POST /api/investidor/analisar credito=%s", payload.credito_desejado)
-    if not is_investor_objective(payload.objetivo):
-        return {
-            "perfil_investidor": False,
-            "objetivo": payload.objetivo,
-            "items": [],
-            "total_grupos_considerados": 0,
-            "total_grupos_compativeis": 0,
-            "total_grupos_exibidos": 0,
-            "mensagem": "O objetivo selecionado pertence ao fluxo de contemplação.",
-        }
-    try:
-        try:
-            groups = list_grupos(include_history=False)
-        except Exception as light_error:
-            logger.warning("Falha na leitura leve do motor investidor; tentando leitura completa: %s", light_error)
-            groups = list_grupos(include_history=True)
-        return analyze_investor_groups(payload, groups)
-    except Exception as error:
-        logger.exception("Erro ao analisar grupos do perfil investidor")
-        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
-
-
-@app.post("/api/contemplar/analisar")
-def contemplar_analisar(payload: ViabilidadeRequest):
-    logger.info("POST /api/contemplar/analisar credito=%s", payload.credito_desejado)
-    if not is_contemplar_objective(payload.objetivo):
-        return {
-            "perfil_contemplar": False,
-            "objetivo": payload.objetivo,
-            "items": [],
-            "total_grupos_analisados": 0,
-            "total_grupos_compativeis": 0,
-            "mensagem": "O objetivo selecionado pertence ao fluxo Investidor.",
-        }
-    try:
-        try:
-            groups = list_grupos(include_history=False)
-        except Exception as light_error:
-            logger.warning("Falha na leitura leve do motor contemplar; tentando leitura completa: %s", light_error)
-            groups = list_grupos(include_history=True)
-        return analyze_contemplar_groups(payload, groups)
-    except ValueError as error:
-        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
-    except Exception as error:
-        logger.exception("Erro ao analisar grupos do perfil contemplar")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
 
 
