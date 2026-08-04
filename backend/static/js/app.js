@@ -2568,6 +2568,10 @@ function renderInvestorAnalysis(result) {
     <div class="investor-engine-note">
       <strong>${showingCreditStage ? "Compatíveis por crédito:" : "Pré-seleção de grupos:"}</strong> ${showingCreditStage ? "estes grupos atendem à faixa O/U para pelo menos um cenário." : "cada cenário preserva o crédito líquido, atende à faixa O/U e ao prazo/renda no mesmo cenário financeiro."} A classificação BL:BP é informativa e não elimina nesta etapa. AJ, AK e AL são apenas referências até a seleção da carta exata.
     </div>
+    <div class="motor360-single-quota-note" role="note">
+      <strong>Crédito atendido com 1 cota</strong>
+      <span>Os grupos listados abaixo possuem crédito líquido disponível em uma cota suficiente para a necessidade do cliente, após a validação do crédito desejado, da parcela e dos recursos de lance com RP e/ou FGTS.</span>
+    </div>
     <div class="motor360-selection-toolbar"><strong>Próxima etapa</strong><span id="motor360SelectionSummary">${investorState.selectedGroupIds.size} grupo(s) selecionado(s) para a próxima etapa</span><button class="btn btn-primary btn-sm" type="button" data-screen-jump="grupos-selecionados">Ver grupos selecionados</button></div>
     <div class="motor360-group-list">${items.map(renderMotor360GroupCard).join("")}</div>
     ${creditRejectedByTerm.length ? `<details class="motor360-credit-excluded"><summary>Compatíveis por crédito, mas eliminados por prazo/renda (${creditRejectedByTerm.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Prazo restante</th><th>Motivo</th></tr></thead><tbody>${creditRejectedByTerm.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td><td>Prazo/renda insuficiente no cenário compatível por crédito.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
