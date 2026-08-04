@@ -1735,12 +1735,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-floating-action { width: 100%; margin-top: 9px; }
 .motor360-floating-summary.is-empty { width: min(320px, calc(100vw - 32px)); }
 .motor360-floating-summary.is-empty p { margin: 9px 0 0; color: var(--muted); font-size: 0.64rem; line-height: 1.4; }
-.motor360-single-quota-note { display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 10px 12px; border: 1px solid #efb477; border-left: 4px solid var(--brand-orange); border-radius: 6px; background: #fff8f2; color: var(--brand-navy); }
-.motor360-single-quota-note strong { flex: 0 0 auto; color: var(--brand-bronze-dark); font-size: 0.75rem; }
-.motor360-single-quota-note span { font-size: 0.72rem; line-height: 1.4; }
-.motor360-multiple-quota-note { display: flex; align-items: center; gap: 12px; margin: 18px 0 10px; padding: 11px 12px; border: 1px solid #efb477; border-left: 4px solid var(--brand-orange); border-radius: 6px; background: #fff4e9; color: var(--brand-navy); }
-.motor360-multiple-quota-note strong { flex: 0 0 auto; color: var(--brand-bronze-dark); font-size: 0.78rem; }
-.motor360-multiple-quota-note span { font-size: 0.72rem; line-height: 1.4; }
+.motor360-single-quota-note, .motor360-multiple-quota-note { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 5px; min-height: 78px; margin: 16px 0 12px; padding: 14px 22px; border: 1px solid #efb477; border-left: 5px solid var(--brand-orange); border-radius: 6px; background: #fff8f2; color: var(--brand-navy); text-align: center; }
+.motor360-multiple-quota-note { margin-top: 22px; background: #fff4e9; }
+.motor360-single-quota-note strong, .motor360-multiple-quota-note strong { color: var(--brand-bronze-dark); font-size: 1rem; line-height: 1.2; }
+.motor360-single-quota-note span, .motor360-multiple-quota-note span { max-width: 920px; font-size: 0.78rem; line-height: 1.45; }
 .motor360-composition-list { display: grid; gap: 10px; }
 .motor360-composition-card { border: 1px solid var(--line); border-radius: 6px; background: #fff; overflow: hidden; }
 .motor360-composition-card.is-selected { border-color: var(--brand-orange); box-shadow: 0 0 0 2px rgb(229 121 27 / 10%); }
@@ -1777,7 +1775,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-cart-profiles { display: grid; gap: 5px; margin-top: 8px; }
 .motor360-cart-profiles > div { display: grid; grid-template-columns: 90px 1fr 1fr; gap: 7px; padding: 6px 7px; border-top: 1px solid var(--line); font-size: 0.62rem; }
 .motor360-cart-profiles small { grid-column: 1 / -1; color: var(--muted); line-height: 1.35; }
-@media (max-width: 760px) { .motor360-single-quota-note { align-items: flex-start; flex-direction: column; gap: 4px; } }
+@media (max-width: 760px) { .motor360-single-quota-note, .motor360-multiple-quota-note { min-height: auto; padding: 12px 14px; } .motor360-single-quota-note strong, .motor360-multiple-quota-note strong { font-size: 0.9rem; } }
 @media (max-width: 760px) { .motor360-floating-summary { right: 10px; bottom: 10px; width: calc(100vw - 20px); } .motor360-floating-scenarios { grid-template-columns: 1fr; max-height: 240px; overflow-y: auto; } }
 @media (max-width: 900px) { .motor360-composition-scenarios, .motor360-cart-scenarios { grid-template-columns: 1fr; } .motor360-composition-scenario dl, .motor360-cart-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .motor360-group-section { padding: 13px 16px 0; }
