@@ -2316,7 +2316,12 @@ async function loadMotor360Audit(auditId) {
 }
 
 function motor360AdministratorName(item) {
-  return String(item?.administradora || "").trim();
+  if (typeof item === "string") return item.trim();
+  return String(item?.administradora || item?.adm || "").trim();
+}
+
+function motor360AdministratorKey(item) {
+  return normalizeText(motor360AdministratorName(item)).replace(/[^a-z0-9]+/g, "");
 }
 
 function clearMotor360GroupSelection() {
@@ -2327,22 +2332,31 @@ function clearMotor360GroupSelection() {
 
 function syncMotor360AdministratorFilter(sourceItems) {
   const select = document.getElementById("investorAdministratorFilter");
-  const administrators = [...new Set(sourceItems.map(motor360AdministratorName).filter(Boolean))]
+  const administratorByKey = new Map();
+  sourceItems.forEach((item) => {
+    const name = motor360AdministratorName(item);
+    const key = motor360AdministratorKey(item);
+    if (name && key && !administratorByKey.has(key)) administratorByKey.set(key, name);
+  });
+  const administrators = [...administratorByKey.values()]
     .sort((left, right) => left.localeCompare(right, "pt-BR"));
+  const availableKeys = new Set(administrators.map(motor360AdministratorKey));
   const selectedAdministrator = [...investorState.selectedGroupIds]
     .map((id) => investorState.selectedGroupData.get(id))
     .map(motor360AdministratorName)
     .find(Boolean);
 
-  if (!administrators.includes(investorState.administrator)) {
-    investorState.administrator = administrators.includes(selectedAdministrator)
-      ? selectedAdministrator
+  if (!availableKeys.has(motor360AdministratorKey(investorState.administrator))) {
+    investorState.administrator = availableKeys.has(motor360AdministratorKey(selectedAdministrator))
+      ? administratorByKey.get(motor360AdministratorKey(selectedAdministrator))
       : administrators[0] || "";
+  } else {
+    investorState.administrator = administratorByKey.get(motor360AdministratorKey(investorState.administrator));
   }
 
   [...investorState.selectedGroupIds].forEach((id) => {
     const selectedItem = investorState.selectedGroupData.get(id);
-    if (motor360AdministratorName(selectedItem) === investorState.administrator) return;
+    if (motor360AdministratorKey(selectedItem) === motor360AdministratorKey(investorState.administrator)) return;
     investorState.selectedGroupIds.delete(id);
     investorState.quotaCounts.delete(id);
     investorState.selectedGroupData.delete(id);
@@ -2373,10 +2387,11 @@ function renderInvestorAnalysis(result) {
   const sourceItems = showingCreditStage ? creditItems : finalItems;
   const selectedAdministrator = syncMotor360AdministratorFilter(sourceItems);
   updateInvestorPreferenceSummary();
-  const administratorItems = sourceItems.filter((item) => motor360AdministratorName(item) === selectedAdministrator);
+  const selectedAdministratorKey = motor360AdministratorKey(selectedAdministrator);
+  const administratorItems = sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey);
   const items = applyInvestorPreferences(administratorItems, investorState.preferences);
   const creditRejectedByTerm = creditItems.filter((item) => (
-    motor360AdministratorName(item) === selectedAdministrator && !item.recommendable
+    motor360AdministratorKey(item) === selectedAdministratorKey && !item.recommendable
   ));
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
@@ -2421,7 +2436,7 @@ function renderInvestorAnalysis(result) {
     if (event.target.checked) {
       const selectedItem = [...(investorState.result?.items || []), ...(investorState.result?.credit_items || [])]
         .find((item) => String(item.grupo || item.grupo_id || "") === groupId);
-      if (motor360AdministratorName(selectedItem) !== investorState.administrator) {
+      if (motor360AdministratorKey(selectedItem) !== motor360AdministratorKey(investorState.administrator)) {
         event.target.checked = false;
         showToast("Selecione grupos de apenas uma administradora por estudo.", "warning");
         return;
