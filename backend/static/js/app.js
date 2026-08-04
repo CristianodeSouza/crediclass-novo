@@ -91,9 +91,11 @@ const savedMotor360QuotaCounts = (() => {
 const savedMotor360SelectedData = (() => {
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedGroupData") || "{}"); } catch { return {}; }
 })();
+const savedMotor360Administrator = localStorage.getItem("crediclass.motor360.administrator") || "";
 const investorState = {
   result: null,
   preferences: [],
+  administrator: savedMotor360Administrator,
   audit: null,
   selectedGroupIds: new Set(savedMotor360SelectedGroups.map(String)),
   quotaCounts: new Map(Object.entries(savedMotor360QuotaCounts).map(([id, value]) => [String(id), Math.min(10, Math.max(1, Number(value) || 1))])),
@@ -2065,20 +2067,17 @@ function renderSelectedGroupsScreen() {
   const items = selectedMotor360Items();
   const empty = document.getElementById("selectedGroupsEmpty");
   const results = document.getElementById("selectedGroupsResults");
-  const summary = document.getElementById("selectedGroupsSummary");
-  const count = document.getElementById("selectedGroupsCount");
-  if (!empty || !results || !summary || !count) return;
-  count.textContent = `${items.length} ${items.length === 1 ? "grupo" : "grupos"}`;
-  summary.innerHTML = [["Grupos selecionados", items.length], ["Cotas totais", items.reduce((total, item) => total + Math.min(10, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1))), 0)], ["Comparação", "Sem e com embutido"], ["Perfis", "Conservador a Super Agressivo"]].map(([label, value]) => `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`).join("");
+  if (!empty || !results) return;
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
-  results.innerHTML = items.length ? `<div class="selected-groups-note">Os grupos abaixo foram importados do Motor 360. Cada coluna representa um grupo para comparação lado a lado; os valores respeitam a quantidade de cotas selecionada.</div><div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div>` : "";
+  results.innerHTML = items.length ? `<div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div>` : "";
 }
 
 function persistMotor360Selection() {
   localStorage.setItem("crediclass.motor360.selectedGroups", JSON.stringify([...investorState.selectedGroupIds]));
   localStorage.setItem("crediclass.motor360.quotaCounts", JSON.stringify(Object.fromEntries(investorState.quotaCounts)));
   localStorage.setItem("crediclass.motor360.selectedGroupData", JSON.stringify(Object.fromEntries(investorState.selectedGroupData)));
+  localStorage.setItem("crediclass.motor360.administrator", investorState.administrator || "");
 }
 
 function updateMotor360SelectionSummary() {
@@ -2316,6 +2315,51 @@ async function loadMotor360Audit(auditId) {
   }
 }
 
+function motor360AdministratorName(item) {
+  return String(item?.administradora || "").trim();
+}
+
+function clearMotor360GroupSelection() {
+  investorState.selectedGroupIds.clear();
+  investorState.quotaCounts.clear();
+  investorState.selectedGroupData.clear();
+}
+
+function syncMotor360AdministratorFilter(sourceItems) {
+  const select = document.getElementById("investorAdministratorFilter");
+  const administrators = [...new Set(sourceItems.map(motor360AdministratorName).filter(Boolean))]
+    .sort((left, right) => left.localeCompare(right, "pt-BR"));
+  const selectedAdministrator = [...investorState.selectedGroupIds]
+    .map((id) => investorState.selectedGroupData.get(id))
+    .map(motor360AdministratorName)
+    .find(Boolean);
+
+  if (!administrators.includes(investorState.administrator)) {
+    investorState.administrator = administrators.includes(selectedAdministrator)
+      ? selectedAdministrator
+      : administrators[0] || "";
+  }
+
+  [...investorState.selectedGroupIds].forEach((id) => {
+    const selectedItem = investorState.selectedGroupData.get(id);
+    if (motor360AdministratorName(selectedItem) === investorState.administrator) return;
+    investorState.selectedGroupIds.delete(id);
+    investorState.quotaCounts.delete(id);
+    investorState.selectedGroupData.delete(id);
+  });
+
+  if (select) {
+    select.innerHTML = administrators.length
+      ? administrators.map((administrator) => `<option value="${escapeHtml(administrator)}">${escapeHtml(administrator)}</option>`).join("")
+      : '<option value="">Nenhuma administradora disponível</option>';
+    select.value = investorState.administrator;
+    select.disabled = !administrators.length;
+  }
+  localStorage.setItem("crediclass.motor360.administrator", investorState.administrator);
+  persistMotor360Selection();
+  return investorState.administrator;
+}
+
 function renderInvestorAnalysis(result) {
   const status = document.getElementById("investorAnalysisStatus");
   const summary = document.getElementById("investorAnalysisSummary");
@@ -2326,15 +2370,22 @@ function renderInvestorAnalysis(result) {
   const finalItems = result.items || [];
   const creditItems = result.credit_items || [];
   const showingCreditStage = !finalItems.length && creditItems.length > 0;
-  const items = applyInvestorPreferences(showingCreditStage ? creditItems : finalItems, investorState.preferences);
-  const creditRejectedByTerm = creditItems.filter((item) => !item.recommendable);
+  const sourceItems = showingCreditStage ? creditItems : finalItems;
+  const selectedAdministrator = syncMotor360AdministratorFilter(sourceItems);
+  updateInvestorPreferenceSummary();
+  const administratorItems = sourceItems.filter((item) => motor360AdministratorName(item) === selectedAdministrator);
+  const items = applyInvestorPreferences(administratorItems, investorState.preferences);
+  const creditRejectedByTerm = creditItems.filter((item) => (
+    motor360AdministratorName(item) === selectedAdministrator && !item.recommendable
+  ));
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
     ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
     ["Estratégia declarada", result.preferencia_declarada === "investment" ? "Investimento" : result.preferencia_declarada || "Não classificada"],
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
     ["Lance ofertado", formatMoney(client.lance_cliente_total)],
-    ["Compatíveis por crédito", result.total_grupos_credito_compativeis ?? 0],
+    ["Administradora", selectedAdministrator || "-"],
+    ["Grupos desta administradora", items.length],
     ["Pré-selecionados", result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0],
     ["Eliminados por crédito", result.audit?.summary?.total_credit_rejected ?? 0],
     ["Eliminados por prazo/renda", result.audit?.summary?.total_term_income_rejected ?? 0],
@@ -2368,8 +2419,14 @@ function renderInvestorAnalysis(result) {
   results.querySelectorAll(".motor360-group-select-input").forEach((input) => input.addEventListener("change", (event) => {
     const groupId = String(event.target.dataset.groupId || "");
     if (event.target.checked) {
+      const selectedItem = [...(investorState.result?.items || []), ...(investorState.result?.credit_items || [])]
+        .find((item) => String(item.grupo || item.grupo_id || "") === groupId);
+      if (motor360AdministratorName(selectedItem) !== investorState.administrator) {
+        event.target.checked = false;
+        showToast("Selecione grupos de apenas uma administradora por estudo.", "warning");
+        return;
+      }
       investorState.selectedGroupIds.add(groupId);
-      const selectedItem = (investorState.result?.items || []).find((item) => String(item.grupo || item.grupo_id || "") === groupId);
       if (selectedItem) investorState.selectedGroupData.set(groupId, selectedItem);
       if (!investorState.quotaCounts.has(groupId)) investorState.quotaCounts.set(groupId, 1);
     } else {
@@ -2409,9 +2466,12 @@ function renderInvestorPreferenceOptions() {
 function updateInvestorPreferenceSummary() {
   const summary = document.getElementById("investorPreferencesSummary");
   if (!summary) return;
-  summary.textContent = investorState.preferences.length
+  const preferenceText = investorState.preferences.length
     ? `${investorState.preferences.length} preferência(s) aplicada(s)`
-    : "Nenhuma preferência selecionada";
+    : "Sem ordenação adicional";
+  summary.textContent = investorState.administrator
+    ? `${investorState.administrator} · ${preferenceText}`
+    : preferenceText;
 }
 
 function setInvestorAnalysisState(state) {
@@ -4170,6 +4230,18 @@ document.getElementById("advanceClientProfileBtn").addEventListener("click", adv
 renderInvestorPreferenceOptions();
 updateInvestorPreferenceSummary();
 document.getElementById("investorPreferencesOptions")?.addEventListener("change", syncInvestorPreferencesFromInputs);
+document.getElementById("investorAdministratorFilter")?.addEventListener("change", (event) => {
+  const nextAdministrator = String(event.target.value || "");
+  if (!nextAdministrator || nextAdministrator === investorState.administrator) return;
+  const hadSelectedGroups = investorState.selectedGroupIds.size > 0;
+  clearMotor360GroupSelection();
+  investorState.administrator = nextAdministrator;
+  persistMotor360Selection();
+  updateInvestorPreferenceSummary();
+  if (hadSelectedGroups) showToast("A seleção anterior foi limpa para manter apenas uma administradora no estudo.", "warning");
+  if (investorState.result) renderInvestorAnalysis(investorState.result);
+  renderSelectedGroupsScreen();
+});
 document.getElementById("clearInvestorPreferencesBtn")?.addEventListener("click", () => {
   investorState.preferences = [];
   renderInvestorPreferenceOptions();

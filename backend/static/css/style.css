@@ -1737,7 +1737,6 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .selected-groups-header p { margin: 4px 0 0; color: var(--muted); font-size: 0.76rem; }
 .selected-groups-header .state-badge { flex: 0 0 auto; }
 .selected-groups-list { display: grid; gap: 14px; }
-.selected-groups-note { padding: 10px 12px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-bronze-dark); font-size: 0.72rem; }
 .selected-groups-comparison { display: grid; grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); gap: 12px; align-items: start; margin-top: 12px; }
 .selected-comparison-column { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 2px 8px rgb(31 45 51 / 6%); }
 .selected-comparison-column > header { display: flex; align-items: center; gap: 10px; padding: 12px; border-bottom: 1px solid var(--line); background: #f7f9f9; }
@@ -4321,6 +4320,43 @@ body[data-theme="escuro"] .btn-outline-secondary {
   flex-wrap: wrap;
   gap: 8px 22px;
   margin: 12px 0;
+}
+
+.investor-administrator-filter {
+  display: grid;
+  grid-template-columns: minmax(120px, 160px) minmax(220px, 320px) minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
+}
+
+.investor-administrator-filter label {
+  margin: 0;
+  color: var(--brand-navy);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.investor-administrator-filter .form-select {
+  min-height: 34px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  font-size: 0.76rem;
+}
+
+.investor-administrator-filter small {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+@media (max-width: 760px) {
+  .investor-administrator-filter {
+    grid-template-columns: 1fr;
+  }
 }
 
 .investor-preference-option {

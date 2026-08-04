@@ -355,6 +355,13 @@
               <div class="investor-preferences-heading">
                 <strong>Critérios de ordenação</strong>
               </div>
+              <div class="investor-administrator-filter">
+                <label for="investorAdministratorFilter">Administradora</label>
+                <select id="investorAdministratorFilter" class="form-select" aria-label="Selecionar administradora">
+                  <option value="">Aguardando grupos</option>
+                </select>
+                <small>O estudo utiliza grupos de uma única administradora por vez.</small>
+              </div>
               <div id="investorPreferencesOptions" class="investor-preferences-options"></div>
               <div class="investor-preferences-footer">
                 <span>Marque ou desmarque os critérios para reordenar os grupos compatíveis.</span>
@@ -388,9 +395,7 @@
                 <h2>Grupos Selecionados</h2>
                 <p>Comparativo dos grupos escolhidos pelo consultor para a próxima etapa do estudo.</p>
               </div>
-              <span id="selectedGroupsCount" class="state-badge">0 grupos</span>
             </div>
-            <div id="selectedGroupsSummary" class="smart-engine-phase-two-summary"></div>
             <div id="selectedGroupsEmpty" class="placeholder-card compact-placeholder">
               <p>Nenhum grupo selecionado. Volte ao Motor 360 e marque os grupos que deseja comparar.</p>
               <button class="btn btn-primary" type="button" data-screen-jump="motor360">Voltar ao Motor 360</button>
