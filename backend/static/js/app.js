@@ -2064,6 +2064,40 @@ function selectedMotor360Items() {
   return [...investorState.selectedGroupIds].map((id) => currentItems.get(id) || investorState.selectedGroupData.get(id)).filter(Boolean);
 }
 
+function renderMotor360FloatingSelectionSummary() {
+  const items = selectedMotor360Items();
+  if (!items.length) {
+    return `<aside class="motor360-floating-summary is-empty" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>Nenhum grupo selecionado</strong></div><span class="motor360-floating-count">0</span></div><p>Adicione grupos e cotas para acompanhar o atendimento ao crédito e à parcela do cliente.</p></aside>`;
+  }
+  const client = investorState.result?.cliente || {};
+  const desiredCredit = Number(client.credito_liquido_desejado || 0);
+  const desiredInstallment = Number(client.parcela_desejada || 0);
+  const maximumInstallment = Number(client.parcela_maxima || 0);
+  const entries = items.map((item) => {
+    const groupId = String(item.grupo || item.grupo_id || "-");
+    const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+    return { item, quotas };
+  });
+  const totalQuotas = entries.reduce((sum, entry) => sum + entry.quotas, 0);
+  const scenario = (scenarioId, label) => {
+    const values = entries.map((entry) => ({
+      quotas: entry.quotas,
+      scenario: (entry.item.cenarios || []).find((value) => value.id === scenarioId),
+    })).filter((entry) => entry.scenario);
+    const sum = (field, fallback) => values.reduce((total, entry) => total + Number(entry.scenario[field] ?? entry.scenario[fallback] ?? 0) * entry.quotas, 0);
+    const credit = sum("credito_liquido_projetado", "credito_contratado");
+    const installment = sum("parcela_inicial");
+    const balance = sum("saldo_devedor");
+    const creditOk = desiredCredit > 0 && credit >= desiredCredit;
+    const incomeOk = maximumInstallment <= 0 || installment <= maximumInstallment;
+    const desiredOk = desiredInstallment <= 0 || installment <= desiredInstallment;
+    const viable = creditOk && incomeOk;
+    const progress = desiredCredit > 0 ? Math.min(100, Math.max(0, credit / desiredCredit * 100)) : 0;
+    return `<section class="motor360-floating-scenario ${viable ? "is-ok" : "is-pending"}"><header><strong>${label}</strong><span>${viable ? "Atende" : "Em composição"}</span></header><div class="motor360-floating-progress" aria-label="${progress.toFixed(0)}% do crédito desejado"><i style="width:${progress.toFixed(2)}%"></i></div><dl><div><dt>Crédito</dt><dd>${formatMoney(credit)} <small>de ${formatMoney(desiredCredit)}</small></dd></div><div><dt>Parcela</dt><dd>${formatMoney(installment)} <small>limite ${formatMoney(maximumInstallment)}</small></dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(balance)}</dd></div></dl><p>${creditOk ? "Crédito atendido" : `Faltam ${formatMoney(Math.max(0, desiredCredit - credit))}`} · ${incomeOk ? "Dentro de 30% da renda" : "Acima de 30% da renda"}${desiredOk ? "" : " · Acima da parcela desejada"}</p></section>`;
+  };
+  return `<aside class="motor360-floating-summary" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><span class="motor360-floating-count">${totalQuotas}</span></div><div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-screen-jump="grupos-selecionados">Analisar grupos selecionados</button></aside>`;
+}
+
 function renderSelectedGroupComparisonColumn(item, index) {
   const groupId = String(item.grupo || item.grupo_id || "-");
   const quotaCount = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
@@ -2631,6 +2665,7 @@ function renderInvestorAnalysis(result) {
       <span>Os grupos listados abaixo possuem crédito líquido disponível em uma cota suficiente para a necessidade do cliente, após a validação do crédito desejado, da parcela e dos recursos de lance com RP e/ou FGTS.</span>
     </div>
     <div class="motor360-selection-toolbar"><strong>Próxima etapa</strong><span id="motor360SelectionSummary">${investorState.selectedGroupIds.size} grupo(s) selecionado(s) para a próxima etapa</span><button class="btn btn-primary btn-sm" type="button" data-screen-jump="grupos-selecionados">Ver grupos selecionados</button></div>
+    ${renderMotor360FloatingSelectionSummary()}
     <div class="motor360-group-list">${items.map(renderMotor360GroupCard).join("")}</div>
     <div class="motor360-multiple-quota-note" role="note"><strong>Composição com mais de uma cota</strong><span>Lista de grupos em que uma cota não atende sozinha ao crédito solicitado. O operador pode adicionar até 50 cotas por grupo ao carrinho e combinar somente grupos desta administradora.</span></div>
     <div class="motor360-composition-list">${administratorCompositionItems.length ? administratorCompositionItems.map(renderMotor360CompositionCard).join("") : '<div class="table-state">Nenhum grupo desta administradora exige composição de múltiplas cotas.</div>'}</div>
