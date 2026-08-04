@@ -2006,6 +2006,13 @@ function renderContemplationProfilesCell(item) {
   return `<div class="motor360-profile-cell"><div class="motor360-profile-head"><span>Perfil</span><span>Sem embutido</span><span>Com embutido</span></div>${profiles.map((profile) => `<div class="motor360-profile-row"><strong>${escapeHtml(profile.label)}</strong>${scenarioValue(byId.without_embedded, profile.id)}${scenarioValue(byId.with_embedded, profile.id)}</div>`).join("")}<div class="motor360-profile-client-bid"><span>Lance ofertado</span><b>${formatMoney(byId.without_embedded?.lance_cliente_total ?? byId.with_embedded?.lance_cliente_total)}</b></div></div>`;
 }
 
+function motor360QuotaCapacity(item) {
+  const selected = item?.capacidade_contemplacoes_selecionada;
+  if (selected) return selected;
+  const capacities = Object.values(item?.capacidade_contemplacoes || {});
+  return capacities.find((capacity) => capacity?.perfil === item?.best_contemplation_strategy) || null;
+}
+
 function renderMotor360GroupCard(item) {
   const scenarios = Array.isArray(item.cenarios) ? item.cenarios : [];
   const byId = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
@@ -2015,8 +2022,12 @@ function renderMotor360GroupCard(item) {
   const auditId = escapeHtml(groupId);
   const selected = investorState.selectedGroupIds.has(groupId);
   const quotaCount = selected ? Math.min(10, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1))) : 1;
+  const quotaCapacity = motor360QuotaCapacity(item);
+  const quotaLimit = Number.isFinite(Number(quotaCapacity?.limite_cotas)) ? Number(quotaCapacity.limite_cotas) : null;
+  const quotaAverage = Number.isFinite(Number(quotaCapacity?.media_contemplacoes)) ? Number(quotaCapacity.media_contemplacoes) : null;
+  const quotaExceeded = selected && quotaLimit !== null && quotaCount > quotaLimit;
   const scaleMoney = (value) => value === null || value === undefined ? value : Number(value) * quotaCount;
-  const quotaControl = selected ? `<div class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="10" value="${quotaCount}" data-quota-action="input" data-group-id="${auditId}" aria-label="Quantidade de cotas do grupo ${auditId}"></div>` : "";
+  const quotaControl = selected ? `<div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}"><div class="motor360-quota-guidance"><small>Média máxima · ${escapeHtml(quotaCapacity?.perfil || "perfil não classificado")}</small><b>${quotaAverage === null ? "Sem histórico" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(quotaAverage)} contemplações`}</b><span>${quotaCapacity?.meses_com_dados ? `${quotaCapacity.meses_com_dados} mês(es) com dados` : "Quantidade mensal não disponível"}</span></div><div class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="10" value="${quotaCount}" data-quota-action="input" data-group-id="${auditId}" aria-label="Quantidade de cotas do grupo ${auditId}"></div>${quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : ""}</div>` : "";
   const scaledScenarioCards = scenarios.map((scenario) => {
     const title = scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido";
     const compatible = scenario.credit_compatible;
@@ -2595,7 +2606,14 @@ function renderInvestorAnalysis(result) {
       : control.dataset.quotaAction === "decrease"
         ? current - 1
         : Number(control.value);
-    investorState.quotaCounts.set(groupId, Math.min(10, Math.max(1, Number.isFinite(requested) ? requested : 1)));
+    const nextQuotaCount = Math.min(10, Math.max(1, Number.isFinite(requested) ? requested : 1));
+    investorState.quotaCounts.set(groupId, nextQuotaCount);
+    const selectedItem = [...(investorState.result?.items || []), ...(investorState.result?.credit_items || [])]
+      .find((item) => String(item.grupo || item.grupo_id || "") === groupId);
+    const historicalLimit = Number(motor360QuotaCapacity(selectedItem)?.limite_cotas);
+    if (Number.isFinite(historicalLimit) && nextQuotaCount > historicalLimit) {
+      showToast(`A quantidade selecionada ultrapassa a média histórica de ${historicalLimit} cota(s) para o perfil deste grupo.`, "warning");
+    }
     persistMotor360Selection();
     renderInvestorAnalysis(investorState.result);
     renderSelectedGroupsScreen();

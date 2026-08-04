@@ -1696,6 +1696,14 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-quota-control { display: inline-flex; flex: 0 0 auto; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 62px; padding: 5px 6px 6px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-bronze-dark); font-size: 0.68rem; font-weight: 800; white-space: nowrap; }
 .motor360-quota-input { width: 54px; height: 34px; padding: 0 6px; border: 1px solid #e2b17d; border-radius: 5px; background: #fff; color: var(--brand-navy); font-size: 1rem; font-weight: 800; text-align: left; }
 .motor360-quota-input::-webkit-inner-spin-button, .motor360-quota-input::-webkit-outer-spin-button { opacity: 1; }
+.motor360-quota-area { position: relative; display: inline-flex; align-items: stretch; gap: 6px; }
+.motor360-quota-guidance { display: grid; align-content: center; min-width: 148px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.motor360-quota-guidance small, .motor360-quota-guidance span { color: var(--muted); font-size: 0.6rem; line-height: 1.2; }
+.motor360-quota-guidance b { margin: 2px 0; color: var(--brand-navy); font-size: 0.72rem; }
+.motor360-quota-area.is-warning .motor360-quota-guidance, .motor360-quota-area.is-warning .motor360-quota-control { border-color: var(--warning); background: #fff8e8; }
+.motor360-quota-warning { position: absolute; top: calc(100% + 6px); right: 0; z-index: 5; display: grid; width: 230px; padding: 8px 10px; border: 1px solid #f4c56a; border-radius: 6px; background: #fff8e8; box-shadow: var(--shadow-card); color: #8a4b08; }
+.motor360-quota-warning strong { font-size: 0.7rem; }
+.motor360-quota-warning span { margin-top: 2px; font-size: 0.63rem; line-height: 1.3; }
 .motor360-group-card.is-selected { border-color: #f0a15e; box-shadow: 0 0 0 2px rgb(229 121 27 / 12%); }
 .motor360-group-card.is-selected .motor360-group-order { background: var(--brand-orange); }
 .motor360-selection-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 12px 0; padding: 10px 12px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-navy); font-size: 0.75rem; }

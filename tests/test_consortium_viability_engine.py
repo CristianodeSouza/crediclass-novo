@@ -42,12 +42,29 @@ def group(identifier="G1", **overrides):
         "parcela_inicial_grupo": 6000,
         "parcela_apos_lance_grupo": 5000,
         "parcela_reduzida": 3000,
+        "historico_12_meses": [],
     }
     values.update(overrides)
     return values
 
 
 class Motor360RfcTest(unittest.TestCase):
+    def test_expoe_media_maxima_de_contemplacoes_para_controlar_cotas(self):
+        history = [
+            {"mes": "2026-04", "qtd_contemplacoes": 2},
+            {"mes": "2026-05", "qtd_contemplacoes": 4},
+            {"mes": "2026-06", "qtd_contemplacoes": 3},
+        ]
+        result = analyze_client_consortium_viability(payload(objetivo="Contemplar - rapido - 6 meses"), [
+            group(historico_12_meses=history),
+        ])
+
+        capacity = result["items"][0]["capacidade_contemplacoes_selecionada"]
+        self.assertEqual(capacity["perfil"], "Rapido - 6 meses")
+        self.assertEqual(capacity["janela_meses"], 3)
+        self.assertEqual(capacity["media_contemplacoes"], 3.0)
+        self.assertEqual(capacity["limite_cotas"], 3)
+
     def test_official_scenarios_preserve_credit_and_do_not_share_values(self):
         result = analyze_client_consortium_viability(payload(), [group()])
         scenarios = result["items"][0]["cenarios"]
@@ -266,7 +283,7 @@ class Motor360RfcTest(unittest.TestCase):
     def test_audit_records_rfc_version_calculations_and_group_columns(self):
         result = analyze_client_consortium_viability(payload(), [group()])
         audit = result["audit"]
-        self.assertEqual(audit["metadata"]["engine_version"], "4.0.18")
+        self.assertEqual(audit["metadata"]["engine_version"], "4.0.19")
         self.assertEqual(audit["metadata"]["rules_version"], "RFC-001-architecture-v4.0")
         self.assertIn("X", [item["column"] for item in audit["columns_used"]])
         self.assertIn("BL", [item["column"] for item in audit["columns_used"]])

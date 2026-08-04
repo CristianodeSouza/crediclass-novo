@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.18"
+MOTOR_VERSION = "4.0.19"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -38,6 +38,14 @@ CONTEMPLATION_PROFILE_TARGETS = (
     ("aggressive", "Agressivo", "fast"),
     ("super_aggressive", "Super Agressivo", "urgent"),
 )
+
+CONTEMPLATION_CAPACITY_WINDOWS = {
+    "urgent": 3,
+    "fast": 3,
+    "moderate": 12,
+    "conservative": 12,
+    "long_term": 12,
+}
 
 
 def map_declared_objective_to_preference(objective: str) -> str | None:
@@ -113,6 +121,27 @@ def _scenario_reasons(scenario: dict[str, Any], matches: list[str], has_ranges: 
 
 def _reference_name(strategy: str | None) -> str | None:
     return next((label for key, _, _, label in STRATEGY_TARGETS if key == strategy), None)
+
+
+def _contemplation_capacity(group: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    history = [
+        item for item in (group.get("historico_12_meses") or [])
+        if item.get("qtd_contemplacoes") is not None
+    ]
+    capacities: dict[str, dict[str, Any]] = {}
+    for strategy, months in CONTEMPLATION_CAPACITY_WINDOWS.items():
+        quantities = [int(item["qtd_contemplacoes"]) for item in history[-months:]]
+        average = round(sum(quantities) / len(quantities), 2) if quantities else None
+        capacities[strategy] = {
+            "perfil": _reference_name(strategy),
+            "janela_meses": months,
+            "meses_com_dados": len(quantities),
+            "quantidades": quantities,
+            "media_contemplacoes": average,
+            "limite_cotas": math.floor(average) if average is not None else None,
+            "fonte": "Quantidades mensais de contemplacoes da planilha oficial",
+        }
+    return capacities
 
 
 def _parcela_inicial_por_cenario(scenario: dict[str, Any]) -> float | None:
@@ -345,6 +374,7 @@ def analyze_client_consortium_viability(
         # A pre-selected group passed credit and term/income in the same
         # scenario. Contemplation is deliberately not an exclusion here.
         approved_scenarios = term_scenarios
+        contemplation_capacities = _contemplation_capacity(group)
         source_values = {
             "prazo_restante": remaining_term,
             "credito_minimo": money(minimum),
@@ -353,6 +383,7 @@ def analyze_client_consortium_viability(
             "fundo_reserva": money(fund),
             "percentual_lance_embutido": money(embedded),
             "faixas_lance": ranges,
+            "capacidade_contemplacoes": contemplation_capacities,
         }
         missing_fields = [
             {"field": "Credito minimo", "column": "O", "raw_value": group.get("credito_minimo"), "reason": "Necessario para validar a faixa de credito.", "impact": "group_excluded"} if minimum is None else None,
@@ -408,6 +439,8 @@ def analyze_client_consortium_viability(
                 "recommendable": bool(approved_scenarios),
                 "compatible_contemplation_strategies": credit_distinct_matches,
                 "best_contemplation_strategy": _reference_name(preference if preference in credit_distinct_matches else (credit_distinct_matches[0] if credit_distinct_matches else None)),
+                "capacidade_contemplacoes": contemplation_capacities,
+                "capacidade_contemplacoes_selecionada": contemplation_capacities.get(preference if preference in credit_distinct_matches else (credit_distinct_matches[0] if credit_distinct_matches else "")),
                 "destaque_preferencia": preference in credit_distinct_matches,
                 "source_values": source_values,
                 "alerts": sorted({reason for scenario in credit_scenarios for reason in scenario["eligibility_reasons"] if reason != "credito_fora_da_faixa"}),
@@ -472,6 +505,8 @@ def analyze_client_consortium_viability(
             "recommendable": True,
             "compatible_contemplation_strategies": distinct_matches,
             "best_contemplation_strategy": _reference_name(best_strategy),
+            "capacidade_contemplacoes": contemplation_capacities,
+            "capacidade_contemplacoes_selecionada": contemplation_capacities.get(best_strategy or ""),
             "contemplation_classification": contemplation_classification,
             "destaque_preferencia": preference in distinct_matches,
             "source_values": source_values,

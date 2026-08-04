@@ -382,9 +382,11 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
             index = header_positions[header]
             selected.append((field, header, index))
     selected_indexes = {index for _, _, index in selected}
-    if include_history:
-        for header, index in header_positions.items():
-            if index in selected_indexes or not history_key_from_header(header):
+    for header, index in header_positions.items():
+        history_key = history_key_from_header(header)
+        include_quantity = history_key and history_key[1] == "qtd_contemplacoes"
+        if include_history or include_quantity:
+            if index in selected_indexes or not history_key:
                 continue
             selected.append(("historico", header, index))
             selected_indexes.add(index)
