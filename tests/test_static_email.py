@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.24", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.25", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=4.0.24", index_html)
+        self.assertIn("/static/js/app.js?v=4.0.25", index_html)
         self.assertIn('<button class="nav-item active" type="button" data-screen="perfil">', index_html)
         self.assertIn('<section id="screen-perfil" class="screen-panel active">', index_html)
 
@@ -46,6 +46,7 @@ class StaticEmailTest(unittest.TestCase):
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
         self.assertIn("Composição com mais de uma cota", app_js)
+        self.assertIn("quotaCapacity = motor360QuotaCapacity(item)", app_js)
         self.assertIn("renderMotor360FloatingSelectionSummary", app_js)
         self.assertIn("Composição atual", app_js)
         self.assertIn("Dentro de 30% da renda", app_js)
@@ -679,7 +680,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.24", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.25", index_html)
         self.assertNotIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

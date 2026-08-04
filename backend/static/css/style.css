@@ -1748,6 +1748,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-composition-card h3 { font-size: 0.85rem; }
 .motor360-composition-card p { grid-column: 2; color: var(--muted); font-size: 0.65rem; }
 .motor360-composition-actions { display: flex; align-items: center; gap: 8px; }
+.motor360-composition-actions .motor360-quota-area { align-items: center; }
+.motor360-composition-actions .motor360-quota-guidance { min-width: 164px; }
 .motor360-composition-scenarios { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px 12px 12px; }
 .motor360-composition-scenario { padding: 9px 10px; border: 1px solid var(--line); border-left: 3px solid var(--success); border-radius: 5px; }
 .motor360-composition-scenario > strong { font-size: 0.72rem; }
@@ -1777,6 +1779,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-cart-profiles small { grid-column: 1 / -1; color: var(--muted); line-height: 1.35; }
 @media (max-width: 760px) { .motor360-single-quota-note, .motor360-multiple-quota-note { min-height: auto; padding: 12px 14px; } .motor360-single-quota-note strong, .motor360-multiple-quota-note strong { font-size: 0.9rem; } }
 @media (max-width: 760px) { .motor360-floating-summary { right: 10px; bottom: 10px; width: calc(100vw - 20px); } .motor360-floating-scenarios { grid-template-columns: 1fr; max-height: 240px; overflow-y: auto; } }
+@media (max-width: 760px) { .motor360-composition-card > header, .motor360-composition-actions .motor360-quota-area { align-items: stretch; flex-direction: column; } .motor360-composition-actions, .motor360-composition-actions .motor360-quota-guidance { width: 100%; } }
 @media (max-width: 900px) { .motor360-composition-scenarios, .motor360-cart-scenarios { grid-template-columns: 1fr; } .motor360-composition-scenario dl, .motor360-cart-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .motor360-group-section { padding: 13px 16px 0; }
 .motor360-group-section h4 { margin: 0 0 9px; color: var(--brand-navy); font-size: 0.78rem; letter-spacing: 0.04em; text-transform: uppercase; }
