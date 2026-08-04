@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.20", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.21", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=4.0.20", index_html)
+        self.assertIn("/static/js/app.js?v=4.0.21", index_html)
         self.assertIn('<button class="nav-item active" type="button" data-screen="perfil">', index_html)
         self.assertIn('<section id="screen-perfil" class="screen-panel active">', index_html)
 
@@ -40,6 +40,15 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("Média máxima", app_js)
         self.assertIn("Acima da média histórica", app_js)
         self.assertIn("motor360-quota-warning", style_css)
+
+    def test_motor360_composicao_manual_de_multiplas_cotas(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn("Composição com mais de uma cota", app_js)
+        self.assertIn('max="50"', app_js)
+        self.assertIn("renderSelectedGroupsCartSummary", app_js)
+        self.assertIn("motor360-cart-summary", style_css)
 
     def test_motor_360_filtra_grupos_por_uma_administradora(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -666,7 +675,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.20", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.21", index_html)
         self.assertNotIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

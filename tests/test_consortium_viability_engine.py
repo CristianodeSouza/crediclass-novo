@@ -49,6 +49,18 @@ def group(identifier="G1", **overrides):
 
 
 class Motor360RfcTest(unittest.TestCase):
+    def test_lista_grupo_menor_para_composicao_manual_de_ate_50_cotas(self):
+        result = analyze_client_consortium_viability(payload(credito_desejado=600000), [
+            group(credito_minimo=100000, credito_maximo=300000),
+        ])
+
+        self.assertEqual(result["items"], [])
+        self.assertEqual(result["total_grupos_composicao"], 1)
+        item = result["composition_items"][0]
+        self.assertEqual(item["cotas_minimas_sem_embutido"], 2)
+        self.assertEqual(item["cotas_maximas"], 50)
+        self.assertEqual(item["cenarios"][0]["credito_liquido_projetado"], 300000)
+
     def test_expoe_media_maxima_de_contemplacoes_para_controlar_cotas(self):
         history = [
             {"mes": "2026-04", "qtd_contemplacoes": 2},
@@ -283,7 +295,7 @@ class Motor360RfcTest(unittest.TestCase):
     def test_audit_records_rfc_version_calculations_and_group_columns(self):
         result = analyze_client_consortium_viability(payload(), [group()])
         audit = result["audit"]
-        self.assertEqual(audit["metadata"]["engine_version"], "4.0.20")
+        self.assertEqual(audit["metadata"]["engine_version"], "4.0.21")
         self.assertEqual(audit["metadata"]["rules_version"], "RFC-001-architecture-v4.0")
         self.assertIn("X", [item["column"] for item in audit["columns_used"]])
         self.assertIn("BL", [item["column"] for item in audit["columns_used"]])

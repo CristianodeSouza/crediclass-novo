@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.20"
+MOTOR_VERSION = "4.0.21"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -222,6 +222,7 @@ def analyze_client_consortium_viability(
     durations = Counter()
     eligible_items: list[dict[str, Any]] = []
     credit_eligible_items: list[dict[str, Any]] = []
+    composition_items: list[dict[str, Any]] = []
     excluded: list[dict[str, Any]] = []
     incomplete_groups: list[dict[str, Any]] = []
     group_results: list[dict[str, Any]] = []
@@ -385,6 +386,72 @@ def analyze_client_consortium_viability(
             "faixas_lance": ranges,
             "capacidade_contemplacoes": contemplation_capacities,
         }
+        if (
+            maximum is not None
+            and maximum > 0
+            and maximum < desired
+            and maximum * Decimal("50") >= desired
+            and fee is not None
+            and fund is not None
+            and remaining_term is not None
+        ):
+            composition_scenarios = []
+            for with_embedded in (False, True):
+                if with_embedded and (embedded is None or embedded <= 0 or embedded >= 1):
+                    continue
+                embedded_amount = maximum * (embedded or Decimal("0")) if with_embedded else Decimal("0")
+                liquid_credit = maximum - embedded_amount
+                fee_amount = maximum * fee
+                fund_amount = maximum * fund
+                balance = maximum + fee_amount + fund_amount
+                initial_installment = balance / Decimal(remaining_term)
+                profile_rows = []
+                for profile_id, label, strategy_key in CONTEMPLATION_PROFILE_TARGETS:
+                    threshold = ranges.get(strategy_key)
+                    threshold_decimal = Decimal(str(threshold)) if threshold is not None else None
+                    ideal_total = maximum * threshold_decimal if threshold_decimal is not None else None
+                    ideal_client = max(Decimal("0"), ideal_total - embedded_amount) if ideal_total is not None else None
+                    profile_rows.append({
+                        "id": profile_id,
+                        "label": label,
+                        "percentual_referencia": threshold,
+                        "lance_ideal": money(ideal_client),
+                        "lance_ideal_total": money(ideal_total),
+                        "lance_embutido": money(embedded_amount),
+                    })
+                composition_scenarios.append({
+                    "id": "with_embedded" if with_embedded else "without_embedded",
+                    "credito_contratado": money(maximum),
+                    "credito_liquido_projetado": money(liquid_credit),
+                    "lance_embutido": money(embedded_amount),
+                    "saldo_devedor": money(balance),
+                    "parcela_inicial": money(initial_installment),
+                    "perfis_contemplacao": profile_rows,
+                    "credit_compatible": True,
+                    "term_compatible": None,
+                    "composition_candidate": True,
+                })
+            if composition_scenarios and any((parse_decimal(scenario.get("credito_liquido_projetado")) or Decimal("0")) * Decimal("50") >= desired for scenario in composition_scenarios):
+                composition_items.append({
+                    **group_ref,
+                    "grupo_id": str(group.get("grupo_id") or group_ref["grupo"]),
+                    "tipo_bem": str(group.get("tipo_bem") or ""),
+                    "credito_minimo": money(minimum),
+                    "credito_maximo": money(maximum),
+                    "prazo_restante": remaining_term,
+                    "prazo_remanescente": remaining_term,
+                    "taxa_total": money(fee),
+                    "taxa_ano": money(normalize_percent(group.get("taxa_adm_ano"))),
+                    "lance_embutido": money(embedded),
+                    "cenarios": composition_scenarios,
+                    "capacidade_contemplacoes": contemplation_capacities,
+                    "capacidade_contemplacoes_selecionada": contemplation_capacities.get(preference or ""),
+                    "best_contemplation_strategy": _reference_name(preference),
+                    "selection_stage": "composition",
+                    "composition_candidate": True,
+                    "cotas_minimas_sem_embutido": math.ceil(desired / maximum),
+                    "cotas_maximas": 50,
+                })
         missing_fields = [
             {"field": "Credito minimo", "column": "O", "raw_value": group.get("credito_minimo"), "reason": "Necessario para validar a faixa de credito.", "impact": "group_excluded"} if minimum is None else None,
             {"field": "Credito maximo", "column": "U", "raw_value": group.get("credito_maximo"), "reason": "Necessario para validar a faixa de credito.", "impact": "group_excluded"} if maximum is None else None,
@@ -530,9 +597,12 @@ def analyze_client_consortium_viability(
     step_started = time.perf_counter()
     eligible_items.sort(key=ordering_key)
     credit_eligible_items.sort(key=ordering_key)
+    composition_items.sort(key=ordering_key)
     for rank, item in enumerate(eligible_items, 1):
         item["ranking"] = rank
     for rank, item in enumerate(credit_eligible_items, 1):
+        item["ranking"] = rank
+    for rank, item in enumerate(composition_items, 1):
         item["ranking"] = rank
     for entry in group_results:
         match = next((item for item in eligible_items if item["grupo"] == entry["grupo"] and item["administradora"] == entry["administradora"]), None)
@@ -642,4 +712,4 @@ def analyze_client_consortium_viability(
         {"order": 6, "id": "contemplation_information", "name": "Classificacao de contemplacao", "formula_or_rule": "BL:BP apenas classificam potencial; nao excluem grupos da pre-selecao.", "input_count": len(eligible_items), "evaluated_count": len(eligible_items), "classified_count": contemplation_classified_count, "unclassified_count": contemplation_unclassified_count, "approved_count": contemplation_classified_count, "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
         {"order": 7, "id": "preliminary_order", "name": "Ordem preliminar", "formula_or_rule": "Maior prazo remanescente, menor taxa administrativa total, administradora e grupo. Nao e ranking final.", "input_count": len(eligible_items), "approved_count": len(eligible_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["ranking"] * 1000, 3)},
     ]
-    return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(eligible_items), "total_grupos_viaveis": len(eligible_items), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Faixa de credito aplicada por O/U.", "Prazo F e renda aplicados no mesmo cenario aprovado por credito.", "Contemplacao BL:BP apenas classifica; nao elimina a pre-selecao.", "Ordem preliminar aplicada sem ranking definitivo."], "items": eligible_items, "credit_items": credit_eligible_items, "audit": audit}
+    return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(eligible_items), "total_grupos_viaveis": len(eligible_items), "total_grupos_composicao": len(composition_items), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Faixa de credito aplicada por O/U.", "Prazo F e renda aplicados no mesmo cenario aprovado por credito.", "Contemplacao BL:BP apenas classifica; nao elimina a pre-selecao.", "Ordem preliminar aplicada sem ranking definitivo."], "items": eligible_items, "credit_items": credit_eligible_items, "composition_items": composition_items, "audit": audit}
