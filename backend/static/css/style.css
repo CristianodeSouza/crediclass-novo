@@ -4,6 +4,7 @@
   --primary: #e06c1f;
   --primary-hover: #b4552d;
   --primary-soft: #fff2e8;
+  --brand-orange: var(--primary);
   --brand-navy: #2e3f47;
   --brand-navy-deep: #1f2d33;
   --brand-navy-light: #495f69;
@@ -25,6 +26,7 @@
   --shadow-card: 0 12px 28px rgba(27, 41, 50, 0.05);
   --shadow-raised: 0 18px 38px rgba(27, 41, 50, 0.09);
   --success: #16a34a;
+  --success-dark: #147a48;
   --success-soft: #ecf9f0;
   --warning: #f59e0b;
   --danger: #dc2626;
