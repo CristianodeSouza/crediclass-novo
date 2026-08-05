@@ -3611,6 +3611,48 @@ body[data-theme="escuro"] .btn-outline-secondary {
   line-height: 1.55;
 }
 
+.financial-study-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.financial-study-summary-strip > div {
+  min-width: 0;
+  padding: 16px 20px;
+  border-right: 1px solid var(--border);
+}
+
+.financial-study-summary-strip > div:last-child {
+  border-right: 0;
+}
+
+.financial-study-summary-strip span,
+.financial-study-summary-strip strong,
+.financial-study-summary-strip small {
+  display: block;
+}
+
+.financial-study-summary-strip span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.financial-study-summary-strip strong {
+  margin-top: 5px;
+  color: var(--brand-navy);
+  font-size: 1rem;
+}
+
+.financial-study-summary-strip small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
 .financial-study-section {
   padding: 24px 32px;
   border-bottom: 1px solid var(--border);
@@ -3743,6 +3785,174 @@ body[data-theme="escuro"] .btn-outline-secondary {
   margin-top: 3px;
   color: var(--muted);
   font-size: 0.68rem;
+}
+
+.financial-study-options {
+  display: grid;
+  gap: 14px;
+}
+
+.financial-study-option {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.financial-study-option > header {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+
+.financial-study-option-number {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-navy);
+  color: #fff;
+  font-weight: 800;
+}
+
+.financial-study-option > header span,
+.financial-study-option > header h4,
+.financial-study-option > header p {
+  margin: 0;
+}
+
+.financial-study-option > header span {
+  color: var(--primary);
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.financial-study-option > header h4 {
+  margin-top: 1px;
+  color: var(--brand-navy);
+  font-size: 1rem;
+}
+
+.financial-study-option > header p {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.financial-study-option > header > strong {
+  max-width: 220px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+.financial-study-option-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-bottom: 1px solid var(--border);
+}
+
+.financial-study-option-facts > span {
+  min-width: 0;
+  padding: 10px 14px;
+  border-right: 1px solid var(--border);
+}
+
+.financial-study-option-facts > span:last-child {
+  border-right: 0;
+}
+
+.financial-study-option-facts small,
+.financial-study-option-facts b {
+  display: block;
+}
+
+.financial-study-option-facts small {
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.financial-study-option-facts b {
+  margin-top: 3px;
+  color: var(--brand-navy);
+  font-size: 0.78rem;
+}
+
+.financial-study-option-scenarios {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px 14px 14px;
+}
+
+.financial-study-option-scenario {
+  padding: 11px 12px;
+  border: 1px solid color-mix(in srgb, var(--success) 32%, var(--border));
+  border-left: 3px solid var(--success);
+  border-radius: 6px;
+  background: var(--success-soft);
+}
+
+.financial-study-option-scenario.is-unavailable {
+  border-color: var(--border);
+  background: var(--surface-soft);
+}
+
+.financial-study-option-scenario header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.financial-study-option-scenario header strong {
+  color: var(--brand-navy);
+  font-size: 0.76rem;
+}
+
+.financial-study-option-scenario header span {
+  color: var(--success-dark);
+  font-size: 0.62rem;
+  font-weight: 800;
+}
+
+.financial-study-option-scenario dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 0;
+}
+
+.financial-study-option-scenario dt,
+.financial-study-option-scenario dd {
+  margin: 0;
+}
+
+.financial-study-option-scenario dt {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.financial-study-option-scenario dd {
+  margin-top: 2px;
+  color: var(--success-dark);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.financial-study-option-scenario > p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.7rem;
 }
 
 .financial-study-profile-list {
@@ -3922,8 +4132,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .financial-study-metrics,
-  .financial-study-profile-group > div {
+  .financial-study-profile-group > div,
+  .financial-study-summary-strip,
+  .financial-study-option-facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .financial-study-summary-strip > div:nth-child(2),
+  .financial-study-option-facts > span:nth-child(2) {
+    border-right: 0;
   }
 
   .financial-study-profile-group section:nth-child(2) {
@@ -3942,8 +4159,26 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .financial-study-metrics,
-  .financial-study-profile-group > div {
+  .financial-study-profile-group > div,
+  .financial-study-summary-strip,
+  .financial-study-option-facts,
+  .financial-study-option-scenarios {
     grid-template-columns: 1fr;
+  }
+
+  .financial-study-summary-strip > div,
+  .financial-study-option-facts > span {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .financial-study-option > header {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .financial-study-option > header > strong {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 
   .financial-study-profile-group section {
@@ -4045,6 +4280,17 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
   .financial-study-profile-group section {
     padding: 8px;
+  }
+
+  .financial-study-option {
+    break-inside: avoid-page;
+  }
+
+  .financial-study-option > header,
+  .financial-study-option-facts > span,
+  .financial-study-option-scenarios {
+    padding-top: 7px;
+    padding-bottom: 7px;
   }
 
   .financial-study-profile-result,
