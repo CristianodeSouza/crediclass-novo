@@ -2091,7 +2091,7 @@ function renderMotor360FloatingSelectionSummary() {
       scenario: (entry.item.cenarios || []).find((value) => value.id === scenarioId),
     })).filter((entry) => entry.scenario);
     const sum = (field, fallback) => values.reduce((total, entry) => total + Number(entry.scenario[field] ?? entry.scenario[fallback] ?? 0) * entry.quotas, 0);
-    const credit = sum("credito_liquido_projetado", "credito_contratado");
+    const credit = sum("credito_contratado", "credito_liquido_projetado");
     const installment = sum("parcela_inicial");
     const balance = sum("saldo_devedor");
     const creditOk = desiredCredit > 0 && credit >= desiredCredit;
@@ -2233,46 +2233,22 @@ function financialStudyGroupRow(item) {
   const scale = (value) => value === null || value === undefined ? null : Number(value) * quotas;
   const without = financialStudyScenario(item, "without_embedded");
   const withEmbedded = financialStudyScenario(item, "with_embedded");
+  const source = item.source_values || {};
+  const rate = source.taxa_adm ?? item.taxa_total ?? item.taxa_adm;
   return `<tr>
-    <td><strong>${escapeHtml(groupId)}</strong><small>${escapeHtml(item.administradora || "-")}</small></td>
+    <td><strong>${escapeHtml(groupId)}</strong><small>${escapeHtml(item.administradora || "-")} · ${quotas} ${quotas === 1 ? "cota" : "cotas"}</small></td>
     <td>${quotas}</td>
     <td>${formatMoney(scale(item.credito_maximo))}</td>
     <td>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</td>
-    <td><span class="financial-study-scenario-value">${formatMoney(scale(without.credito_contratado))}</span><small>Parcela ${formatMoney(scale(without.parcela_inicial))}</small></td>
-    <td>${withEmbedded.credito_contratado == null ? "Não disponível" : `<span class="financial-study-scenario-value">${formatMoney(scale(withEmbedded.credito_contratado))}</span>`}<small>${withEmbedded.parcela_inicial == null ? "" : `Parcela ${formatMoney(scale(withEmbedded.parcela_inicial))}`}</small></td>
+    <td>${rate == null ? "Não informada" : formatPercent(rate)}</td>
+    <td><span class="financial-study-scenario-value">${formatMoney(scale(without.credito_contratado))}</span><small>Parcela ${formatMoney(scale(without.parcela_inicial))}</small><small>Saldo ${formatMoney(scale(without.saldo_devedor))}</small></td>
+    <td>${withEmbedded.credito_contratado == null ? "Não disponível" : `<span class="financial-study-scenario-value">${formatMoney(scale(withEmbedded.credito_contratado))}</span>`}<small>${withEmbedded.parcela_inicial == null ? "" : `Parcela ${formatMoney(scale(withEmbedded.parcela_inicial))}`}</small><small>${withEmbedded.saldo_devedor == null ? "" : `Saldo ${formatMoney(scale(withEmbedded.saldo_devedor))}`}</small></td>
     <td><span class="financial-study-classification">${escapeHtml(financialStudyStrategyLabel(item.best_contemplation_strategy))}</span></td>
   </tr>`;
 }
 
-function financialStudyScenarioCard(item, scenarioId, quotas) {
-  const scenario = financialStudyScenario(item, scenarioId);
-  const embedded = scenarioId === "with_embedded";
-  const scale = (value) => value === null || value === undefined ? null : Number(value) * quotas;
-  const available = scenario.credito_contratado !== null && scenario.credito_contratado !== undefined;
-  if (!available) {
-    return `<article class="financial-study-option-scenario is-unavailable"><header><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><span>Não disponível</span></header><p>Este cenário não possui dados suficientes na base atual.</p></article>`;
-  }
-  return `<article class="financial-study-option-scenario"><header><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><span>${scenario.credit_compatible === false ? "Fora da faixa" : "Crédito compatível"}</span></header><dl>
-    <div><dt>Crédito contratado</dt><dd>${formatMoney(scale(scenario.credito_contratado))}</dd></div>
-    <div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div>
-    <div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div>
-    <div><dt>Lance total</dt><dd>${formatMoney(scale(scenario.lance_total_cenario))}</dd></div>
-  </dl></article>`;
-}
-
-function financialStudyGroupOption(item, index) {
-  const groupId = String(item.grupo || item.grupo_id || "-");
-  const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
-  const source = item.source_values || {};
-  const rate = source.taxa_adm ?? item.taxa_total ?? item.taxa_adm;
-  const fund = source.fundo_reserva ?? item.fundo_reserva;
-  const rateText = rate === null || rate === undefined ? "Não informada" : formatPercent(rate);
-  const fundText = fund === null || fund === undefined ? "Não informado" : formatPercent(fund);
-  return `<article class="financial-study-option">
-    <header><div class="financial-study-option-number">${index + 1}</div><div><span>Opção de contratação</span><h4>Grupo ${escapeHtml(groupId)}</h4><p>${escapeHtml(item.administradora || "-")} · ${quotas} ${quotas === 1 ? "cota" : "cotas"}</p></div><strong>${escapeHtml(financialStudyStrategyLabel(item.best_contemplation_strategy))}</strong></header>
-    <div class="financial-study-option-facts"><span><small>Crédito máximo</small><b>${formatMoney(Number(item.credito_maximo || 0) * quotas)}</b></span><span><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></span><span><small>Taxa administrativa</small><b>${rateText}</b></span><span><small>Fundo de reserva</small><b>${fundText}</b></span></div>
-    <div class="financial-study-option-scenarios">${financialStudyScenarioCard(item, "without_embedded", quotas)}${financialStudyScenarioCard(item, "with_embedded", quotas)}</div>
-  </article>`;
+function financialStudyComparisonTable(items) {
+  return `<div class="financial-study-table-wrap"><table class="financial-study-table financial-study-comparison-table"><thead><tr><th>Grupo</th><th>Cotas</th><th>Crédito máximo</th><th>Prazo</th><th>Taxa</th><th>Sem embutido</th><th>Com embutido</th><th>Classificação</th></tr></thead><tbody>${items.map(financialStudyGroupRow).join("")}</tbody></table></div>`;
 }
 
 function financialStudyPortfolioSummary(items) {
@@ -2292,25 +2268,26 @@ function financialStudyPortfolioSummary(items) {
   return `<section class="financial-study-summary-strip"><div><span>Seleção</span><strong>${items.length} grupo(s) · ${totals.quotas} cota(s)</strong></div><div><span>Crédito máximo combinado</span><strong>${formatMoney(totals.maxCredit)}</strong></div><div><span>Sem embutido</span><strong>${formatMoney(totals.withoutCredit)}</strong><small>Parcela inicial ${formatMoney(totals.withoutInstallment)}</small></div><div><span>Com embutido</span><strong>${formatMoney(totals.withCredit)}</strong><small>Parcela inicial ${formatMoney(totals.withInstallment)}</small></div></section>`;
 }
 
-function financialStudyProfileCards(items) {
+function financialStudyProfileMatrix(items) {
   const profileIds = ["conservative", "moderate", "aggressive", "super_aggressive"];
   const labels = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super Agressivo" };
-  return items.map((item) => {
+  const rows = items.map((item) => {
     const groupId = String(item.grupo || item.grupo_id || "-");
     const scenarios = Object.fromEntries((item.cenarios || []).map((scenario) => [scenario.id, scenario]));
     const valueFor = (scenarioId, profileId) => (scenarios[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profileId);
-    return `<article class="financial-study-profile-group"><header><strong>Grupo ${escapeHtml(groupId)}</strong><span>${escapeHtml(item.administradora || "-")}</span></header><div>${profileIds.map((profileId) => {
+    return `<tr><th><strong>${escapeHtml(groupId)}</strong><small>${escapeHtml(item.administradora || "-")}</small></th>${profileIds.map((profileId) => {
       const without = valueFor("without_embedded", profileId);
       const withEmbedded = valueFor("with_embedded", profileId);
       const renderValue = (value, scenarioLabel) => {
-        if (value?.percentual_referencia == null) return `<span class="financial-study-profile-empty">${scenarioLabel}: sem referência</span>`;
+        if (value?.percentual_referencia == null) return `<span class="financial-study-profile-empty"><small>${scenarioLabel}</small><em>Sem referência</em></span>`;
         const state = value.atinge_perfil ? "is-positive" : "is-warning";
         const result = value.atinge_perfil ? "Lance atinge o perfil" : `Faltam ${formatMoney(value.falta_para_ideal)}`;
         return `<span class="financial-study-profile-result ${state}"><small>${scenarioLabel}</small><b>${formatPercent(value.percentual_referencia)}</b><em>${result}</em></span>`;
       };
-      return `<section><h4>${labels[profileId]}</h4>${renderValue(without, "Sem embutido")}${renderValue(withEmbedded, "Com embutido")}</section>`;
-    }).join("")}</div></article>`;
+      return `<td>${renderValue(without, "Sem embutido")}${renderValue(withEmbedded, "Com embutido")}</td>`;
+    }).join("")}</tr>`;
   }).join("");
+  return `<div class="financial-study-table-wrap"><table class="financial-study-profile-matrix"><thead><tr><th>Grupo</th>${profileIds.map((id) => `<th>${labels[id]}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 
 function renderFinancialStudyScreen() {
@@ -2347,8 +2324,8 @@ function renderFinancialStudyScreen() {
       ${financialStudyPortfolioSummary(items)}
       <section class="financial-study-section${sectionClass("cliente")}" data-study-content="cliente"><div class="financial-study-section-heading"><span>01</span><div><h3>Cliente e necessidade</h3><p>Informações declaradas e registradas no Perfil do Cliente.</p></div></div><div class="financial-study-metrics">${financialStudyMetric("Cliente", clientName)}${financialStudyMetric("Tipo de contratação", financialStudyContractLabel(profile.tipo_contratacao))}${financialStudyMetric("Objetivo do consórcio", profile.objetivo || "Não informado")}${optionalAssetMetric}</div></section>
       <section class="financial-study-section${sectionClass("resumo")}" data-study-content="resumo"><div class="financial-study-section-heading"><span>02</span><div><h3>Resumo financeiro</h3><p>Capacidade e parâmetros declarados pelo cliente.</p></div></div><div class="financial-study-metrics financial-study-metrics-compact">${financialStudyMetric("Crédito líquido desejado", formatMoney(profile.credito_desejado))}${financialStudyMetric("Parcela desejada", formatMoney(profile.parcela_desejada ?? profile.parcela_ideal))}${financialStudyMetric("Parcela máxima", formatMoney(profile.parcela_limite))}${financialStudyMetric("Renda total", formatMoney(profile.renda_total))}${financialStudyMetric("Recursos próprios", formatMoney(profile.lance_proprio))}${financialStudyMetric("FGTS", formatMoney(profile.fgts))}${financialStudyMetric("Grupos selecionados", items.length)}${financialStudyMetric("Total de cotas", totalQuotas)}</div></section>
-      <section class="financial-study-section${sectionClass("grupos")}" data-study-content="grupos"><div class="financial-study-section-heading"><span>03</span><div><h3>Opções selecionadas</h3><p>Compare crédito, parcela, prazo e custos nos cenários com e sem lance embutido.</p></div></div><div class="financial-study-options">${items.map(financialStudyGroupOption).join("")}</div><p class="financial-study-table-note">Taxas e fundos aparecem somente quando estão registrados na base. A ordem reproduz a seleção atual do Motor 360.</p></section>
-      <section class="financial-study-section${sectionClass("contemplacao")}" data-study-content="contemplacao"><div class="financial-study-section-heading"><span>04</span><div><h3>Perfis de contemplação</h3><p>Comparação histórica por grupo e cenário; não representa garantia de contemplação.</p></div></div><div class="financial-study-profile-list">${financialStudyProfileCards(items)}</div></section>
+      <section class="financial-study-section${sectionClass("grupos")}" data-study-content="grupos"><div class="financial-study-section-heading"><span>03</span><div><h3>Comparativo dos grupos</h3><p>Crédito, parcela, saldo, prazo e custos reunidos em uma única visão.</p></div></div>${financialStudyComparisonTable(items)}<p class="financial-study-table-note">Taxas aparecem somente quando registradas na base. A ordem reproduz a seleção atual do Motor 360.</p></section>
+      <section class="financial-study-section${sectionClass("contemplacao")}" data-study-content="contemplacao"><div class="financial-study-section-heading"><span>04</span><div><h3>Perfis de contemplação</h3><p>Comparação histórica compacta por grupo e cenário; não representa garantia de contemplação.</p></div></div>${financialStudyProfileMatrix(items)}</section>
       <section class="financial-study-section${sectionClass("observacoes")}" data-study-content="observacoes"><div class="financial-study-section-heading"><span>05</span><div><h3>Conclusão e observações</h3><p>Leitura executiva para a continuidade do atendimento.</p></div></div><div class="financial-study-conclusion"><strong>Próximo passo recomendado</strong><p>Validar com o cliente a quantidade de cotas e o cenário preferido do grupo em destaque; depois, confirmar taxas, fundo de reserva, disponibilidade da carta e regras comerciais diretamente com a administradora.</p></div><div class="financial-study-disclaimer"><p>Este estudo utiliza exclusivamente as informações registradas pelo cliente e os dados disponíveis dos grupos na data da análise.</p><p>Percentuais, projeções e classificações possuem caráter informativo e histórico. Não constituem promessa ou garantia de contemplação.</p><p>Condições comerciais, taxas e datas operacionais não estruturadas no sistema devem ser confirmadas antes da contratação.</p></div></section>
       <footer class="financial-study-footer"><span>Crediclass · Estudo Financeiro</span><span>${escapeHtml(auditId)} · versão ${escapeHtml(systemVersion)}</span></footer>
     </article>
@@ -2850,16 +2827,26 @@ async function loadInvestorAnalysis() {
   setInvestorAnalysisState("loading");
   addMotor360ExecutionLog("Requisição enviada", `Crédito ${formatMoney(profile.credito_desejado)} · parcela ${formatMoney(profile.parcela_desejada)} · RP ${formatMoney(profile.lance_recursos_proprios ?? profile.lance_maximo_recursos_proprios)} · FGTS ${formatMoney(profile.fgts_total)} · renda ${formatMoney(profile.renda_total)}.`);
   try {
-    const response = await fetch("/api/viabilidade-360/analisar", {
-      method: "POST",
-      cache: "no-store",
-      credentials: "same-origin",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify(profile),
-    });
-    const result = await response.json().catch(() => ({}));
-    addMotor360ExecutionLog("Resposta recebida", `HTTP ${response.status} · ${Math.round(performance.now() - startedAt)} ms · ${result.request_id || "sem ID"}.`);
+    const retryableStatuses = new Set([502, 503, 504]);
+    const maxAttempts = 3;
+    let response;
+    let result = {};
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      response = await fetch("/api/viabilidade-360/analisar", {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify(profile),
+      });
+      result = await response.json().catch(() => ({}));
+      addMotor360ExecutionLog("Resposta recebida", `Tentativa ${attempt}/${maxAttempts} · HTTP ${response.status} · ${Math.round(performance.now() - startedAt)} ms · ${result.request_id || "sem ID"}.`);
+      if (response.ok || !retryableStatuses.has(response.status) || attempt === maxAttempts) break;
+      status.textContent = `Sincronizando base... ${attempt + 1}/${maxAttempts}`;
+      addMotor360ExecutionLog("Nova tentativa programada", `Serviço temporariamente indisponível (HTTP ${response.status}).`, "warning");
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+    }
     if (!response.ok) throw new Error(result.error || "Falha ao calcular a viabilidade dos grupos.");
     if (requestId !== investorAnalysisRequestId) return;
     investorState.result = result;

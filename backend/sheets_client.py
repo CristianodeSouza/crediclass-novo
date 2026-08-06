@@ -11,6 +11,7 @@ from functools import lru_cache
 from typing import Any
 
 from google.oauth2.service_account import Credentials
+from google.auth.exceptions import GoogleAuthError
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
@@ -287,10 +288,10 @@ def execute_sheets_read(request_factory, operation: str) -> dict[str, Any]:
     for attempt in range(1, SHEETS_READ_ATTEMPTS + 1):
         try:
             return request_factory().execute()
-        except (AttributeError, OSError, TimeoutError, HttpError) as error:
+        except (AttributeError, OSError, TimeoutError, GoogleAuthError, HttpError) as error:
             last_error = error
-            is_server_error = isinstance(error, HttpError) and getattr(error.resp, "status", 0) >= 500
-            is_transient = not isinstance(error, HttpError) or is_server_error
+            http_status = getattr(error.resp, "status", 0) if isinstance(error, HttpError) else 0
+            is_transient = not isinstance(error, HttpError) or http_status == 429 or http_status >= 500
             if not is_transient or attempt == SHEETS_READ_ATTEMPTS:
                 break
             logger.warning(

@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.27", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.28", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=4.0.27", index_html)
+        self.assertIn("/static/js/app.js?v=4.0.28", index_html)
         self.assertIn('<button class="nav-item active" type="button" data-screen="perfil">', index_html)
         self.assertIn('<section id="screen-perfil" class="screen-panel active">', index_html)
 
@@ -30,7 +30,7 @@ class StaticEmailTest(unittest.TestCase):
 
         self.assertIn("Opção em destaque", app_js)
         self.assertIn("financialStudyPortfolioSummary", app_js)
-        self.assertIn("Compare crédito, parcela, prazo e custos", app_js)
+        self.assertIn("Crédito, parcela, saldo, prazo e custos reunidos em uma única visão", app_js)
         self.assertIn("Comparativo dos grupos selecionados", app_js)
         self.assertIn("Conclusão e observações", app_js)
         self.assertIn("Identificador", app_js)
@@ -51,6 +51,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("quotaCapacity = motor360QuotaCapacity(item)", app_js)
         self.assertIn("renderMotor360FloatingSelectionSummary", app_js)
         self.assertIn("Composição atual", app_js)
+        self.assertIn('const credit = sum("credito_contratado", "credito_liquido_projetado")', app_js)
         self.assertIn("Dentro de 30% da renda", app_js)
         self.assertIn('max="50"', app_js)
         self.assertIn("renderSelectedGroupsCartSummary", app_js)
@@ -683,7 +684,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.27", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.28", index_html)
         self.assertNotIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)
