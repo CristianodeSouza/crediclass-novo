@@ -2256,6 +2256,7 @@ function renderSelectedGroupsScreen() {
 }
 
 const FINANCIAL_STUDY_SECTIONS_KEY = "crediclass.financialStudy.sections";
+let financialStudyRenderToken = 0;
 
 function financialStudyProfile() {
   try {
@@ -2266,7 +2267,7 @@ function financialStudyProfile() {
 }
 
 function financialStudySectionPreferences() {
-  const defaults = { cliente: true, resumo: true, grupos: true, contemplacao: true, observacoes: true };
+  const defaults = { agenda: true, cliente: true, resumo: true, grupos: true, contemplacao: true, observacoes: true };
   try {
     return { ...defaults, ...JSON.parse(localStorage.getItem(FINANCIAL_STUDY_SECTIONS_KEY) || "{}") };
   } catch {
@@ -2343,14 +2344,100 @@ function financialStudyPortfolioSummary(items) {
   return `<section class="financial-study-summary-strip"><div><span>Seleção</span><strong>${items.length} grupo(s) · ${totals.quotas} cota(s)</strong></div><div><span>Crédito máximo combinado</span><strong>${formatMoney(totals.maxCredit)}</strong></div><div><span>Sem embutido</span><strong>${formatMoney(totals.withoutCredit)}</strong><small>Parcela inicial ${formatMoney(totals.withoutInstallment)}</small></div><div><span>Com embutido</span><strong>${formatMoney(totals.withCredit)}</strong><small>Parcela inicial ${formatMoney(totals.withInstallment)}</small></div></section>`;
 }
 
+function financialStudyComparable(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toUpperCase();
+}
+
+function financialStudyCalendarDate(event, month, metadata) {
+  if (event?.iso_date) {
+    const parsed = new Date(`${event.iso_date}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  const day = Number(event?.value);
+  const monthNumber = Number(month?.number);
+  const year = Number(metadata?.reference_year);
+  if (!day || !monthNumber || !year) return null;
+  const parsed = new Date(year, monthNumber - 1, day);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function financialStudyFormatCalendarDate(date) {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" })
+    .format(date)
+    .replace(" de ", " ")
+    .replace(" de ", " ");
+}
+
+async function financialStudyAssemblyData() {
+  if (assemblyState.loaded && assemblyState.data) return assemblyState.data;
+  const data = await apiGet("/mapa-assembleia");
+  assemblyState.data = data;
+  assemblyState.loaded = true;
+  return data;
+}
+
+function financialStudyAssemblyAgenda(data, administrators, generatedAt) {
+  const wanted = new Set(administrators.map(financialStudyComparable));
+  const start = new Date(generatedAt);
+  start.setHours(0, 0, 0, 0);
+  const cycles = [];
+  (data?.schedules || []).forEach((schedule) => {
+    if (!wanted.has(financialStudyComparable(schedule.administrator))) return;
+    (schedule.months || []).forEach((month) => {
+      const events = (month.events || []).map((event) => {
+        const date = financialStudyCalendarDate(event, month, data.metadata);
+        return date && date >= start ? { ...event, date } : null;
+      }).filter(Boolean).sort((a, b) => a.date - b.date);
+      if (!events.length) return;
+      cycles.push({
+        administrator: schedule.administrator,
+        faixa: schedule.faixa,
+        month: month.name,
+        events,
+        firstDate: events[0].date,
+      });
+    });
+  });
+  cycles.sort((a, b) => a.firstDate - b.firstDate || Number(a.faixa) - Number(b.faixa));
+  const rules = (data?.rules || []).filter((rule) => wanted.has(financialStudyComparable(rule.administrator)));
+  return { cycles, rules };
+}
+
+function financialStudyAssemblySection(data, administrators, generatedAt, loadError = "") {
+  const issued = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(generatedAt);
+  if (loadError) {
+    return `<div class="financial-study-agenda-state is-warning"><strong>Agenda operacional indisponível</strong><span>${escapeHtml(loadError)}</span></div>`;
+  }
+  const { cycles, rules } = financialStudyAssemblyAgenda(data, administrators, generatedAt);
+  if (!cycles.length) {
+    return `<div class="financial-study-agenda-state"><strong>Nenhuma data futura cadastrada</strong><span>Confirme o próximo ciclo diretamente com a administradora antes da contratação.</span></div>`;
+  }
+  const allEvents = cycles.flatMap((cycle) => cycle.events.map((event) => ({ ...event, faixa: cycle.faixa, month: cycle.month })));
+  const nextEvent = (id) => allEvents.filter((event) => event.id === id).sort((a, b) => a.date - b.date)[0];
+  const nextAdhesion = nextEvent("adesao");
+  const nextInstallment = nextEvent("vencimento_boleto_adesao") || nextEvent("vencimento_parcela");
+  const nextAssembly = nextEvent("assembleia");
+  const deadline = (label, event, fallback) => `<div><span>${label}</span><strong>${event ? financialStudyFormatCalendarDate(event.date) : fallback}</strong>${event ? `<small>Faixa ${escapeHtml(event.faixa)} · ${escapeHtml(event.month)}</small>` : ""}</div>`;
+  const cycleCard = (cycle) => `<article class="financial-study-agenda-cycle"><header><div><strong>${escapeHtml(cycle.month)} · Faixa ${escapeHtml(cycle.faixa)}</strong><span>${escapeHtml(cycle.administrator)}</span></div><small>${cycle.events.length} data(s) futura(s)</small></header><div>${cycle.events.map((event) => `<span><small>${escapeHtml(event.label)}</small><b>${financialStudyFormatCalendarDate(event.date)}</b></span>`).join("")}</div></article>`;
+  const primaryCycles = cycles.slice(0, 4);
+  const additionalCycles = cycles.slice(4);
+  const ruleCards = rules.map((rule) => `<article class="financial-study-agenda-rule"><header><strong>Regras operacionais · Faixa ${escapeHtml(rule.faixa)}</strong><span>${escapeHtml(rule.administrator)}</span></header><dl>${(rule.parameters || []).map((parameter) => `<div><dt>${escapeHtml(parameter.label)}</dt><dd>${escapeHtml(parameter.value)}</dd></div>`).join("")}</dl>${rule.guidance?.length ? `<ul>${rule.guidance.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}</article>`).join("");
+  const issuedCard = `<div><span>Estudo gerado em</span><strong>${escapeHtml(issued)}</strong><small>Horário local</small></div>`;
+  return `<div class="financial-study-deadlines">${issuedCard}${deadline("Assinar / aderir até", nextAdhesion, "Confirmar")}${deadline("Pagar a primeira parcela", nextInstallment, "Confirmar")}${deadline("Próxima assembleia", nextAssembly, "Confirmar")}</div><div class="financial-study-agenda-cycles">${primaryCycles.map(cycleCard).join("")}</div>${additionalCycles.length ? `<details class="financial-study-agenda-more"><summary>Ver mais ${additionalCycles.length} ciclo(s) futuro(s)</summary><div>${additionalCycles.map(cycleCard).join("")}</div></details>` : ""}${ruleCards ? `<details class="financial-study-agenda-more"><summary>Regras operacionais da administradora</summary><div class="financial-study-agenda-rules">${ruleCards}</div></details>` : ""}`;
+}
+
 function financialStudyProfileMatrix(items) {
   const profileIds = ["conservative", "moderate", "aggressive", "super_aggressive"];
   const labels = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super Agressivo" };
-  const rows = items.map((item) => {
+  return `<div class="financial-study-profile-list">${items.map((item) => {
     const groupId = String(item.grupo || item.grupo_id || "-");
     const scenarios = Object.fromEntries((item.cenarios || []).map((scenario) => [scenario.id, scenario]));
     const valueFor = (scenarioId, profileId) => (scenarios[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profileId);
-    return `<tr><th><strong>${escapeHtml(groupId)}</strong><small>${escapeHtml(item.administradora || "-")}</small></th>${profileIds.map((profileId) => {
+    return `<article class="financial-study-profile-group"><header><strong>Grupo ${escapeHtml(groupId)}</strong><span>${escapeHtml(item.administradora || "-")}</span></header><div>${profileIds.map((profileId) => {
       const without = valueFor("without_embedded", profileId);
       const withEmbedded = valueFor("with_embedded", profileId);
       const renderValue = (value, scenarioLabel) => {
@@ -2359,13 +2446,13 @@ function financialStudyProfileMatrix(items) {
         const result = value.atinge_perfil ? "Lance atinge o perfil" : `Faltam ${formatMoney(value.falta_para_ideal)}`;
         return `<span class="financial-study-profile-result ${state}"><small>${scenarioLabel}</small><b>${formatPercent(value.percentual_referencia)}</b><em>${result}</em></span>`;
       };
-      return `<td>${renderValue(without, "Sem embutido")}${renderValue(withEmbedded, "Com embutido")}</td>`;
-    }).join("")}</tr>`;
-  }).join("");
-  return `<div class="financial-study-table-wrap"><table class="financial-study-profile-matrix"><thead><tr><th>Grupo</th>${profileIds.map((id) => `<th>${labels[id]}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div>`;
+      return `<section><h4>${labels[profileId]}</h4>${renderValue(without, "Sem embutido")}${renderValue(withEmbedded, "Com embutido")}</section>`;
+    }).join("")}</div></article>`;
+  }).join("")}</div>`;
 }
 
-function renderFinancialStudyScreen() {
+async function renderFinancialStudyScreen() {
+  const renderToken = ++financialStudyRenderToken;
   const screen = document.getElementById("screen-estudo");
   if (!screen) return;
   const items = selectedMotor360Items();
@@ -2381,7 +2468,8 @@ function renderFinancialStudyScreen() {
   const holders = profile.titulares?.pessoas || profile.titulares?.titulares || [];
   const holderNames = Array.isArray(holders) ? holders.map((holder) => holder.nome).filter(Boolean) : [];
   const clientName = profile.nome || holderNames.join(", ") || "Cliente não informado";
-  const issueDate = new Intl.DateTimeFormat("pt-BR").format(new Date());
+  const generatedAt = new Date();
+  const issueDate = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(generatedAt);
   const auditId = investorState.audit?.metadata?.audit_id || "Estudo não versionado";
   const systemVersion = document.getElementById("systemVersionLabel")?.textContent?.trim() || "-";
   const highlighted = items[0];
@@ -2390,18 +2478,29 @@ function renderFinancialStudyScreen() {
   const optionalAssetMetric = profile.tipo_bem ? financialStudyMetric("Tipo de bem", profile.tipo_bem) : "";
   const executiveText = `Entre ${items.length} grupo(s) selecionado(s), o grupo ${highlightedGroup} aparece primeiro na ordem atual da análise. A classificação informativa registrada é ${highlightedStrategy}. A decisão final deve considerar os cenários, as condições comerciais e a validação do consultor.`;
   const sectionClass = (id) => preferences[id] ? "" : " d-none";
+  let assemblyData = null;
+  let assemblyError = "";
+  screen.setAttribute("aria-busy", "true");
+  try {
+    assemblyData = await financialStudyAssemblyData();
+  } catch (error) {
+    assemblyError = "Não foi possível consultar o Mapa de Assembleias neste momento.";
+  }
+  if (renderToken !== financialStudyRenderToken) return;
+  screen.removeAttribute("aria-busy");
   screen.innerHTML = `<div class="financial-study-page">
     <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Documento dinâmico criado com os dados disponíveis no perfil e nos grupos selecionados.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-primary" type="button" data-study-print>Imprimir / Salvar PDF</button></div></div>
-    <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados", contemplacao: "Perfis de contemplação", observacoes: "Observações" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
+    <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ agenda: "Agenda de contratação", cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados", contemplacao: "Perfis de contemplação", observacoes: "Observações" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
     <article class="financial-study-document">
       <header class="financial-study-cover"><div class="financial-study-cover-brand"><span class="financial-study-kicker">CREDICLASS</span><h2>Estudo Financeiro</h2><p>Comparativo dos grupos selecionados para apoiar uma decisão clara e auditável.</p></div><dl><div><dt>Cliente</dt><dd>${escapeHtml(clientName)}</dd></div><div><dt>Emissão</dt><dd>${issueDate}</dd></div><div><dt>Administradora</dt><dd>${escapeHtml(administrators.join(", ") || "Não informada")}</dd></div><div><dt>Identificador</dt><dd>${escapeHtml(auditId)}</dd></div></dl></header>
       <section class="financial-study-executive"><div><span>Objetivo do cliente</span><strong>${escapeHtml(profile.objetivo || "Objetivo não informado")}</strong></div><div><span>Opção em destaque</span><strong>Grupo ${escapeHtml(highlightedGroup)}</strong><small>${escapeHtml(highlightedStrategy)}</small></div><p>${escapeHtml(executiveText)}</p></section>
       ${financialStudyPortfolioSummary(items)}
-      <section class="financial-study-section${sectionClass("cliente")}" data-study-content="cliente"><div class="financial-study-section-heading"><span>01</span><div><h3>Cliente e necessidade</h3><p>Informações declaradas e registradas no Perfil do Cliente.</p></div></div><div class="financial-study-metrics">${financialStudyMetric("Cliente", clientName)}${financialStudyMetric("Tipo de contratação", financialStudyContractLabel(profile.tipo_contratacao))}${financialStudyMetric("Objetivo do consórcio", profile.objetivo || "Não informado")}${optionalAssetMetric}</div></section>
-      <section class="financial-study-section${sectionClass("resumo")}" data-study-content="resumo"><div class="financial-study-section-heading"><span>02</span><div><h3>Resumo financeiro</h3><p>Capacidade e parâmetros declarados pelo cliente.</p></div></div><div class="financial-study-metrics financial-study-metrics-compact">${financialStudyMetric("Crédito líquido desejado", formatMoney(profile.credito_desejado))}${financialStudyMetric("Parcela desejada", formatMoney(profile.parcela_desejada ?? profile.parcela_ideal))}${financialStudyMetric("Parcela máxima", formatMoney(profile.parcela_limite))}${financialStudyMetric("Renda total", formatMoney(profile.renda_total))}${financialStudyMetric("Recursos próprios", formatMoney(profile.lance_proprio))}${financialStudyMetric("FGTS", formatMoney(profile.fgts))}${financialStudyMetric("Grupos selecionados", items.length)}${financialStudyMetric("Total de cotas", totalQuotas)}</div></section>
-      <section class="financial-study-section${sectionClass("grupos")}" data-study-content="grupos"><div class="financial-study-section-heading"><span>03</span><div><h3>Comparativo dos grupos</h3><p>Crédito, parcela, saldo, prazo e custos reunidos em uma única visão.</p></div></div>${financialStudyComparisonTable(items)}<p class="financial-study-table-note">Taxas aparecem somente quando registradas na base. A ordem reproduz a seleção atual do Motor 360.</p></section>
-      <section class="financial-study-section${sectionClass("contemplacao")}" data-study-content="contemplacao"><div class="financial-study-section-heading"><span>04</span><div><h3>Perfis de contemplação</h3><p>Comparação histórica compacta por grupo e cenário; não representa garantia de contemplação.</p></div></div>${financialStudyProfileMatrix(items)}</section>
-      <section class="financial-study-section${sectionClass("observacoes")}" data-study-content="observacoes"><div class="financial-study-section-heading"><span>05</span><div><h3>Conclusão e observações</h3><p>Leitura executiva para a continuidade do atendimento.</p></div></div><div class="financial-study-conclusion"><strong>Próximo passo recomendado</strong><p>Validar com o cliente a quantidade de cotas e o cenário preferido do grupo em destaque; depois, confirmar taxas, fundo de reserva, disponibilidade da carta e regras comerciais diretamente com a administradora.</p></div><div class="financial-study-disclaimer"><p>Este estudo utiliza exclusivamente as informações registradas pelo cliente e os dados disponíveis dos grupos na data da análise.</p><p>Percentuais, projeções e classificações possuem caráter informativo e histórico. Não constituem promessa ou garantia de contemplação.</p><p>Condições comerciais, taxas e datas operacionais não estruturadas no sistema devem ser confirmadas antes da contratação.</p></div></section>
+      <section class="financial-study-section${sectionClass("agenda")}" data-study-content="agenda"><div class="financial-study-section-heading"><span>01</span><div><h3>Agenda de contratação e assembleias</h3><p>Datas futuras da administradora a partir da emissão deste estudo.</p></div></div>${financialStudyAssemblySection(assemblyData, administrators, generatedAt, assemblyError)}</section>
+      <section class="financial-study-section${sectionClass("cliente")}" data-study-content="cliente"><div class="financial-study-section-heading"><span>02</span><div><h3>Cliente e necessidade</h3><p>Informações declaradas e registradas no Perfil do Cliente.</p></div></div><div class="financial-study-metrics">${financialStudyMetric("Cliente", clientName)}${financialStudyMetric("Tipo de contratação", financialStudyContractLabel(profile.tipo_contratacao))}${financialStudyMetric("Objetivo do consórcio", profile.objetivo || "Não informado")}${optionalAssetMetric}</div></section>
+      <section class="financial-study-section${sectionClass("resumo")}" data-study-content="resumo"><div class="financial-study-section-heading"><span>03</span><div><h3>Resumo financeiro</h3><p>Capacidade e parâmetros declarados pelo cliente.</p></div></div><div class="financial-study-metrics financial-study-metrics-compact">${financialStudyMetric("Crédito líquido desejado", formatMoney(profile.credito_desejado))}${financialStudyMetric("Parcela desejada", formatMoney(profile.parcela_desejada ?? profile.parcela_ideal))}${financialStudyMetric("Parcela máxima", formatMoney(profile.parcela_limite))}${financialStudyMetric("Renda total", formatMoney(profile.renda_total))}${financialStudyMetric("Recursos próprios", formatMoney(profile.lance_proprio))}${financialStudyMetric("FGTS", formatMoney(profile.fgts))}${financialStudyMetric("Grupos selecionados", items.length)}${financialStudyMetric("Total de cotas", totalQuotas)}</div></section>
+      <section class="financial-study-section${sectionClass("grupos")}" data-study-content="grupos"><div class="financial-study-section-heading"><span>04</span><div><h3>Comparativo dos grupos</h3><p>Crédito, parcela, saldo, prazo e custos reunidos em uma única visão.</p></div></div>${financialStudyComparisonTable(items)}<p class="financial-study-table-note">Taxas aparecem somente quando registradas na base. A ordem reproduz a seleção atual do Motor 360.</p></section>
+      <section class="financial-study-section${sectionClass("contemplacao")}" data-study-content="contemplacao"><div class="financial-study-section-heading"><span>05</span><div><h3>Perfis de contemplação</h3><p>Comparação histórica compacta por grupo e cenário; não representa garantia de contemplação.</p></div></div>${financialStudyProfileMatrix(items)}</section>
+      <section class="financial-study-section${sectionClass("observacoes")}" data-study-content="observacoes"><div class="financial-study-section-heading"><span>06</span><div><h3>Conclusão e observações</h3><p>Leitura executiva para a continuidade do atendimento.</p></div></div><div class="financial-study-conclusion"><strong>Próximo passo recomendado</strong><p>Validar com o cliente a quantidade de cotas e o cenário preferido do grupo em destaque; depois, confirmar taxas, fundo de reserva, disponibilidade da carta e regras comerciais diretamente com a administradora.</p></div><div class="financial-study-disclaimer"><p>Este estudo utiliza exclusivamente as informações registradas pelo cliente e os dados disponíveis dos grupos na data da análise.</p><p>Percentuais, projeções e classificações possuem caráter informativo e histórico. Não constituem promessa ou garantia de contemplação.</p><p>As datas operacionais refletem o calendário cadastrado e devem ser confirmadas com a administradora antes da contratação.</p></div></section>
       <footer class="financial-study-footer"><span>Crediclass · Estudo Financeiro</span><span>${escapeHtml(auditId)} · versão ${escapeHtml(systemVersion)}</span></footer>
     </article>
   </div>`;

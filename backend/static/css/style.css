@@ -4355,8 +4355,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.82rem;
 }
 
-.financial-study-profile-group section span,
-.financial-study-profile-group section b {
+.financial-study-profile-group section > span {
   display: block;
   overflow-wrap: anywhere;
 }
@@ -4408,16 +4407,205 @@ body[data-theme="escuro"] .btn-outline-secondary {
   background: var(--surface-soft);
 }
 
-.financial-study-profile-group section span {
+.financial-study-profile-group section > span + span {
   margin-top: 6px;
-  color: var(--muted);
-  font-size: 0.68rem;
 }
 
-.financial-study-profile-group section b {
+.financial-study-deadlines {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.financial-study-deadlines > div {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.financial-study-deadlines span,
+.financial-study-deadlines strong,
+.financial-study-deadlines small {
+  display: block;
+}
+
+.financial-study-deadlines span,
+.financial-study-deadlines small {
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.financial-study-deadlines strong {
+  margin: 3px 0;
+  color: var(--brand-navy);
+  font-size: 0.82rem;
+}
+
+.financial-study-agenda-state {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.financial-study-agenda-state.is-warning {
+  border-color: color-mix(in srgb, var(--primary) 42%, var(--border));
+  background: var(--primary-soft);
+}
+
+.financial-study-agenda-state span {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.financial-study-agenda-cycles,
+.financial-study-agenda-more > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.financial-study-agenda-cycle {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: #fff;
+}
+
+.financial-study-agenda-cycle > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface-soft);
+}
+
+.financial-study-agenda-cycle > header div,
+.financial-study-agenda-cycle > header strong,
+.financial-study-agenda-cycle > header span {
+  min-width: 0;
+}
+
+.financial-study-agenda-cycle > header strong,
+.financial-study-agenda-cycle > header span,
+.financial-study-agenda-cycle > header small {
+  display: block;
+}
+
+.financial-study-agenda-cycle > header strong {
+  color: var(--brand-navy);
+  font-size: 0.76rem;
+}
+
+.financial-study-agenda-cycle > header span,
+.financial-study-agenda-cycle > header small {
+  color: var(--muted);
+  font-size: 0.62rem;
+}
+
+.financial-study-agenda-cycle > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.financial-study-agenda-cycle > div > span {
+  min-width: 0;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+}
+
+.financial-study-agenda-cycle > div > span:nth-child(3n) {
+  border-right: 0;
+}
+
+.financial-study-agenda-cycle > div small,
+.financial-study-agenda-cycle > div b {
+  display: block;
+}
+
+.financial-study-agenda-cycle > div small {
+  color: var(--muted);
+  font-size: 0.6rem;
+  line-height: 1.25;
+}
+
+.financial-study-agenda-cycle > div b {
+  margin-top: 3px;
+  color: var(--text);
+  font-size: 0.7rem;
+}
+
+.financial-study-agenda-more {
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.financial-study-agenda-more > summary {
+  padding: 10px 0 8px;
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.financial-study-agenda-rules {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.financial-study-agenda-rule {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+}
+
+.financial-study-agenda-rule > header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--brand-navy);
+  font-size: 0.7rem;
+}
+
+.financial-study-agenda-rule dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px 10px;
+  margin: 8px 0 0;
+}
+
+.financial-study-agenda-rule dl div {
+  min-width: 0;
+}
+
+.financial-study-agenda-rule dt,
+.financial-study-agenda-rule dd {
+  margin: 0;
+  font-size: 0.64rem;
+}
+
+.financial-study-agenda-rule dt {
+  color: var(--muted);
+}
+
+.financial-study-agenda-rule dd {
   margin-top: 2px;
   color: var(--text);
-  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.financial-study-agenda-rule ul {
+  margin: 8px 0 0;
+  padding-left: 16px;
+  color: var(--muted);
+  font-size: 0.64rem;
 }
 
 .financial-study-disclaimer {
@@ -4486,6 +4674,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .financial-study-metrics,
+  .financial-study-deadlines,
   .financial-study-profile-group > div,
   .financial-study-summary-strip,
   .financial-study-option-facts {
@@ -4504,6 +4693,18 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-profile-group section:nth-child(-n + 2) {
     border-bottom: 1px solid var(--border);
   }
+
+  .financial-study-agenda-cycle > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .financial-study-agenda-cycle > div > span:nth-child(3n) {
+    border-right: 1px solid var(--border);
+  }
+
+  .financial-study-agenda-cycle > div > span:nth-child(2n) {
+    border-right: 0;
+  }
 }
 
 @media (max-width: 560px) {
@@ -4513,6 +4714,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .financial-study-metrics,
+  .financial-study-deadlines,
+  .financial-study-agenda-cycles,
+  .financial-study-agenda-more > div,
+  .financial-study-agenda-rules,
   .financial-study-profile-group > div,
   .financial-study-summary-strip,
   .financial-study-option-facts,
@@ -4542,6 +4747,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
   .financial-study-profile-group section:last-child {
     border-bottom: 0;
+  }
+
+  .financial-study-agenda-cycle > div,
+  .financial-study-agenda-rule dl {
+    grid-template-columns: 1fr;
+  }
+
+  .financial-study-agenda-cycle > div > span {
+    border-right: 0 !important;
   }
 }
 
@@ -4629,6 +4843,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .financial-study-profile-group {
+    break-inside: avoid-page;
+  }
+
+  .financial-study-agenda-cycle,
+  .financial-study-agenda-rule,
+  .financial-study-deadlines {
     break-inside: avoid-page;
   }
 
