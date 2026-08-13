@@ -77,6 +77,10 @@
               <span class="nav-icon">MG</span>
               <span>Mapa de Grupos</span>
             </button>
+            <button class="nav-item" type="button" data-screen="mapa-assembleia">
+              <span class="nav-icon">MA</span>
+              <span>Mapa Assembleia</span>
+            </button>
             <button class="nav-item" type="button" data-screen="configuracoes">
               <span class="nav-icon">CO</span>
               <span>Configurações</span>
@@ -256,6 +260,58 @@
                 <button id="nextPageBtn" class="btn btn-outline-secondary btn-sm" type="button">Proxima</button>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section id="screen-mapa-assembleia" class="screen-panel">
+          <div class="assembly-overview">
+            <article class="assembly-overview-copy">
+              <span class="assembly-eyebrow">Calendário operacional</span>
+              <h2>Assembleias, ofertas e vencimentos</h2>
+              <p>Consulte os marcos mensais e as regras de cada administradora sem navegar pela planilha.</p>
+            </article>
+            <div class="assembly-overview-stats" aria-label="Resumo do calendário">
+              <span><small>Calendários</small><strong id="assemblyScheduleCount">-</strong></span>
+              <span><small>Regras</small><strong id="assemblyRuleCount">-</strong></span>
+              <span><small>Referência</small><strong>2026/27</strong></span>
+            </div>
+          </div>
+
+          <div class="content-card assembly-filter-card">
+            <div class="assembly-filter-grid">
+              <label><span>Administradora</span><select id="assemblyAdministratorFilter" class="form-select"><option value="">Todas</option></select></label>
+              <label><span>Faixa</span><select id="assemblyRangeFilter" class="form-select"><option value="">Todas</option></select></label>
+              <label><span>Mês</span><select id="assemblyMonthFilter" class="form-select"></select></label>
+              <button id="assemblyClearFilters" class="btn btn-outline-secondary" type="button">Limpar filtros</button>
+            </div>
+          </div>
+
+          <div id="assemblyLoading" class="content-card assembly-state">Carregando calendário...</div>
+          <div id="assemblyError" class="content-card assembly-state assembly-state-error d-none">Não foi possível carregar o calendário.</div>
+          <div id="assemblyContent" class="d-none">
+            <div class="content-card assembly-calendar-card">
+              <div class="table-toolbar">
+                <div><h2 id="assemblyMonthTitle">Calendário</h2><p id="assemblyCalendarSubtitle"></p></div>
+                <span id="assemblyDateRule" class="assembly-year-note"></span>
+              </div>
+              <div class="table-responsive">
+                <table class="table assembly-table">
+                  <thead><tr><th>Administradora</th><th>Faixa</th><th>Venc. parcela</th><th>Adesão</th><th>Venc. boleto adesão</th><th>Oferta</th><th>Assembleia</th><th>Pagamento lance</th><th>2ª chamada</th></tr></thead>
+                  <tbody id="assemblyCalendarBody"></tbody>
+                </table>
+              </div>
+              <div id="assemblyEmpty" class="assembly-state d-none">Nenhum calendário corresponde aos filtros.</div>
+            </div>
+
+            <div class="content-card">
+              <div class="table-toolbar"><div><h2>Regras operacionais</h2><p>Parâmetros registrados na aba REGRAS da planilha.</p></div></div>
+              <div id="assemblyRulesGrid" class="assembly-rules-grid"></div>
+            </div>
+
+            <details class="content-card assembly-notes">
+              <summary>Observações complementares da planilha <span id="assemblyObservationCount"></span></summary>
+              <div id="assemblyObservations" class="assembly-observations-grid"></div>
+            </details>
           </div>
         </section>
 
@@ -1179,6 +1235,6 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=20260604-15"></script>
-    <script src="/static/js/app.js?v=4.0.28"></script>
+    <script src="/static/js/app.js?v=4.0.29"></script>
   </body>
 </html>

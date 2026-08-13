@@ -5,6 +5,12 @@
     subtitle: "Lista e manutenção da base de grupos",
     action: "Novo Grupo",
   },
+  "mapa-assembleia": {
+    letter: "A) MAPA ASSEMBLEIA",
+    title: "Mapa Assembleia",
+    subtitle: "Calendário e regras operacionais das assembleias",
+    action: "",
+  },
   perfil: {
     letter: "B) PERFIL DO CLIENTE",
     title: "Perfil do Cliente",
@@ -59,6 +65,8 @@ const mapState = {
   lanceSortOrder: "",
   lastLoadAt: null,
 };
+
+const assemblyState = { data: null, loaded: false };
 
 const historyState = {
   items: [],
@@ -353,13 +361,14 @@ function activateScreen(screenName) {
   document.getElementById("screenSubtitle").textContent = meta.subtitle;
   const primaryAction = document.getElementById("primaryAction");
   primaryAction.textContent = meta.action;
-  primaryAction.classList.toggle("d-none", ["motor360", "estudo"].includes(screenName));
+  primaryAction.classList.toggle("d-none", ["motor360", "estudo", "mapa-assembleia"].includes(screenName));
   document.getElementById("reloadMapDataBtn").classList.toggle("d-none", screenName !== "mapa");
 
   if (screenName === "historico") {
     loadHistoryStudies();
   }
   if (screenName === "motor360") loadInvestorAnalysis();
+  if (screenName === "mapa-assembleia") loadAssemblyMap();
   if (screenName === "grupos-selecionados") renderSelectedGroupsScreen();
   if (screenName === "estudo") renderFinancialStudyScreen();
   if (screenName === "configuracoes") {
@@ -4338,6 +4347,83 @@ async function loadHealth() {
   document.getElementById("systemVersionLabel").textContent = health.version;
 }
 
+function assemblyFilters() {
+  return {
+    administrator: document.getElementById("assemblyAdministratorFilter")?.value || "",
+    range: document.getElementById("assemblyRangeFilter")?.value || "",
+    month: Number(document.getElementById("assemblyMonthFilter")?.value || 1),
+  };
+}
+
+function assemblyMatches(item, filters) {
+  return (!filters.administrator || item.administrator === filters.administrator)
+    && (!filters.range || String(item.faixa) === filters.range);
+}
+
+function renderAssemblyMap() {
+  const data = assemblyState.data;
+  if (!data) return;
+  const filters = assemblyFilters();
+  const monthName = data.schedules[0]?.months.find((month) => month.number === filters.month)?.name || "Mês";
+  const schedules = data.schedules.filter((item) => assemblyMatches(item, filters));
+  const rules = data.rules.filter((item) => assemblyMatches(item, filters));
+
+  document.getElementById("assemblyMonthTitle").textContent = `${monthName} de 2026`;
+  document.getElementById("assemblyCalendarSubtitle").textContent = `${schedules.length} calendário(s) exibido(s)`;
+  document.getElementById("assemblyDateRule").textContent = filters.month === 12 ? "Próximo ciclo: janeiro de 2027" : "Dias do mês de referência";
+  document.getElementById("assemblyEmpty").classList.toggle("d-none", schedules.length > 0);
+
+  document.getElementById("assemblyCalendarBody").innerHTML = schedules.map((item) => {
+    const month = item.months.find((entry) => entry.number === filters.month);
+    const values = (month?.events || []).map((event) => {
+      const className = event.iso_date?.startsWith("2027-") ? "assembly-next-cycle" : "";
+      const suffix = event.iso_date?.startsWith("2027-") ? "<small>2027</small>" : "";
+      return `<td><span class="assembly-date ${className}" title="Célula ${escapeHtml(event.source_cell)}">${escapeHtml(event.display)}${suffix}</span></td>`;
+    }).join("");
+    return `<tr><th scope="row">${escapeHtml(item.administrator)}</th><td>${escapeHtml(item.faixa)}</td>${values}</tr>`;
+  }).join("");
+
+  document.getElementById("assemblyRulesGrid").innerHTML = rules.length ? rules.map((rule) => `
+    <article class="assembly-rule-card">
+      <header><div><strong>${escapeHtml(rule.administrator)}</strong><small>Faixa ${escapeHtml(rule.faixa)}</small></div><span>Regra</span></header>
+      <dl>${rule.parameters.map((parameter) => `<div><dt>${escapeHtml(parameter.label)}</dt><dd>${escapeHtml(parameter.value)}</dd></div>`).join("")}</dl>
+    </article>
+  `).join("") : `<p class="assembly-state">Nenhuma regra corresponde aos filtros.</p>`;
+}
+
+function populateAssemblyFilters(data) {
+  const administrators = [...new Set([...data.schedules, ...data.rules].map((item) => item.administrator).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
+  const ranges = [...new Set([...data.schedules, ...data.rules].map((item) => String(item.faixa)).filter(Boolean))].sort((a, b) => Number(a) - Number(b));
+  document.getElementById("assemblyAdministratorFilter").innerHTML = `<option value="">Todas</option>${administrators.map((value) => `<option>${escapeHtml(value)}</option>`).join("")}`;
+  document.getElementById("assemblyRangeFilter").innerHTML = `<option value="">Todas</option>${ranges.map((value) => `<option>${escapeHtml(value)}</option>`).join("")}`;
+  document.getElementById("assemblyMonthFilter").innerHTML = data.schedules[0].months.map((month) => `<option value="${month.number}">${escapeHtml(month.name)}</option>`).join("");
+}
+
+async function loadAssemblyMap() {
+  if (assemblyState.loaded) {
+    renderAssemblyMap();
+    return;
+  }
+  document.getElementById("assemblyLoading").classList.remove("d-none");
+  document.getElementById("assemblyError").classList.add("d-none");
+  try {
+    const data = await apiGet("/mapa-assembleia");
+    assemblyState.data = data;
+    assemblyState.loaded = true;
+    populateAssemblyFilters(data);
+    document.getElementById("assemblyScheduleCount").textContent = data.schedules.length;
+    document.getElementById("assemblyRuleCount").textContent = data.rules.length;
+    document.getElementById("assemblyObservationCount").textContent = `(${data.observations.length})`;
+    document.getElementById("assemblyObservations").innerHTML = data.observations.map((item) => `<article><span>${escapeHtml(item.source_cell)}</span><p>${escapeHtml(item.text)}</p></article>`).join("");
+    document.getElementById("assemblyContent").classList.remove("d-none");
+    renderAssemblyMap();
+  } catch (error) {
+    document.getElementById("assemblyError").classList.remove("d-none");
+  } finally {
+    document.getElementById("assemblyLoading").classList.add("d-none");
+  }
+}
+
 document.querySelectorAll(".nav-item").forEach((item) => {
   item.addEventListener("click", () => activateScreen(item.dataset.screen));
 });
@@ -4369,6 +4455,15 @@ document.getElementById("primaryAction").addEventListener("click", () => {
   }
 });
 document.getElementById("reloadMapDataBtn").addEventListener("click", reloadMapData);
+document.getElementById("assemblyAdministratorFilter")?.addEventListener("change", renderAssemblyMap);
+document.getElementById("assemblyRangeFilter")?.addEventListener("change", renderAssemblyMap);
+document.getElementById("assemblyMonthFilter")?.addEventListener("change", renderAssemblyMap);
+document.getElementById("assemblyClearFilters")?.addEventListener("click", () => {
+  document.getElementById("assemblyAdministratorFilter").value = "";
+  document.getElementById("assemblyRangeFilter").value = "";
+  document.getElementById("assemblyMonthFilter").value = "1";
+  renderAssemblyMap();
+});
 document.getElementById("openDefasagemBtn")?.addEventListener("click", openDefasagemModal);
 document.getElementById("defasagemFilter").addEventListener("change", renderDefasagemRows);
 document.getElementById("defasagemTableBody").addEventListener("change", (event) => {

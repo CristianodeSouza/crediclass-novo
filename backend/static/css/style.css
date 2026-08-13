@@ -503,6 +503,60 @@ body[data-theme="escuro"] .btn-outline-secondary {
   box-shadow: 0 12px 28px rgba(27, 41, 50, 0.05);
 }
 
+/* Mapa Assembleia */
+.assembly-overview {
+  align-items: center;
+  background: var(--brand-navy);
+  border-radius: var(--radius-md);
+  color: #fff;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  padding: 18px 20px;
+}
+.assembly-overview-copy h2 { color: #fff; font-size: 1.3rem; margin: 2px 0 4px; }
+.assembly-overview-copy p { color: #d6e0e4; margin: 0; }
+.assembly-eyebrow { color: var(--brand-gold-light); font-size: .72rem; font-weight: 800; text-transform: uppercase; }
+.assembly-overview-stats { display: flex; gap: 8px; }
+.assembly-overview-stats span { border-left: 1px solid #5c717a; display: grid; min-width: 92px; padding: 2px 14px; }
+.assembly-overview-stats small { color: #cbd7dc; font-size: .68rem; }
+.assembly-overview-stats strong { font-size: 1.1rem; }
+.assembly-filter-card { padding: 12px 14px; }
+.assembly-filter-grid { align-items: end; display: grid; gap: 10px; grid-template-columns: minmax(180px, 1.4fr) minmax(100px, .6fr) minmax(160px, 1fr) auto; }
+.assembly-filter-grid label { display: grid; font-size: .76rem; font-weight: 800; gap: 5px; }
+.assembly-state { color: var(--muted); padding: 24px; text-align: center; }
+.assembly-state-error { color: var(--danger); }
+.assembly-calendar-card { padding-bottom: 12px; }
+.assembly-year-note { background: var(--primary-soft); border-radius: 999px; color: var(--primary-hover); font-size: .72rem; font-weight: 800; padding: 7px 10px; }
+.assembly-table { font-size: .76rem; margin-bottom: 0; min-width: 920px; text-align: center; }
+.assembly-table th:first-child { min-width: 135px; text-align: left; }
+.assembly-table td, .assembly-table th { padding: 9px 7px; vertical-align: middle; }
+.assembly-date { align-items: center; display: inline-flex; font-weight: 800; gap: 4px; justify-content: center; min-width: 34px; }
+.assembly-date small { background: var(--primary-soft); border-radius: 4px; color: var(--primary-hover); font-size: .58rem; padding: 2px 3px; }
+.assembly-next-cycle { color: var(--primary-hover); }
+.assembly-rules-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.assembly-rule-card { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.assembly-rule-card header { align-items: center; background: var(--surface-soft); display: flex; justify-content: space-between; padding: 10px 12px; }
+.assembly-rule-card header div { display: grid; }
+.assembly-rule-card header small { color: var(--muted); }
+.assembly-rule-card header > span { color: var(--primary); font-size: .68rem; font-weight: 800; text-transform: uppercase; }
+.assembly-rule-card dl { margin: 0; }
+.assembly-rule-card dl div { display: grid; gap: 10px; grid-template-columns: 150px 1fr; padding: 7px 12px; }
+.assembly-rule-card dl div + div { border-top: 1px solid var(--border); }
+.assembly-rule-card dt { color: var(--muted); font-size: .7rem; }
+.assembly-rule-card dd { font-size: .76rem; margin: 0; }
+.assembly-notes { padding: 0; }
+.assembly-notes summary { cursor: pointer; font-weight: 800; padding: 14px 16px; }
+.assembly-observations-grid { border-top: 1px solid var(--border); display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 14px; }
+.assembly-observations-grid article { background: var(--surface-soft); border-radius: var(--radius-sm); padding: 10px 12px; }
+.assembly-observations-grid span { color: var(--primary); font-size: .65rem; font-weight: 800; }
+.assembly-observations-grid p { font-size: .76rem; margin: 4px 0 0; }
+@media (max-width: 900px) {
+  .assembly-overview { align-items: stretch; flex-direction: column; gap: 14px; }
+  .assembly-overview-stats { overflow-x: auto; }
+  .assembly-filter-grid, .assembly-rules-grid, .assembly-observations-grid { grid-template-columns: 1fr; }
+}
+
 .summary-card {
   display: grid;
   gap: 4px;

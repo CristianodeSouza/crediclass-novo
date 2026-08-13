@@ -2,6 +2,7 @@ from pathlib import Path
 import base64
 import hashlib
 import hmac
+import json
 import logging
 import math
 import os
@@ -27,6 +28,7 @@ from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 FILES_DIR = BASE_DIR / "generated_files"
+DATA_DIR = BASE_DIR / "data"
 FILES_DIR.mkdir(exist_ok=True)
 logger = logging.getLogger("crediclass.api")
 
@@ -202,6 +204,15 @@ def grupos(
         "tipos_bem": tipos_bem,
         "items": items[start:end],
     }
+
+
+@app.get("/api/mapa-assembleia")
+def mapa_assembleia():
+    """Retorna o calendario importado e versionado, sem consultar fonte externa."""
+    source = DATA_DIR / "assembly_calendar_2026.json"
+    if not source.exists():
+        return JSONResponse(status_code=503, content={"success": False, "error": "Calendario de assembleias indisponivel."})
+    return json.loads(source.read_text(encoding="utf-8"))
 
 
 @app.get("/api/grupos/exportar-planilha")
