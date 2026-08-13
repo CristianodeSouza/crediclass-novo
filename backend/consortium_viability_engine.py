@@ -157,6 +157,26 @@ def _parcela_inicial_por_cenario(scenario: dict[str, Any]) -> float | None:
     return money(saldo / Decimal(str(int(prazo))))
 
 
+def _parcela_pos_contemplacao_por_cenario(scenario: dict[str, Any]) -> float | None:
+    """Calculate the installment after contemplation for one financial scenario."""
+    saldo = parse_decimal(scenario.get("saldo_devedor"))
+    parcela_inicial = parse_decimal(scenario.get("parcela_inicial"))
+    lance_total = parse_decimal(scenario.get("lance_total_cenario"))
+    prazo = scenario.get("prazo_remanescente")
+    if (
+        saldo is None
+        or parcela_inicial is None
+        or lance_total is None
+        or prazo is None
+        or int(prazo) <= 1
+    ):
+        return None
+    return money(
+        (saldo - parcela_inicial - lance_total)
+        / Decimal(str(int(prazo) - 1))
+    )
+
+
 def _audit_field(name: str, technical: str, value: Any, source: str, transformation: str) -> dict[str, Any]:
     return {
         "field_name": name,
@@ -301,6 +321,8 @@ def analyze_client_consortium_viability(
             scenario["lance_total_cenario"] = money(total_bid)
             scenario["percentual_lance_cliente"] = float(client_bid_percent) if client_bid_percent is not None else None
             scenario["percentual_lance_efetivo"] = float(total_bid_percent) if total_bid_percent is not None else None
+            scenario["parcela_pos_contemplacao"] = _parcela_pos_contemplacao_por_cenario(scenario)
+            scenario["parcela_pos_contemplacao_formula"] = "(saldo devedor - parcela inicial - lance total ofertado) / (prazo remanescente - 1)"
             profile_rows = []
             for profile_id, label, strategy_key in CONTEMPLATION_PROFILE_TARGETS:
                 threshold = ranges.get(strategy_key)
@@ -446,6 +468,7 @@ def analyze_client_consortium_viability(
                     "cenarios": composition_scenarios,
                     "capacidade_contemplacoes": contemplation_capacities,
                     "capacidade_contemplacoes_selecionada": contemplation_capacities.get(preference or ""),
+                    "historico_12_meses": list(group.get("historico_12_meses") or []),
                     "best_contemplation_strategy": _reference_name(preference),
                     "selection_stage": "composition",
                     "composition_candidate": True,
@@ -508,6 +531,7 @@ def analyze_client_consortium_viability(
                 "best_contemplation_strategy": _reference_name(preference if preference in credit_distinct_matches else (credit_distinct_matches[0] if credit_distinct_matches else None)),
                 "capacidade_contemplacoes": contemplation_capacities,
                 "capacidade_contemplacoes_selecionada": contemplation_capacities.get(preference if preference in credit_distinct_matches else (credit_distinct_matches[0] if credit_distinct_matches else "")),
+                "historico_12_meses": list(group.get("historico_12_meses") or []),
                 "destaque_preferencia": preference in credit_distinct_matches,
                 "source_values": source_values,
                 "alerts": sorted({reason for scenario in credit_scenarios for reason in scenario["eligibility_reasons"] if reason != "credito_fora_da_faixa"}),
@@ -574,6 +598,7 @@ def analyze_client_consortium_viability(
             "best_contemplation_strategy": _reference_name(best_strategy),
             "capacidade_contemplacoes": contemplation_capacities,
             "capacidade_contemplacoes_selecionada": contemplation_capacities.get(best_strategy or ""),
+            "historico_12_meses": list(group.get("historico_12_meses") or []),
             "contemplation_classification": contemplation_classification,
             "destaque_preferencia": preference in distinct_matches,
             "source_values": source_values,
@@ -692,6 +717,7 @@ def analyze_client_consortium_viability(
             {"id": "saldo", "name": "Saldo devedor", "expression": "credito + taxa + fundo", "result": "calculado por cenario"},
             {"id": "parcela_inicial_sem_embutido", "name": "Parcela inicial sem lance embutido", "expression": "saldo devedor sem lance embutido / prazo remanescente (coluna F)", "result": "calculado por grupo"},
             {"id": "parcela_inicial_com_embutido", "name": "Parcela inicial com lance embutido", "expression": "saldo devedor com lance embutido / prazo remanescente (coluna F)", "result": "calculado por grupo"},
+            {"id": "parcela_pos_contemplacao", "name": "Parcela pós-contemplação por cenário", "expression": "(saldo devedor - parcela inicial - lance total ofertado) / (prazo remanescente - 1)", "result": "calculado por grupo e cenário"},
             {"id": "lance_cliente", "name": "Lance ofertado pelo cliente", "expression": "RP + FGTS", "result": money(own + fgts)},
             {"id": "lance_cenario", "name": "Lance financeiro do cenario", "expression": "RP + FGTS + lance embutido quando aplicavel", "result": "calculado por cenario"},
             {"id": "prazo", "name": "Prazo", "expression": "ceil(saldo ou saldo apos lance / parcela)", "result": "calculado por cenario"},

@@ -66,6 +66,7 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(item["cotas_maximas"], 50)
         self.assertEqual(item["cenarios"][0]["credito_liquido_projetado"], 300000)
         self.assertTrue(item["capacidade_contemplacoes"])
+        self.assertEqual(item["historico_12_meses"], history)
 
     def test_expoe_media_maxima_de_contemplacoes_para_controlar_cotas(self):
         history = [
@@ -82,6 +83,7 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(capacity["janela_meses"], 3)
         self.assertEqual(capacity["media_contemplacoes"], 3.0)
         self.assertEqual(capacity["limite_cotas"], 3)
+        self.assertEqual(result["items"][0]["historico_12_meses"], history)
 
     def test_official_scenarios_preserve_credit_and_do_not_share_values(self):
         result = analyze_client_consortium_viability(payload(), [group()])
@@ -97,6 +99,11 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(without["lance_cliente_total"], 150000.0)
         self.assertAlmostEqual(without["percentual_lance_cliente"], 150000 / 950000, places=6)
         self.assertEqual(without["saldo_apos_lance"], 980500.0)
+        self.assertEqual(without["parcela_pos_contemplacao"], 3266.66)
+        self.assertEqual(
+            without["parcela_pos_contemplacao_formula"],
+            "(saldo devedor - parcela inicial - lance total ofertado) / (prazo remanescente - 1)",
+        )
         self.assertEqual(without["prazo_inicial_desejada_meses"], 174)
         self.assertEqual(without["prazo_apos_lance_limite_renda_meses"], 66)
         self.assertTrue(without["liquidez_preservada"])
@@ -110,6 +117,7 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(embedded["lance_cliente_total"], 150000.0)
         self.assertAlmostEqual(embedded["percentual_lance_cliente"], 150000 / 1357142.86, places=6)
         self.assertEqual(embedded["saldo_apos_lance"], 1057857.14)
+        self.assertEqual(embedded["parcela_pos_contemplacao"], 3519.98)
         self.assertEqual(embedded["prazo_apos_lance_limite_renda_meses"], 71)
         self.assertTrue(embedded["liquidez_preservada"])
         item = result["items"][0]

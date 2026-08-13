@@ -548,7 +548,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .assembly-administrator, .assembly-rule-card strong, .assembly-rule-card dt { align-items: center; display: inline-flex; gap: 6px; }
 .assembly-table thead th .assembly-tooltip { margin-left: 5px; }
 .assembly-tooltip { display: inline-flex; position: relative; vertical-align: middle; }
-.assembly-tooltip-trigger { align-items: center; background: var(--primary-soft); border: 1px solid rgba(235, 112, 22, .28); border-radius: 50%; color: var(--primary); cursor: help; display: inline-flex; font-size: .62rem; font-style: normal; font-weight: 800; height: 17px; justify-content: center; line-height: 1; width: 17px; }
+.assembly-tooltip-trigger { align-items: center; background: var(--primary-soft); border: 1px solid rgba(235, 112, 22, .28); border-radius: 50%; color: var(--primary); cursor: help; display: inline-flex; font-size: .42rem; font-style: normal; font-weight: 800; height: 9px; justify-content: center; line-height: 1; width: 9px; }
 .assembly-tooltip-panel { background: var(--sidebar); border: 1px solid rgba(255, 255, 255, .12); border-radius: var(--radius-sm); box-shadow: 0 12px 28px rgba(19, 34, 41, .22); color: #fff; display: none; font-size: .72rem; font-weight: 400; left: 50%; line-height: 1.45; padding: 11px 12px; position: absolute; text-align: left; text-transform: none; top: calc(100% + 7px); transform: translateX(-50%); width: min(330px, 76vw); z-index: 30; }
 .assembly-tooltip-panel::before { border-bottom: 6px solid var(--sidebar); border-left: 6px solid transparent; border-right: 6px solid transparent; content: ""; left: 50%; position: absolute; top: -6px; transform: translateX(-50%); }
 .assembly-tooltip-panel strong { color: #fff; display: block; font-size: .75rem; margin-bottom: 6px; }
@@ -1267,6 +1267,20 @@ body[data-theme="escuro"] .btn-outline-secondary {
   color: var(--muted);
   font-size: 0.72rem;
 }
+
+.history-hover-capacity {
+  background: var(--primary-soft);
+  border: 1px solid rgba(235, 112, 22, 0.24);
+  border-radius: 6px;
+  display: grid;
+  gap: 2px;
+  margin-bottom: 9px;
+  padding: 8px 9px;
+}
+
+.history-hover-capacity span,
+.history-hover-capacity small { color: var(--muted); font-size: 0.68rem; }
+.history-hover-capacity strong { color: var(--primary); font-size: 0.8rem; }
 
 .history-hover-modal table {
   border-collapse: collapse;
@@ -2008,6 +2022,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-order { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: var(--brand-navy); color: #fff; font-weight: 800; }
 .motor360-group-identity h3 { margin: 0; color: var(--brand-navy); font-size: 0.95rem; }
 .motor360-group-identity p { margin: 2px 0 0; color: var(--muted); font-size: 0.75rem; }
+.motor360-group-title { align-items: center; display: inline-flex; gap: 7px; }
+.motor360-group-title h3 { margin: 0; }
+.motor360-history-trigger { align-items: center; background: var(--primary-soft); border: 1px solid rgba(235, 112, 22, .42); border-radius: 50%; color: var(--primary); cursor: help; display: inline-flex; font-size: .65rem; font-weight: 800; height: 18px; justify-content: center; line-height: 1; padding: 0; width: 18px; }
+.motor360-history-trigger:hover, .motor360-history-trigger:focus-visible { background: var(--primary); color: #fff; outline: none; }
 .motor360-group-summary { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
 .motor360-group-summary div { display: grid; gap: 2px; min-width: 92px; }
 .motor360-group-summary small, .motor360-scenario-grid small, .motor360-profile-card-value small { color: var(--muted); font-size: 0.68rem; }
@@ -2067,6 +2085,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-composition-card.is-selected { border-color: var(--brand-orange); box-shadow: 0 0 0 2px rgb(229 121 27 / 10%); }
 .motor360-composition-card > header { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 11px 12px; background: #f8fafb; }
 .motor360-composition-card > header > div:first-child { display: grid; grid-template-columns: auto auto; align-items: center; column-gap: 9px; }
+.motor360-composition-card .motor360-group-title { grid-column: 2; }
 .motor360-composition-card h3, .motor360-composition-card p { margin: 0; }
 .motor360-composition-card h3 { font-size: 0.85rem; }
 .motor360-composition-card p { grid-column: 2; color: var(--muted); font-size: 0.65rem; }
