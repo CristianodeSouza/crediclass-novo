@@ -89,6 +89,7 @@ const investorPreferenceFlags = [
   { id: "maior_parcela_reduzida", label: "Maior Parcela Reduzida" },
   { id: "maior_prazo_remanescente", label: "Maior Prazo Remanescente" },
   { id: "maior_lance_embutido", label: "Maior Lance Embutido" },
+  { id: "maior_media_contemplacoes", label: "Maior Média de Contemplações" },
 ];
 const savedMotor360SelectedGroups = (() => {
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedGroups") || "[]"); } catch { return []; }
@@ -108,6 +109,7 @@ const investorState = {
   selectedGroupIds: new Set(savedMotor360SelectedGroups.map(String)),
   quotaCounts: new Map(Object.entries(savedMotor360QuotaCounts).map(([id, value]) => [String(id), Math.min(50, Math.max(1, Number(value) || 1))])),
   selectedGroupData: new Map(Object.entries(savedMotor360SelectedData)),
+  floatingSummaryMinimized: false,
 };
 let investorAnalysisController = null;
 let investorAnalysisRequestId = 0;
@@ -1967,6 +1969,7 @@ function formatInvestorPreferenceValue(flag, value) {
   if (number === null) return "-";
   if (["menor_taxa_total", "menor_taxa_ano", "maior_lance_embutido"].includes(flag)) return formatPercent(number);
   if (flag === "maior_prazo_remanescente") return `${number} meses`;
+  if (flag === "maior_media_contemplacoes") return `${number.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} contemplações`;
   return formatMoney(number);
 }
 
@@ -1978,11 +1981,12 @@ function applyInvestorPreferences(items, selectedFlags) {
     maior_parcela_reduzida: { field: "parcela_reduzida", direction: "max", label: "Maior Parcela Reduzida" },
     maior_prazo_remanescente: { field: "prazo_remanescente", direction: "max", label: "Maior Prazo Remanescente" },
     maior_lance_embutido: { field: "lance_embutido", direction: "max", label: "Maior Lance Embutido" },
+    maior_media_contemplacoes: { field: "media_contemplacoes", direction: "max", label: "Maior Média de Contemplações", value: (item) => motor360QuotaCapacity(item)?.media_contemplacoes },
   };
   const scores = new Map(items.map((item) => [item, {}]));
   selectedFlags.forEach((flag) => {
     const definition = definitions[flag];
-    const values = items.map((item) => investorPreferenceNumber(item[definition.field], flag === "maior_lance_embutido"));
+    const values = items.map((item) => investorPreferenceNumber(definition.value ? definition.value(item) : item[definition.field], flag === "maior_lance_embutido"));
     const valid = values.filter((value) => value !== null);
     const min = valid.length ? Math.min(...valid) : null;
     const max = valid.length ? Math.max(...valid) : null;
@@ -2000,7 +2004,11 @@ function applyInvestorPreferences(items, selectedFlags) {
     const scoreValues = selectedFlags.map((flag) => itemScores[flag]);
     const highlights = selectedFlags
       .filter((flag) => itemScores[flag] >= 0.999999)
-      .map((flag) => `${definitions[flag].label}: ${formatInvestorPreferenceValue(flag, item[definitions[flag].field])}`);
+      .map((flag) => {
+        const definition = definitions[flag];
+        const value = definition.value ? definition.value(item) : item[definition.field];
+        return `${definition.label}: ${formatInvestorPreferenceValue(flag, value)}`;
+      });
     return {
       ...item,
       indice_preferencia: scoreValues.length ? Math.round((scoreValues.reduce((sum, value) => sum + value, 0) / scoreValues.length) * 10000) / 100 : null,
@@ -2120,10 +2128,27 @@ function selectedMotor360Items() {
   return [...investorState.selectedGroupIds].map((id) => currentItems.get(id) || investorState.selectedGroupData.get(id)).filter(Boolean);
 }
 
+function renderMotor360SelectedGroupsDock() {
+  const items = selectedMotor360Items();
+  if (!items.length) return "";
+  const totalQuotas = items.reduce((total, item) => {
+    const groupId = String(item.grupo || item.grupo_id || "");
+    return total + Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+  }, 0);
+  const groups = items.map((item) => {
+    const groupId = String(item.grupo || item.grupo_id || "-");
+    const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+    return `<span class="motor360-selected-dock-item"><b>Grupo ${escapeHtml(groupId)}</b><small>${escapeHtml(item.administradora || "-")} · ${quotas} ${quotas === 1 ? "cota" : "cotas"}</small></span>`;
+  }).join("");
+  return `<section class="motor360-selected-dock" aria-label="Grupos selecionados"><div class="motor360-selected-dock-heading"><span>Grupos selecionados</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-selected-dock-list">${groups}</div><button class="btn btn-primary btn-sm" type="button" data-screen-jump="grupos-selecionados">Comparar</button></section>`;
+}
+
 function renderMotor360FloatingSelectionSummary() {
   const items = selectedMotor360Items();
+  const minimizedClass = investorState.floatingSummaryMinimized ? " is-minimized" : "";
+  const minimizeButton = `<button type="button" class="motor360-floating-minimize" data-floating-summary-toggle aria-expanded="${investorState.floatingSummaryMinimized ? "false" : "true"}" title="${investorState.floatingSummaryMinimized ? "Expandir composição" : "Minimizar composição"}">${investorState.floatingSummaryMinimized ? "+" : "−"}</button>`;
   if (!items.length) {
-    return `<aside class="motor360-floating-summary is-empty" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>Nenhum grupo selecionado</strong></div><span class="motor360-floating-count">0</span></div><p>Adicione grupos e cotas para acompanhar o atendimento ao crédito e à parcela do cliente.</p></aside>`;
+    return `<aside class="motor360-floating-summary is-empty${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>Nenhum grupo selecionado</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">0</span>${minimizeButton}</div></div><p>Adicione grupos e cotas para acompanhar o atendimento ao crédito e à parcela do cliente.</p></aside>`;
   }
   const client = investorState.result?.cliente || {};
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
@@ -2151,7 +2176,7 @@ function renderMotor360FloatingSelectionSummary() {
     const progress = desiredCredit > 0 ? Math.min(100, Math.max(0, credit / desiredCredit * 100)) : 0;
     return `<section class="motor360-floating-scenario ${viable ? "is-ok" : "is-pending"}"><header><strong>${label}</strong><span>${viable ? "Atende" : "Em composição"}</span></header><div class="motor360-floating-progress" aria-label="${progress.toFixed(0)}% do crédito desejado"><i style="width:${progress.toFixed(2)}%"></i></div><dl><div><dt>Crédito</dt><dd>${formatMoney(credit)} <small>de ${formatMoney(desiredCredit)}</small></dd></div><div><dt>Parcela</dt><dd>${formatMoney(installment)} <small>limite ${formatMoney(maximumInstallment)}</small></dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(balance)}</dd></div></dl><p>${creditOk ? "Crédito atendido" : `Faltam ${formatMoney(Math.max(0, desiredCredit - credit))}`} · ${incomeOk ? "Dentro de 30% da renda" : "Acima de 30% da renda"}${desiredOk ? "" : " · Acima da parcela desejada"}</p></section>`;
   };
-  return `<aside class="motor360-floating-summary" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><span class="motor360-floating-count">${totalQuotas}</span></div><div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-screen-jump="grupos-selecionados">Analisar grupos selecionados</button></aside>`;
+  return `<aside class="motor360-floating-summary${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">${totalQuotas}</span>${minimizeButton}</div></div><div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-screen-jump="grupos-selecionados">Analisar grupos selecionados</button></aside>`;
 }
 
 function renderSelectedGroupComparisonColumn(item, index) {
@@ -2747,6 +2772,7 @@ function renderInvestorAnalysis(result) {
     <div class="investor-engine-note">
       <strong>${showingCreditStage ? "Compatíveis por crédito:" : "Pré-seleção de grupos:"}</strong> ${showingCreditStage ? "estes grupos atendem à faixa O/U para pelo menos um cenário." : "cada cenário preserva o crédito líquido, atende à faixa O/U e ao prazo/renda no mesmo cenário financeiro."} A classificação BL:BP é informativa e não elimina nesta etapa. AJ, AK e AL são apenas referências até a seleção da carta exata.
     </div>
+    ${renderMotor360SelectedGroupsDock()}
     <div class="motor360-single-quota-note" role="note">
       <strong>Crédito atendido com 1 cota</strong>
       <span>Os grupos listados abaixo possuem crédito líquido disponível em uma cota suficiente para a necessidade do cliente, após a validação do crédito desejado, da parcela e dos recursos de lance com RP e/ou FGTS.</span>
@@ -2762,6 +2788,14 @@ function renderInvestorAnalysis(result) {
     <div class="motor360-selection-toolbar motor360-selection-toolbar-final"><strong>Próxima etapa</strong><span id="motor360SelectionSummary">${investorState.selectedGroupIds.size} grupo(s) selecionado(s) para a próxima etapa</span><button class="btn btn-primary btn-sm" type="button" data-screen-jump="grupos-selecionados">Ver grupos selecionados</button></div>
   `;
   results.querySelectorAll("[data-screen-jump]").forEach((button) => button.addEventListener("click", () => activateScreen(button.dataset.screenJump)));
+  results.querySelectorAll("[data-floating-summary-toggle]").forEach((button) => button.addEventListener("click", () => {
+    investorState.floatingSummaryMinimized = !investorState.floatingSummaryMinimized;
+    const summaryCard = button.closest(".motor360-floating-summary");
+    summaryCard?.classList.toggle("is-minimized", investorState.floatingSummaryMinimized);
+    button.textContent = investorState.floatingSummaryMinimized ? "+" : "−";
+    button.title = investorState.floatingSummaryMinimized ? "Expandir composição" : "Minimizar composição";
+    button.setAttribute("aria-expanded", investorState.floatingSummaryMinimized ? "false" : "true");
+  }));
   results.querySelectorAll(".motor360-group-select-input").forEach((input) => input.addEventListener("change", (event) => {
     const groupId = String(event.target.dataset.groupId || "");
     if (event.target.checked) {
