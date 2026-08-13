@@ -30,6 +30,16 @@ class MapaAssembleiaDataTest(unittest.TestCase):
         self.assertIn("Adesão", serialized)
         self.assertIn("ITAÚ", serialized)
 
+    def test_orientacoes_sao_contextuais_e_nao_expoem_celulas(self):
+        guidance = self.data["guidance"]["administrators"]
+        self.assertIn("ITAÚ", guidance)
+        self.assertIn("CAOA", guidance)
+        self.assertIn("EMBRACON", guidance)
+        self.assertTrue(all(event["guidance"] for event in self.data["event_types"]))
+        contextual = json.dumps(guidance, ensure_ascii=False)
+        self.assertNotIn("A16", contextual)
+        self.assertNotIn("C16", contextual)
+
 
 if __name__ == "__main__":
     unittest.main()

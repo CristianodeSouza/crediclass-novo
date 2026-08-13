@@ -11,38 +11,91 @@
   "event_types": [
     {
       "id": "vencimento_parcela",
-      "label": "Vencimento da parcela"
+      "label": "Vencimento da parcela",
+      "guidance": "Data prevista para o vencimento da parcela do grupo.",
+      "details": []
     },
     {
       "id": "adesao",
-      "label": "Adesão"
+      "label": "Adesão",
+      "guidance": "Data prevista para formalizar a adesão ao grupo.",
+      "details": []
     },
     {
       "id": "vencimento_boleto_adesao",
-      "label": "Vencimento do boleto de adesão"
+      "label": "Vencimento do boleto de adesão",
+      "guidance": "Data de vencimento do boleto de adesão.",
+      "details": []
     },
     {
       "id": "oferta",
-      "label": "Oferta"
+      "label": "Oferta",
+      "guidance": "Prazo operacional para registrar a oferta de lance antes da assembleia.",
+      "details": [
+        "O prazo varia conforme a administradora e a faixa do grupo.",
+        "As referências operacionais cadastradas incluem: quinta-feira anterior à assembleia, quatro dias úteis antes, dois dias antes e um dia antes.",
+        "Em grupos com vencimento de parcela no dia 10, pode haver prazo de até um dia útil após o vencimento."
+      ]
     },
     {
       "id": "assembleia",
-      "label": "Assembleia"
+      "label": "Assembleia",
+      "guidance": "Data prevista para a assembleia mensal do grupo.",
+      "details": []
     },
     {
       "id": "pagamento_lance",
-      "label": "Pagamento do lance"
+      "label": "Pagamento do lance",
+      "guidance": "Prazo previsto para pagar o lance após a contemplação.",
+      "details": []
     },
     {
       "id": "segunda_chamada",
-      "label": "Segunda chamada"
+      "label": "Segunda chamada",
+      "guidance": "Data alternativa de assembleia, quando prevista pela administradora.",
+      "details": []
     }
   ],
+  "guidance": {
+    "administrators": {
+      "ITAÚ": {
+        "items": [
+          "Não há assembleia às segundas e quintas-feiras.",
+          "As datas de adesão são 5, 10, 15 e 20; se caírem em feriado ou fim de semana, passam para o próximo dia útil.",
+          "A adesão ocorre dois dias antes do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+          "A assembleia ocorre cinco dias após o vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+          "A oferta deve ser registrada até um dia antes da assembleia, desconsiderando fins de semana e feriados.",
+          "O vencimento da parcela ocorre no mesmo dia do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+          "Não há segunda chamada; o calendário apresenta um traço nesse campo."
+        ]
+      },
+      "PAN": {
+        "items": [
+          "1º bloco: grupos 8019, 8020, 8021 e 8023.",
+          "2º bloco: grupos 8022 e 8025."
+        ]
+      },
+      "CAOA": {
+        "items": [
+          "Vencimento no dia 10: grupos 545 e 558.",
+          "Vencimento no dia 20: grupos 585 e 595."
+        ]
+      },
+      "EMBRACON": {
+        "items": [
+          "Vencimento no dia 10: grupos 340, 763, 342, 768, 769, 774, 788, 792, 794, 797, 742, 744 e 746.",
+          "Vencimento no dia 20: grupos 761, 762, 764, 765, 766, 767, 770, 771, 772, 776, 779, 781, 785, 786, 787, 789, 790, 791, 793, 795, 727, 743, 751 e 7017.",
+          "Vencimento no dia 26: grupos 338, 339, 341, 760, 775, 777, 778, 780, 782, 783, 784, 796, 749 e 7018."
+        ]
+      }
+    }
+  },
   "schedules": [
     {
       "source_row": 4,
       "administrator": "CNP",
       "faixa": 1,
+      "guidance": [],
       "months": [
         {
           "number": 1,
@@ -794,6 +847,7 @@
       "source_row": 5,
       "administrator": "CNP AUTO",
       "faixa": 2,
+      "guidance": [],
       "months": [
         {
           "number": 1,
@@ -1545,6 +1599,10 @@
       "source_row": 6,
       "administrator": "CAOA",
       "faixa": 1,
+      "guidance": [
+        "Vencimento no dia 10: grupos 545 e 558.",
+        "Vencimento no dia 20: grupos 585 e 595."
+      ],
       "months": [
         {
           "number": 1,
@@ -2296,6 +2354,10 @@
       "source_row": 7,
       "administrator": "CAOA",
       "faixa": 2,
+      "guidance": [
+        "Vencimento no dia 10: grupos 545 e 558.",
+        "Vencimento no dia 20: grupos 585 e 595."
+      ],
       "months": [
         {
           "number": 1,
@@ -3047,6 +3109,15 @@
       "source_row": 8,
       "administrator": "ITAÚ",
       "faixa": 1,
+      "guidance": [
+        "Não há assembleia às segundas e quintas-feiras.",
+        "As datas de adesão são 5, 10, 15 e 20; se caírem em feriado ou fim de semana, passam para o próximo dia útil.",
+        "A adesão ocorre dois dias antes do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A assembleia ocorre cinco dias após o vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A oferta deve ser registrada até um dia antes da assembleia, desconsiderando fins de semana e feriados.",
+        "O vencimento da parcela ocorre no mesmo dia do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "Não há segunda chamada; o calendário apresenta um traço nesse campo."
+      ],
       "months": [
         {
           "number": 1,
@@ -3798,6 +3869,15 @@
       "source_row": 9,
       "administrator": "ITAÚ",
       "faixa": 2,
+      "guidance": [
+        "Não há assembleia às segundas e quintas-feiras.",
+        "As datas de adesão são 5, 10, 15 e 20; se caírem em feriado ou fim de semana, passam para o próximo dia útil.",
+        "A adesão ocorre dois dias antes do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A assembleia ocorre cinco dias após o vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A oferta deve ser registrada até um dia antes da assembleia, desconsiderando fins de semana e feriados.",
+        "O vencimento da parcela ocorre no mesmo dia do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "Não há segunda chamada; o calendário apresenta um traço nesse campo."
+      ],
       "months": [
         {
           "number": 1,
@@ -4549,6 +4629,15 @@
       "source_row": 10,
       "administrator": "ITAÚ",
       "faixa": 3,
+      "guidance": [
+        "Não há assembleia às segundas e quintas-feiras.",
+        "As datas de adesão são 5, 10, 15 e 20; se caírem em feriado ou fim de semana, passam para o próximo dia útil.",
+        "A adesão ocorre dois dias antes do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A assembleia ocorre cinco dias após o vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A oferta deve ser registrada até um dia antes da assembleia, desconsiderando fins de semana e feriados.",
+        "O vencimento da parcela ocorre no mesmo dia do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "Não há segunda chamada; o calendário apresenta um traço nesse campo."
+      ],
       "months": [
         {
           "number": 1,
@@ -5300,6 +5389,15 @@
       "source_row": 11,
       "administrator": "ITAÚ",
       "faixa": 4,
+      "guidance": [
+        "Não há assembleia às segundas e quintas-feiras.",
+        "As datas de adesão são 5, 10, 15 e 20; se caírem em feriado ou fim de semana, passam para o próximo dia útil.",
+        "A adesão ocorre dois dias antes do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A assembleia ocorre cinco dias após o vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A oferta deve ser registrada até um dia antes da assembleia, desconsiderando fins de semana e feriados.",
+        "O vencimento da parcela ocorre no mesmo dia do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "Não há segunda chamada; o calendário apresenta um traço nesse campo."
+      ],
       "months": [
         {
           "number": 1,
@@ -6051,6 +6149,7 @@
       "source_row": 12,
       "administrator": "PORTO SEGURO",
       "faixa": 1,
+      "guidance": [],
       "months": [
         {
           "number": 1,
@@ -6802,6 +6901,7 @@
       "source_row": 13,
       "administrator": "RODOBENS IMÓVEL",
       "faixa": 1,
+      "guidance": [],
       "months": [
         {
           "number": 1,
@@ -7553,6 +7653,7 @@
       "source_row": 14,
       "administrator": "RODOBENS AUTO",
       "faixa": 1,
+      "guidance": [],
       "months": [
         {
           "number": 1,
@@ -8306,6 +8407,7 @@
       "source_row": 4,
       "administrator": "CAIXA",
       "faixa": 1,
+      "guidance": [],
       "parameters": [
         {
           "id": "vencimento",
@@ -8355,6 +8457,10 @@
       "source_row": 5,
       "administrator": "CAOA",
       "faixa": 1,
+      "guidance": [
+        "Vencimento no dia 10: grupos 545 e 558.",
+        "Vencimento no dia 20: grupos 585 e 595."
+      ],
       "parameters": [
         {
           "id": "vencimento",
@@ -8404,6 +8510,10 @@
       "source_row": 6,
       "administrator": "CAOA",
       "faixa": 2,
+      "guidance": [
+        "Vencimento no dia 10: grupos 545 e 558.",
+        "Vencimento no dia 20: grupos 585 e 595."
+      ],
       "parameters": [
         {
           "id": "vencimento",
@@ -8453,6 +8563,11 @@
       "source_row": 7,
       "administrator": "Embracon",
       "faixa": 1,
+      "guidance": [
+        "Vencimento no dia 10: grupos 340, 763, 342, 768, 769, 774, 788, 792, 794, 797, 742, 744 e 746.",
+        "Vencimento no dia 20: grupos 761, 762, 764, 765, 766, 767, 770, 771, 772, 776, 779, 781, 785, 786, 787, 789, 790, 791, 793, 795, 727, 743, 751 e 7017.",
+        "Vencimento no dia 26: grupos 338, 339, 341, 760, 775, 777, 778, 780, 782, 783, 784, 796, 749 e 7018."
+      ],
       "parameters": [
         {
           "id": "vencimento",
@@ -8502,6 +8617,11 @@
       "source_row": 8,
       "administrator": "Embracon",
       "faixa": 2,
+      "guidance": [
+        "Vencimento no dia 10: grupos 340, 763, 342, 768, 769, 774, 788, 792, 794, 797, 742, 744 e 746.",
+        "Vencimento no dia 20: grupos 761, 762, 764, 765, 766, 767, 770, 771, 772, 776, 779, 781, 785, 786, 787, 789, 790, 791, 793, 795, 727, 743, 751 e 7017.",
+        "Vencimento no dia 26: grupos 338, 339, 341, 760, 775, 777, 778, 780, 782, 783, 784, 796, 749 e 7018."
+      ],
       "parameters": [
         {
           "id": "vencimento",
@@ -8551,6 +8671,11 @@
       "source_row": 9,
       "administrator": "Embracon",
       "faixa": 3,
+      "guidance": [
+        "Vencimento no dia 10: grupos 340, 763, 342, 768, 769, 774, 788, 792, 794, 797, 742, 744 e 746.",
+        "Vencimento no dia 20: grupos 761, 762, 764, 765, 766, 767, 770, 771, 772, 776, 779, 781, 785, 786, 787, 789, 790, 791, 793, 795, 727, 743, 751 e 7017.",
+        "Vencimento no dia 26: grupos 338, 339, 341, 760, 775, 777, 778, 780, 782, 783, 784, 796, 749 e 7018."
+      ],
       "parameters": [
         {
           "id": "vencimento",
@@ -8600,6 +8725,7 @@
       "source_row": 10,
       "administrator": "HS",
       "faixa": 1,
+      "guidance": [],
       "parameters": [
         {
           "id": "vencimento",
@@ -8649,6 +8775,15 @@
       "source_row": 11,
       "administrator": "ITAÚ",
       "faixa": 1,
+      "guidance": [
+        "Não há assembleia às segundas e quintas-feiras.",
+        "As datas de adesão são 5, 10, 15 e 20; se caírem em feriado ou fim de semana, passam para o próximo dia útil.",
+        "A adesão ocorre dois dias antes do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A assembleia ocorre cinco dias após o vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A oferta deve ser registrada até um dia antes da assembleia, desconsiderando fins de semana e feriados.",
+        "O vencimento da parcela ocorre no mesmo dia do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "Não há segunda chamada; o calendário apresenta um traço nesse campo."
+      ],
       "parameters": [
         {
           "id": "vencimento",
@@ -8698,6 +8833,15 @@
       "source_row": 12,
       "administrator": "ITAÚ",
       "faixa": 2,
+      "guidance": [
+        "Não há assembleia às segundas e quintas-feiras.",
+        "As datas de adesão são 5, 10, 15 e 20; se caírem em feriado ou fim de semana, passam para o próximo dia útil.",
+        "A adesão ocorre dois dias antes do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A assembleia ocorre cinco dias após o vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A oferta deve ser registrada até um dia antes da assembleia, desconsiderando fins de semana e feriados.",
+        "O vencimento da parcela ocorre no mesmo dia do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "Não há segunda chamada; o calendário apresenta um traço nesse campo."
+      ],
       "parameters": [
         {
           "id": "vencimento",
@@ -8747,6 +8891,15 @@
       "source_row": 13,
       "administrator": "ITAÚ",
       "faixa": 3,
+      "guidance": [
+        "Não há assembleia às segundas e quintas-feiras.",
+        "As datas de adesão são 5, 10, 15 e 20; se caírem em feriado ou fim de semana, passam para o próximo dia útil.",
+        "A adesão ocorre dois dias antes do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A assembleia ocorre cinco dias após o vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A oferta deve ser registrada até um dia antes da assembleia, desconsiderando fins de semana e feriados.",
+        "O vencimento da parcela ocorre no mesmo dia do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "Não há segunda chamada; o calendário apresenta um traço nesse campo."
+      ],
       "parameters": [
         {
           "id": "vencimento",
@@ -8796,6 +8949,15 @@
       "source_row": 14,
       "administrator": "ITAÚ",
       "faixa": 4,
+      "guidance": [
+        "Não há assembleia às segundas e quintas-feiras.",
+        "As datas de adesão são 5, 10, 15 e 20; se caírem em feriado ou fim de semana, passam para o próximo dia útil.",
+        "A adesão ocorre dois dias antes do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A assembleia ocorre cinco dias após o vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A oferta deve ser registrada até um dia antes da assembleia, desconsiderando fins de semana e feriados.",
+        "O vencimento da parcela ocorre no mesmo dia do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "Não há segunda chamada; o calendário apresenta um traço nesse campo."
+      ],
       "parameters": [
         {
           "id": "vencimento",
@@ -8845,6 +9007,7 @@
       "source_row": 15,
       "administrator": "MAPFRE",
       "faixa": 1,
+      "guidance": [],
       "parameters": [
         {
           "id": "vencimento",
@@ -8894,6 +9057,10 @@
       "source_row": 16,
       "administrator": "PAN",
       "faixa": 1,
+      "guidance": [
+        "1º bloco: grupos 8019, 8020, 8021 e 8023.",
+        "2º bloco: grupos 8022 e 8025."
+      ],
       "parameters": [
         {
           "id": "vencimento",
@@ -8943,6 +9110,10 @@
       "source_row": 17,
       "administrator": "PAN",
       "faixa": 2,
+      "guidance": [
+        "1º bloco: grupos 8019, 8020, 8021 e 8023.",
+        "2º bloco: grupos 8022 e 8025."
+      ],
       "parameters": [
         {
           "id": "vencimento",
@@ -8992,6 +9163,7 @@
       "source_row": 18,
       "administrator": "PORTO",
       "faixa": 1,
+      "guidance": [],
       "parameters": [
         {
           "id": "vencimento",
@@ -9041,6 +9213,7 @@
       "source_row": 19,
       "administrator": "RODOBENS",
       "faixa": 1,
+      "guidance": [],
       "parameters": [
         {
           "id": "vencimento",
@@ -9090,6 +9263,7 @@
       "source_row": 20,
       "administrator": "UNIFISA",
       "faixa": 1,
+      "guidance": [],
       "parameters": [
         {
           "id": "vencimento",

@@ -25,6 +25,48 @@ EVENTS = [
     ("segunda_chamada", "Segunda chamada"),
 ]
 
+EVENT_GUIDANCE = {
+    "vencimento_parcela": "Data prevista para o vencimento da parcela do grupo.",
+    "adesao": "Data prevista para formalizar a adesão ao grupo.",
+    "vencimento_boleto_adesao": "Data de vencimento do boleto de adesão.",
+    "oferta": "Prazo operacional para registrar a oferta de lance antes da assembleia.",
+    "assembleia": "Data prevista para a assembleia mensal do grupo.",
+    "pagamento_lance": "Prazo previsto para pagar o lance após a contemplação.",
+    "segunda_chamada": "Data alternativa de assembleia, quando prevista pela administradora.",
+    "canal_segunda_chamada": "Canal informado pela administradora para a segunda chamada.",
+}
+
+ADMINISTRATOR_GUIDANCE = {
+    "ITAÚ": [
+        "Não há assembleia às segundas e quintas-feiras.",
+        "As datas de adesão são 5, 10, 15 e 20; se caírem em feriado ou fim de semana, passam para o próximo dia útil.",
+        "A adesão ocorre dois dias antes do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A assembleia ocorre cinco dias após o vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "A oferta deve ser registrada até um dia antes da assembleia, desconsiderando fins de semana e feriados.",
+        "O vencimento da parcela ocorre no mesmo dia do vencimento do boleto de adesão, desconsiderando fins de semana e feriados.",
+        "Não há segunda chamada; o calendário apresenta um traço nesse campo.",
+    ],
+    "PAN": [
+        "1º bloco: grupos 8019, 8020, 8021 e 8023.",
+        "2º bloco: grupos 8022 e 8025.",
+    ],
+    "CAOA": [
+        "Vencimento no dia 10: grupos 545 e 558.",
+        "Vencimento no dia 20: grupos 585 e 595.",
+    ],
+    "EMBRACON": [
+        "Vencimento no dia 10: grupos 340, 763, 342, 768, 769, 774, 788, 792, 794, 797, 742, 744 e 746.",
+        "Vencimento no dia 20: grupos 761, 762, 764, 765, 766, 767, 770, 771, 772, 776, 779, 781, 785, 786, 787, 789, 790, 791, 793, 795, 727, 743, 751 e 7017.",
+        "Vencimento no dia 26: grupos 338, 339, 341, 760, 775, 777, 778, 780, 782, 783, 784, 796, 749 e 7018.",
+    ],
+}
+
+OFFER_GUIDANCE = [
+    "O prazo varia conforme a administradora e a faixa do grupo.",
+    "As referências operacionais cadastradas incluem: quinta-feira anterior à assembleia, quatro dias úteis antes, dois dias antes e um dia antes.",
+    "Em grupos com vencimento de parcela no dia 10, pode haver prazo de até um dia útil após o vencimento.",
+]
+
 TEXT_REPLACEMENTS = {
     "Calend\ufffdrio": "Calend\u00e1rio",
     "IM\ufffdVEL": "IM\u00d3VEL",
@@ -57,6 +99,10 @@ def clean_text(value: object) -> str:
     for source, target in TEXT_REPLACEMENTS.items():
         text = text.replace(source, target)
     return " ".join(text.split())
+
+
+def normalized_administrator(value: str) -> str:
+    return clean_text(value).upper().replace("ITAU", "ITAÚ")
 
 
 def serialize_calendar_value(value: object, month_index: int) -> dict:
@@ -104,6 +150,7 @@ def import_workbook(source: Path) -> dict:
             "source_row": row_number,
             "administrator": current_administrator,
             "faixa": int(faixa) if isinstance(faixa, (int, float)) else clean_text(faixa),
+            "guidance": ADMINISTRATOR_GUIDANCE.get(normalized_administrator(current_administrator), []),
             "months": months,
         })
 
@@ -136,6 +183,7 @@ def import_workbook(source: Path) -> dict:
             "source_row": row_number,
             "administrator": current_administrator,
             "faixa": int(faixa) if isinstance(faixa, (int, float)) else clean_text(faixa),
+            "guidance": ADMINISTRATOR_GUIDANCE.get(normalized_administrator(current_administrator), []),
             "parameters": parameters,
         })
 
@@ -159,7 +207,21 @@ def import_workbook(source: Path) -> dict:
             "calendar_sheet": clean_text(calendar_sheet.title),
             "rules_sheet": clean_text(rules_sheet.title),
         },
-        "event_types": [{"id": event_id, "label": label} for event_id, label in EVENTS],
+        "event_types": [
+            {
+                "id": event_id,
+                "label": label,
+                "guidance": EVENT_GUIDANCE[event_id],
+                "details": OFFER_GUIDANCE if event_id == "oferta" else [],
+            }
+            for event_id, label in EVENTS
+        ],
+        "guidance": {
+            "administrators": {
+                administrator: {"items": items}
+                for administrator, items in ADMINISTRATOR_GUIDANCE.items()
+            },
+        },
         "schedules": schedules,
         "rules": rules,
         "observations": observations,

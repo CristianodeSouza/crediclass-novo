@@ -4360,6 +4360,29 @@ function assemblyMatches(item, filters) {
     && (!filters.range || String(item.faixa) === filters.range);
 }
 
+function assemblyTooltip(items, label = "Orientação") {
+  const notes = (items || []).filter(Boolean);
+  if (!notes.length) return "";
+  return `
+    <span class="assembly-tooltip" tabindex="0" aria-label="${escapeHtml(label)}">
+      <span class="assembly-tooltip-trigger" aria-hidden="true">i</span>
+      <span class="assembly-tooltip-panel" role="tooltip">
+        <strong>${escapeHtml(label)}</strong>
+        <span>${notes.map((item) => escapeHtml(item)).join("</span><span>")}</span>
+      </span>
+    </span>
+  `;
+}
+
+function renderAssemblyEventGuidance(data) {
+  (data.event_types || []).forEach((event) => {
+    const heading = document.querySelector(`[data-assembly-event="${event.id}"]`);
+    if (!heading || heading.querySelector(".assembly-tooltip")) return;
+    const notes = [event.guidance, ...(event.details || [])];
+    heading.insertAdjacentHTML("beforeend", assemblyTooltip(notes, event.label));
+  });
+}
+
 function renderAssemblyMap() {
   const data = assemblyState.data;
   if (!data) return;
@@ -4378,15 +4401,19 @@ function renderAssemblyMap() {
     const values = (month?.events || []).map((event) => {
       const className = event.iso_date?.startsWith("2027-") ? "assembly-next-cycle" : "";
       const suffix = event.iso_date?.startsWith("2027-") ? "<small>2027</small>" : "";
-      return `<td><span class="assembly-date ${className}" title="Célula ${escapeHtml(event.source_cell)}">${escapeHtml(event.display)}${suffix}</span></td>`;
+      return `<td><span class="assembly-date ${className}">${escapeHtml(event.display)}${suffix}</span></td>`;
     }).join("");
-    return `<tr><th scope="row">${escapeHtml(item.administrator)}</th><td>${escapeHtml(item.faixa)}</td>${values}</tr>`;
+    const guidance = assemblyTooltip(item.guidance, `Orientações de ${item.administrator}`);
+    return `<tr><th scope="row"><span class="assembly-administrator">${escapeHtml(item.administrator)}${guidance}</span></th><td>${escapeHtml(item.faixa)}</td>${values}</tr>`;
   }).join("");
 
   document.getElementById("assemblyRulesGrid").innerHTML = rules.length ? rules.map((rule) => `
     <article class="assembly-rule-card">
-      <header><div><strong>${escapeHtml(rule.administrator)}</strong><small>Faixa ${escapeHtml(rule.faixa)}</small></div><span>Regra</span></header>
-      <dl>${rule.parameters.map((parameter) => `<div><dt>${escapeHtml(parameter.label)}</dt><dd>${escapeHtml(parameter.value)}</dd></div>`).join("")}</dl>
+      <header><div><strong><span>${escapeHtml(rule.administrator)}</span>${assemblyTooltip(rule.guidance, `Orientações de ${rule.administrator}`)}</strong><small>Faixa ${escapeHtml(rule.faixa)}</small></div><span>Regra</span></header>
+      <dl>${rule.parameters.map((parameter) => {
+        const event = data.event_types.find((item) => item.id === parameter.id);
+        return `<div><dt>${escapeHtml(parameter.label)}${assemblyTooltip([event?.guidance, ...(event?.details || [])], parameter.label)}</dt><dd>${escapeHtml(parameter.value)}</dd></div>`;
+      }).join("")}</dl>
     </article>
   `).join("") : `<p class="assembly-state">Nenhuma regra corresponde aos filtros.</p>`;
 }
@@ -4411,10 +4438,9 @@ async function loadAssemblyMap() {
     assemblyState.data = data;
     assemblyState.loaded = true;
     populateAssemblyFilters(data);
+    renderAssemblyEventGuidance(data);
     document.getElementById("assemblyScheduleCount").textContent = data.schedules.length;
     document.getElementById("assemblyRuleCount").textContent = data.rules.length;
-    document.getElementById("assemblyObservationCount").textContent = `(${data.observations.length})`;
-    document.getElementById("assemblyObservations").innerHTML = data.observations.map((item) => `<article><span>${escapeHtml(item.source_cell)}</span><p>${escapeHtml(item.text)}</p></article>`).join("");
     document.getElementById("assemblyContent").classList.remove("d-none");
     renderAssemblyMap();
   } catch (error) {

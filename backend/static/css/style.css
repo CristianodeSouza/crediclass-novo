@@ -535,7 +535,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .assembly-date small { background: var(--primary-soft); border-radius: 4px; color: var(--primary-hover); font-size: .58rem; padding: 2px 3px; }
 .assembly-next-cycle { color: var(--primary-hover); }
 .assembly-rules-grid { display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.assembly-rule-card { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.assembly-rule-card { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: visible; }
 .assembly-rule-card header { align-items: center; background: var(--surface-soft); display: flex; justify-content: space-between; padding: 10px 12px; }
 .assembly-rule-card header div { display: grid; }
 .assembly-rule-card header small { color: var(--muted); }
@@ -545,16 +545,24 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .assembly-rule-card dl div + div { border-top: 1px solid var(--border); }
 .assembly-rule-card dt { color: var(--muted); font-size: .7rem; }
 .assembly-rule-card dd { font-size: .76rem; margin: 0; }
-.assembly-notes { padding: 0; }
-.assembly-notes summary { cursor: pointer; font-weight: 800; padding: 14px 16px; }
-.assembly-observations-grid { border-top: 1px solid var(--border); display: grid; gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 14px; }
-.assembly-observations-grid article { background: var(--surface-soft); border-radius: var(--radius-sm); padding: 10px 12px; }
-.assembly-observations-grid span { color: var(--primary); font-size: .65rem; font-weight: 800; }
-.assembly-observations-grid p { font-size: .76rem; margin: 4px 0 0; }
+.assembly-administrator, .assembly-rule-card strong, .assembly-rule-card dt { align-items: center; display: inline-flex; gap: 6px; }
+.assembly-table thead th .assembly-tooltip { margin-left: 5px; }
+.assembly-tooltip { display: inline-flex; position: relative; vertical-align: middle; }
+.assembly-tooltip-trigger { align-items: center; background: var(--primary-soft); border: 1px solid rgba(235, 112, 22, .28); border-radius: 50%; color: var(--primary); cursor: help; display: inline-flex; font-size: .62rem; font-style: normal; font-weight: 800; height: 17px; justify-content: center; line-height: 1; width: 17px; }
+.assembly-tooltip-panel { background: var(--sidebar); border: 1px solid rgba(255, 255, 255, .12); border-radius: var(--radius-sm); box-shadow: 0 12px 28px rgba(19, 34, 41, .22); color: #fff; display: none; font-size: .72rem; font-weight: 400; left: 50%; line-height: 1.45; padding: 11px 12px; position: absolute; text-align: left; text-transform: none; top: calc(100% + 7px); transform: translateX(-50%); width: min(330px, 76vw); z-index: 30; }
+.assembly-tooltip-panel::before { border-bottom: 6px solid var(--sidebar); border-left: 6px solid transparent; border-right: 6px solid transparent; content: ""; left: 50%; position: absolute; top: -6px; transform: translateX(-50%); }
+.assembly-tooltip-panel strong { color: #fff; display: block; font-size: .75rem; margin-bottom: 6px; }
+.assembly-tooltip-panel > span { color: rgba(255, 255, 255, .84); display: block; }
+.assembly-tooltip-panel > span + span { border-top: 1px solid rgba(255, 255, 255, .12); margin-top: 6px; padding-top: 6px; }
+.assembly-tooltip:hover .assembly-tooltip-panel, .assembly-tooltip:focus .assembly-tooltip-panel, .assembly-tooltip:focus-within .assembly-tooltip-panel { display: block; }
+.assembly-administrator .assembly-tooltip-panel, .assembly-rule-card header .assembly-tooltip-panel { left: 0; transform: none; }
+.assembly-administrator .assembly-tooltip-panel::before, .assembly-rule-card header .assembly-tooltip-panel::before { left: 8px; transform: none; }
+.assembly-calendar-card .table-responsive { overflow: visible; }
 @media (max-width: 900px) {
   .assembly-overview { align-items: stretch; flex-direction: column; gap: 14px; }
   .assembly-overview-stats { overflow-x: auto; }
-  .assembly-filter-grid, .assembly-rules-grid, .assembly-observations-grid { grid-template-columns: 1fr; }
+  .assembly-filter-grid, .assembly-rules-grid { grid-template-columns: 1fr; }
+  .assembly-calendar-card .table-responsive { overflow-x: auto; overflow-y: visible; }
 }
 
 .summary-card {
