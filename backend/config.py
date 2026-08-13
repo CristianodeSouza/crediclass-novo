@@ -9,7 +9,7 @@ load_dotenv()
 
 class Settings(BaseModel):
     app_name: str = "Crediclass Dashboard V3"
-    version: str = "4.0.34"
+    version: str = "4.0.35"
     environment: str = "development"
     debug: bool = False
     google_sheets_id: str = ""
@@ -20,7 +20,7 @@ class Settings(BaseModel):
 @lru_cache
 def get_settings() -> Settings:
     return Settings(
-        version=os.getenv("APP_VERSION", "4.0.34"),
+        version=os.getenv("APP_VERSION", "4.0.35"),
         environment=os.getenv("ENVIRONMENT", "development"),
         debug=os.getenv("DEBUG", "false").lower() == "true",
         google_sheets_id=os.getenv("GOOGLE_SHEETS_ID", ""),

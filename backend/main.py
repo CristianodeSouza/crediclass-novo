@@ -1,5 +1,6 @@
 from pathlib import Path
 import base64
+from functools import lru_cache
 import hashlib
 import hmac
 import json
@@ -33,6 +34,20 @@ FILES_DIR.mkdir(exist_ok=True)
 logger = logging.getLogger("crediclass.api")
 
 app = FastAPI(title="Crediclass Dashboard V3")
+
+
+@lru_cache(maxsize=1)
+def _assembly_calendar_payload() -> dict:
+    """Carrega o calendario uma vez por processo para manter a tela responsiva."""
+    source = DATA_DIR / "assembly_calendar_2026.json"
+    if not source.exists():
+        raise FileNotFoundError(source)
+    payload = json.loads(source.read_text(encoding="utf-8"))
+    if not isinstance(payload.get("schedules"), list) or not isinstance(payload.get("rules"), list):
+        raise ValueError("Estrutura do calendario de assembleias invalida.")
+    return payload
+
+
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/files", StaticFiles(directory=FILES_DIR), name="files")
 
@@ -209,10 +224,11 @@ def grupos(
 @app.get("/api/mapa-assembleia")
 def mapa_assembleia():
     """Retorna o calendario importado e versionado, sem consultar fonte externa."""
-    source = DATA_DIR / "assembly_calendar_2026.json"
-    if not source.exists():
+    try:
+        return _assembly_calendar_payload()
+    except (FileNotFoundError, json.JSONDecodeError, ValueError):
+        logger.exception("Falha ao carregar o calendario de assembleias")
         return JSONResponse(status_code=503, content={"success": False, "error": "Calendario de assembleias indisponivel."})
-    return json.loads(source.read_text(encoding="utf-8"))
 
 
 @app.get("/api/grupos/exportar-planilha")

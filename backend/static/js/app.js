@@ -66,7 +66,7 @@ const mapState = {
   lastLoadAt: null,
 };
 
-const assemblyState = { data: null, loaded: false };
+const assemblyState = { data: null, loaded: false, loadingPromise: null };
 
 const historyState = {
   items: [],
@@ -4617,15 +4617,42 @@ function populateAssemblyFilters(data) {
   document.getElementById("assemblyMonthFilter").innerHTML = data.schedules[0].months.map((month) => `<option value="${month.number}">${escapeHtml(month.name)}</option>`).join("");
 }
 
-async function loadAssemblyMap() {
+function validateAssemblyPayload(data) {
+  if (!data || !Array.isArray(data.schedules) || !Array.isArray(data.rules) || !data.schedules.length) {
+    throw new Error("O calendário recebido está incompleto.");
+  }
+  return data;
+}
+
+function renderAssemblyLoadError(error) {
+  const container = document.getElementById("assemblyError");
+  const message = error?.message || "Não foi possível carregar o calendário.";
+  container.innerHTML = `
+    <strong>Não foi possível carregar o calendário.</strong>
+    <span>${escapeHtml(message)}</span>
+    <button class="btn btn-outline-secondary btn-sm" type="button" data-assembly-retry>Tentar novamente</button>
+  `;
+  container.classList.remove("d-none");
+  container.querySelector("[data-assembly-retry]")?.addEventListener("click", () => loadAssemblyMap(true));
+}
+
+async function loadAssemblyMap(force = false) {
+  if (force) {
+    assemblyState.loaded = false;
+    assemblyState.data = null;
+    assemblyState.loadingPromise = null;
+  }
   if (assemblyState.loaded) {
     renderAssemblyMap();
     return;
   }
+  if (assemblyState.loadingPromise) return assemblyState.loadingPromise;
   document.getElementById("assemblyLoading").classList.remove("d-none");
   document.getElementById("assemblyError").classList.add("d-none");
+  document.getElementById("assemblyContent").classList.add("d-none");
+  assemblyState.loadingPromise = apiGet("/mapa-assembleia", { timeoutMs: 15000 });
   try {
-    const data = await apiGet("/mapa-assembleia");
+    const data = validateAssemblyPayload(await assemblyState.loadingPromise);
     assemblyState.data = data;
     assemblyState.loaded = true;
     populateAssemblyFilters(data);
@@ -4635,8 +4662,9 @@ async function loadAssemblyMap() {
     document.getElementById("assemblyContent").classList.remove("d-none");
     renderAssemblyMap();
   } catch (error) {
-    document.getElementById("assemblyError").classList.remove("d-none");
+    renderAssemblyLoadError(error);
   } finally {
+    assemblyState.loadingPromise = null;
     document.getElementById("assemblyLoading").classList.add("d-none");
   }
 }
