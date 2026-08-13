@@ -358,7 +358,10 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest):
     request_id = f"REQ-{uuid4().hex[:12].upper()}"
     logger.info("POST /api/viabilidade-360/analisar request_id=%s credito=%s", request_id, payload.credito_desejado)
     try:
-        groups = list_grupos(include_history=payload.base_mode == "historical_audit")
+        # O histórico completo alimenta o tooltip do Motor 360. A leitura é
+        # cacheada pelo cliente da planilha, portanto não há uma nova consulta
+        # ao Google Sheets para cada grupo exibido.
+        groups = list_grupos(include_history=True)
         result = analyze_client_consortium_viability(payload, groups, mode=payload.base_mode, request_id=request_id)
         audit = save_motor360_audit(result.pop("audit"))
         result["audit_id"] = audit["metadata"]["audit_id"]

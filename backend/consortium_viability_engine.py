@@ -131,12 +131,14 @@ def _contemplation_capacity(group: dict[str, Any]) -> dict[str, dict[str, Any]]:
     capacities: dict[str, dict[str, Any]] = {}
     for strategy, months in CONTEMPLATION_CAPACITY_WINDOWS.items():
         quantities = [int(item["qtd_contemplacoes"]) for item in history[-months:]]
-        average = round(sum(quantities) / len(quantities), 2) if quantities else None
+        total = sum(quantities)
+        average = round(total / len(quantities), 2) if quantities else None
         capacities[strategy] = {
             "perfil": _reference_name(strategy),
             "janela_meses": months,
             "meses_com_dados": len(quantities),
             "quantidades": quantities,
+            "total_contemplacoes": total,
             "media_contemplacoes": average,
             "limite_cotas": math.floor(average) if average is not None else None,
             "fonte": "Quantidades mensais de contemplacoes da planilha oficial",

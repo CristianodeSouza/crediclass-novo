@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.28", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.32", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=4.0.28", index_html)
+        self.assertIn("/static/js/app.js?v=4.0.32", index_html)
         self.assertIn('<button class="nav-item active" type="button" data-screen="perfil">', index_html)
         self.assertIn('<section id="screen-perfil" class="screen-panel active">', index_html)
 
@@ -40,8 +40,19 @@ class StaticEmailTest(unittest.TestCase):
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
         self.assertIn("Média máxima", app_js)
+        self.assertIn("Cálculo do período:", app_js)
+        self.assertIn("capacity.total_contemplacoes", app_js)
         self.assertIn("Acima da média histórica", app_js)
+        self.assertNotIn('class="motor360-quota-guidance"', app_js)
+        self.assertIn("scheduleHistoryHoverHide", app_js)
+        self.assertIn('modal.addEventListener("mouseenter", cancelHistoryHoverHide)', app_js)
         self.assertIn("motor360-quota-warning", style_css)
+
+    def test_motor360_carrega_historico_completo_dos_grupos(self):
+        main_py = (ROOT / "backend" / "main.py").read_text(encoding="utf-8")
+        endpoint = main_py.split("def viabilidade_360_analisar", 1)[1].split("@app.get", 1)[0]
+
+        self.assertIn("groups = list_grupos(include_history=True)", endpoint)
 
     def test_motor360_composicao_manual_de_multiplas_cotas(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")

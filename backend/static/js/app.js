@@ -802,17 +802,21 @@ function showHistoryHoverModal(trigger) {
 }
 
 function showGroupHistoryHoverModal(trigger, item, capacity = null) {
+  cancelHistoryHoverHide();
   const modalId = trigger?.dataset?.motor360HistoryGroup ? "motor360HistoryHoverModal" : "historyHoverModal";
   const modal = document.getElementById(modalId);
   if (!item || !modal) return;
   const average = Number.isFinite(Number(capacity?.media_contemplacoes))
     ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(Number(capacity.media_contemplacoes))} contemplações`
     : "Sem histórico suficiente";
+  const averageCalculation = capacity?.meses_com_dados
+    ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(Number(capacity.total_contemplacoes || 0))} contemplações ÷ ${escapeHtml(String(capacity.meses_com_dados))} meses = ${escapeHtml(average)}`
+    : "Quantidade mensal não disponível";
   const capacitySummary = capacity ? `
     <div class="history-hover-capacity">
       <span>Média máxima · ${escapeHtml(capacity.perfil || "Perfil não classificado")}</span>
       <strong>${escapeHtml(average)}</strong>
-      <small>${capacity.meses_com_dados ? `${escapeHtml(String(capacity.meses_com_dados))} mês(es) com dados` : "Quantidade mensal não disponível"}</small>
+      <small>Cálculo do período: ${averageCalculation}</small>
     </div>
   ` : "";
   modal.innerHTML = `
@@ -832,7 +836,24 @@ function showGroupHistoryHoverModal(trigger, item, capacity = null) {
   positionHistoryHoverModal(modal, trigger);
 }
 
+let historyHoverHideTimer = null;
+
+function cancelHistoryHoverHide() {
+  if (!historyHoverHideTimer) return;
+  clearTimeout(historyHoverHideTimer);
+  historyHoverHideTimer = null;
+}
+
+function scheduleHistoryHoverHide(delay = 280) {
+  cancelHistoryHoverHide();
+  historyHoverHideTimer = window.setTimeout(() => {
+    historyHoverHideTimer = null;
+    hideHistoryHoverModal();
+  }, delay);
+}
+
 function hideHistoryHoverModal() {
+  cancelHistoryHoverHide();
   ["historyHoverModal", "motor360HistoryHoverModal"].forEach((modalId) => {
     const modal = document.getElementById(modalId);
     if (!modal) return;
@@ -2056,10 +2077,9 @@ function renderMotor360GroupCard(item) {
   const quotaCount = selected ? Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1))) : 1;
   const quotaCapacity = motor360QuotaCapacity(item);
   const quotaLimit = Number.isFinite(Number(quotaCapacity?.limite_cotas)) ? Number(quotaCapacity.limite_cotas) : null;
-  const quotaAverage = Number.isFinite(Number(quotaCapacity?.media_contemplacoes)) ? Number(quotaCapacity.media_contemplacoes) : null;
   const quotaExceeded = selected && quotaLimit !== null && quotaCount > quotaLimit;
   const scaleMoney = (value) => value === null || value === undefined ? value : Number(value) * quotaCount;
-  const quotaControl = selected ? `<div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}"><div class="motor360-quota-guidance"><small>Média máxima · ${escapeHtml(quotaCapacity?.perfil || "perfil não classificado")}</small><b>${quotaAverage === null ? "Sem histórico" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(quotaAverage)} contemplações`}</b><span>${quotaCapacity?.meses_com_dados ? `${quotaCapacity.meses_com_dados} mês(es) com dados` : "Quantidade mensal não disponível"}</span></div><div class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="50" value="${quotaCount}" data-quota-action="input" data-group-id="${auditId}" aria-label="Quantidade de cotas do grupo ${auditId}"></div>${quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : ""}</div>` : "";
+  const quotaControl = selected ? `<div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}"><div class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="50" value="${quotaCount}" data-quota-action="input" data-group-id="${auditId}" aria-label="Quantidade de cotas do grupo ${auditId}"></div>${quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : ""}</div>` : "";
   const scaledScenarioCards = scenarios.map((scenario) => {
     const title = scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido";
     const compatible = scenario.credit_compatible;
@@ -2084,13 +2104,11 @@ function renderMotor360CompositionCard(item) {
   const quotaCount = selected ? Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1))) : Math.max(1, Number(item.cotas_minimas_sem_embutido || 1));
   const quotaCapacity = motor360QuotaCapacity(item);
   const quotaLimit = Number.isFinite(Number(quotaCapacity?.limite_cotas)) ? Number(quotaCapacity.limite_cotas) : null;
-  const quotaAverage = Number.isFinite(Number(quotaCapacity?.media_contemplacoes)) ? Number(quotaCapacity.media_contemplacoes) : null;
   const quotaExceeded = selected && quotaLimit !== null && quotaCount > quotaLimit;
-  const quotaGuidance = `<div class="motor360-quota-guidance"><small>Média máxima · ${escapeHtml(quotaCapacity?.perfil || "perfil não classificado")}</small><b>${quotaAverage === null ? "Sem histórico" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(quotaAverage)} contemplações`}</b><span>${quotaCapacity?.meses_com_dados ? `${quotaCapacity.meses_com_dados} mês(es) com dados` : "Quantidade mensal não disponível"}</span></div>`;
   const quotaWarning = quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : "";
   const scenarios = item.cenarios || [];
   const scenarioCards = scenarios.map((scenario) => `<article class="motor360-composition-scenario"><strong>${scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido"}</strong><dl><div><dt>Crédito líquido por cota</dt><dd>${formatMoney(scenario.credito_liquido_projetado)}</dd></div><div><dt>Crédito líquido selecionado</dt><dd>${formatMoney(Number(scenario.credito_liquido_projetado || 0) * quotaCount)}</dd></div><div><dt>Parcela por cota</dt><dd>${formatMoney(scenario.parcela_inicial)}</dd></div><div><dt>Parcela total</dt><dd>${formatMoney(Number(scenario.parcela_inicial || 0) * quotaCount)}</dd></div><div><dt>Saldo devedor total</dt><dd>${formatMoney(Number(scenario.saldo_devedor || 0) * quotaCount)}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>Pendente da distribuição do lance</dd></div></dl></article>`).join("");
-  return `<article class="motor360-composition-card ${selected ? "is-selected" : ""}"><header><div><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div class="motor360-group-title"><h3>Grupo ${escapeHtml(groupId)}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")} · mínimo estimado ${escapeHtml(String(item.cotas_minimas_sem_embutido || "-"))} cotas</p></div><div class="motor360-composition-actions"><div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}">${quotaGuidance}<label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${escapeHtml(groupId)}" ${selected ? "checked" : ""}><span>Adicionar ao carrinho</span></label>${selected ? `<label class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="50" value="${quotaCount}" data-quota-action="input" data-group-id="${escapeHtml(groupId)}"></label>` : ""}${quotaWarning}</div></div></header><div class="motor360-composition-scenarios">${scenarioCards}</div></article>`;
+  return `<article class="motor360-composition-card ${selected ? "is-selected" : ""}"><header><div><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div class="motor360-group-title"><h3>Grupo ${escapeHtml(groupId)}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")} · mínimo estimado ${escapeHtml(String(item.cotas_minimas_sem_embutido || "-"))} cotas</p></div><div class="motor360-composition-actions"><div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}"><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${escapeHtml(groupId)}" ${selected ? "checked" : ""}><span>Adicionar ao carrinho</span></label>${selected ? `<label class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="50" value="${quotaCount}" data-quota-action="input" data-group-id="${escapeHtml(groupId)}"></label>` : ""}${quotaWarning}</div></div></header><div class="motor360-composition-scenarios">${scenarioCards}</div></article>`;
 }
 
 function selectedMotor360Items() {
@@ -2796,8 +2814,8 @@ function renderInvestorAnalysis(result) {
     };
     trigger.addEventListener("mouseenter", showHistory);
     trigger.addEventListener("focus", showHistory);
-    trigger.addEventListener("mouseleave", hideHistoryHoverModal);
-    trigger.addEventListener("blur", hideHistoryHoverModal);
+    trigger.addEventListener("mouseleave", () => scheduleHistoryHoverHide());
+    trigger.addEventListener("blur", () => scheduleHistoryHoverHide());
   });
   setInvestorAnalysisState("results");
 }
@@ -4576,7 +4594,7 @@ document.getElementById("groupsTableBody").addEventListener("mouseout", (event) 
   if (!trigger) return;
   const related = event.relatedTarget;
   if (related && (trigger.contains(related) || document.getElementById("historyHoverModal")?.contains(related))) return;
-  hideHistoryHoverModal();
+  scheduleHistoryHoverHide();
 });
 
 document.getElementById("groupsTableBody").addEventListener("focusin", (event) => {
@@ -4586,10 +4604,17 @@ document.getElementById("groupsTableBody").addEventListener("focusin", (event) =
 
 document.getElementById("groupsTableBody").addEventListener("focusout", (event) => {
   const trigger = event.target.closest("[data-history-index]");
-  if (trigger) hideHistoryHoverModal();
+  if (trigger) scheduleHistoryHoverHide();
 });
 
-document.getElementById("historyHoverModal").addEventListener("mouseleave", hideHistoryHoverModal);
+["historyHoverModal", "motor360HistoryHoverModal"].forEach((modalId) => {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  modal.addEventListener("mouseenter", cancelHistoryHoverHide);
+  modal.addEventListener("mouseleave", () => scheduleHistoryHoverHide());
+  modal.addEventListener("focusin", cancelHistoryHoverHide);
+  modal.addEventListener("focusout", () => scheduleHistoryHoverHide());
+});
 
 document.getElementById("clearFiltersBtn").addEventListener("click", () => {
   document.getElementById("groupFilters").reset();
