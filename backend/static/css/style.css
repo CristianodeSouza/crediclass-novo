@@ -2054,8 +2054,19 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-selected-dock-heading strong { color: var(--brand-navy); font-size: 0.75rem; }
 .motor360-selected-dock-list { display: flex; gap: 6px; min-width: 0; overflow-x: auto; scrollbar-width: thin; }
 .motor360-selected-dock-item { display: grid; flex: 0 0 auto; gap: 1px; min-width: 112px; padding: 5px 8px; border: 1px solid #f0d7bd; border-radius: 5px; background: #fff; }
+.motor360-selected-dock-item { appearance: none; color: inherit; text-align: left; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.motor360-selected-dock-item:hover,
+.motor360-selected-dock-item:focus-visible { border-color: #e8791b; box-shadow: 0 0 0 2px rgb(232 121 27 / 14%); outline: none; }
+.motor360-selected-dock-item:active { transform: translateY(1px); }
 .motor360-selected-dock-item b { color: var(--brand-navy); font-size: 0.68rem; }
 .motor360-selected-dock-item small { color: var(--muted); font-size: 0.58rem; }
+.motor360-group-card,
+.motor360-composition-card { scroll-margin-top: 90px; }
+.motor360-group--focus { animation: motor360-group-focus 1.8s ease-out; }
+@keyframes motor360-group-focus {
+  from { box-shadow: 0 0 0 3px rgb(232 121 27 / 46%), 0 8px 20px rgb(23 43 51 / 12%); }
+  to { box-shadow: 0 0 0 0 rgb(232 121 27 / 0%), 0 2px 8px rgb(23 43 51 / 8%); }
+}
 .motor360-floating-summary { position: fixed; right: 20px; bottom: 18px; z-index: 35; width: min(390px, calc(100vw - 32px)); padding: 12px; border: 1px solid #efb477; border-radius: 7px; background: rgb(255 255 255 / 97%); box-shadow: 0 14px 36px rgb(21 44 52 / 22%); backdrop-filter: blur(8px); }
 .motor360-floating-summary-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
 .motor360-floating-summary-heading > div { display: grid; gap: 2px; }
