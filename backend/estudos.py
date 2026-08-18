@@ -30,6 +30,18 @@ def initial_counter(studies: dict[str, dict]) -> int:
     return max(counters, default=0)
 
 
+def initial_proposal_counter(studies: dict[str, dict]) -> int:
+    counters = []
+    for item in studies.values():
+        value = str(item.get("proposal_id") or "")
+        if value.upper().startswith("ID "):
+            try:
+                counters.append(int(value[3:]))
+            except ValueError:
+                continue
+    return max(counters, default=0)
+
+
 def save_studies_to_disk() -> None:
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
     STUDIES_FILE.write_text(json.dumps(_studies, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -37,16 +49,21 @@ def save_studies_to_disk() -> None:
 
 _studies: dict[str, dict] = load_studies_from_disk()
 _counter = initial_counter(_studies)
+_proposal_counter = initial_proposal_counter(_studies)
 
 
-def create_estudo(payload: EstudoRequest, grupo: dict | None = None) -> dict:
-    global _counter
+def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: str = "") -> dict:
+    global _counter, _proposal_counter
     _counter += 1
+    _proposal_counter += 1
     estudo_id = f"EST-{datetime.now().year}-{_counter:05d}"
+    proposal_id = f"ID {_proposal_counter:04d}"
+    criado_em = datetime.now().isoformat(timespec="seconds")
     grupo_data = grupo or {}
     financeiro = build_financeiro(payload, grupo_data)
     _studies[estudo_id] = {
         "estudo_id": estudo_id,
+        "proposal_id": proposal_id,
         "cliente": payload.cliente.model_dump(),
         "grupo_id": payload.grupo_id,
         "grupo": grupo_data,
@@ -55,11 +72,11 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None) -> dict:
         "template_campos": payload.template_campos,
         "estrategia": financeiro["estrategia_recomendada"],
         "status": "Concluido",
-        "operador": "Joyce",
-        "criado_em": datetime.now().isoformat(timespec="seconds"),
+        "operador": operador or "Não informado",
+        "criado_em": criado_em,
     }
     save_studies_to_disk()
-    return {"estudo_id": estudo_id, "success": True}
+    return {"estudo_id": estudo_id, "proposal_id": proposal_id, "success": True}
 
 
 def list_estudos() -> list[dict]:

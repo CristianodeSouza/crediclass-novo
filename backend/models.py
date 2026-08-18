@@ -456,18 +456,20 @@ class EstudoRequest(BaseModel):
 
 class EstudoCreateResponse(BaseModel):
     estudo_id: str
+    proposal_id: str
     success: bool = True
 
 
 class EstudoResumo(BaseModel):
     estudo_id: str
+    proposal_id: str | None = None
     criado_em: str
     cliente: dict = Field(default_factory=dict)
     grupo: dict = Field(default_factory=dict)
     financeiro: dict = Field(default_factory=dict)
     estrategia: str = "Lance Total"
     status: str = "Em andamento"
-    operador: str = "Joyce"
+    operador: str = "Não informado"
 
 
 class EstudosResponse(BaseModel):

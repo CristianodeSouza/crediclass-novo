@@ -459,13 +459,15 @@ def auth_me(request: Request):
 
 
 @app.post("/api/estudos", response_model=EstudoCreateResponse)
-def estudos_criar(payload: EstudoRequest):
+def estudos_criar(payload: EstudoRequest, request: Request):
     logger.info("POST /api/estudos grupo_id=%s", payload.grupo_id)
     try:
         item = get_grupo(payload.grupo_id)
         if not item:
             return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
-        result = create_estudo(payload, item)
+        username = getattr(request.state, "auth_user", "")
+        operador = AUTH_USERS.get(username, {}).get("name", username)
+        result = create_estudo(payload, item, operador)
     except Exception as error:
         logger.exception("Erro ao criar estudo")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
