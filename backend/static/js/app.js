@@ -2352,14 +2352,20 @@ function financialStudyComparable(value) {
     .toUpperCase();
 }
 
-function financialStudyCalendarDate(event, month, metadata) {
+function financialStudyCalendarDate(event, month, metadata, generatedAt = new Date()) {
   if (event?.iso_date) {
     const parsed = new Date(`${event.iso_date}T00:00:00`);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   }
   const day = Number(event?.value);
   const monthNumber = Number(month?.number);
-  const year = Number(metadata?.reference_year);
+  const referenceYear = Number(metadata?.reference_year);
+  const nextCycleYear = Number(metadata?.next_cycle_year || referenceYear + 1);
+  // The calendar workbook contains the reference year and the following
+  // cycle. January belongs to the next cycle when the reference year is over.
+  const year = monthNumber === 1 && generatedAt.getFullYear() > referenceYear
+    ? nextCycleYear
+    : referenceYear;
   if (!day || !monthNumber || !year) return null;
   const parsed = new Date(year, monthNumber - 1, day);
   return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -2388,15 +2394,20 @@ function financialStudyAssemblyAgenda(data, administrators, generatedAt) {
   (data?.schedules || []).forEach((schedule) => {
     if (!wanted.has(financialStudyComparable(schedule.administrator))) return;
     (schedule.months || []).forEach((month) => {
+      const monthNumber = Number(month.number);
+      const monthYear = dateYearForAssemblyMonth(month, data.metadata, generatedAt);
+      const isCurrentMonth = monthNumber === generatedAt.getMonth() + 1 && monthYear === generatedAt.getFullYear();
       const events = (month.events || []).map((event) => {
-        const date = financialStudyCalendarDate(event, month, data.metadata);
-        return date && date >= start ? { ...event, date } : null;
+        const date = financialStudyCalendarDate(event, month, data.metadata, generatedAt);
+        return date && (isCurrentMonth || date >= start) ? { ...event, date } : null;
       }).filter(Boolean).sort((a, b) => a.date - b.date);
       if (!events.length) return;
       cycles.push({
         administrator: schedule.administrator,
         faixa: schedule.faixa,
         month: month.name,
+        monthNumber: Number(month.number),
+        year: dateYearForAssemblyMonth(month, data.metadata, generatedAt),
         events,
         firstDate: events[0].date,
       });
@@ -2405,6 +2416,31 @@ function financialStudyAssemblyAgenda(data, administrators, generatedAt) {
   cycles.sort((a, b) => a.firstDate - b.firstDate || Number(a.faixa) - Number(b.faixa));
   const rules = (data?.rules || []).filter((rule) => wanted.has(financialStudyComparable(rule.administrator)));
   return { cycles, rules };
+}
+
+function dateYearForAssemblyMonth(month, metadata, generatedAt) {
+  const referenceYear = Number(metadata?.reference_year || generatedAt.getFullYear());
+  const nextCycleYear = Number(metadata?.next_cycle_year || referenceYear + 1);
+  const currentYear = generatedAt.getFullYear();
+  return Number(month?.number) === 1 && currentYear > referenceYear ? nextCycleYear : referenceYear;
+}
+
+function financialStudyAssemblyPrimaryCycles(cycles, generatedAt) {
+  const currentMonth = generatedAt.getMonth() + 1;
+  const currentYear = generatedAt.getFullYear();
+  const current = cycles.filter((cycle) => cycle.monthNumber === currentMonth && cycle.year === currentYear);
+  if (!current.length) return [];
+
+  const hasFutureAdhesion = current.some((cycle) => cycle.events.some((event) => (
+    event.id === "adesao" && event.date >= generatedAt
+  )));
+  if (hasFutureAdhesion) return current;
+
+  const nextMonthDate = new Date(currentYear, currentMonth, 1);
+  const next = cycles.filter((cycle) => (
+    cycle.monthNumber === nextMonthDate.getMonth() + 1 && cycle.year === nextMonthDate.getFullYear()
+  ));
+  return [...current, ...next];
 }
 
 function financialStudyAssemblySection(data, administrators, generatedAt, loadError = "") {
@@ -2417,14 +2453,15 @@ function financialStudyAssemblySection(data, administrators, generatedAt, loadEr
     return `<div class="financial-study-agenda-state"><strong>Nenhuma data futura cadastrada</strong><span>Confirme o próximo ciclo diretamente com a administradora antes da contratação.</span></div>`;
   }
   const allEvents = cycles.flatMap((cycle) => cycle.events.map((event) => ({ ...event, faixa: cycle.faixa, month: cycle.month })));
-  const nextEvent = (id) => allEvents.filter((event) => event.id === id).sort((a, b) => a.date - b.date)[0];
+  const nextEvent = (id) => allEvents.filter((event) => event.id === id && event.date >= generatedAt).sort((a, b) => a.date - b.date)[0];
   const nextAdhesion = nextEvent("adesao");
   const nextInstallment = nextEvent("vencimento_boleto_adesao") || nextEvent("vencimento_parcela");
   const nextAssembly = nextEvent("assembleia");
   const deadline = (label, event, fallback) => `<div><span>${label}</span><strong>${event ? financialStudyFormatCalendarDate(event.date) : fallback}</strong>${event ? `<small>Faixa ${escapeHtml(event.faixa)} · ${escapeHtml(event.month)}</small>` : ""}</div>`;
   const cycleCard = (cycle) => `<article class="financial-study-agenda-cycle"><header><div><strong>${escapeHtml(cycle.month)} · Faixa ${escapeHtml(cycle.faixa)}</strong><span>${escapeHtml(cycle.administrator)}</span></div><small>${cycle.events.length} data(s) futura(s)</small></header><div>${cycle.events.map((event) => `<span><small>${escapeHtml(event.label)}</small><b>${financialStudyFormatCalendarDate(event.date)}</b></span>`).join("")}</div></article>`;
-  const primaryCycles = cycles.slice(0, 4);
-  const additionalCycles = cycles.slice(4);
+  const primaryCycles = financialStudyAssemblyPrimaryCycles(cycles, generatedAt);
+  const primarySet = new Set(primaryCycles);
+  const additionalCycles = cycles.filter((cycle) => !primarySet.has(cycle));
   const ruleCards = rules.map((rule) => `<article class="financial-study-agenda-rule"><header><strong>Regras operacionais · Faixa ${escapeHtml(rule.faixa)}</strong><span>${escapeHtml(rule.administrator)}</span></header><dl>${(rule.parameters || []).map((parameter) => `<div><dt>${escapeHtml(parameter.label)}</dt><dd>${escapeHtml(parameter.value)}</dd></div>`).join("")}</dl>${rule.guidance?.length ? `<ul>${rule.guidance.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}</article>`).join("");
   const issuedCard = `<div><span>Estudo gerado em</span><strong>${escapeHtml(issued)}</strong><small>Horário local</small></div>`;
   return `<div class="financial-study-deadlines">${issuedCard}${deadline("Assinar / aderir até", nextAdhesion, "Confirmar")}${deadline("Pagar a primeira parcela", nextInstallment, "Confirmar")}${deadline("Próxima assembleia", nextAssembly, "Confirmar")}</div><div class="financial-study-agenda-cycles">${primaryCycles.map(cycleCard).join("")}</div>${additionalCycles.length ? `<details class="financial-study-agenda-more"><summary>Ver mais ${additionalCycles.length} ciclo(s) futuro(s)</summary><div>${additionalCycles.map(cycleCard).join("")}</div></details>` : ""}${ruleCards ? `<details class="financial-study-agenda-more"><summary>Regras operacionais da administradora</summary><div class="financial-study-agenda-rules">${ruleCards}</div></details>` : ""}`;
