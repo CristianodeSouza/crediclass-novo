@@ -104,6 +104,16 @@ async def require_authenticated_session(request: Request, call_next):
     return await call_next(request)
 
 
+@app.middleware("http")
+async def prevent_stale_frontend_assets(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path == "/index.html" or request.url.path.startswith("/static/"):
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
+
 @app.get("/")
 def index():
     return FileResponse(
