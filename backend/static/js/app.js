@@ -3784,13 +3784,17 @@ async function openFinancialStudy(groupId, viabilityItem) {
     renderStudyHistory(group);
     renderStudyRecommendations(viabilityItem, financial, group);
     renderStudyTemplateFields(currentStudy.templateCampos);
+
+    // Versiona o estudo assim que a tela fica pronta para manter o cabeçalho
+    // e o Historico de Estudos sincronizados desde a primeira visualizacao.
+    await ensureCurrentStudySaved({ silent: true });
     setStudyState("ready");
   } catch (error) {
     setStudyState("error");
   }
 }
 
-async function saveCurrentStudy() {
+async function saveCurrentStudy(options = {}) {
   if (!currentStudy) {
     showToast("Selecione um cenario na Viabilidade antes de salvar.", "warning");
     return null;
@@ -3820,7 +3824,9 @@ async function saveCurrentStudy() {
     currentStudy.savedStudyId = result.estudo_id;
     currentStudy.proposalId = result.proposal_id || null;
     document.getElementById("studyDisplayId").textContent = result.proposal_id || result.estudo_id;
-    showToast(`Estudo salvo: ${result.proposal_id || result.estudo_id}`, "success");
+    if (!options.silent) {
+      showToast(`Estudo salvo: ${result.proposal_id || result.estudo_id}`, "success");
+    }
   loadHistoryStudies();
   return result;
 }
@@ -3844,13 +3850,13 @@ async function exportStudyPdf(studyId) {
   window.open(result.download_url, "_blank", "noopener");
 }
 
-async function ensureCurrentStudySaved() {
+async function ensureCurrentStudySaved(options = {}) {
   if (!currentStudy) {
     showToast("Selecione um cenario na Viabilidade antes de compartilhar.", "warning");
     return null;
   }
   if (currentStudy.savedStudyId) return currentStudy.savedStudyId;
-  const result = await saveCurrentStudy();
+  const result = await saveCurrentStudy(options);
   return result?.estudo_id || null;
 }
 
