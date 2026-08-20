@@ -4213,6 +4213,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
   text-align: left;
 }
 
+.financial-study-group-assembly-card > div > span small {
+  color: #000;
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 .financial-study-group-assembly-card > div > span b {
   display: block;
   margin-top: 2px;
