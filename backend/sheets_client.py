@@ -57,6 +57,7 @@ SUMMARY_FIELDS = [
     "parcela_apos_lance_grupo",
     "prazo_total",
     "prazo_restante",
+    "vencimento_parcela",
     "taxa_adm_ano",
     "parcela_reduzida",
     "primeira_assembleia",
@@ -90,6 +91,7 @@ MAPA_GRUPOS_COLUMN_INDEXES = {
     "grupo": 1,  # B
     "tipo_bem": 2,  # C
     "prazo_restante": 5,  # F
+    "vencimento_parcela": 10,  # K
     "seguro_obrigatorio": 11,  # L
     "idade_maxima_seguro": 12,  # M
     "aliquota_seguro": 13,  # N
@@ -995,6 +997,7 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "parcela_reduzida": parse_number(get_optional_field(row, "parcela_reduzida")),
         "prazo_total": parse_int(get_field(row, "prazo_total")),
         "prazo_restante": parse_int(get_optional_field(row, "prazo_restante")),
+        "vencimento_parcela": clean_text(get_optional_field(row, "vencimento_parcela")),
         "atualizado": short_history_month_label(updated_month),
         "historico_12_meses": history_last_12_rows(historico),
         "primeira_assembleia": clean_text(get_field(row, "primeira_assembleia")),
