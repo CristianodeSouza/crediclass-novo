@@ -2347,8 +2347,88 @@ function financialStudyGroupRow(item) {
   </tr>`;
 }
 
+function financialStudyGroupDueDay(item) {
+  const directValue = item.vencimento_parcela ?? item.source_values?.vencimento_parcela;
+  const numericValue = Number(directValue);
+  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null;
+}
+
+function financialStudyGroupAssemblyCycles(item, data, generatedAt) {
+  const wantedAdministrator = financialStudyComparable(item.administradora);
+  const wantedDueDay = financialStudyGroupDueDay(item);
+  const start = new Date(generatedAt);
+  start.setHours(0, 0, 0, 0);
+  const matches = [];
+  (data?.schedules || []).forEach((schedule) => {
+    if (financialStudyComparable(schedule.administrator) !== wantedAdministrator) return;
+    (schedule.months || []).forEach((month) => {
+      const dueEvent = (month.events || []).find((event) => event.id === "vencimento_parcela");
+      const dueDay = Number(dueEvent?.value);
+      if (wantedDueDay && dueDay && dueDay !== wantedDueDay) return;
+      const events = (month.events || []).map((event) => {
+        const date = financialStudyCalendarDate(event, month, data.metadata, generatedAt);
+        return date && date >= start ? { ...event, date } : null;
+      }).filter(Boolean).sort((a, b) => a.date - b.date);
+      if (!events.length) return;
+      matches.push({
+        administrator: schedule.administrator,
+        month: month.name,
+        monthNumber: Number(month.number),
+        year: dateYearForAssemblyMonth(month, data.metadata, generatedAt),
+        dueDay: dueDay || wantedDueDay || null,
+        events,
+        firstDate: events[0].date,
+      });
+    });
+  });
+  return matches.sort((a, b) => a.firstDate - b.firstDate).slice(0, 2);
+}
+
+function financialStudyGroupAssemblyBlock(item, data, generatedAt, loadError = "") {
+  if (loadError) {
+    return `<div class="financial-study-group-assembly-empty"><strong>Agenda de assembleia indisponível</strong><span>${escapeHtml(loadError)}</span></div>`;
+  }
+  const cycles = financialStudyGroupAssemblyCycles(item, data, generatedAt);
+  if (!cycles.length) {
+    return `<div class="financial-study-group-assembly-empty"><strong>Sem agenda vinculada</strong><span>Não encontramos datas futuras de assembleia para este grupo na base atual.</span></div>`;
+  }
+  return `<div class="financial-study-group-assembly-list">${cycles.map((cycle) => `<article class="financial-study-group-assembly-card"><header><div><strong>${escapeHtml(cycle.month)}${cycle.year ? ` · ${escapeHtml(String(cycle.year))}` : ""}</strong><span>${escapeHtml(cycle.administrator || "-")}${cycle.dueDay ? ` · Vencimento ${escapeHtml(String(cycle.dueDay))}` : ""}</span></div><small>${cycle.events.length} evento(s)</small></header><div>${cycle.events.map((event) => `<span><small>${escapeHtml(event.label)}</small><b>${financialStudyFormatCalendarDate(event.date)}</b></span>`).join("")}</div></article>`).join("")}</div>`;
+}
+
+function financialStudyGroupCard(item, assemblyData, generatedAt, assemblyError = "") {
+  const groupId = String(item.grupo || item.grupo_id || "-");
+  const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+  const scale = (value) => value === null || value === undefined ? null : Number(value) * quotas;
+  const without = financialStudyScenario(item, "without_embedded");
+  const withEmbedded = financialStudyScenario(item, "with_embedded");
+  const source = item.source_values || {};
+  const rate = source.taxa_adm ?? item.taxa_total ?? item.taxa_adm;
+  const dueDay = financialStudyGroupDueDay(item);
+  const summaryMetrics = [
+    ["Grupo", groupId],
+    ["Administradora", item.administradora || "-"],
+    ["Cotas", `${quotas}`],
+    ["Crédito máximo", formatMoney(scale(item.credito_maximo))],
+    ["Prazo restante", `${escapeHtml(String(item.prazo_restante ?? "-"))} meses`],
+    ["Taxa", rate == null ? "Não informada" : formatPercent(rate)],
+    ["Venc. parcela", dueDay ? String(dueDay) : "-"],
+    ["Classificação", financialStudyStrategyLabel(item.best_contemplation_strategy)],
+  ];
+  const scenarioColumn = (title, scenario) => `<section class="financial-study-group-scenario"><header><strong>${title}</strong></header><div><span>Crédito contratado</span><b>${scenario.credito_contratado == null ? "Não disponível" : formatMoney(scale(scenario.credito_contratado))}</b></div><div><span>Parcela inicial</span><b>${scenario.parcela_inicial == null ? "Não calculada" : formatMoney(scale(scenario.parcela_inicial))}</b></div><div><span>Pós-contemplação</span><b>${scenario.parcela_pos_contemplacao == null ? "Não calculada" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</b></div><div><span>Saldo devedor</span><b>${scenario.saldo_devedor == null ? "Não calculado" : formatMoney(scale(scenario.saldo_devedor))}</b></div></section>`;
+  return `<article class="financial-study-group-card">
+    <header class="financial-study-group-header"><div><strong>Grupo ${escapeHtml(groupId)}</strong><span>${escapeHtml(item.administradora || "-")} · ${quotas} ${quotas === 1 ? "cota" : "cotas"}</span></div><span class="financial-study-classification">${escapeHtml(financialStudyStrategyLabel(item.best_contemplation_strategy))}</span></header>
+    <div class="financial-study-group-metrics">${summaryMetrics.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("")}</div>
+    <div class="financial-study-group-financials">${scenarioColumn("Sem embutido", without)}${scenarioColumn("Com embutido", withEmbedded)}</div>
+    <div class="financial-study-group-assembly"><div class="financial-study-group-section-title"><strong>Agenda de assembleia</strong><span>Datas futuras vinculadas à administradora e ao vencimento da parcela</span></div>${financialStudyGroupAssemblyBlock(item, assemblyData, generatedAt, assemblyError)}</div>
+  </article>`;
+}
+
 function financialStudyComparisonTable(items) {
   return `<div class="financial-study-table-wrap"><table class="financial-study-table financial-study-comparison-table"><thead><tr><th>Grupo</th><th>Cotas</th><th>Crédito máximo</th><th>Prazo</th><th>Taxa</th><th>Sem embutido</th><th>Com embutido</th><th>Classificação</th></tr></thead><tbody>${items.map(financialStudyGroupRow).join("")}</tbody></table></div>`;
+}
+
+function financialStudyGroupCards(items, assemblyData, generatedAt, assemblyError = "") {
+  return `<div class="financial-study-group-list">${items.map((item) => financialStudyGroupCard(item, assemblyData, generatedAt, assemblyError)).join("")}</div>`;
 }
 
 function financialStudyPortfolioSummary(items) {
@@ -2481,10 +2561,10 @@ function financialStudyAssemblySection(data, administrators, generatedAt, loadEr
   const nextAdhesion = nextEvent("adesao");
   const nextInstallment = nextEvent("vencimento_boleto_adesao") || nextEvent("vencimento_parcela");
   const nextAssembly = nextEvent("assembleia");
-  const deadline = (label, event, fallback) => `<div><span>${label}</span><strong>${event ? financialStudyFormatCalendarDate(event.date) : fallback}</strong>${event ? `<small>Faixa ${escapeHtml(event.faixa)} · ${escapeHtml(event.month)}</small>` : ""}</div>`;
-  const cycleCard = (cycle) => `<article class="financial-study-agenda-cycle"><header><div><strong>${escapeHtml(cycle.month)} · Faixa ${escapeHtml(cycle.faixa)}</strong><span>${escapeHtml(cycle.administrator)}</span></div><small>${cycle.events.length} data(s) futura(s)</small></header><div>${cycle.events.map((event) => `<span><small>${escapeHtml(event.label)}</small><b>${financialStudyFormatCalendarDate(event.date)}</b></span>`).join("")}</div></article>`;
+  const deadline = (label, event, fallback) => `<div><span>${label}</span><strong>${event ? financialStudyFormatCalendarDate(event.date) : fallback}</strong>${event ? `<small>${escapeHtml(event.month)}${event.faixa ? ` · ciclo ${escapeHtml(event.faixa)}` : ""}</small>` : ""}</div>`;
+  const cycleCard = (cycle) => `<article class="financial-study-agenda-cycle"><header><div><strong>${escapeHtml(cycle.month)}</strong><span>${escapeHtml(cycle.administrator)}${cycle.faixa ? ` · ciclo ${escapeHtml(cycle.faixa)}` : ""}</span></div><small>${cycle.events.length} data(s) futura(s)</small></header><div>${cycle.events.map((event) => `<span><small>${escapeHtml(event.label)}</small><b>${financialStudyFormatCalendarDate(event.date)}</b></span>`).join("")}</div></article>`;
   const primaryCycles = financialStudyAssemblyPrimaryCycles(cycles, generatedAt);
-  const ruleCards = rules.map((rule) => `<article class="financial-study-agenda-rule"><header><strong>Regras operacionais · Faixa ${escapeHtml(rule.faixa)}</strong><span>${escapeHtml(rule.administrator)}</span></header><dl>${(rule.parameters || []).map((parameter) => `<div><dt>${escapeHtml(parameter.label)}</dt><dd>${escapeHtml(parameter.value)}</dd></div>`).join("")}</dl>${rule.guidance?.length ? `<ul>${rule.guidance.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}</article>`).join("");
+  const ruleCards = rules.map((rule) => `<article class="financial-study-agenda-rule"><header><strong>Regras operacionais</strong><span>${escapeHtml(rule.administrator)}${rule.faixa ? ` · ciclo ${escapeHtml(rule.faixa)}` : ""}</span></header><dl>${(rule.parameters || []).map((parameter) => `<div><dt>${escapeHtml(parameter.label)}</dt><dd>${escapeHtml(parameter.value)}</dd></div>`).join("")}</dl>${rule.guidance?.length ? `<ul>${rule.guidance.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}</article>`).join("");
   const issuedCard = `<div><span>Estudo gerado em</span><strong>${escapeHtml(issued)}</strong><small>Horário local</small></div>`;
   return `<div class="financial-study-deadlines">${issuedCard}${deadline("Assinar / aderir até", nextAdhesion, "Confirmar")}${deadline("Pagar a primeira parcela", nextInstallment, "Confirmar")}${deadline("Próxima assembleia", nextAssembly, "Confirmar")}</div><div class="financial-study-agenda-cycles">${primaryCycles.map(cycleCard).join("")}</div>${ruleCards ? `<details class="financial-study-agenda-more"><summary>Regras operacionais da administradora</summary><div class="financial-study-agenda-rules">${ruleCards}</div></details>` : ""}`;
 }
@@ -2557,7 +2637,7 @@ async function renderFinancialStudyScreen() {
       ${financialStudyPortfolioSummary(items)}
       <section class="financial-study-section${sectionClass("cliente")}" data-study-content="cliente"><div class="financial-study-section-heading"><span>01</span><div><h3>Cliente e necessidade</h3><p>Informações declaradas e registradas no Perfil do Cliente.</p></div></div><div class="financial-study-metrics">${financialStudyMetric("Cliente", clientName)}${financialStudyMetric("Tipo de contratação", financialStudyContractLabel(profile.tipo_contratacao))}${financialStudyMetric("Objetivo do consórcio", profile.objetivo || "Não informado")}${optionalAssetMetric}</div></section>
       <section class="financial-study-section${sectionClass("resumo")}" data-study-content="resumo"><div class="financial-study-section-heading"><span>02</span><div><h3>Resumo financeiro</h3><p>Capacidade e parâmetros declarados pelo cliente.</p></div></div><div class="financial-study-metrics financial-study-metrics-compact">${financialStudyMetric("Crédito líquido desejado", formatMoney(profile.credito_desejado))}${financialStudyMetric("Parcela desejada", formatMoney(profile.parcela_desejada ?? profile.parcela_ideal))}${financialStudyMetric("Parcela máxima", formatMoney(profile.parcela_limite))}${financialStudyMetric("Renda total", formatMoney(profile.renda_total))}${financialStudyMetric("Recursos próprios", formatMoney(profile.lance_proprio))}${financialStudyMetric("FGTS", formatMoney(profile.fgts))}${financialStudyMetric("Grupos selecionados", items.length)}${financialStudyMetric("Total de cotas", totalQuotas)}</div></section>
-      <section class="financial-study-section${sectionClass("grupos")}" data-study-content="grupos"><div class="financial-study-section-heading"><span>03</span><div><h3>Comparativo dos grupos</h3><p>Crédito, parcela, saldo, prazo e custos reunidos em uma única visão.</p></div></div>${financialStudyComparisonTable(items)}<p class="financial-study-table-note">Taxas aparecem somente quando registradas na base. A ordem reproduz a seleção atual do Motor 360.</p></section>
+      <section class="financial-study-section${sectionClass("grupos")}" data-study-content="grupos"><div class="financial-study-section-heading"><span>03</span><div><h3>Comparativo dos grupos</h3><p>Cada grupo apresenta os dados financeiros e, logo abaixo, a agenda de assembleia correspondente.</p></div></div>${financialStudyGroupCards(items, assemblyData, generatedAt, assemblyError)}<p class="financial-study-table-note">Taxas aparecem somente quando registradas na base. A ordem reproduz a seleção atual do Motor 360.</p></section>
       <section class="financial-study-section${sectionClass("contemplacao")}" data-study-content="contemplacao"><div class="financial-study-section-heading"><span>04</span><div><h3>Perfis de contemplação</h3><p>Comparação histórica compacta por grupo e cenário; não representa garantia de contemplação.</p></div></div>${financialStudyProfileMatrix(items)}</section>
       <section class="financial-study-section${sectionClass("agenda")}" data-study-content="agenda"><div class="financial-study-section-heading"><span>05</span><div><h3>Agenda de contratação e assembleias</h3><p>Datas futuras da administradora a partir da emissão deste estudo.</p></div></div>${financialStudyAssemblySection(assemblyData, administrators, generatedAt, assemblyError)}</section>
       <section class="financial-study-section${sectionClass("observacoes")}" data-study-content="observacoes"><div class="financial-study-section-heading"><span>06</span><div><h3>Conclusão e observações</h3><p>Leitura executiva para a continuidade do atendimento.</p></div></div><div class="financial-study-conclusion"><strong>Próximo passo recomendado</strong><p>Validar com o cliente a quantidade de cotas e o cenário preferido do grupo em destaque; depois, confirmar taxas, fundo de reserva, disponibilidade da carta e regras comerciais diretamente com a administradora.</p></div><div class="financial-study-disclaimer"><p>Este estudo utiliza exclusivamente as informações registradas pelo cliente e os dados disponíveis dos grupos na data da análise.</p><p>Percentuais, projeções e classificações possuem caráter informativo e histórico. Não constituem promessa ou garantia de contemplação.</p><p>As datas operacionais refletem o calendário cadastrado e devem ser confirmadas com a administradora antes da contratação.</p></div></section>
