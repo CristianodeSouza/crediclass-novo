@@ -2361,32 +2361,35 @@ function financialStudyGroupAssemblyCycles(item, data, generatedAt) {
   const wantedAdministrator = financialStudyComparable(item.administradora);
   const wantedDueDay = financialStudyGroupDueDay(item, data);
   if (!wantedDueDay) return [];
-  const start = new Date(generatedAt);
-  start.setHours(0, 0, 0, 0);
   const matches = [];
+  const currentMonth = generatedAt.getMonth() + 1;
+  const currentYear = generatedAt.getFullYear();
   (data?.schedules || []).forEach((schedule) => {
     if (financialStudyComparable(schedule.administrator) !== wantedAdministrator) return;
     (schedule.months || []).forEach((month) => {
+      const monthNumber = Number(month.number);
+      const monthYear = dateYearForAssemblyMonth(month, data.metadata, generatedAt);
+      if (monthNumber !== currentMonth || monthYear !== currentYear) return;
       const dueEvent = (month.events || []).find((event) => event.id === "vencimento_parcela");
       const dueDay = Number(dueEvent?.value);
       if (!dueDay || dueDay !== wantedDueDay) return;
       const events = (month.events || []).map((event) => {
         const date = financialStudyCalendarDate(event, month, data.metadata, generatedAt);
-        return date && date >= start ? { ...event, date } : null;
+        return date ? { ...event, date } : null;
       }).filter(Boolean).sort((a, b) => a.date - b.date);
       if (!events.length) return;
       matches.push({
         administrator: schedule.administrator,
         month: month.name,
-        monthNumber: Number(month.number),
-        year: dateYearForAssemblyMonth(month, data.metadata, generatedAt),
+        monthNumber,
+        year: monthYear,
         dueDay: dueDay || wantedDueDay || null,
         events,
         firstDate: events[0].date,
       });
     });
   });
-  return matches.sort((a, b) => a.firstDate - b.firstDate).slice(0, 2);
+  return matches.sort((a, b) => a.firstDate - b.firstDate);
 }
 
 function financialStudyGroupAssemblyBlock(item, data, generatedAt, loadError = "") {
