@@ -8,6 +8,7 @@ import logging
 import math
 import os
 import time
+import copy
 from typing import Annotated
 from uuid import uuid4
 
@@ -45,7 +46,48 @@ def _assembly_calendar_payload() -> dict:
     payload = json.loads(source.read_text(encoding="utf-8"))
     if not isinstance(payload.get("schedules"), list) or not isinstance(payload.get("rules"), list):
         raise ValueError("Estrutura do calendario de assembleias invalida.")
-    return payload
+    enriched_payload = copy.deepcopy(payload)
+    try:
+        groups = list_grupos(include_history=False)
+        due_dates_by_administrator: dict[str, list[int]] = {}
+        for group in groups:
+            administrator = str(group.get("administradora") or "").strip()
+            due_date = str(group.get("vencimento_parcela") or "").strip()
+            if not administrator or not due_date.isdigit():
+                continue
+            due_dates_by_administrator.setdefault(administrator, [])
+            value = int(due_date)
+            if value not in due_dates_by_administrator[administrator]:
+                due_dates_by_administrator[administrator].append(value)
+        for administrator, values in due_dates_by_administrator.items():
+            values.sort()
+        schedules_by_administrator: dict[str, list[dict]] = {}
+        for schedule in enriched_payload.get("schedules", []):
+            administrator = str(schedule.get("administrator") or "").strip()
+            if not administrator:
+                continue
+            schedules_by_administrator.setdefault(administrator, []).append(schedule)
+        for administrator, schedules in schedules_by_administrator.items():
+            due_dates = due_dates_by_administrator.get(administrator, [])
+            if not due_dates:
+                continue
+            ordered_schedules = sorted(
+                schedules,
+                key=lambda item: (
+                    int(item.get("faixa") or 0),
+                    int(item.get("source_row") or 0),
+                ),
+            )
+            for schedule, due_date in zip(ordered_schedules, due_dates):
+                for month in schedule.get("months", []):
+                    for event in month.get("events", []):
+                        if event.get("id") != "vencimento_parcela":
+                            continue
+                        event["display"] = str(due_date)
+                        event["value"] = due_date
+    except Exception:
+        logger.exception("Nao foi possivel enriquecer vencimentos do Mapa Assembleia com a base de grupos.")
+    return enriched_payload
 
 
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

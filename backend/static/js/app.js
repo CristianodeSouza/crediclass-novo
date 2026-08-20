@@ -4609,14 +4609,12 @@ async function loadHealth() {
 function assemblyFilters() {
   return {
     administrator: document.getElementById("assemblyAdministratorFilter")?.value || "",
-    range: document.getElementById("assemblyRangeFilter")?.value || "",
     month: Number(document.getElementById("assemblyMonthFilter")?.value || 1),
   };
 }
 
 function assemblyMatches(item, filters) {
-  return (!filters.administrator || item.administrator === filters.administrator)
-    && (!filters.range || String(item.faixa) === filters.range);
+  return !filters.administrator || item.administrator === filters.administrator;
 }
 
 function assemblyTooltip(items, label = "Orientação") {
@@ -4663,12 +4661,12 @@ function renderAssemblyMap() {
       return `<td><span class="assembly-date ${className}">${escapeHtml(event.display)}${suffix}</span></td>`;
     }).join("");
     const guidance = assemblyTooltip(item.guidance, `Orientações de ${item.administrator}`);
-    return `<tr><th scope="row"><span class="assembly-administrator">${escapeHtml(item.administrator)}${guidance}</span></th><td>${escapeHtml(item.faixa)}</td>${values}</tr>`;
+    return `<tr><th scope="row"><span class="assembly-administrator">${escapeHtml(item.administrator)}${guidance}</span></th>${values}</tr>`;
   }).join("");
 
   document.getElementById("assemblyRulesGrid").innerHTML = rules.length ? rules.map((rule) => `
     <article class="assembly-rule-card">
-      <header><div><strong><span>${escapeHtml(rule.administrator)}</span>${assemblyTooltip(rule.guidance, `Orientações de ${rule.administrator}`)}</strong><small>Faixa ${escapeHtml(rule.faixa)}</small></div><span>Regra</span></header>
+      <header><div><strong><span>${escapeHtml(rule.administrator)}</span>${assemblyTooltip(rule.guidance, `Orientações de ${rule.administrator}`)}</strong></div><span>Regra</span></header>
       <dl>${rule.parameters.map((parameter) => {
         const event = data.event_types.find((item) => item.id === parameter.id);
         return `<div><dt>${escapeHtml(parameter.label)}${assemblyTooltip([event?.guidance, ...(event?.details || [])], parameter.label)}</dt><dd>${escapeHtml(parameter.value)}</dd></div>`;
@@ -4679,9 +4677,7 @@ function renderAssemblyMap() {
 
 function populateAssemblyFilters(data) {
   const administrators = [...new Set([...data.schedules, ...data.rules].map((item) => item.administrator).filter(Boolean))].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  const ranges = [...new Set([...data.schedules, ...data.rules].map((item) => String(item.faixa)).filter(Boolean))].sort((a, b) => Number(a) - Number(b));
   document.getElementById("assemblyAdministratorFilter").innerHTML = `<option value="">Todas</option>${administrators.map((value) => `<option>${escapeHtml(value)}</option>`).join("")}`;
-  document.getElementById("assemblyRangeFilter").innerHTML = `<option value="">Todas</option>${ranges.map((value) => `<option>${escapeHtml(value)}</option>`).join("")}`;
   document.getElementById("assemblyMonthFilter").innerHTML = data.schedules[0].months.map((month) => `<option value="${month.number}">${escapeHtml(month.name)}</option>`).join("");
 }
 
@@ -4769,11 +4765,9 @@ document.getElementById("primaryAction").addEventListener("click", () => {
 });
 document.getElementById("reloadMapDataBtn").addEventListener("click", reloadMapData);
 document.getElementById("assemblyAdministratorFilter")?.addEventListener("change", renderAssemblyMap);
-document.getElementById("assemblyRangeFilter")?.addEventListener("change", renderAssemblyMap);
 document.getElementById("assemblyMonthFilter")?.addEventListener("change", renderAssemblyMap);
 document.getElementById("assemblyClearFilters")?.addEventListener("click", () => {
   document.getElementById("assemblyAdministratorFilter").value = "";
-  document.getElementById("assemblyRangeFilter").value = "";
   document.getElementById("assemblyMonthFilter").value = "1";
   renderAssemblyMap();
 });

@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=4.0.44" rel="stylesheet">
+    <link href="/static/css/style.css?v=4.0.45" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -280,7 +280,6 @@
           <div class="content-card assembly-filter-card">
             <div class="assembly-filter-grid">
               <label><span>Administradora</span><select id="assemblyAdministratorFilter" class="form-select"><option value="">Todas</option></select></label>
-              <label><span>Faixa</span><select id="assemblyRangeFilter" class="form-select"><option value="">Todas</option></select></label>
               <label><span>Mês</span><select id="assemblyMonthFilter" class="form-select"></select></label>
               <button id="assemblyClearFilters" class="btn btn-outline-secondary" type="button">Limpar filtros</button>
             </div>
@@ -296,7 +295,7 @@
               </div>
               <div class="table-responsive">
                 <table class="table assembly-table">
-                  <thead><tr><th>Administradora</th><th>Faixa</th><th data-assembly-event="vencimento_parcela">Venc. parcela</th><th data-assembly-event="adesao">Adesão</th><th data-assembly-event="vencimento_boleto_adesao">Venc. boleto adesão</th><th data-assembly-event="oferta">Oferta</th><th data-assembly-event="assembleia">Assembleia</th><th data-assembly-event="pagamento_lance">Pagamento lance</th><th data-assembly-event="segunda_chamada">2ª chamada</th></tr></thead>
+                  <thead><tr><th>Administradora</th><th data-assembly-event="vencimento_parcela">Venc. parcela</th><th data-assembly-event="adesao">Adesão</th><th data-assembly-event="vencimento_boleto_adesao">Venc. boleto adesão</th><th data-assembly-event="oferta">Oferta</th><th data-assembly-event="assembleia">Assembleia</th><th data-assembly-event="pagamento_lance">Pagamento lance</th><th data-assembly-event="segunda_chamada">2ª chamada</th></tr></thead>
                   <tbody id="assemblyCalendarBody"></tbody>
                 </table>
               </div>
@@ -304,7 +303,7 @@
             </div>
 
             <div class="content-card">
-              <div class="table-toolbar"><div><h2>Regras operacionais</h2><p>Critérios aplicáveis a cada administradora e faixa de grupo.</p></div></div>
+              <div class="table-toolbar"><div><h2>Regras operacionais</h2><p>Critérios aplicáveis a cada administradora.</p></div></div>
               <div id="assemblyRulesGrid" class="assembly-rules-grid"></div>
             </div>
           </div>
@@ -1230,7 +1229,7 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.44"></script>
-    <script src="/static/js/app.js?v=4.0.44"></script>
+    <script src="/static/js/api.js?v=4.0.45"></script>
+    <script src="/static/js/app.js?v=4.0.45"></script>
   </body>
 </html>
