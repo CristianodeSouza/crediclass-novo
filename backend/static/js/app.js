@@ -2403,6 +2403,79 @@ function financialStudyGroupAssemblyBlock(item, data, generatedAt, loadError = "
   return `<div class="financial-study-group-assembly-list">${cycles.map((cycle) => `<article class="financial-study-group-assembly-card"><header><div><strong>${escapeHtml(cycle.month)}${cycle.year ? ` · ${escapeHtml(String(cycle.year))}` : ""}</strong><span>${escapeHtml(cycle.administrator || "-")}${cycle.dueDay ? ` · Vencimento ${escapeHtml(String(cycle.dueDay))}` : ""}</span></div><small>${cycle.events.length} evento(s)</small></header><div>${cycle.events.map((event) => `<span><small>${escapeHtml(event.label)}</small><b>${financialStudyFormatCalendarDate(event.date)}</b></span>`).join("")}</div></article>`).join("")}</div>`;
 }
 
+function financialStudyProjectionCanvasId(item) {
+  return `financialStudyProjectionChart-${String(item.grupo || item.grupo_id || "grupo").replace(/[^a-zA-Z0-9_-]/g, "")}`;
+}
+
+function financialStudyProjectionSection(item) {
+  const chartId = financialStudyProjectionCanvasId(item);
+  const selectedCapacity = item?.capacidade_contemplacoes_selecionada;
+  const average = Number.isFinite(Number(selectedCapacity?.media_contemplacoes))
+    ? new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(Number(selectedCapacity.media_contemplacoes))
+    : "-";
+  const profileLabel = selectedCapacity?.perfil || financialStudyStrategyLabel(item.best_contemplation_strategy);
+  return `<section class="financial-study-group-projection"><div class="financial-study-group-section-title"><strong>Gráfico de projeção</strong><span>${escapeHtml(profileLabel || "Perfil não classificado")} · média ${escapeHtml(String(average))} contemplações</span></div><div class="financial-study-group-projection-chart"><canvas id="${escapeHtml(chartId)}" aria-label="Gráfico de projeção do grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}"></canvas></div></section>`;
+}
+
+function financialStudyGroupProfileSection(item) {
+  const profileIds = ["conservative", "moderate", "aggressive", "super_aggressive"];
+  const labels = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super Agressivo" };
+  const scenarios = Object.fromEntries((item.cenarios || []).map((scenario) => [scenario.id, scenario]));
+  const valueFor = (scenarioId, profileId) => (scenarios[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profileId);
+  const renderValue = (value, scenarioLabel) => {
+    if (value?.percentual_referencia == null) return `<span class="financial-study-profile-empty"><small>${scenarioLabel}</small><em>Sem referência</em></span>`;
+    const state = value.atinge_perfil ? "is-positive" : "is-warning";
+    const result = value.atinge_perfil ? "Lance atinge o perfil" : `Faltam ${formatMoney(value.falta_para_ideal)}`;
+    return `<span class="financial-study-profile-result ${state}"><small>${scenarioLabel}</small><b>${formatPercent(value.percentual_referencia)}</b><em>${result}</em></span>`;
+  };
+  return `<section class="financial-study-group-profile"><div class="financial-study-group-section-title"><strong>Perfil de contemplação</strong><span>Leitura do grupo por cenário financeiro</span></div><div class="financial-study-profile-list"><article class="financial-study-profile-group"><header><strong>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</strong><span>${escapeHtml(item.administradora || "-")}</span></header><div>${profileIds.map((profileId) => `<section><h4>${labels[profileId]}</h4>${renderValue(valueFor("without_embedded", profileId), "Sem embutido")}${renderValue(valueFor("with_embedded", profileId), "Com embutido")}</section>`).join("")}</div></article></div></section>`;
+}
+
+function financialStudyProjectionDataset(item) {
+  const entries = [...(item.historico_12_meses || [])]
+    .filter((entry) => entry && entry.mes)
+    .sort((left, right) => compareMonthKeys(left.mes, right.mes))
+    .slice(-12);
+  return {
+    labels: entries.map((entry) => formatChartMonth(entry.mes)),
+    maiores: entries.map((entry) => entry.maior_lance != null ? Number(entry.maior_lance) * 100 : null),
+    menores: entries.map((entry) => entry.menor_lance != null ? Number(entry.menor_lance) * 100 : null),
+    quantidades: entries.map((entry) => entry.qtd_contemplacoes != null ? Number(entry.qtd_contemplacoes) : 0),
+  };
+}
+
+function renderFinancialStudyProjectionCharts(items) {
+  items.forEach((item) => {
+    const canvas = document.getElementById(financialStudyProjectionCanvasId(item));
+    if (!canvas || typeof Chart === "undefined") return;
+    const dataset = financialStudyProjectionDataset(item);
+    if (!dataset.labels.length) {
+      canvas.parentElement.innerHTML = '<div class="financial-study-group-assembly-empty"><strong>Sem histórico suficiente</strong><span>Não há 12 meses de dados para projetar contemplações deste grupo.</span></div>';
+      return;
+    }
+    new Chart(canvas, {
+      type: "bar",
+      data: {
+        labels: dataset.labels,
+        datasets: [
+          { type: "line", label: "Maior lance %", data: dataset.maiores, borderColor: "#1f6fb2", backgroundColor: "#1f6fb2", yAxisID: "yPercent", tension: 0.25 },
+          { type: "line", label: "Menor lance %", data: dataset.menores, borderColor: "#e67e22", backgroundColor: "#e67e22", yAxisID: "yPercent", tension: 0.25 },
+          { type: "bar", label: "Qtd. contemplações", data: dataset.quantidades, backgroundColor: "rgba(31, 111, 178, 0.22)", borderColor: "rgba(31, 111, 178, 0.65)", yAxisID: "yCount" },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: "bottom" } },
+        scales: {
+          yPercent: { type: "linear", position: "left", ticks: { callback: (value) => `${value}%` } },
+          yCount: { type: "linear", position: "right", grid: { drawOnChartArea: false } },
+        },
+      },
+    });
+  });
+}
+
 function financialStudyGroupCard(item, assemblyData, generatedAt, assemblyError = "") {
   const groupId = String(item.grupo || item.grupo_id || "-");
   const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
@@ -2424,6 +2497,8 @@ function financialStudyGroupCard(item, assemblyData, generatedAt, assemblyError 
     <div class="financial-study-group-metrics">${summaryMetrics.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("")}</div>
     <div class="financial-study-group-financials">${scenarioColumn("Sem embutido", without)}${scenarioColumn("Com embutido", withEmbedded)}</div>
     <div class="financial-study-group-assembly"><div class="financial-study-group-section-title"><strong>Agenda de assembleia</strong><span>Datas futuras vinculadas à administradora e ao vencimento da parcela</span></div>${financialStudyGroupAssemblyBlock(item, assemblyData, generatedAt, assemblyError)}</div>
+    ${financialStudyProjectionSection(item)}
+    ${financialStudyGroupProfileSection(item)}
   </article>`;
 }
 
@@ -2634,7 +2709,7 @@ async function renderFinancialStudyScreen() {
   screen.removeAttribute("aria-busy");
   screen.innerHTML = `<div class="financial-study-page">
     <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Documento dinâmico criado com os dados disponíveis no perfil e nos grupos selecionados.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-primary" type="button" data-study-print>Imprimir / Salvar PDF</button></div></div>
-    <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados", contemplacao: "Perfis de contemplação", observacoes: "Observações" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
+    <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados", observacoes: "Observações" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
     <article class="financial-study-document">
       <header class="financial-study-cover"><div class="financial-study-cover-brand"><span class="financial-study-kicker">CREDICLASS</span><h2>Estudo Financeiro</h2><p>Comparativo dos grupos selecionados para apoiar uma decisão clara e auditável.</p></div><dl><div><dt>Cliente</dt><dd>${escapeHtml(clientName)}</dd></div><div><dt>Emissão</dt><dd>${issueDate}</dd></div><div><dt>Administradora</dt><dd>${escapeHtml(administrators.join(", ") || "Não informada")}</dd></div><div><dt>Identificador</dt><dd>${escapeHtml(proposalId)}</dd></div><div><dt>Auditoria técnica</dt><dd>${escapeHtml(auditId)}</dd></div></dl></header>
       <section class="financial-study-executive"><div><span>Objetivo do cliente</span><strong>${escapeHtml(profile.objetivo || "Objetivo não informado")}</strong></div><div><span>Opção em destaque</span><strong>Grupo ${escapeHtml(highlightedGroup)}</strong><small>${escapeHtml(highlightedStrategy)}</small></div><p>${escapeHtml(executiveText)}</p></section>
@@ -2642,13 +2717,13 @@ async function renderFinancialStudyScreen() {
       <section class="financial-study-section${sectionClass("cliente")}" data-study-content="cliente"><div class="financial-study-section-heading"><span>01</span><div><h3>Cliente e necessidade</h3><p>Informações declaradas e registradas no Perfil do Cliente.</p></div></div><div class="financial-study-metrics">${financialStudyMetric("Cliente", clientName)}${financialStudyMetric("Tipo de contratação", financialStudyContractLabel(profile.tipo_contratacao))}${financialStudyMetric("Objetivo do consórcio", profile.objetivo || "Não informado")}${optionalAssetMetric}</div></section>
       <section class="financial-study-section${sectionClass("resumo")}" data-study-content="resumo"><div class="financial-study-section-heading"><span>02</span><div><h3>Resumo financeiro</h3><p>Capacidade e parâmetros declarados pelo cliente.</p></div></div><div class="financial-study-metrics financial-study-metrics-compact">${financialStudyMetric("Crédito líquido desejado", formatMoney(profile.credito_desejado))}${financialStudyMetric("Parcela desejada", formatMoney(profile.parcela_desejada ?? profile.parcela_ideal))}${financialStudyMetric("Parcela máxima", formatMoney(profile.parcela_limite))}${financialStudyMetric("Renda total", formatMoney(profile.renda_total))}${financialStudyMetric("Recursos próprios", formatMoney(profile.lance_proprio))}${financialStudyMetric("FGTS", formatMoney(profile.fgts))}${financialStudyMetric("Grupos selecionados", items.length)}${financialStudyMetric("Total de cotas", totalQuotas)}</div></section>
       <section class="financial-study-section${sectionClass("grupos")}" data-study-content="grupos"><div class="financial-study-section-heading"><span>03</span><div><h3>Comparativo dos grupos</h3><p>Dados financeiros e agenda de assembleia reunidos em cada grupo.</p></div></div>${financialStudyGroupCards(items, assemblyData, generatedAt, assemblyError)}<p class="financial-study-table-note">Taxas aparecem somente quando registradas na base. A ordem reproduz a seleção atual do Motor 360.</p></section>
-      <section class="financial-study-section${sectionClass("contemplacao")}" data-study-content="contemplacao"><div class="financial-study-section-heading"><span>04</span><div><h3>Perfis de contemplação</h3><p>Comparação histórica compacta por grupo e cenário; não representa garantia de contemplação.</p></div></div>${financialStudyProfileMatrix(items)}</section>
-      <section class="financial-study-section${sectionClass("observacoes")}" data-study-content="observacoes"><div class="financial-study-section-heading"><span>05</span><div><h3>Conclusão e observações</h3><p>Leitura executiva para a continuidade do atendimento.</p></div></div><div class="financial-study-conclusion"><strong>Próximo passo recomendado</strong><p>Validar com o cliente a quantidade de cotas e o cenário preferido do grupo em destaque; depois, confirmar taxas, fundo de reserva, disponibilidade da carta e regras comerciais diretamente com a administradora.</p></div><div class="financial-study-disclaimer"><p>Este estudo utiliza exclusivamente as informações registradas pelo cliente e os dados disponíveis dos grupos na data da análise.</p><p>Percentuais, projeções e classificações possuem caráter informativo e histórico. Não constituem promessa ou garantia de contemplação.</p><p>As datas operacionais refletem o calendário cadastrado e devem ser confirmadas com a administradora antes da contratação.</p></div></section>
+      <section class="financial-study-section${sectionClass("observacoes")}" data-study-content="observacoes"><div class="financial-study-section-heading"><span>04</span><div><h3>Conclusão e observações</h3><p>Leitura executiva para a continuidade do atendimento.</p></div></div><div class="financial-study-conclusion"><strong>Próximo passo recomendado</strong><p>Validar com o cliente a quantidade de cotas e o cenário preferido do grupo em destaque; depois, confirmar taxas, fundo de reserva, disponibilidade da carta e regras comerciais diretamente com a administradora.</p></div><div class="financial-study-disclaimer"><p>Este estudo utiliza exclusivamente as informações registradas pelo cliente e os dados disponíveis dos grupos na data da análise.</p><p>Percentuais, projeções e classificações possuem caráter informativo e histórico. Não constituem promessa ou garantia de contemplação.</p><p>As datas operacionais refletem o calendário cadastrado e devem ser confirmadas com a administradora antes da contratação.</p></div></section>
       <footer class="financial-study-footer"><span>Crediclass · Estudo Financeiro</span><span>${escapeHtml(proposalId)} · ${escapeHtml(auditId)} · versão ${escapeHtml(systemVersion)}</span></footer>
     </article>
   </div>`;
   screen.querySelector("[data-study-print]")?.addEventListener("click", () => window.print());
   screen.querySelector("[data-study-customize]")?.addEventListener("click", () => screen.querySelector("[data-study-customizer-panel]")?.classList.toggle("d-none"));
+  renderFinancialStudyProjectionCharts(items);
   screen.querySelectorAll("[data-study-section]").forEach((input) => input.addEventListener("change", () => {
     preferences[input.dataset.studySection] = input.checked;
     localStorage.setItem(FINANCIAL_STUDY_SECTIONS_KEY, JSON.stringify(preferences));

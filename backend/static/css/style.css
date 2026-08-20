@@ -4159,6 +4159,27 @@ body[data-theme="escuro"] .btn-outline-secondary {
   padding: 8px 10px;
 }
 
+.financial-study-group-projection,
+.financial-study-group-profile {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.financial-study-group-projection-chart {
+  min-height: 280px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: #fff;
+}
+
+.financial-study-group-projection-chart canvas {
+  width: 100% !important;
+  height: 260px !important;
+}
+
 .financial-study-group-section-title {
   display: grid;
   gap: 1px;
@@ -4556,6 +4577,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  background: #fff;
 }
 
 .financial-study-profile-group > header {
