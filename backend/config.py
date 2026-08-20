@@ -9,7 +9,7 @@ load_dotenv()
 
 class Settings(BaseModel):
     app_name: str = "Crediclass Dashboard V3"
-    version: str = "4.0.42"
+    version: str = "4.0.43"
     environment: str = "development"
     debug: bool = False
     google_sheets_id: str = ""
@@ -22,7 +22,7 @@ def get_settings() -> Settings:
     return Settings(
         # O release exibido deve acompanhar o código publicado; uma variável
         # antiga no ambiente do provedor não pode mascarar a versão atual.
-        version="4.0.42",
+        version="4.0.43",
         environment=os.getenv("ENVIRONMENT", "development"),
         debug=os.getenv("DEBUG", "false").lower() == "true",
         google_sheets_id=os.getenv("GOOGLE_SHEETS_ID", ""),

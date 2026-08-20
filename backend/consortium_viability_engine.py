@@ -254,6 +254,7 @@ def analyze_client_consortium_viability(
             "grupo": str(group.get("grupo") or group.get("grupo_id") or "-"),
             "grupo_raw": str(group.get("grupo_raw") or group.get("grupo") or group.get("grupo_id") or "-"),
             "administradora": str(group.get("administradora") or "-"),
+            "vencimento_parcela": str(group.get("vencimento_parcela") or ""),
             "source_row": group.get("source_row"),
         }
         step_started = time.perf_counter()
