@@ -3820,8 +3820,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 /* Estudo Financeiro: documento dinamico e imprimivel com o DS Crediclass. */
 .financial-study-page {
   display: grid;
-  gap: 16px;
-  padding: 24px;
+  gap: 12px;
+  padding: 14px;
 }
 
 .financial-study-toolbar,
@@ -3838,8 +3838,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 16px 18px;
+  gap: 12px;
+  padding: 12px 14px;
 }
 
 .financial-study-toolbar h2,
@@ -3862,8 +3862,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px 20px;
-  padding: 14px 18px;
+  gap: 8px 14px;
+  padding: 10px 14px;
 }
 
 .financial-study-customizer label {
@@ -4020,7 +4020,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-section {
-  padding: 24px 32px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -4030,7 +4030,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-group-list {
   display: grid;
-  gap: 16px;
+  gap: 10px;
 }
 
 .financial-study-group-card {
@@ -4045,8 +4045,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 16px 18px;
+  gap: 10px;
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--primary-soft) 68%, #fff);
 }
@@ -4075,9 +4075,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-group-metrics > div {
   min-width: 0;
-  padding: 14px 18px;
+  padding: 8px 12px;
   border-right: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
 }
 
 .financial-study-group-metrics > div:nth-child(4n) {
@@ -4091,7 +4090,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-group-assembly-empty span {
   display: block;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.68rem;
+}
+
+.financial-study-group-metrics strong {
+  font-size: 0.95rem;
 }
 
 .financial-study-group-metrics strong,
@@ -4104,38 +4107,40 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-group-financials {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-  padding: 18px;
+  gap: 8px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--border);
 }
 
 .financial-study-group-scenario {
   display: grid;
-  gap: 10px;
-  padding: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 12px;
+  padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: #fff;
 }
 
 .financial-study-group-scenario > header {
-  padding-bottom: 6px;
+  grid-column: 1 / -1;
+  padding-bottom: 4px;
   border-bottom: 1px solid var(--border);
 }
 
 .financial-study-group-scenario > div {
   display: grid;
-  gap: 3px;
+  gap: 1px;
 }
 
 .financial-study-group-scenario b {
-  font-size: 1rem;
+  font-size: 0.92rem;
 }
 
 .financial-study-group-assembly {
   display: grid;
-  gap: 12px;
-  padding: 18px;
+  gap: 6px;
+  padding: 10px 12px;
 }
 
 .financial-study-group-section-title {
@@ -4149,24 +4154,24 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-group-assembly-list {
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .financial-study-group-assembly-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: #fff;
-  padding: 14px 16px;
+  padding: 8px 10px;
 }
 
 .financial-study-group-assembly-card > header {
   display: flex;
   align-items: start;
   justify-content: space-between;
-  gap: 12px;
-  padding-bottom: 10px;
+  gap: 10px;
+  padding-bottom: 6px;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .financial-study-group-assembly-card > header > div {
@@ -4177,19 +4182,17 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-group-assembly-card > div {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 6px 10px;
 }
 
 .financial-study-group-assembly-card > div > span {
-  padding: 10px 12px;
-  border-radius: var(--radius-sm);
-  background: var(--surface-alt);
+  padding: 0;
 }
 
 .financial-study-group-assembly-empty {
   display: grid;
   gap: 4px;
-  padding: 14px 16px;
+  padding: 8px 10px;
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-md);
   background: var(--surface-alt);
