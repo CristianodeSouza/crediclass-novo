@@ -4645,7 +4645,15 @@ function renderAssemblyMap() {
   if (!data) return;
   const filters = assemblyFilters();
   const monthName = data.schedules[0]?.months.find((month) => month.number === filters.month)?.name || "Mês";
-  const schedules = data.schedules.filter((item) => assemblyMatches(item, filters));
+  const schedules = data.schedules
+    .filter((item) => assemblyMatches(item, filters))
+    .sort((left, right) => {
+      const leftMonth = left.months.find((entry) => entry.number === filters.month);
+      const rightMonth = right.months.find((entry) => entry.number === filters.month);
+      const leftDueDate = Number((leftMonth?.events || []).find((event) => event.id === "vencimento_parcela")?.value ?? Number.POSITIVE_INFINITY);
+      const rightDueDate = Number((rightMonth?.events || []).find((event) => event.id === "vencimento_parcela")?.value ?? Number.POSITIVE_INFINITY);
+      return leftDueDate - rightDueDate || String(left.administrator || "").localeCompare(String(right.administrator || ""), "pt-BR");
+    });
   const rules = data.rules.filter((item) => assemblyMatches(item, filters));
 
   document.getElementById("assemblyMonthTitle").textContent = `${monthName} de 2026`;
