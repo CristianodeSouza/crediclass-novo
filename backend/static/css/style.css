@@ -2116,6 +2116,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-composition-card p { grid-column: 2; color: var(--muted); font-size: 0.65rem; }
 .motor360-composition-actions { display: flex; align-items: center; gap: 8px; }
 .motor360-composition-actions .motor360-quota-area { align-items: center; }
+.motor360-composition-card .motor360-group-summary { flex-wrap: wrap; }
 .motor360-composition-scenarios { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px 12px 12px; }
 .motor360-composition-scenario { padding: 9px 10px; border: 1px solid var(--line); border-left: 3px solid var(--success); border-radius: 5px; }
 .motor360-composition-scenario > strong { font-size: 0.72rem; }

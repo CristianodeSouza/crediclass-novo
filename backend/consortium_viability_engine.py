@@ -457,6 +457,7 @@ def analyze_client_consortium_viability(
                     "composition_candidate": True,
                 })
             if composition_scenarios and any((parse_decimal(scenario.get("credito_liquido_projetado")) or Decimal("0")) * Decimal("50") >= desired for scenario in composition_scenarios):
+                composition_capacity_key = preference if preference in contemplation_capacities else next(iter(contemplation_capacities), "")
                 composition_items.append({
                     **group_ref,
                     "grupo_id": str(group.get("grupo_id") or group_ref["grupo"]),
@@ -470,9 +471,9 @@ def analyze_client_consortium_viability(
                     "lance_embutido": money(embedded),
                     "cenarios": composition_scenarios,
                     "capacidade_contemplacoes": contemplation_capacities,
-                    "capacidade_contemplacoes_selecionada": contemplation_capacities.get(preference or ""),
+                    "capacidade_contemplacoes_selecionada": contemplation_capacities.get(composition_capacity_key or ""),
                     "historico_12_meses": list(group.get("historico_12_meses") or []),
-                    "best_contemplation_strategy": _reference_name(preference),
+                    "best_contemplation_strategy": _reference_name(composition_capacity_key),
                     "selection_stage": "composition",
                     "composition_candidate": True,
                     "cotas_minimas_sem_embutido": math.ceil(desired / maximum),
