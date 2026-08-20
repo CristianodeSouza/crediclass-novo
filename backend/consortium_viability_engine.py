@@ -407,6 +407,7 @@ def analyze_client_consortium_viability(
             "credito_maximo": money(maximum),
             "taxa_adm": money(fee),
             "fundo_reserva": money(fund),
+            "vencimento_parcela": str(group.get("vencimento_parcela") or ""),
             "percentual_lance_embutido": money(embedded),
             "faixas_lance": ranges,
             "capacidade_contemplacoes": contemplation_capacities,

@@ -4030,7 +4030,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-group-list {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .financial-study-group-card {
@@ -4046,14 +4046,14 @@ body[data-theme="escuro"] .btn-outline-secondary {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 16px;
+  padding: 8px 14px;
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--primary-soft) 68%, #fff);
 }
 
 .financial-study-group-header > div {
   display: grid;
-  gap: 4px;
+  gap: 2px;
 }
 
 .financial-study-group-header strong {
@@ -4077,7 +4077,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-group-metrics > div {
   min-width: 0;
-  padding: 10px 12px;
+  padding: 7px 10px;
   background: #fff;
 }
 
@@ -4105,22 +4105,22 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-group-financials {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  padding: 12px;
+  gap: 8px;
+  padding: 8px 10px;
   border-bottom: 1px solid var(--border);
 }
 
 .financial-study-group-scenario {
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: 6px;
+  padding: 8px 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: #fff;
 }
 
 .financial-study-group-scenario > header {
-  padding-bottom: 6px;
+  padding-bottom: 4px;
   border-bottom: 1px solid var(--border);
 }
 
@@ -4133,7 +4133,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-group-scenario-grid > div {
   display: grid;
   gap: 2px;
-  padding: 8px 10px;
+  padding: 5px 8px;
   border-radius: 10px;
   background: var(--surface-alt);
 }
@@ -4149,13 +4149,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-group-assembly {
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: 6px;
+  padding: 8px 10px;
 }
 
 .financial-study-group-section-title {
   display: grid;
-  gap: 3px;
+  gap: 1px;
 }
 
 .financial-study-group-section-title strong {
@@ -4164,39 +4164,39 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-group-assembly-list {
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .financial-study-group-assembly-card {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: #fff;
-  padding: 10px 12px;
+  padding: 7px 9px;
 }
 
 .financial-study-group-assembly-card > header {
   display: flex;
   align-items: start;
   justify-content: space-between;
-  gap: 10px;
-  padding-bottom: 6px;
+  gap: 8px;
+  padding-bottom: 4px;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .financial-study-group-assembly-card > header > div {
   display: grid;
-  gap: 3px;
+  gap: 1px;
 }
 
 .financial-study-group-assembly-card > div {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: 6px;
 }
 
 .financial-study-group-assembly-card > div > span {
-  padding: 7px 8px;
+  padding: 4px 6px;
   border-radius: 8px;
   background: var(--surface-alt);
 }

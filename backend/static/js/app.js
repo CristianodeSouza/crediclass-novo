@@ -2347,15 +2347,20 @@ function financialStudyGroupRow(item) {
   </tr>`;
 }
 
-function financialStudyGroupDueDay(item) {
+function financialStudyGroupDueDay(item, data = null) {
   const directValue = item.vencimento_parcela ?? item.source_values?.vencimento_parcela;
   const numericValue = Number(directValue);
-  return Number.isFinite(numericValue) && numericValue > 0 ? numericValue : null;
+  if (Number.isFinite(numericValue) && numericValue > 0) return numericValue;
+  const administrator = String(item.administradora || "").trim();
+  const groupId = String(item.grupo || item.grupo_id || "").trim();
+  const payloadValue = Number(data?.group_due_dates?.[administrator]?.[groupId]);
+  return Number.isFinite(payloadValue) && payloadValue > 0 ? payloadValue : null;
 }
 
 function financialStudyGroupAssemblyCycles(item, data, generatedAt) {
   const wantedAdministrator = financialStudyComparable(item.administradora);
-  const wantedDueDay = financialStudyGroupDueDay(item);
+  const wantedDueDay = financialStudyGroupDueDay(item, data);
+  if (!wantedDueDay) return [];
   const start = new Date(generatedAt);
   start.setHours(0, 0, 0, 0);
   const matches = [];
@@ -2364,7 +2369,7 @@ function financialStudyGroupAssemblyCycles(item, data, generatedAt) {
     (schedule.months || []).forEach((month) => {
       const dueEvent = (month.events || []).find((event) => event.id === "vencimento_parcela");
       const dueDay = Number(dueEvent?.value);
-      if (wantedDueDay && dueDay && dueDay !== wantedDueDay) return;
+      if (!dueDay || dueDay !== wantedDueDay) return;
       const events = (month.events || []).map((event) => {
         const date = financialStudyCalendarDate(event, month, data.metadata, generatedAt);
         return date && date >= start ? { ...event, date } : null;
@@ -2403,7 +2408,7 @@ function financialStudyGroupCard(item, assemblyData, generatedAt, assemblyError 
   const withEmbedded = financialStudyScenario(item, "with_embedded");
   const source = item.source_values || {};
   const rate = source.taxa_adm ?? item.taxa_total ?? item.taxa_adm;
-  const dueDay = financialStudyGroupDueDay(item);
+  const dueDay = financialStudyGroupDueDay(item, assemblyData);
   const summaryMetrics = [
     ["Crédito máximo", formatMoney(scale(item.credito_maximo))],
     ["Prazo", `${escapeHtml(String(item.prazo_restante ?? "-"))} meses`],
@@ -4797,7 +4802,7 @@ async function loadAssemblyMap(force = false) {
   document.getElementById("assemblyLoading").classList.remove("d-none");
   document.getElementById("assemblyError").classList.add("d-none");
   document.getElementById("assemblyContent").classList.add("d-none");
-  assemblyState.loadingPromise = apiGet("/mapa-assembleia", { timeoutMs: 15000 });
+  assemblyState.loadingPromise = apiGet("/mapa-assembleia", { timeoutMs: 30000 });
   try {
     const data = validateAssemblyPayload(await assemblyState.loadingPromise);
     assemblyState.data = data;

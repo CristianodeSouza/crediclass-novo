@@ -50,8 +50,10 @@ def _assembly_calendar_payload() -> dict:
     try:
         groups = list_grupos(include_history=False)
         due_dates_by_administrator: dict[str, list[int]] = {}
+        group_due_dates: dict[str, dict[str, int]] = {}
         for group in groups:
             administrator = str(group.get("administradora") or "").strip()
+            group_id = str(group.get("grupo") or group.get("grupo_id") or "").strip()
             due_date = str(group.get("vencimento_parcela") or "").strip()
             if not administrator or not due_date.isdigit():
                 continue
@@ -59,8 +61,11 @@ def _assembly_calendar_payload() -> dict:
             value = int(due_date)
             if value not in due_dates_by_administrator[administrator]:
                 due_dates_by_administrator[administrator].append(value)
+            if group_id:
+                group_due_dates.setdefault(administrator, {})[group_id] = value
         for administrator, values in due_dates_by_administrator.items():
             values.sort()
+        enriched_payload["group_due_dates"] = group_due_dates
         schedules_by_administrator: dict[str, list[dict]] = {}
         for schedule in enriched_payload.get("schedules", []):
             administrator = str(schedule.get("administrator") or "").strip()
