@@ -3930,6 +3930,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
   border-bottom: 1px solid rgba(255, 255, 255, 0.16);
 }
 
+.financial-study-cover dl div:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
 .financial-study-cover dt {
   color: #bfcdd2;
   font-size: 0.76rem;
