@@ -2692,7 +2692,7 @@ async function renderFinancialStudyScreen() {
   const clientName = profile.nome || holderNames.join(", ") || "Cliente não informado";
   const generatedAt = new Date();
   const issueDate = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(generatedAt);
-  const proposalId = currentStudy?.proposalId || currentStudy?.proposal_id || "Gerando número...";
+  const proposalId = currentStudy?.proposalId || currentStudy?.proposal_id || "Aguardando geração";
   const systemVersion = document.getElementById("systemVersionLabel")?.textContent?.trim() || "-";
   const highlighted = items[0];
   const highlightedGroup = String(highlighted?.grupo || highlighted?.grupo_id || "-");
@@ -2711,7 +2711,7 @@ async function renderFinancialStudyScreen() {
   if (renderToken !== financialStudyRenderToken) return;
   screen.removeAttribute("aria-busy");
   screen.innerHTML = `<div class="financial-study-page">
-    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Documento dinâmico criado com os dados disponíveis no perfil e nos grupos selecionados.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-primary" type="button" data-study-print>Imprimir / Salvar PDF</button></div></div>
+    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Documento dinâmico criado com os dados disponíveis no perfil e nos grupos selecionados.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-outline-primary" type="button" data-study-generate>Gerar Estudo</button><button class="btn btn-primary" type="button" data-study-print>Imprimir / Salvar PDF</button></div></div>
     <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
     <article class="financial-study-document">
       <header class="financial-study-cover"><div class="financial-study-cover-brand"><span class="financial-study-kicker">CREDICLASS</span><h2>Estudo Financeiro</h2><p>Comparativo dos grupos selecionados para apoiar uma decisão clara e auditável.</p></div><dl><div><dt>Nome do cliente</dt><dd id="financialStudyHeaderClient">${escapeHtml(clientName)}</dd></div><div><dt>Data do estudo</dt><dd id="financialStudyHeaderDate">${escapeHtml(issueDate)}</dd></div><div><dt>Número do estudo</dt><dd id="financialStudyHeaderNumber">${escapeHtml(proposalId)}</dd></div></dl></header>
@@ -2725,6 +2725,32 @@ async function renderFinancialStudyScreen() {
   </div>`;
   screen.querySelector("[data-study-print]")?.addEventListener("click", () => window.print());
   screen.querySelector("[data-study-customize]")?.addEventListener("click", () => screen.querySelector("[data-study-customizer-panel]")?.classList.toggle("d-none"));
+  screen.querySelector("[data-study-generate]")?.addEventListener("click", async () => {
+    const button = screen.querySelector("[data-study-generate]");
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Gerando...";
+    }
+    try {
+      const result = await saveCurrentStudy();
+      if (button) {
+        button.textContent = `Estudo ${result?.proposal_id || result?.estudo_id || "gerado"}`;
+      }
+    } catch (error) {
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Gerar Estudo";
+      }
+      throw error;
+    }
+  });
+  if (currentStudy?.savedStudyId) {
+    const button = screen.querySelector("[data-study-generate]");
+    if (button) {
+      button.disabled = true;
+      button.textContent = `Estudo ${currentStudy.proposalId || currentStudy.savedStudyId}`;
+    }
+  }
   renderFinancialStudyProjectionCharts(items);
   screen.querySelectorAll("[data-study-section]").forEach((input) => input.addEventListener("change", () => {
     preferences[input.dataset.studySection] = input.checked;
@@ -3954,7 +3980,7 @@ function activateStudyTemplateTab(tabName) {
 
 async function openFinancialStudy(groupId, viabilityItem) {
   const payload = collectClientProfile();
-  currentStudy = { groupId, viabilityItem, payload, group: null, cenario: viabilityItem?.cartas ? viabilityItem : null, templateCampos: {} };
+  currentStudy = { groupId, viabilityItem, payload, group: null, cenario: viabilityItem?.cartas ? viabilityItem : null, templateCampos: {}, savedStudyId: null, proposalId: null };
   activateScreen("estudo");
   setStudyState("loading");
   try {
@@ -3970,9 +3996,6 @@ async function openFinancialStudy(groupId, viabilityItem) {
     renderStudyRecommendations(viabilityItem, financial, group);
     renderStudyTemplateFields(currentStudy.templateCampos);
 
-    // Versiona o estudo assim que a tela fica pronta para manter o cabeçalho
-    // e o Historico de Estudos sincronizados desde a primeira visualizacao.
-    await ensureCurrentStudySaved({ silent: true });
     setStudyState("ready");
   } catch (error) {
     setStudyState("error");
@@ -3983,6 +4006,17 @@ async function saveCurrentStudy(options = {}) {
   if (!currentStudy) {
     showToast("Selecione um cenario na Viabilidade antes de salvar.", "warning");
     return null;
+  }
+  if (currentStudy.savedStudyId) {
+    if (!options.silent) {
+      showToast(`Estudo já gerado: ${currentStudy.proposalId || currentStudy.savedStudyId}`, "info");
+    }
+    return {
+      estudo_id: currentStudy.savedStudyId,
+      proposal_id: currentStudy.proposalId || currentStudy.savedStudyId,
+      success: true,
+      already_exists: true,
+    };
   }
   const payload = {
     cliente: {
