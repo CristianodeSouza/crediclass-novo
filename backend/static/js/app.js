@@ -4978,10 +4978,6 @@ document.getElementById("primaryAction").addEventListener("click", () => {
     saveConfiguracoes().catch(() => setConfigState("error"));
     return;
   }
-  if (document.getElementById("screen-estudo").classList.contains("active")) {
-    saveCurrentStudy().catch(() => setStudyState("error"));
-    return;
-  }
   if (document.getElementById("screen-historico").classList.contains("active")) {
     loadHistoryStudies();
     return;
@@ -5268,9 +5264,6 @@ document.getElementById("studyStrategyTabs").addEventListener("click", (event) =
   currentStudyStrategyTab = button.dataset.studyStrategy;
   renderStudyStrategyTabs();
   renderStudyStrategyTable();
-});
-document.getElementById("studySaveBtn").addEventListener("click", () => {
-  saveCurrentStudy().catch(() => setStudyState("error"));
 });
 document.getElementById("studyPdfBtn").addEventListener("click", () => {
   exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
