@@ -2362,14 +2362,13 @@ function financialStudyGroupAssemblyCycles(item, data, generatedAt) {
   const wantedDueDay = financialStudyGroupDueDay(item, data);
   if (!wantedDueDay) return [];
   const matches = [];
-  const currentMonth = generatedAt.getMonth() + 1;
-  const currentYear = generatedAt.getFullYear();
+  const referenceDate = new Date(generatedAt);
+  referenceDate.setHours(0, 0, 0, 0);
   (data?.schedules || []).forEach((schedule) => {
     if (financialStudyComparable(schedule.administrator) !== wantedAdministrator) return;
     (schedule.months || []).forEach((month) => {
       const monthNumber = Number(month.number);
       const monthYear = dateYearForAssemblyMonth(month, data.metadata, generatedAt);
-      if (monthNumber !== currentMonth || monthYear !== currentYear) return;
       const dueEvent = (month.events || []).find((event) => event.id === "vencimento_parcela");
       const dueDay = Number(dueEvent?.value);
       if (!dueDay || dueDay !== wantedDueDay) return;
@@ -2378,18 +2377,23 @@ function financialStudyGroupAssemblyCycles(item, data, generatedAt) {
         return date ? { ...event, date } : null;
       }).filter(Boolean).sort((a, b) => a.date - b.date);
       if (!events.length) return;
+      const adhesionEvent = events.find((event) => event.id === "adesao");
+      if (!adhesionEvent || adhesionEvent.date < referenceDate) return;
       matches.push({
         administrator: schedule.administrator,
         month: month.name,
         monthNumber,
         year: monthYear,
         dueDay: dueDay || wantedDueDay || null,
+        adhesionDate: adhesionEvent.date,
         events,
         firstDate: events[0].date,
       });
     });
   });
-  return matches.sort((a, b) => a.firstDate - b.firstDate);
+  return matches
+    .sort((a, b) => a.adhesionDate - b.adhesionDate || a.firstDate - b.firstDate)
+    .slice(0, 1);
 }
 
 function financialStudyGroupAssemblyBlock(item, data, generatedAt, loadError = "") {
