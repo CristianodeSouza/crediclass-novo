@@ -3886,9 +3886,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-cover {
   display: grid;
-  grid-template-columns: minmax(0, 1.55fr) minmax(420px, 0.85fr);
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 460px);
   align-items: start;
-  gap: 36px;
+  gap: 28px;
   padding: 26px 30px;
   background: var(--brand-navy);
   color: #fff;
@@ -3920,16 +3920,19 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-cover dl {
   display: grid;
+  width: 100%;
+  max-width: 460px;
+  justify-self: end;
   align-content: start;
-  gap: 10px;
+  gap: 12px;
 }
 
 .financial-study-cover dl div {
   display: grid;
-  grid-template-columns: minmax(150px, 180px) minmax(0, 1fr);
-  align-items: start;
-  gap: 16px;
-  padding-bottom: 9px;
+  grid-template-columns: 170px minmax(170px, 1fr);
+  align-items: center;
+  gap: 18px;
+  padding-bottom: 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.16);
 }
 
@@ -3949,7 +3952,18 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 700;
   text-align: left;
   line-height: 1.4;
-  word-break: break-word;
+  word-break: normal;
+  overflow-wrap: normal;
+  white-space: normal;
+}
+
+#financialStudyHeaderClient {
+  overflow-wrap: anywhere;
+}
+
+#financialStudyHeaderDate,
+#financialStudyHeaderNumber {
+  white-space: nowrap;
 }
 
 .financial-study-executive {
