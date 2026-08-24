@@ -2,12 +2,34 @@ from datetime import datetime
 import json
 from pathlib import Path
 import unicodedata
+from typing import Any
 
+from .config import get_settings
 from .financial_study_engine import build_financeiro
 from .models import EstudoRequest
+from .sheets_client import get_service
 
 RUNTIME_DIR = Path(__file__).resolve().parent / "runtime_data"
 STUDIES_FILE = RUNTIME_DIR / "studies.json"
+STUDIES_SHEET_NAME = "Historico de Estudos"
+STUDIES_HEADERS = [
+    "estudo_id",
+    "proposal_id",
+    "criado_em",
+    "status",
+    "operador",
+    "grupo_id",
+    "cliente_nome",
+    "administradora",
+    "tipo_bem",
+    "estrategia",
+    "cliente_json",
+    "grupo_json",
+    "cenario_json",
+    "financeiro_json",
+    "template_campos_json",
+    "cancelado_em",
+]
 
 
 def load_studies_from_disk() -> dict[str, dict]:
@@ -52,16 +74,185 @@ _counter = initial_counter(_studies)
 _proposal_counter = initial_proposal_counter(_studies)
 
 
+def sheets_enabled() -> bool:
+    settings = get_settings()
+    return bool(settings.google_sheets_id and settings.google_service_account_json)
+
+
+def dumps_cell(value: Any) -> str:
+    return json.dumps(value, ensure_ascii=False)
+
+
+def loads_cell(raw_value: Any, default: Any) -> Any:
+    text = str(raw_value or "").strip()
+    if not text:
+        return default
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return default
+
+
+def ensure_studies_sheet() -> None:
+    if not sheets_enabled():
+        return
+    settings = get_settings()
+    service = get_service()
+    spreadsheet = service.spreadsheets().get(spreadsheetId=settings.google_sheets_id).execute()
+    sheets = spreadsheet.get("sheets", [])
+    titles = {sheet.get("properties", {}).get("title", "") for sheet in sheets}
+    if STUDIES_SHEET_NAME not in titles:
+        service.spreadsheets().batchUpdate(
+            spreadsheetId=settings.google_sheets_id,
+            body={"requests": [{"addSheet": {"properties": {"title": STUDIES_SHEET_NAME}}}]},
+        ).execute()
+    result = service.spreadsheets().values().get(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"'{STUDIES_SHEET_NAME}'!A1:P2",
+    ).execute()
+    rows = result.get("values", [])
+    if not rows or rows[0] != STUDIES_HEADERS:
+        service.spreadsheets().values().update(
+            spreadsheetId=settings.google_sheets_id,
+            range=f"'{STUDIES_SHEET_NAME}'!A1:P1",
+            valueInputOption="RAW",
+            body={"values": [STUDIES_HEADERS]},
+        ).execute()
+
+
+def normalize_study_item(item: dict[str, Any]) -> dict[str, Any]:
+    normalized = {
+        "estudo_id": str(item.get("estudo_id") or ""),
+        "proposal_id": str(item.get("proposal_id") or ""),
+        "criado_em": str(item.get("criado_em") or ""),
+        "status": str(item.get("status") or "Concluido"),
+        "operador": str(item.get("operador") or "Não informado"),
+        "grupo_id": str(item.get("grupo_id") or ""),
+        "grupo": item.get("grupo") or {},
+        "cliente": item.get("cliente") or {},
+        "cenario": item.get("cenario") or None,
+        "financeiro": item.get("financeiro") or {},
+        "template_campos": item.get("template_campos") or {},
+        "estrategia": str(item.get("estrategia") or "Lance Total"),
+    }
+    if item.get("cancelado_em"):
+        normalized["cancelado_em"] = str(item.get("cancelado_em"))
+    return normalized
+
+
+def study_item_to_row(item: dict[str, Any]) -> list[str]:
+    normalized = normalize_study_item(item)
+    grupo = normalized["grupo"]
+    cliente = normalized["cliente"]
+    return [
+        normalized["estudo_id"],
+        normalized["proposal_id"],
+        normalized["criado_em"],
+        normalized["status"],
+        normalized["operador"],
+        normalized["grupo_id"],
+        str(cliente.get("nome") or ""),
+        str(grupo.get("administradora") or ""),
+        str(grupo.get("tipo_bem") or ""),
+        normalized["estrategia"],
+        dumps_cell(cliente),
+        dumps_cell(grupo),
+        dumps_cell(normalized["cenario"]),
+        dumps_cell(normalized["financeiro"]),
+        dumps_cell(normalized["template_campos"]),
+        str(normalized.get("cancelado_em") or ""),
+    ]
+
+
+def study_item_from_row(row: list[Any]) -> dict[str, Any]:
+    padded = list(row[: len(STUDIES_HEADERS)]) + [""] * max(0, len(STUDIES_HEADERS) - len(row))
+    payload = dict(zip(STUDIES_HEADERS, padded))
+    return normalize_study_item(
+        {
+            "estudo_id": payload["estudo_id"],
+            "proposal_id": payload["proposal_id"],
+            "criado_em": payload["criado_em"],
+            "status": payload["status"],
+            "operador": payload["operador"],
+            "grupo_id": payload["grupo_id"],
+            "cliente": loads_cell(payload["cliente_json"], {}),
+            "grupo": loads_cell(payload["grupo_json"], {}),
+            "cenario": loads_cell(payload["cenario_json"], None),
+            "financeiro": loads_cell(payload["financeiro_json"], {}),
+            "template_campos": loads_cell(payload["template_campos_json"], {}),
+            "estrategia": payload["estrategia"],
+            "cancelado_em": payload["cancelado_em"],
+        }
+    )
+
+
+def read_studies_from_sheet() -> list[tuple[int, dict[str, Any]]]:
+    ensure_studies_sheet()
+    settings = get_settings()
+    service = get_service()
+    result = service.spreadsheets().values().get(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"'{STUDIES_SHEET_NAME}'!A:P",
+    ).execute()
+    values = result.get("values", [])
+    if not values:
+        return []
+    rows = []
+    for row_number, row in enumerate(values[1:], start=2):
+        if not any(str(cell or "").strip() for cell in row):
+            continue
+        item = study_item_from_row(row)
+        if item.get("estudo_id"):
+            rows.append((row_number, item))
+    return rows
+
+
+def write_study_row_to_sheet(row_number: int, item: dict[str, Any]) -> None:
+    ensure_studies_sheet()
+    settings = get_settings()
+    service = get_service()
+    service.spreadsheets().values().update(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"'{STUDIES_SHEET_NAME}'!A{row_number}:P{row_number}",
+        valueInputOption="RAW",
+        body={"values": [study_item_to_row(item)]},
+    ).execute()
+
+
+def append_study_row_to_sheet(item: dict[str, Any]) -> None:
+    ensure_studies_sheet()
+    settings = get_settings()
+    service = get_service()
+    service.spreadsheets().values().append(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"'{STUDIES_SHEET_NAME}'!A:P",
+        valueInputOption="RAW",
+        insertDataOption="INSERT_ROWS",
+        body={"values": [study_item_to_row(item)]},
+    ).execute()
+
+
+def next_study_identifiers(existing_items: list[dict[str, Any]]) -> tuple[str, str]:
+    year = datetime.now().year
+    estudo_counter = initial_counter({item.get("estudo_id", ""): item for item in existing_items})
+    proposal_counter = initial_proposal_counter({item.get("estudo_id", ""): item for item in existing_items})
+    return f"EST-{year}-{estudo_counter + 1:05d}", f"ID {proposal_counter + 1:04d}"
+
+
 def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: str = "") -> dict:
     global _counter, _proposal_counter
-    _counter += 1
-    _proposal_counter += 1
-    estudo_id = f"EST-{datetime.now().year}-{_counter:05d}"
-    proposal_id = f"ID {_proposal_counter:04d}"
     criado_em = datetime.now().isoformat(timespec="seconds")
     grupo_data = grupo or {}
     financeiro = build_financeiro(payload, grupo_data)
-    _studies[estudo_id] = {
+    if sheets_enabled():
+        existing_items = [item for _, item in read_studies_from_sheet()]
+        estudo_id, proposal_id = next_study_identifiers(existing_items)
+    else:
+        _counter += 1
+        _proposal_counter += 1
+        estudo_id = f"EST-{datetime.now().year}-{_counter:05d}"
+        proposal_id = f"ID {_proposal_counter:04d}"
+    study_item = {
         "estudo_id": estudo_id,
         "proposal_id": proposal_id,
         "cliente": payload.cliente.model_dump(),
@@ -75,24 +266,47 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: s
         "operador": operador or "Não informado",
         "criado_em": criado_em,
     }
-    save_studies_to_disk()
+    if sheets_enabled():
+        append_study_row_to_sheet(study_item)
+    else:
+        _studies[estudo_id] = study_item
+        save_studies_to_disk()
     return {"estudo_id": estudo_id, "proposal_id": proposal_id, "success": True}
 
 
 def list_estudos() -> list[dict]:
-    return sorted(_studies.values(), key=lambda item: item["criado_em"], reverse=True)
+    if sheets_enabled():
+        items = [item for _, item in read_studies_from_sheet()]
+    else:
+        items = list(_studies.values())
+    return sorted(items, key=lambda item: item["criado_em"], reverse=True)
 
 
 def get_estudo(estudo_id: str) -> dict | None:
+    if sheets_enabled():
+        for _, item in read_studies_from_sheet():
+            if item.get("estudo_id") == estudo_id:
+                return item
+        return None
     return _studies.get(estudo_id)
 
 
 def delete_estudo(estudo_id: str) -> bool:
+    cancelado_em = datetime.now().isoformat(timespec="seconds")
+    if sheets_enabled():
+        for row_number, item in read_studies_from_sheet():
+            if item.get("estudo_id") != estudo_id:
+                continue
+            item["status"] = "Cancelado"
+            item["cancelado_em"] = cancelado_em
+            write_study_row_to_sheet(row_number, item)
+            return True
+        return False
     estudo = _studies.get(estudo_id)
     if not estudo:
         return False
     estudo["status"] = "Cancelado"
-    estudo["cancelado_em"] = datetime.now().isoformat(timespec="seconds")
+    estudo["cancelado_em"] = cancelado_em
     save_studies_to_disk()
     return True
 
