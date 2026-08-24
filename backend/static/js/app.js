@@ -2681,9 +2681,30 @@ async function renderFinancialStudyScreen() {
   const profile = financialStudyProfile();
   const preferences = financialStudySectionPreferences();
   if (!items.length) {
+    currentStudy = null;
     screen.innerHTML = `<div class="content-card"><div class="placeholder-card compact-placeholder"><span class="state-badge">Aguardando grupos</span><h2>Estudo Financeiro</h2><p>Selecione ao menos um grupo no Motor 360 para gerar o estudo.</p><button class="btn btn-primary" type="button" data-study-back>Voltar ao Motor 360</button></div></div>`;
     screen.querySelector("[data-study-back]")?.addEventListener("click", () => activateScreen("motor360"));
     return;
+  }
+  if (!currentStudy || !currentStudy.groupId) {
+    const highlighted = items[0] || {};
+    const fallbackGroupId = String(highlighted.grupo || highlighted.grupo_id || "");
+    currentStudy = {
+      groupId: fallbackGroupId,
+      viabilityItem: highlighted,
+      payload: collectClientProfile(),
+      group: null,
+      cenario: highlighted?.cartas ? highlighted : null,
+      templateCampos: collectStudyOperatorFields(),
+      savedStudyId: null,
+      proposalId: null,
+    };
+  } else {
+    currentStudy.payload = collectClientProfile();
+    currentStudy.templateCampos = currentStudy.templateCampos || collectStudyOperatorFields();
+    if (!currentStudy.cenario && currentStudy.viabilityItem?.cartas) {
+      currentStudy.cenario = currentStudy.viabilityItem;
+    }
   }
   const administrators = [...new Set(items.map((item) => item.administradora).filter(Boolean))];
   const totalQuotas = items.reduce((total, item) => total + Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1))), 0);
@@ -4003,8 +4024,8 @@ async function openFinancialStudy(groupId, viabilityItem) {
 }
 
 async function saveCurrentStudy(options = {}) {
-  if (!currentStudy) {
-    showToast("Selecione um cenario na Viabilidade antes de salvar.", "warning");
+  if (!currentStudy || !currentStudy.groupId) {
+    showToast("Abra um estudo com pelo menos um grupo selecionado antes de gerar.", "warning");
     return null;
   }
   if (currentStudy.savedStudyId) {
