@@ -4801,6 +4801,25 @@ function renderAssemblyEventGuidance(data) {
   });
 }
 
+function assemblyEventDateValue(event, monthNumber, metadata = {}) {
+  if (event?.iso_date) {
+    const parsed = new Date(`${event.iso_date}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+  const day = Number(event?.value);
+  const month = Number(monthNumber);
+  const referenceYear = Number(metadata?.reference_year || 2026);
+  const nextCycleYear = Number(metadata?.next_cycle_year || referenceYear + 1);
+  const year = month === 1 && referenceYear < nextCycleYear ? nextCycleYear : referenceYear;
+  if (!day || !month || !year) return null;
+  const parsed = new Date(year, month - 1, day);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function assemblyFormatDate(date) {
+  return new Intl.DateTimeFormat("pt-BR").format(date);
+}
+
 function renderAssemblyMap() {
   const data = assemblyState.data;
   if (!data) return;
@@ -4825,9 +4844,11 @@ function renderAssemblyMap() {
   document.getElementById("assemblyCalendarBody").innerHTML = schedules.map((item) => {
     const month = item.months.find((entry) => entry.number === filters.month);
     const values = (month?.events || []).map((event) => {
-      const className = event.iso_date?.startsWith("2027-") ? "assembly-next-cycle" : "";
-      const suffix = event.iso_date?.startsWith("2027-") ? "<small>2027</small>" : "";
-      return `<td><span class="assembly-date ${className}">${escapeHtml(event.display)}${suffix}</span></td>`;
+      const date = assemblyEventDateValue(event, month?.number, data.metadata);
+      const isNextCycle = Boolean(event.iso_date?.startsWith("2027-"));
+      const className = isNextCycle ? "assembly-next-cycle" : "";
+      const text = date ? assemblyFormatDate(date) : String(event.display || event.value || "-");
+      return `<td><span class="assembly-date ${className}">${escapeHtml(text)}</span></td>`;
     }).join("");
     const guidance = assemblyTooltip(item.guidance, `Orientações de ${item.administrator}`);
     return `<tr><th scope="row"><span class="assembly-administrator">${escapeHtml(item.administrator)}${guidance}</span></th>${values}</tr>`;
