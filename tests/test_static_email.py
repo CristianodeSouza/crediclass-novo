@@ -572,8 +572,13 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("function clientProfileConcept(months)", app_js)
         self.assertIn("CLIENT_OBJECTIVE_RULES", app_js)
         self.assertIn('id="clientProfileTipoBem"', index_html)
+        self.assertIn('<select id="clientProfileTipoBem" class="form-select"><option value=""></option></select>', index_html)
+        self.assertIn("function updateClientProfileTipoBemOptions(tipos = [], selected = \"\")", app_js)
+        self.assertIn("updateClientProfileTipoBemOptions(data.tipos_bem || []);", app_js)
+        self.assertIn("updateClientProfileTipoBemOptions(mapState.tipos_bem || [], profile.tipo_bem || \"\");", app_js)
         self.assertIn('tipo_bem: document.getElementById("clientProfileTipoBem").value', app_js)
         self.assertNotIn('tipo_bem: "Imovel"', app_js)
+        self.assertIn('if (viabilityTipo) viabilityTipo.value = profile.tipo_bem || "";', app_js)
         self.assertIn('const lanceManual = toNumber(document.getElementById("clientProfileLanceProprio").value);', app_js)
 
     def test_perfil_cliente_suporta_titulares_pf_pj(self):

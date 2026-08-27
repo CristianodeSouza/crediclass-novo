@@ -61,6 +61,7 @@ const mapState = {
   total: 0,
   items: [],
   administradoras: [],
+  tipos_bem: [],
   lanceSortField: "",
   lanceSortOrder: "",
   lastLoadAt: null,
@@ -725,6 +726,16 @@ function updateSelectOptions(id, values, defaultLabel) {
 function updateFilterOptions(administradoras = [], tipos = []) {
   updateSelectOptions("filterAdministradora", administradoras, "Todas");
   updateSelectOptions("filterTipoBem", tipos, "Todos");
+}
+
+function updateClientProfileTipoBemOptions(tipos = [], selected = "") {
+  const select = document.getElementById("clientProfileTipoBem");
+  if (!select) return;
+  const values = [...new Set((tipos || []).map((value) => String(value || "").trim()).filter(Boolean))];
+  const resolvedSelected = String(selected ?? select.dataset.pendingValue ?? select.value ?? "").trim();
+  select.innerHTML = `<option value=""></option>${values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("")}`;
+  select.value = values.includes(resolvedSelected) ? resolvedSelected : "";
+  select.dataset.pendingValue = select.value;
 }
 
 function renderSummary(items, total, totalAdministradoras = null) {
@@ -1600,8 +1611,10 @@ async function loadMapaGrupos() {
     mapState.total = data.total;
     mapState.items = data.items;
     mapState.administradoras = data.administradoras || [];
+    mapState.tipos_bem = data.tipos_bem || [];
     mapState.lastLoadAt = new Date().toLocaleString("pt-BR");
     updateFilterOptions(data.administradoras || [], data.tipos_bem || []);
+    updateClientProfileTipoBemOptions(data.tipos_bem || []);
     renderSummary(data.items, data.total, data.total_administradoras);
     renderGroupsTable(data.items);
     renderPagination();
@@ -3905,7 +3918,7 @@ function applyClientProfileToFlow(profile) {
     if (viabilityTarget) viabilityTarget.value = profile[key] ?? "";
   });
   const viabilityTipo = document.getElementById("viabilityTipoBem");
-  if (viabilityTipo) viabilityTipo.value = profile.tipo_bem || "Imovel";
+  if (viabilityTipo) viabilityTipo.value = profile.tipo_bem || "";
   updateViabilityTotals();
 }
 
@@ -3935,6 +3948,7 @@ function loadClientProfile() {
   setMoneyInputValue("clientProfileParcelaIdeal", profile.parcela_ideal ?? profile.parcela_desejada);
   const objective = CLIENT_OBJECTIVE_RULES[profile.objetivo] ? profile.objetivo : "Contemplar - urgente - 3 meses";
   setInputValue("clientProfileObjetivo", objective);
+  updateClientProfileTipoBemOptions(mapState.tipos_bem || [], profile.tipo_bem || "");
   updateClientProfileTotals();
   applyClientProfileToFlow(collectClientProfile());
 }
