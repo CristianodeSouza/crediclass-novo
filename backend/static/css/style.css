@@ -2018,7 +2018,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-execution-log-error strong { color: #b42318; }
 .motor360-execution-log-empty { padding: 12px; color: var(--muted); font-size: 0.72rem; }
 .motor360-group-card { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 2px 8px rgb(31 45 51 / 6%); }
-.motor360-group-card-header { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: #f7f9f9; }
+.motor360-group-card-header { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(260px, 420px) auto; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: #f7f9f9; }
 .motor360-group-identity { display: flex; align-items: center; gap: 11px; min-width: 150px; }
 .motor360-group-order { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: var(--brand-navy); color: #fff; font-weight: 800; }
 .motor360-group-identity h3 { margin: 0; color: var(--brand-navy); font-size: 0.95rem; }
@@ -2031,6 +2031,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-summary div { display: grid; gap: 2px; min-width: 92px; }
 .motor360-group-summary small, .motor360-scenario-grid small, .motor360-profile-card-value small { color: var(--muted); font-size: 0.68rem; }
 .motor360-group-summary b { color: var(--brand-navy); font-size: 0.82rem; }
+.motor360-visible-capacity { display: grid; gap: 4px; min-width: 0; padding: 10px 12px; border: 1px solid rgba(239, 121, 37, 0.28); border-radius: 14px; background: #fff6f0; }
+.motor360-visible-capacity span, .motor360-visible-capacity small { color: var(--muted); font-size: 0.68rem; }
+.motor360-visible-capacity strong { color: var(--primary); font-size: 0.82rem; line-height: 1.2; }
 .motor360-group-status { padding: 5px 9px; border-radius: 999px; background: #e9f8ef; color: #147a48; font-size: 0.7rem; font-weight: 800; }
 .motor360-group-select { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--brand-navy); cursor: pointer; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
 .motor360-group-select:hover { border-color: var(--brand-orange); background: #fff8f2; }
@@ -2278,7 +2281,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-chance-chart { position: relative; height: 250px; margin-top: 10px; }
 
 @media (max-width: 900px) {
-  .motor360-group-card-header, .motor360-profile-section-title { align-items: flex-start; flex-direction: column; }
+  .motor360-group-card-header { grid-template-columns: 1fr; align-items: flex-start; }
+  .motor360-profile-section-title { align-items: flex-start; flex-direction: column; }
   .motor360-group-summary { justify-content: flex-start; flex-wrap: wrap; gap: 12px; }
   .motor360-scenario-list, .motor360-profile-card-list { grid-template-columns: 1fr 1fr; }
   .motor360-chance-header { flex-direction: column; }
