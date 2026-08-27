@@ -157,6 +157,10 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(item["capacidade_contemplacoes_selecionada"]["meses_contemplados"], 3)
         self.assertEqual(item["capacidade_contemplacoes_selecionada"]["media_contemplacoes"], 1.0)
         self.assertFalse(item["capacidade_contemplacoes_selecionada"]["atinge_regra_minima"])
+        self.assertEqual(
+            [profile["label"] for profile in item["cenarios"][0]["perfis_contemplacao"]],
+            ["Urgente", "Rápido", "Moderado", "Conservador", "Investidor"],
+        )
 
     def test_official_scenarios_preserve_credit_and_do_not_share_values(self):
         result = analyze_client_consortium_viability(payload(), [group()])

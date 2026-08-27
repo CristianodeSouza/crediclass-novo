@@ -117,8 +117,8 @@ let investorAnalysisRequestId = 0;
 const HISTORY_START_MONTH = "2024-01";
 const CLIENT_PROFILE_STORAGE_KEY = "crediclass.clientProfile.v1";
 const CLIENT_OBJECTIVE_RULES = {
-  "Urgente - 3 meses": { prazo: 3, conceito: "Super Agressivo", tipoBem: "Imovel", estadoBem: "Pronto" },
-  "Rapido - 6 meses": { prazo: 6, conceito: "Agressivo", tipoBem: "Imovel", estadoBem: "Pronto" },
+  "Urgente - 3 meses": { prazo: 3, conceito: "Urgente", tipoBem: "Imovel", estadoBem: "Pronto" },
+  "Rapido - 6 meses": { prazo: 6, conceito: "Rápido", tipoBem: "Imovel", estadoBem: "Pronto" },
   "Moderado - 12 meses": { prazo: 12, conceito: "Moderado", tipoBem: "Imovel", estadoBem: "Pronto" },
   "Conservador - 24 meses": { prazo: 24, conceito: "Conservador", tipoBem: "Imovel", estadoBem: "Pronto" },
   "Investidor - 36 meses": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Pronto" },
@@ -168,7 +168,7 @@ const businessRulesFlow = [
     id: "estrategia",
     etapa: "2. Estrategia",
     regras: [
-      "O backend define o perfil estrategico: ate 3 meses = Super Agressivo; ate 6 meses = Agressivo; ate 12 meses = Moderado; ate 24 meses = Conservador; acima de 24 meses = Investidor.",
+      "O backend define o perfil estrategico: ate 3 meses = Urgente; ate 6 meses = Rápido; ate 12 meses = Moderado; ate 24 meses = Conservador; acima de 24 meses = Investidor.",
       "A referencia de lance usa somente meses com qtd_contemplacoes maior que zero e menor_lance preenchido acima de zero.",
       "Todas as referencias recebem acrescimo operacional de 0,25 ponto percentual.",
     ],
@@ -1665,8 +1665,8 @@ function updateViabilityTotals() {
 
 function clientProfileConcept(months) {
   const prazo = Number(months || 0);
-  if (prazo <= 3) return "Super Agressivo";
-  if (prazo <= 6) return "Agressivo";
+  if (prazo <= 3) return "Urgente";
+  if (prazo <= 6) return "Rápido";
   if (prazo <= 12) return "Moderado";
   if (prazo <= 24) return "Conservador";
   return "Investidor";
@@ -2270,8 +2270,8 @@ function renderSelectedGroupsCartSummary(items) {
   const desiredInstallment = Number(client.parcela_desejada || 0);
   const incomeInstallment = Number(client.parcela_maxima || 0);
   const availableBid = Number(client.lance_cliente_total || 0);
-  const profileIds = ["conservative", "moderate", "aggressive", "super_aggressive"];
-  const profileLabels = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super Agressivo" };
+  const profileIds = ["urgent", "fast", "moderate", "conservative", "long_term"];
+  const profileLabels = { urgent: "Urgente", fast: "Rápido", moderate: "Moderado", conservative: "Conservador", long_term: "Investidor" };
   const scenarioSummary = (scenarioId, label) => {
     const entries = items.map((item) => {
       const groupId = String(item.grupo || item.grupo_id || "-");
@@ -2356,10 +2356,11 @@ function financialStudyContractLabel(value) {
 
 function financialStudyStrategyLabel(value) {
   const labels = {
+    urgent: "Urgente - 3 meses",
+    fast: "Rápido - 6 meses",
+    long_term: "Investidor - 36 meses",
     conservative: "Conservador - 24 meses",
     moderate: "Moderado - 12 meses",
-    aggressive: "Agressivo - 6 meses",
-    super_aggressive: "Super Agressivo - 3 meses",
   };
   return labels[value] || value || "Não classificada";
 }
@@ -2463,8 +2464,8 @@ function financialStudyProjectionSection(item) {
 }
 
 function financialStudyGroupProfileSection(item) {
-  const profileIds = ["conservative", "moderate", "aggressive", "super_aggressive"];
-  const labels = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super Agressivo" };
+  const profileIds = ["urgent", "fast", "moderate", "conservative", "long_term"];
+  const labels = { urgent: "Urgente", fast: "Rápido", moderate: "Moderado", conservative: "Conservador", long_term: "Investidor" };
   const scenarios = Object.fromEntries((item.cenarios || []).map((scenario) => [scenario.id, scenario]));
   const valueFor = (scenarioId, profileId) => (scenarios[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profileId);
   const renderValue = (value, scenarioLabel) => {
@@ -2604,9 +2605,11 @@ function financialStudyProfileValue(item, scenarioId, profileId) {
 
 function financialStudyPreferredProfileId(item) {
   const label = String(item?.capacidade_contemplacoes_selecionada?.perfil || item?.best_contemplation_strategy || "").toLowerCase();
-  if (label.includes("super")) return "super_aggressive";
-  if (label.includes("agress")) return "aggressive";
+  if (label.includes("urgent")) return "urgent";
+  if (label.includes("urgente")) return "urgent";
+  if (label.includes("rap")) return "fast";
   if (label.includes("moder")) return "moderate";
+  if (label.includes("invest")) return "long_term";
   return "conservative";
 }
 
@@ -2742,10 +2745,11 @@ function financialStudyHistoryTable(items) {
 
 function financialStudyProjectionTable(items, title, profileId, scenarioId) {
   const labels = {
+    urgent: "Urgente",
+    fast: "Rápido",
+    long_term: "Investidor",
     conservative: "Conservador",
     moderate: "Moderado",
-    aggressive: "Agressivo",
-    super_aggressive: "Super Agressivo",
   };
   const rows = items.map((item) => {
     const quotas = financialStudyQuotaCount(item);
@@ -2808,7 +2812,7 @@ function renderFinancialStudyPdfDocument({ items, profile, preferences, clientNa
   const intro = `<section class="financial-study-pdf-cover financial-study-executive${sectionClass("cliente")}" data-study-content="cliente"><div class="financial-study-pdf-cover-title">ESTUDO FINANCEIRO</div><div class="financial-study-pdf-cover-layout"><div class="financial-study-pdf-cover-main"><div class="financial-study-pdf-cover-hero"><div class="financial-study-pdf-cover-hero-panel"><span class="financial-study-pdf-cover-kicker">Documento executivo</span><h2>Comparativo estruturado para decisao do cliente</h2><p>Previa HTML do estudo financeiro com base nos dados reais do grupo em destaque e parametros do perfil atual.</p></div></div></div><aside class="financial-study-pdf-cover-notes"><div class="financial-study-pdf-cover-note is-intro"><strong>Prezado,</strong></div>${introNotes.map((note) => `<div class="financial-study-pdf-cover-note"><p>${escapeHtml(note)}</p></div>`).join("")}</aside></div><div class="financial-study-pdf-client-meta">${financialStudyPdfMetaItem("Cliente", clientName)}${financialStudyPdfMetaItem("Objetivo", objective, "is-wide")}${financialStudyPdfMetaItem("Opção em destaque", `Grupo ${highlightedGroup} (${highlightedStrategy})`)}${financialStudyPdfMetaItem("Identificador", proposalId)}</div></section>`;
   const page1 = intro + `<div class="financial-study-pdf-section-group${sectionClass("resumo")}" data-study-content="resumo">${financialStudyInvestmentSimulation(items, profile)}${financialStudySelectionNarrative(items[0]?.administradora)}${financialStudySummaryTable(items)}${financialStudyInvestmentsTable(items)}</div>`;
   const page2 = `<div class="financial-study-pdf-section-group${sectionClass("grupos")}" data-study-content="grupos">${financialStudySpecialistsSection()}${financialStudyBenefitsSection(items[0]?.administradora)}${financialStudyContractTable(items)}${financialStudyStrategyNarrative()}${financialStudyHistoryTable(items)}${financialStudyProjectionTable(items, "1. Sorteio Geral", "conservative", "without_embedded")}</div>`;
-  const page3 = `<div class="financial-study-pdf-section-group${sectionClass("grupos")}" data-study-content="grupos">${financialStudyProjectionTable(items, "2. Lance Conservador", "aggressive", "without_embedded")}${financialStudyProjectionTable(items, "3. Lance Moderado", "moderate", "with_embedded")}${assemblyError ? `<div class="financial-study-pdf-warning">${escapeHtml(assemblyError)}</div>` : ""}${financialStudyDeadlinesTable(items, assemblyData || {}, generatedAt)}</div>`;
+  const page3 = `<div class="financial-study-pdf-section-group${sectionClass("grupos")}" data-study-content="grupos">${financialStudyProjectionTable(items, "2. Lance Rápido", "fast", "without_embedded")}${financialStudyProjectionTable(items, "3. Lance Moderado", "moderate", "with_embedded")}${assemblyError ? `<div class="financial-study-pdf-warning">${escapeHtml(assemblyError)}</div>` : ""}${financialStudyDeadlinesTable(items, assemblyData || {}, generatedAt)}</div>`;
   const page4 = financialStudyConsiderationsSection();
   return `<article class="financial-study-document financial-study-pdf-document">${financialStudyPdfPage(1, 4, issueDateLabel, page1)}${financialStudyPdfPage(2, 4, issueDateLabel, page2)}${financialStudyPdfPage(3, 4, issueDateLabel, page3)}${financialStudyPdfPage(4, 4, issueDateLabel, page4, "is-last")}</article>`;
 }
@@ -2935,8 +2939,8 @@ function financialStudyAssemblySection(data, administrators, generatedAt, loadEr
 }
 
 function financialStudyProfileMatrix(items) {
-  const profileIds = ["conservative", "moderate", "aggressive", "super_aggressive"];
-  const labels = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super Agressivo" };
+  const profileIds = ["urgent", "fast", "moderate", "conservative", "long_term"];
+  const labels = { urgent: "Urgente", fast: "Rápido", moderate: "Moderado", conservative: "Conservador", long_term: "Investidor" };
   return `<div class="financial-study-profile-list">${items.map((item) => {
     const groupId = String(item.grupo || item.grupo_id || "-");
     const scenarios = Object.fromEntries((item.cenarios || []).map((scenario) => [scenario.id, scenario]));
@@ -3087,18 +3091,20 @@ function updateMotor360SelectionSummary() {
 function renderMotor360ChanceChart(items) {
   const groups = (items || []).filter((item) => Array.isArray(item.cenarios) && item.cenarios.length);
   if (!groups.length) return "";
-  const profileIds = ["conservative", "moderate", "aggressive", "super_aggressive"];
+  const profileIds = ["urgent", "fast", "moderate", "conservative", "long_term"];
   const profileLabels = {
+    urgent: "Urgente",
+    fast: "Rápido",
+    long_term: "Investidor",
     conservative: "Conservador",
     moderate: "Moderado",
-    aggressive: "Agressivo",
-    super_aggressive: "Super Agressivo",
   };
   const profileColors = {
+    urgent: "#b84f32",
+    fast: "#e5791b",
+    long_term: "#6b7280",
     conservative: "#4f6872",
     moderate: "#1d9b59",
-    aggressive: "#e5791b",
-    super_aggressive: "#b84f32",
   };
   const byScenario = (item, id) => (item.cenarios || []).find((scenario) => scenario.id === id) || {};
   const countHits = (scenarioId, profileId) => groups.reduce((total, item) => {

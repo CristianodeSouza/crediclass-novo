@@ -33,10 +33,11 @@ STRATEGY_TARGETS = (
 )
 
 CONTEMPLATION_PROFILE_TARGETS = (
-    ("conservative", "Conservador", "conservative"),
+    ("urgent", "Urgente", "urgent"),
+    ("fast", "Rápido", "fast"),
     ("moderate", "Moderado", "moderate"),
-    ("aggressive", "Agressivo", "fast"),
-    ("super_aggressive", "Super Agressivo", "urgent"),
+    ("conservative", "Conservador", "conservative"),
+    ("long_term", "Investidor", "long_term"),
 )
 
 CONTEMPLATION_CAPACITY_WINDOWS = {
