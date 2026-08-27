@@ -5236,6 +5236,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
   gap: 14px;
 }
 
+.financial-study-pdf-cover,
+.financial-study-pdf-cover-main {
+  display: grid;
+  gap: 14px;
+}
+
 .financial-study-pdf-cover-title {
   padding: 2px 0;
   background: #31424b;
@@ -5244,6 +5250,73 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 800;
   letter-spacing: 0.02em;
   text-align: center;
+}
+
+.financial-study-pdf-cover-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.9fr) minmax(220px, 0.9fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.financial-study-pdf-cover-hero {
+  min-height: 470px;
+  border: 1px solid #f0ded1;
+  background:
+    linear-gradient(180deg, rgba(255, 245, 236, 0.95), rgba(255, 249, 244, 0.98)),
+    radial-gradient(circle at 22% 18%, rgba(202, 134, 95, 0.16), transparent 22%),
+    radial-gradient(circle at 78% 28%, rgba(49, 66, 75, 0.12), transparent 24%);
+  position: relative;
+}
+
+.financial-study-pdf-cover-hero::before {
+  content: "";
+  position: absolute;
+  right: 28px;
+  bottom: 34px;
+  left: 28px;
+  height: 24px;
+  background: #31424b;
+}
+
+.financial-study-pdf-cover-hero::after {
+  content: "ESTUDO FINANCEIRO";
+  position: absolute;
+  right: 28px;
+  bottom: 34px;
+  left: 28px;
+  height: 24px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 24px;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.financial-study-pdf-cover-notes {
+  display: grid;
+  gap: 14px;
+}
+
+.financial-study-pdf-cover-note {
+  padding: 12px 18px 14px;
+  border-top: 1px solid #efcfbe;
+}
+
+.financial-study-pdf-cover-note.is-intro {
+  padding-bottom: 0;
+}
+
+.financial-study-pdf-cover-note strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.financial-study-pdf-cover-note p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.42;
 }
 
 .financial-study-pdf-copy p,
@@ -5276,6 +5349,14 @@ body[data-theme="escuro"] .btn-outline-secondary {
   gap: 14px;
 }
 
+.financial-study-pdf-split-layout,
+.financial-study-pdf-selection-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 1.58fr);
+  gap: 14px;
+  align-items: start;
+}
+
 .financial-study-pdf-bar {
   padding: 3px 10px;
   background: #31424b;
@@ -5291,6 +5372,90 @@ body[data-theme="escuro"] .btn-outline-secondary {
   color: #4a5560;
   font-size: 13px;
   text-align: center;
+}
+
+.financial-study-pdf-visual-panel {
+  min-height: 100%;
+  padding: 18px 18px 16px;
+  border: 1px solid #ead7cb;
+  background:
+    linear-gradient(180deg, rgba(255, 247, 241, 0.96), rgba(255, 252, 249, 1)),
+    radial-gradient(circle at 20% 16%, rgba(200, 123, 81, 0.18), transparent 20%),
+    radial-gradient(circle at 80% 82%, rgba(49, 66, 75, 0.10), transparent 26%);
+  position: relative;
+  overflow: hidden;
+}
+
+.financial-study-pdf-visual-brand {
+  width: 136px;
+  height: 96px;
+  margin-bottom: 24px;
+  background: center / contain no-repeat url("/static/images/crediclass-logo.png");
+  opacity: 0.18;
+}
+
+.financial-study-pdf-visual-eyebrow {
+  display: block;
+  margin-bottom: 8px;
+  color: #a9704d;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.financial-study-pdf-visual-panel strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #24313a;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.financial-study-pdf-visual-panel p {
+  margin: 0 0 16px;
+  color: #42515c;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.financial-study-pdf-visual-metrics {
+  display: grid;
+  gap: 10px;
+}
+
+.financial-study-pdf-metric {
+  padding-top: 8px;
+  border-top: 1px solid rgba(49, 66, 75, 0.12);
+}
+
+.financial-study-pdf-metric span,
+.financial-study-pdf-metric strong,
+.financial-study-pdf-metric small {
+  display: block;
+}
+
+.financial-study-pdf-metric span,
+.financial-study-pdf-metric small {
+  color: #66707a;
+}
+
+.financial-study-pdf-metric span {
+  margin-bottom: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.financial-study-pdf-metric strong {
+  color: #24313a;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.financial-study-pdf-metric small {
+  margin-top: 4px;
+  font-size: 11px;
 }
 
 .financial-study-pdf-table {
@@ -5323,6 +5488,22 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 11px;
 }
 
+.financial-study-pdf-editorial-table th {
+  width: 170px;
+  background: #fff;
+  color: #20242a;
+  font-weight: 800;
+  text-align: left;
+}
+
+.financial-study-pdf-editorial-table td {
+  background: #fff;
+}
+
+.financial-study-pdf-editorial-table td p:last-child {
+  margin-bottom: 0;
+}
+
 .financial-study-pdf-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5351,6 +5532,59 @@ body[data-theme="escuro"] .btn-outline-secondary {
   color: #20242a;
   font-size: 13px;
   font-weight: 700;
+}
+
+.financial-study-pdf-summary-matrix th:first-child,
+.financial-study-pdf-summary-matrix td:first-child {
+  min-width: 150px;
+}
+
+.financial-study-pdf-cycle-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.financial-study-pdf-cycle-card {
+  border: 1px solid #d8dde3;
+  background: #fff;
+}
+
+.financial-study-pdf-cycle-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  background: #f4f0ec;
+}
+
+.financial-study-pdf-cycle-head strong,
+.financial-study-pdf-cycle-head span {
+  display: block;
+}
+
+.financial-study-pdf-cycle-head strong {
+  color: #24313a;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.financial-study-pdf-cycle-head span {
+  color: #6d7780;
+  font-size: 11px;
+}
+
+.financial-study-pdf-cycle-table th {
+  width: 42%;
+  background: #fff;
+  text-align: left;
+}
+
+.financial-study-pdf-cycle-empty {
+  padding: 14px 12px;
+  color: #6d7780;
+  font-size: 12px;
 }
 
 .financial-study-pdf-warning {
@@ -5426,8 +5660,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .financial-study-pdf-grid-2,
-  .financial-study-pdf-client-meta {
+  .financial-study-pdf-client-meta,
+  .financial-study-pdf-cover-layout,
+  .financial-study-pdf-split-layout,
+  .financial-study-pdf-selection-layout,
+  .financial-study-pdf-cycle-grid {
     grid-template-columns: 1fr;
+  }
+
+  .financial-study-pdf-cover-hero {
+    min-height: 320px;
   }
 }
 

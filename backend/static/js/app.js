@@ -2569,16 +2569,35 @@ function financialStudyPreferredProfileId(item) {
   return "conservative";
 }
 
+function financialStudyPdfMetric(label, value, detail = "") {
+  return `<div class="financial-study-pdf-metric"><span>${escapeHtml(label)}</span><strong>${value}</strong>${detail ? `<small>${escapeHtml(detail)}</small>` : ""}</div>`;
+}
+
+function financialStudyPdfVisualPanel({ eyebrow = "", title = "", caption = "", metrics = [] }) {
+  return `<div class="financial-study-pdf-visual-panel"><div class="financial-study-pdf-visual-brand"></div>${eyebrow ? `<span class="financial-study-pdf-visual-eyebrow">${escapeHtml(eyebrow)}</span>` : ""}${title ? `<strong>${escapeHtml(title)}</strong>` : ""}${caption ? `<p>${escapeHtml(caption)}</p>` : ""}${metrics.length ? `<div class="financial-study-pdf-visual-metrics">${metrics.join("")}</div>` : ""}</div>`;
+}
+
 function financialStudyInvestmentSimulation(items, profile) {
   const highlighted = items[0] || {};
   const quotas = financialStudyQuotaCount(highlighted);
   const without = financialStudyScenario(highlighted, "without_embedded");
   const ownResources = Number(profile.lance_proprio || 0) + Number(profile.fgts || 0);
+  const visual = financialStudyPdfVisualPanel({
+    eyebrow: "Simulação dinâmica",
+    title: `Grupo ${String(highlighted.grupo || highlighted.grupo_id || "-")}`,
+    caption: "Composição resumida do cenário principal considerando o estudo atual e a opção em destaque.",
+    metrics: [
+      financialStudyPdfMetric("Administradora", escapeHtml(highlighted.administradora || "-")),
+      financialStudyPdfMetric("Recurso próprio", formatMoney(ownResources)),
+      financialStudyPdfMetric("Crédito contratado", formatMoney(financialStudyScaleValue(without.credito_contratado, quotas))),
+      financialStudyPdfMetric("Prazo", `${escapeHtml(String(highlighted.prazo_restante || "-"))} meses`),
+    ],
+  });
   const rows = [
     ["À Vista", formatMoney(ownResources), "-", "1", "-"],
     ["Consórcio selecionado", formatMoney(financialStudyScaleValue(without.credito_contratado, quotas)), formatMoney(financialStudyScaleValue(without.parcela_inicial, quotas)), String(highlighted.prazo_restante || "-"), formatMoney(financialStudyScaleValue(without.saldo_devedor, quotas))],
   ];
-  return financialStudyPdfSection("SIMULAÇÃO DE INVESTIMENTO", `<table class="financial-study-pdf-table"><thead><tr><th>Uso de Recurso Próprio</th><th>Valor base</th><th>Parcela inicial</th><th>Prazo em Meses</th><th>Saldo / custo no período</th></tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table>`, "Simulação dinâmica usando o estudo atual e o grupo em destaque.");
+  return financialStudyPdfSection("SIMULAÇÃO DE INVESTIMENTO", `<div class="financial-study-pdf-split-layout"><div>${visual}</div><div><table class="financial-study-pdf-table"><thead><tr><th>Uso de Recurso Próprio</th><th>Valor base</th><th>Parcela inicial</th><th>Prazo em Meses</th><th>Saldo / custo no período</th></tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div></div>`, "Simulação dinâmica usando o estudo atual e o grupo em destaque.");
 }
 
 function financialStudySelectionNarrative(highlightedAdmin) {
@@ -2595,17 +2614,23 @@ function financialStudySelectionNarrative(highlightedAdmin) {
     "Quitar financiamento imobiliário quando permitido nas regras do grupo.",
     "Compor estratégia patrimonial de médio e longo prazo.",
   ];
-  return financialStudyPdfSection("SIMULAÇÃO MELHORES CONSÓRCIOS", `<div class="financial-study-pdf-grid-2"><div class="financial-study-pdf-box"><strong>Administradora selecionada: ${escapeHtml(highlightedAdmin || "-")}</strong><div class="financial-study-pdf-copy"><p>Os grupos apresentados foram selecionados a partir dos critérios técnicos definidos pela Crediclass, considerando os indicadores históricos e as condições disponíveis na data da análise.</p></div><div class="financial-study-pdf-bullet-list">${criteria.map((item) => `<p>${escapeHtml(item)}</p>`).join("")}</div></div><div class="financial-study-pdf-box"><strong>Como funciona</strong><div class="financial-study-pdf-copy"><p>O consórcio é uma modalidade de crédito planejado que permite a aquisição de imóveis por meio da formação de um fundo comum entre participantes.</p><p>Mensalmente, são realizadas contemplações por sorteio e lance, permitindo acesso à carta de crédito conforme o perfil financeiro do cliente.</p></div><strong>Uso da carta de crédito</strong><div class="financial-study-pdf-bullet-list">${usages.map((item) => `<p>${escapeHtml(item)}</p>`).join("")}</div></div></div>`, "");
+  const visual = financialStudyPdfVisualPanel({
+    eyebrow: "Administradora selecionada",
+    title: String(highlightedAdmin || "-"),
+    caption: "Os grupos apresentados foram selecionados a partir dos critérios técnicos definidos pela Crediclass, considerando indicadores históricos, estabilidade e consistência operacional.",
+  });
+  return financialStudyPdfSection("SIMULAÇÃO MELHORES CONSÓRCIOS", `<div class="financial-study-pdf-selection-layout"><div>${visual}</div><div><table class="financial-study-pdf-table financial-study-pdf-editorial-table"><tbody><tr><th>Critérios de seleção</th><td>${criteria.map((item) => `<p>${escapeHtml(item)}</p>`).join("")}</td></tr><tr><th>Como funciona</th><td><p>O consórcio é uma modalidade de crédito planejado que permite a aquisição de imóveis por meio da formação de um fundo comum entre participantes.</p><p>Mensalmente, são realizadas contemplações por sorteio e lance, permitindo acesso à carta de crédito conforme o perfil financeiro do cliente.</p></td></tr><tr><th>Uso da carta de crédito</th><td>${usages.map((item) => `<p>${escapeHtml(item)}</p>`).join("")}</td></tr></tbody></table></div></div>`, "");
 }
 
 function financialStudySummaryTable(items) {
   const rows = items.map((item) => {
     const quotas = financialStudyQuotaCount(item);
     const without = financialStudyScenario(item, "without_embedded");
+    const withEmbedded = financialStudyScenario(item, "with_embedded");
     const rate = item.source_values?.taxa_adm ?? item.taxa_total ?? item.taxa_adm;
-    return `<tr><td>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</td><td>${formatMoney(financialStudyScaleValue(without.credito_contratado, quotas))}</td><td>${formatMoney(financialStudyScaleValue(without.parcela_inicial, quotas))}</td><td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td><td>${rate == null ? "-" : formatPercent(rate)}</td><td>${escapeHtml(item.administradora || "-")}</td></tr>`;
+    return `<tr><td><strong>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</strong><small>${escapeHtml(item.administradora || "-")}</small></td><td>${formatMoney(financialStudyScaleValue(without.credito_contratado, quotas))}</td><td>${formatMoney(financialStudyScaleValue(without.parcela_inicial, quotas))}</td><td>${formatMoney(financialStudyScaleValue(withEmbedded.credito_contratado, quotas))}</td><td>${formatMoney(financialStudyScaleValue(withEmbedded.parcela_inicial, quotas))}</td><td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td><td>${rate == null ? "-" : formatPercent(rate)}</td></tr>`;
   }).join("");
-  return financialStudyPdfSection("QUADRO RESUMO", `<table class="financial-study-pdf-table"><thead><tr><th>Carta de Crédito</th><th>Crédito</th><th>Parcelas</th><th>Prazo</th><th>Taxa ADM</th><th>Administradora</th></tr></thead><tbody>${rows}</tbody></table>`, "Simulação consolidada das cartas de crédito em grupos estratégicos.");
+  return financialStudyPdfSection("QUADRO RESUMO", `<table class="financial-study-pdf-table financial-study-pdf-summary-matrix"><thead><tr><th>Carta de Crédito</th><th>Crédito sem embutido</th><th>Parcela sem embutido</th><th>Crédito com embutido</th><th>Parcela com embutido</th><th>Prazo</th><th>Taxa ADM</th></tr></thead><tbody>${rows}</tbody></table>`, "Simulação consolidada das cartas de crédito em grupos estratégicos.");
 }
 
 function financialStudyInvestmentsTable(items) {
@@ -2684,6 +2709,20 @@ function financialStudyProjectionTable(items, title, profileId, scenarioId) {
   return financialStudyPdfSection("PROJEÇÃO DE CONTEMPLAÇÃO", `<div class="financial-study-pdf-projection-title">${escapeHtml(title)} · ${escapeHtml(labels[profileId] || title)}</div><table class="financial-study-pdf-table"><thead><tr><th>Grupo</th><th>Percentual</th><th>Lance Total</th><th>Pagto Carta</th><th>Pagto Rec Próprio</th><th>Crédito</th><th>Parcelas</th><th>Prazo</th></tr></thead><tbody>${rows}</tbody></table>`, "");
 }
 
+function financialStudyPdfAgendaTables(items, assemblyData, generatedAt) {
+  const cards = items.map((item) => {
+    const cycles = financialStudyGroupAssemblyCycles(item, assemblyData, generatedAt).slice(0, 2);
+    if (!cycles.length) {
+      return `<div class="financial-study-pdf-cycle-card"><div class="financial-study-pdf-cycle-head"><strong>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</strong><span>${escapeHtml(item.administradora || "-")}</span></div><div class="financial-study-pdf-cycle-empty">Sem ciclos futuros cadastrados.</div></div>`;
+    }
+    return cycles.map((cycle) => {
+      const byId = Object.fromEntries((cycle.events || []).map((event) => [event.id, event]));
+      return `<div class="financial-study-pdf-cycle-card"><div class="financial-study-pdf-cycle-head"><strong>${escapeHtml(cycle.month)}</strong><span>${escapeHtml(item.administradora || "-")}${cycle.faixa ? ` · ciclo ${escapeHtml(cycle.faixa)}` : ""}</span></div><table class="financial-study-pdf-table financial-study-pdf-cycle-table"><tbody><tr><th>Adesão</th><td>${byId.adesao ? financialStudyFormatCalendarDate(byId.adesao.date) : "-"}</td></tr><tr><th>Oferta</th><td>${byId.oferta ? financialStudyFormatCalendarDate(byId.oferta.date) : "-"}</td></tr><tr><th>Assembleia</th><td>${byId.assembleia ? financialStudyFormatCalendarDate(byId.assembleia.date) : "-"}</td></tr><tr><th>1ª Parcela</th><td>${byId.vencimento_parcela ? financialStudyFormatCalendarDate(byId.vencimento_parcela.date) : "-"}</td></tr><tr><th>Pagto lance</th><td>${byId.pagamento_lance ? financialStudyFormatCalendarDate(byId.pagamento_lance.date) : "-"}</td></tr></tbody></table></div>`;
+    }).join("");
+  }).join("");
+  return cards ? `<div class="financial-study-pdf-cycle-grid">${cards}</div>` : "";
+}
+
 function financialStudyDeadlinesTable(items, assemblyData, generatedAt) {
   const rows = items.map((item) => {
     const cycles = financialStudyGroupAssemblyCycles(item, assemblyData, generatedAt);
@@ -2691,7 +2730,7 @@ function financialStudyDeadlinesTable(items, assemblyData, generatedAt) {
     const byId = Object.fromEntries((cycle?.events || []).map((event) => [event.id, event]));
     return `<tr><td>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</td><td>${byId.adesao ? financialStudyFormatCalendarDate(byId.adesao.date) : "-"}</td><td>${byId.assembleia ? financialStudyFormatCalendarDate(byId.assembleia.date) : "-"}</td><td>${byId.vencimento_parcela ? financialStudyFormatCalendarDate(byId.vencimento_parcela.date) : "-"}</td><td>${byId.vencimento_boleto_adesao ? financialStudyFormatCalendarDate(byId.vencimento_boleto_adesao.date) : "-"}</td></tr>`;
   }).join("");
-  const agenda = financialStudyAssemblySection(assemblyData, [...new Set(items.map((item) => item.administradora).filter(Boolean))], generatedAt);
+  const agenda = financialStudyPdfAgendaTables(items, assemblyData, generatedAt);
   return financialStudyPdfSection("DATAS LIMITES PARA ADESÃO", `<table class="financial-study-pdf-table"><thead><tr><th>Grupo</th><th>Limite Adesão</th><th>Próxima Assembleia</th><th>Vencimento Primeira Parcela</th><th>Vencimento Pagamento Lance</th></tr></thead><tbody>${rows}</tbody></table><div class="financial-study-pdf-agenda-note"><strong>Agenda de contratação e assembleias</strong></div>${agenda}`);
 }
 
@@ -2709,7 +2748,15 @@ function renderFinancialStudyPdfDocument({ items, profile, preferences, clientNa
   const issueDateLabel = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(generatedAt);
   const objective = profile.objetivo || "Objetivo não informado";
   const sectionClass = (id) => preferences[id] ? "" : " d-none";
-  const intro = `<section class="financial-study-pdf-cover financial-study-executive${sectionClass("cliente")}" data-study-content="cliente"><div class="financial-study-pdf-cover-title">ESTUDO FINANCEIRO</div><div class="financial-study-pdf-copy"><p><strong>Prezado,</strong></p><p>O presente Estudo Financeiro foi elaborado com base nas informações fornecidas e nas condições de mercado disponíveis na data de sua emissão e parâmetros abaixo.</p><p>O seu objetivo é apresentar cenários comparativos, auxiliando o cliente em seu processo de tomada de decisão.</p><p>As informações apresentadas possuem caráter informativo e ilustrativo, não constituindo garantia de resultado ou promessa de contemplação.</p></div><div class="financial-study-pdf-client-meta"><span><strong>Cliente:</strong> ${escapeHtml(clientName)}</span><span><strong>Objetivo:</strong> ${escapeHtml(objective)}</span><span><strong>Opção em destaque:</strong> Grupo ${escapeHtml(highlightedGroup)} (${escapeHtml(highlightedStrategy)})</span><span><strong>Identificador:</strong> ${escapeHtml(proposalId)}</span></div><div class="financial-study-pdf-copy"><p>Comparativo dos grupos selecionados para apoiar uma decisão clara e auditável.</p><p>Crédito, parcela, saldo, prazo e custos reunidos em uma única visão.</p><p>Conclusão e observações são apresentadas nas considerações finais do documento.</p></div></section>`;
+  const introNotes = [
+    "O presente Estudo Financeiro foi elaborado com base nas informações fornecidas e nas condições de mercado disponíveis na data de sua emissão e parâmetros abaixo.",
+    "O seu objetivo é apresentar cenários comparativos, auxiliando o cliente em seu processo de tomada de decisão.",
+    "As informações apresentadas possuem caráter informativo e ilustrativo, não constituindo garantia de resultado ou promessa de contemplação.",
+    "Comparativo dos grupos selecionados para apoiar uma decisão clara e auditável.",
+    "Crédito, parcela, saldo, prazo e custos reunidos em uma única visão.",
+    "Conclusão e observações são apresentadas nas considerações finais do documento.",
+  ];
+  const intro = `<section class="financial-study-pdf-cover financial-study-executive${sectionClass("cliente")}" data-study-content="cliente"><div class="financial-study-pdf-cover-title">ESTUDO FINANCEIRO</div><div class="financial-study-pdf-cover-layout"><div class="financial-study-pdf-cover-main"><div class="financial-study-pdf-cover-hero"></div><div class="financial-study-pdf-client-meta"><span><strong>Cliente:</strong> ${escapeHtml(clientName)}</span><span><strong>Objetivo:</strong> ${escapeHtml(objective)}</span><span><strong>Opção em destaque:</strong> Grupo ${escapeHtml(highlightedGroup)} (${escapeHtml(highlightedStrategy)})</span><span><strong>Identificador:</strong> ${escapeHtml(proposalId)}</span></div></div><aside class="financial-study-pdf-cover-notes"><div class="financial-study-pdf-cover-note is-intro"><strong>Prezado,</strong></div>${introNotes.map((note) => `<div class="financial-study-pdf-cover-note"><p>${escapeHtml(note)}</p></div>`).join("")}</aside></div></section>`;
   const page1 = intro + `<div class="financial-study-pdf-section-group${sectionClass("resumo")}" data-study-content="resumo">${financialStudyInvestmentSimulation(items, profile)}${financialStudySelectionNarrative(items[0]?.administradora)}${financialStudySummaryTable(items)}${financialStudyInvestmentsTable(items)}</div>`;
   const page2 = `<div class="financial-study-pdf-section-group${sectionClass("grupos")}" data-study-content="grupos">${financialStudySpecialistsSection()}${financialStudyBenefitsSection(items[0]?.administradora)}${financialStudyContractTable(items)}${financialStudyStrategyNarrative()}${financialStudyHistoryTable(items)}${financialStudyProjectionTable(items, "1. Sorteio Geral", "conservative", "without_embedded")}</div>`;
   const page3 = `<div class="financial-study-pdf-section-group${sectionClass("grupos")}" data-study-content="grupos">${financialStudyProjectionTable(items, "2. Lance Conservador", "aggressive", "without_embedded")}${financialStudyProjectionTable(items, "3. Lance Moderado", "moderate", "with_embedded")}${assemblyError ? `<div class="financial-study-pdf-warning">${escapeHtml(assemblyError)}</div>` : ""}${financialStudyDeadlinesTable(items, assemblyData || {}, generatedAt)}</div>`;
@@ -4444,13 +4491,11 @@ function renderHistoryTable(items) {
         <td><span class="status-badge">${escapeHtml(item.status || "-")}</span></td>
         <td>${escapeHtml(item.operador || "-")}</td>
         <td>
-          <div class="row-actions">
-            <button class="btn btn-sm btn-outline-primary" type="button" data-history-action="visualizar" data-study-id="${escapeHtml(item.estudo_id)}">Ver</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="pdf" data-study-id="${escapeHtml(item.estudo_id)}">PDF</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="email" data-study-id="${escapeHtml(item.estudo_id)}">E-mail</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="duplicar" data-study-id="${escapeHtml(item.estudo_id)}">Duplicar</button>
-            <button class="btn btn-sm btn-outline-danger" type="button" data-history-action="excluir" data-study-id="${escapeHtml(item.estudo_id)}">Excluir</button>
-          </div>
+            <div class="row-actions">
+              <button class="btn btn-sm btn-outline-primary" type="button" data-history-action="visualizar" data-study-id="${escapeHtml(item.estudo_id)}">Ver</button>
+              <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="pdf" data-study-id="${escapeHtml(item.estudo_id)}">PDF</button>
+              <button class="btn btn-sm btn-outline-danger" type="button" data-history-action="excluir" data-study-id="${escapeHtml(item.estudo_id)}">Excluir</button>
+            </div>
         </td>
       </tr>
     `;
@@ -5498,10 +5543,6 @@ document.getElementById("historyTableBody").addEventListener("click", async (eve
     openStudyDetails(studyId);
     return;
   }
-  if (button.dataset.historyAction === "duplicar") {
-    duplicateStudy(studyId).catch(() => showToast("Nao foi possivel duplicar o estudo.", "danger"));
-    return;
-  }
   if (button.dataset.historyAction === "excluir") {
     await apiDelete(`/estudos/${encodeURIComponent(studyId)}`);
     showToast("Estudo excluido.", "success");
@@ -5511,9 +5552,6 @@ document.getElementById("historyTableBody").addEventListener("click", async (eve
   if (button.dataset.historyAction === "pdf") {
     exportStudyPdf(studyId).catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
     return;
-  }
-  if (button.dataset.historyAction === "email") {
-    emailHistoryStudy(studyId).catch(() => showToast("Nao foi possivel preparar o e-mail.", "danger"));
   }
 });
 
