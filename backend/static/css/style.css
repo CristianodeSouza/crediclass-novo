@@ -5543,6 +5543,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
   line-height: 1.35;
 }
 
+.financial-study-pdf-value {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 .financial-study-pdf-editorial-table th {
   width: 180px;
   background: #fff;
@@ -5553,6 +5558,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-pdf-editorial-table td {
   background: #fff;
+}
+
+.financial-study-pdf-table-editorial {
+  table-layout: fixed;
 }
 
 .financial-study-pdf-editorial-table td p:last-child {
@@ -5592,6 +5601,114 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-summary-matrix th:first-child,
 .financial-study-pdf-summary-matrix td:first-child {
   width: 150px;
+}
+
+.financial-study-pdf-table-investment th:nth-child(1),
+.financial-study-pdf-table-investment td:nth-child(1) {
+  width: 23%;
+}
+
+.financial-study-pdf-table-investment th:nth-child(2),
+.financial-study-pdf-table-investment td:nth-child(2),
+.financial-study-pdf-table-investment th:nth-child(5),
+.financial-study-pdf-table-investment td:nth-child(5) {
+  width: 21%;
+}
+
+.financial-study-pdf-table-investment th:nth-child(3),
+.financial-study-pdf-table-investment td:nth-child(3) {
+  width: 16%;
+}
+
+.financial-study-pdf-table-investment th:nth-child(4),
+.financial-study-pdf-table-investment td:nth-child(4) {
+  width: 12%;
+}
+
+.financial-study-pdf-table-summary th:nth-child(1),
+.financial-study-pdf-table-summary td:nth-child(1) {
+  width: 18%;
+}
+
+.financial-study-pdf-table-summary th:nth-child(6),
+.financial-study-pdf-table-summary td:nth-child(6),
+.financial-study-pdf-table-summary th:nth-child(7),
+.financial-study-pdf-table-summary td:nth-child(7) {
+  width: 9%;
+}
+
+.financial-study-pdf-table-scenarios th:nth-child(1),
+.financial-study-pdf-table-scenarios td:nth-child(1) {
+  width: 18%;
+}
+
+.financial-study-pdf-table-scenarios th:nth-child(3),
+.financial-study-pdf-table-scenarios td:nth-child(3),
+.financial-study-pdf-table-scenarios th:nth-child(4),
+.financial-study-pdf-table-scenarios td:nth-child(4) {
+  width: 14%;
+}
+
+.financial-study-pdf-table-scenarios th:nth-child(5),
+.financial-study-pdf-table-scenarios td:nth-child(5) {
+  width: 18%;
+}
+
+.financial-study-pdf-table-contract th:nth-child(1),
+.financial-study-pdf-table-contract td:nth-child(1) {
+  width: 16%;
+}
+
+.financial-study-pdf-table-contract th:nth-child(4),
+.financial-study-pdf-table-contract td:nth-child(4),
+.financial-study-pdf-table-contract th:nth-child(5),
+.financial-study-pdf-table-contract td:nth-child(5),
+.financial-study-pdf-table-contract th:nth-child(6),
+.financial-study-pdf-table-contract td:nth-child(6) {
+  width: 11%;
+}
+
+.financial-study-pdf-table-projection th:nth-child(1),
+.financial-study-pdf-table-projection td:nth-child(1) {
+  width: 14%;
+}
+
+.financial-study-pdf-table-projection th:nth-child(2),
+.financial-study-pdf-table-projection td:nth-child(2),
+.financial-study-pdf-table-projection th:nth-child(8),
+.financial-study-pdf-table-projection td:nth-child(8) {
+  width: 10%;
+}
+
+.financial-study-pdf-table-deadlines th:nth-child(1),
+.financial-study-pdf-table-deadlines td:nth-child(1) {
+  width: 18%;
+}
+
+.financial-study-pdf-table-deadlines th:nth-child(2),
+.financial-study-pdf-table-deadlines td:nth-child(2),
+.financial-study-pdf-table-deadlines th:nth-child(3),
+.financial-study-pdf-table-deadlines td:nth-child(3),
+.financial-study-pdf-table-deadlines th:nth-child(4),
+.financial-study-pdf-table-deadlines td:nth-child(4),
+.financial-study-pdf-table-deadlines th:nth-child(5),
+.financial-study-pdf-table-deadlines td:nth-child(5) {
+  width: 20.5%;
+}
+
+.financial-study-pdf-table-investment td:nth-child(n + 2),
+.financial-study-pdf-table-summary td:nth-child(n + 2),
+.financial-study-pdf-table-scenarios td:nth-child(n + 2),
+.financial-study-pdf-table-contract td:nth-child(n + 2),
+.financial-study-pdf-table-projection td:nth-child(n + 2),
+.financial-study-pdf-table-deadlines td:nth-child(n + 2),
+.financial-study-pdf-table-investment th:nth-child(n + 2),
+.financial-study-pdf-table-summary th:nth-child(n + 2),
+.financial-study-pdf-table-scenarios th:nth-child(n + 2),
+.financial-study-pdf-table-contract th:nth-child(n + 2),
+.financial-study-pdf-table-projection th:nth-child(n + 2),
+.financial-study-pdf-table-deadlines th:nth-child(n + 2) {
+  text-align: center;
 }
 
 .financial-study-pdf-cycle-grid {
