@@ -5175,7 +5175,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-pdf-document {
-  width: min(960px, 100%);
+  width: min(1120px, 100%);
   margin: 0 auto;
   border: 1px solid #d6dbe1;
   border-radius: 0;
@@ -5185,7 +5185,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-pdf-page {
   width: 100%;
-  min-height: 1360px;
+  min-height: 1280px;
   padding: 28px 34px 84px;
   background: #fff;
   color: #1f2933;
@@ -5239,7 +5239,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-cover,
 .financial-study-pdf-cover-main {
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 
 .financial-study-pdf-cover-title {
@@ -5254,8 +5254,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-pdf-cover-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.72fr) minmax(280px, 320px);
-  gap: 18px;
+  grid-template-columns: minmax(0, 1.48fr) minmax(270px, 0.72fr);
+  gap: 22px;
   align-items: start;
 }
 
@@ -5270,7 +5270,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-pdf-cover-hero {
-  min-height: 470px;
+  min-height: 390px;
   border: 1px solid #f0ded1;
   background:
     linear-gradient(180deg, rgba(255, 245, 236, 0.95), rgba(255, 249, 244, 0.98)),
@@ -5306,12 +5306,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-pdf-cover-notes {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   align-content: start;
 }
 
 .financial-study-pdf-cover-note {
-  padding: 10px 16px 12px;
+  padding: 12px 18px 14px;
   border-top: 1px solid #efcfbe;
   background: rgba(255, 255, 255, 0.88);
 }
@@ -5328,8 +5328,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-cover-note p {
   margin: 0;
   font-size: 13px;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
+  line-height: 1.46;
+  overflow-wrap: break-word;
 }
 
 .financial-study-pdf-copy p,
@@ -5352,8 +5352,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 12px;
-  margin-top: 14px;
-  padding: 14px 16px;
+  width: min(100%, 596px);
+  margin-top: -6px;
+  padding: 14px 16px 16px;
   border: 1px solid #ecd9cb;
   background: #fffdfa;
   font-size: 12px;
@@ -5388,7 +5389,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 13px;
   font-weight: 700;
   line-height: 1.45;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 .financial-study-pdf-section-group,
@@ -5400,9 +5401,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-split-layout,
 .financial-study-pdf-selection-layout {
   display: grid;
-  grid-template-columns: minmax(300px, 0.95fr) minmax(0, 1.45fr);
-  gap: 14px;
-  align-items: start;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.financial-study-pdf-split-layout {
+  grid-template-columns: minmax(320px, 0.92fr) minmax(360px, 1.08fr);
+}
+
+.financial-study-pdf-selection-layout {
+  grid-template-columns: minmax(320px, 0.86fr) minmax(420px, 1.14fr);
 }
 
 .financial-study-pdf-bar {
@@ -5424,7 +5432,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-pdf-visual-panel {
   min-height: 100%;
-  padding: 18px 18px 16px;
+  padding: 18px 18px 18px;
   border: 1px solid #ead7cb;
   background:
     linear-gradient(180deg, rgba(255, 247, 241, 0.96), rgba(255, 252, 249, 1)),
@@ -5437,7 +5445,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-visual-brand {
   width: 136px;
   height: 96px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   background: center / contain no-repeat url("/static/images/crediclass-logo.png");
   opacity: 0.18;
 }
@@ -5464,7 +5472,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   margin: 0 0 16px;
   color: #42515c;
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .financial-study-pdf-visual-metrics {
@@ -5510,16 +5518,18 @@ body[data-theme="escuro"] .btn-outline-secondary {
   width: 100%;
   border-collapse: collapse;
   table-layout: fixed;
-  font-size: 13px;
+  background: #fff;
+  font-size: 12.5px;
 }
 
 .financial-study-pdf-table th,
 .financial-study-pdf-table td {
-  padding: 6px 8px;
+  padding: 8px 10px;
   border: 1px solid #d8dde3;
   vertical-align: middle;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
   word-break: normal;
+  line-height: 1.4;
   font-variant-numeric: tabular-nums;
 }
 
@@ -5544,7 +5554,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-pdf-value {
-  display: inline-block;
+  display: inline-flex;
+  max-width: 100%;
   white-space: nowrap;
 }
 
@@ -5554,14 +5565,24 @@ body[data-theme="escuro"] .btn-outline-secondary {
   color: #20242a;
   font-weight: 800;
   text-align: left;
+  vertical-align: top;
 }
 
 .financial-study-pdf-editorial-table td {
   background: #fff;
+  vertical-align: top;
+  line-height: 1.48;
 }
 
 .financial-study-pdf-table-editorial {
   table-layout: fixed;
+}
+
+.financial-study-pdf-table-editorial td,
+.financial-study-pdf-table-editorial th {
+  font-size: 12.5px;
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 
 .financial-study-pdf-editorial-table td p:last-child {
@@ -5600,63 +5621,86 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-pdf-summary-matrix th:first-child,
 .financial-study-pdf-summary-matrix td:first-child {
-  width: 150px;
+  width: 19%;
 }
 
 .financial-study-pdf-table-investment th:nth-child(1),
 .financial-study-pdf-table-investment td:nth-child(1) {
-  width: 23%;
+  width: 22%;
 }
 
 .financial-study-pdf-table-investment th:nth-child(2),
 .financial-study-pdf-table-investment td:nth-child(2),
 .financial-study-pdf-table-investment th:nth-child(5),
 .financial-study-pdf-table-investment td:nth-child(5) {
-  width: 21%;
+  width: 22%;
 }
 
 .financial-study-pdf-table-investment th:nth-child(3),
 .financial-study-pdf-table-investment td:nth-child(3) {
-  width: 16%;
+  width: 17%;
 }
 
 .financial-study-pdf-table-investment th:nth-child(4),
 .financial-study-pdf-table-investment td:nth-child(4) {
-  width: 12%;
+  width: 10%;
 }
 
 .financial-study-pdf-table-summary th:nth-child(1),
 .financial-study-pdf-table-summary td:nth-child(1) {
-  width: 18%;
+  width: 19%;
+}
+
+.financial-study-pdf-table-summary th:nth-child(2),
+.financial-study-pdf-table-summary td:nth-child(2),
+.financial-study-pdf-table-summary th:nth-child(3),
+.financial-study-pdf-table-summary td:nth-child(3),
+.financial-study-pdf-table-summary th:nth-child(4),
+.financial-study-pdf-table-summary td:nth-child(4),
+.financial-study-pdf-table-summary th:nth-child(5),
+.financial-study-pdf-table-summary td:nth-child(5) {
+  width: 15%;
 }
 
 .financial-study-pdf-table-summary th:nth-child(6),
 .financial-study-pdf-table-summary td:nth-child(6),
 .financial-study-pdf-table-summary th:nth-child(7),
 .financial-study-pdf-table-summary td:nth-child(7) {
-  width: 9%;
+  width: 10.5%;
 }
 
 .financial-study-pdf-table-scenarios th:nth-child(1),
 .financial-study-pdf-table-scenarios td:nth-child(1) {
-  width: 18%;
+  width: 19%;
+}
+
+.financial-study-pdf-table-scenarios th:nth-child(2),
+.financial-study-pdf-table-scenarios td:nth-child(2) {
+  width: 29%;
 }
 
 .financial-study-pdf-table-scenarios th:nth-child(3),
 .financial-study-pdf-table-scenarios td:nth-child(3),
 .financial-study-pdf-table-scenarios th:nth-child(4),
 .financial-study-pdf-table-scenarios td:nth-child(4) {
-  width: 14%;
+  width: 13%;
 }
 
 .financial-study-pdf-table-scenarios th:nth-child(5),
 .financial-study-pdf-table-scenarios td:nth-child(5) {
-  width: 18%;
+  width: 16%;
 }
 
 .financial-study-pdf-table-contract th:nth-child(1),
 .financial-study-pdf-table-contract td:nth-child(1) {
-  width: 16%;
+  width: 17%;
+}
+
+.financial-study-pdf-table-contract th:nth-child(2),
+.financial-study-pdf-table-contract td:nth-child(2),
+.financial-study-pdf-table-contract th:nth-child(3),
+.financial-study-pdf-table-contract td:nth-child(3) {
+  width: 20%;
 }
 
 .financial-study-pdf-table-contract th:nth-child(4),
@@ -5665,24 +5709,37 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-table-contract td:nth-child(5),
 .financial-study-pdf-table-contract th:nth-child(6),
 .financial-study-pdf-table-contract td:nth-child(6) {
-  width: 11%;
+  width: 7.5%;
 }
 
 .financial-study-pdf-table-projection th:nth-child(1),
 .financial-study-pdf-table-projection td:nth-child(1) {
-  width: 14%;
+  width: 15%;
 }
 
 .financial-study-pdf-table-projection th:nth-child(2),
 .financial-study-pdf-table-projection td:nth-child(2),
 .financial-study-pdf-table-projection th:nth-child(8),
 .financial-study-pdf-table-projection td:nth-child(8) {
-  width: 10%;
+  width: 9%;
+}
+
+.financial-study-pdf-table-projection th:nth-child(3),
+.financial-study-pdf-table-projection td:nth-child(3),
+.financial-study-pdf-table-projection th:nth-child(4),
+.financial-study-pdf-table-projection td:nth-child(4),
+.financial-study-pdf-table-projection th:nth-child(5),
+.financial-study-pdf-table-projection td:nth-child(5),
+.financial-study-pdf-table-projection th:nth-child(6),
+.financial-study-pdf-table-projection td:nth-child(6),
+.financial-study-pdf-table-projection th:nth-child(7),
+.financial-study-pdf-table-projection td:nth-child(7) {
+  width: 13.4%;
 }
 
 .financial-study-pdf-table-deadlines th:nth-child(1),
 .financial-study-pdf-table-deadlines td:nth-child(1) {
-  width: 18%;
+  width: 16%;
 }
 
 .financial-study-pdf-table-deadlines th:nth-child(2),
@@ -5693,7 +5750,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-table-deadlines td:nth-child(4),
 .financial-study-pdf-table-deadlines th:nth-child(5),
 .financial-study-pdf-table-deadlines td:nth-child(5) {
-  width: 20.5%;
+  width: 21%;
 }
 
 .financial-study-pdf-table-investment td:nth-child(n + 2),
@@ -5709,6 +5766,23 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-table-projection th:nth-child(n + 2),
 .financial-study-pdf-table-deadlines th:nth-child(n + 2) {
   text-align: center;
+}
+
+.financial-study-pdf-table-investment td:nth-child(n + 2),
+.financial-study-pdf-table-summary td:nth-child(n + 2),
+.financial-study-pdf-table-scenarios td:nth-child(n + 2),
+.financial-study-pdf-table-contract td:nth-child(n + 2),
+.financial-study-pdf-table-projection td:nth-child(n + 2),
+.financial-study-pdf-table-deadlines td:nth-child(n + 2) {
+  white-space: nowrap;
+}
+
+.financial-study-pdf-table-summary,
+.financial-study-pdf-table-scenarios,
+.financial-study-pdf-table-contract,
+.financial-study-pdf-table-projection,
+.financial-study-pdf-table-deadlines {
+  font-size: 12px;
 }
 
 .financial-study-pdf-cycle-grid {
@@ -5848,6 +5922,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
   .financial-study-pdf-cover-hero {
     min-height: 320px;
+  }
+
+  .financial-study-pdf-client-meta {
+    width: 100%;
+    margin-top: 0;
   }
 
   .financial-study-pdf-meta-item.is-wide {
