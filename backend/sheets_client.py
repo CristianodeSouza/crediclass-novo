@@ -345,6 +345,16 @@ def fixed_column_value(field: str, values: list[Any], base_index: int = 0) -> An
     return value
 
 
+def summary_field_index(headers: list[str], field: str, header_positions: dict[str, int]) -> tuple[str, int]:
+    header = find_header(headers, field)
+    if header is not None:
+        return header, header_positions[header]
+    fixed_index = MAPA_GRUPOS_COLUMN_INDEXES.get(field)
+    if fixed_index is not None:
+        return canonical_field_header(field), fixed_index
+    raise KeyError(field)
+
+
 def read_sheet_headers(force_reload: bool = False) -> list[str]:
     now = time.time()
     with _cache_lock:
@@ -375,15 +385,11 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
     selected: list[tuple[str, str, int]] = []
     header_positions = headers_index(headers)
     for field in SUMMARY_FIELDS:
-        fixed_index = MAPA_GRUPOS_COLUMN_INDEXES.get(field)
-        if fixed_index is not None:
-            selected.append((field, canonical_field_header(field), fixed_index))
-        else:
-            header = find_header(headers, field)
-            if header is None:
-                continue
-            index = header_positions[header]
-            selected.append((field, header, index))
+        try:
+            header, index = summary_field_index(headers, field, header_positions)
+        except KeyError:
+            continue
+        selected.append((field, header, index))
     selected_indexes = {index for _, _, index in selected}
     for header, index in header_positions.items():
         history_key = history_key_from_header(header)
@@ -414,7 +420,7 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
             row: dict[str, Any] = {}
             for field, header, index in selected:
                 relative_index = index - min_index
-                row[header] = fixed_column_value(field, row_values, min_index) if field in MAPA_GRUPOS_COLUMN_INDEXES else row_values[relative_index] if relative_index < len(row_values) else ""
+                row[header] = row_values[relative_index] if relative_index < len(row_values) else ""
             row["__source_row"] = offset + 2
             if not any(str(value).strip() for value in row.values()):
                 continue
@@ -443,7 +449,7 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
             for (field, header, _), column in zip(selected, columns):
                 cell = column[offset] if offset < len(column) else []
                 value = cell[0] if cell else ""
-                if value in (None, "") and field in MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES:
+                if value in (None, "") and header == canonical_field_header(field) and field in MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES:
                     fallback_header = canonical_field_header(field)
                     fallback_index = MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES[field]
                     if fallback_header == header and fallback_index < len(columns):
