@@ -80,10 +80,54 @@ class Motor360RfcTest(unittest.TestCase):
 
         capacity = result["items"][0]["capacidade_contemplacoes_selecionada"]
         self.assertEqual(capacity["perfil"], "Rapido - 6 meses")
-        self.assertEqual(capacity["janela_meses"], 3)
-        self.assertEqual(capacity["media_contemplacoes"], 3.0)
+        self.assertEqual(capacity["janela_meses"], 6)
+        self.assertEqual(capacity["meses_contemplados"], 3)
+        self.assertEqual(capacity["media_contemplacoes"], 3)
         self.assertEqual(capacity["limite_cotas"], 3)
         self.assertEqual(result["items"][0]["historico_12_meses"], history)
+
+    def test_regra_de_contemplacao_exige_ao_menos_dois_meses_no_periodo_do_objetivo(self):
+        history = [
+            {"mes": "2024-01", "qtd_contemplacoes": 1},
+            {"mes": "2024-02", "qtd_contemplacoes": 0},
+            {"mes": "2024-03", "qtd_contemplacoes": 0},
+            {"mes": "2024-04", "qtd_contemplacoes": 0},
+            {"mes": "2024-05", "qtd_contemplacoes": 0},
+            {"mes": "2024-06", "qtd_contemplacoes": 0},
+            {"mes": "2024-07", "qtd_contemplacoes": 0},
+            {"mes": "2024-08", "qtd_contemplacoes": 0},
+            {"mes": "2024-09", "qtd_contemplacoes": 0},
+            {"mes": "2024-10", "qtd_contemplacoes": 0},
+            {"mes": "2024-11", "qtd_contemplacoes": 0},
+            {"mes": "2024-12", "qtd_contemplacoes": 1},
+            {"mes": "2025-01", "qtd_contemplacoes": 0},
+            {"mes": "2025-02", "qtd_contemplacoes": 0},
+            {"mes": "2025-03", "qtd_contemplacoes": 0},
+            {"mes": "2025-04", "qtd_contemplacoes": 0},
+            {"mes": "2025-05", "qtd_contemplacoes": 0},
+            {"mes": "2025-06", "qtd_contemplacoes": 1},
+            {"mes": "2025-07", "qtd_contemplacoes": 0},
+            {"mes": "2025-08", "qtd_contemplacoes": 0},
+            {"mes": "2025-09", "qtd_contemplacoes": 0},
+            {"mes": "2025-10", "qtd_contemplacoes": 0},
+            {"mes": "2025-11", "qtd_contemplacoes": 0},
+            {"mes": "2025-12", "qtd_contemplacoes": 1},
+            {"mes": "2026-01", "qtd_contemplacoes": 0},
+            {"mes": "2026-02", "qtd_contemplacoes": 0},
+            {"mes": "2026-03", "qtd_contemplacoes": 0},
+            {"mes": "2026-04", "qtd_contemplacoes": 0},
+            {"mes": "2026-05", "qtd_contemplacoes": 0},
+            {"mes": "2026-06", "qtd_contemplacoes": 1},
+        ]
+        result = analyze_client_consortium_viability(
+            payload(objetivo="Investidor - 36 meses"),
+            [group(historico_12_meses=history[-12:], historico_periodos=history)],
+        )
+
+        capacity = result["items"][0]["capacidade_contemplacoes_selecionada"]
+        self.assertEqual(capacity["janela_meses"], 36)
+        self.assertEqual(capacity["meses_contemplados"], 5)
+        self.assertTrue(capacity["atinge_regra_minima"])
 
     def test_official_scenarios_preserve_credit_and_do_not_share_values(self):
         result = analyze_client_consortium_viability(payload(), [group()])
@@ -321,6 +365,11 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(map_declared_objective_to_preference("Contemplar - moderado - 12 meses"), "moderate")
         self.assertEqual(map_declared_objective_to_preference("Contemplar - conservador - 24 meses"), "conservative")
         self.assertEqual(map_declared_objective_to_preference("Contemplar - investidor - 36 meses"), "long_term")
+        self.assertEqual(map_declared_objective_to_preference("Urgente - 3 meses"), "urgent")
+        self.assertEqual(map_declared_objective_to_preference("Rapido - 6 meses"), "fast")
+        self.assertEqual(map_declared_objective_to_preference("Moderado - 12 meses"), "moderate")
+        self.assertEqual(map_declared_objective_to_preference("Conservador - 24 meses"), "conservative")
+        self.assertEqual(map_declared_objective_to_preference("Investidor - 36 meses"), "long_term")
         self.assertEqual(map_declared_objective_to_preference("Investidor - carta"), "investment")
 
 

@@ -826,17 +826,17 @@ function showGroupHistoryHoverModal(trigger, item, capacity = null) {
   const modalId = trigger?.dataset?.motor360HistoryGroup ? "motor360HistoryHoverModal" : "historyHoverModal";
   const modal = document.getElementById(modalId);
   if (!item || !modal) return;
-  const average = Number.isFinite(Number(capacity?.media_contemplacoes))
-    ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(Number(capacity.media_contemplacoes))} contemplações`
+  const contemplatedMonths = Number.isFinite(Number(capacity?.meses_contemplados))
+    ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(Number(capacity.meses_contemplados))} meses contemplados`
     : "Sem histórico suficiente";
   const averageCalculation = capacity?.meses_com_dados
-    ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(Number(capacity.total_contemplacoes || 0))} contemplações ÷ ${escapeHtml(String(capacity.meses_com_dados))} meses = ${escapeHtml(average)}`
+    ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(Number(capacity.meses_contemplados || 0))} mês(es) com contemplação nos últimos ${escapeHtml(String(capacity.janela_meses || capacity.meses_com_dados))} meses`
     : "Quantidade mensal não disponível";
   const capacitySummary = capacity ? `
     <div class="history-hover-capacity">
-      <span>Média máxima · ${escapeHtml(capacity.perfil || "Perfil não classificado")}</span>
-      <strong>${escapeHtml(average)}</strong>
-      <small>Cálculo do período: ${averageCalculation}</small>
+      <span>Regra do objetivo · ${escapeHtml(capacity.perfil || "Perfil não classificado")}</span>
+      <strong>${escapeHtml(contemplatedMonths)}</strong>
+      <small>${escapeHtml(averageCalculation)}${capacity.atinge_regra_minima ? " · atende a regra mínima de 2 meses" : " · abaixo da regra mínima de 2 meses"}</small>
     </div>
   ` : "";
   modal.innerHTML = `
@@ -1990,7 +1990,7 @@ function formatInvestorPreferenceValue(flag, value) {
   if (number === null) return "-";
   if (["menor_taxa_total", "menor_taxa_ano", "maior_lance_embutido"].includes(flag)) return formatPercent(number);
   if (flag === "maior_prazo_remanescente") return `${number} meses`;
-  if (flag === "maior_media_contemplacoes") return `${number.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} contemplações`;
+  if (flag === "maior_media_contemplacoes") return `${number.toLocaleString("pt-BR", { maximumFractionDigits: 0 })} mês(es)`;
   return formatMoney(number);
 }
 
@@ -2002,7 +2002,7 @@ function applyInvestorPreferences(items, selectedFlags) {
     maior_parcela_reduzida: { field: "parcela_reduzida", direction: "max", label: "Maior Parcela Reduzida" },
     maior_prazo_remanescente: { field: "prazo_remanescente", direction: "max", label: "Maior Prazo Remanescente" },
     maior_lance_embutido: { field: "lance_embutido", direction: "max", label: "Maior Lance Embutido" },
-    maior_media_contemplacoes: { field: "media_contemplacoes", direction: "max", label: "Maior Média de Contemplações", value: (item) => motor360QuotaCapacity(item)?.media_contemplacoes },
+    maior_media_contemplacoes: { field: "media_contemplacoes", direction: "max", label: "Maior Ocorrência de Contemplações", value: (item) => motor360QuotaCapacity(item)?.media_contemplacoes },
   };
   const scores = new Map(items.map((item) => [item, {}]));
   selectedFlags.forEach((flag) => {
@@ -2435,11 +2435,11 @@ function financialStudyProjectionCanvasId(item) {
 function financialStudyProjectionSection(item) {
   const chartId = financialStudyProjectionCanvasId(item);
   const selectedCapacity = item?.capacidade_contemplacoes_selecionada;
-  const average = Number.isFinite(Number(selectedCapacity?.media_contemplacoes))
-    ? new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(Number(selectedCapacity.media_contemplacoes))
+  const average = Number.isFinite(Number(selectedCapacity?.meses_contemplados))
+    ? new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(Number(selectedCapacity.meses_contemplados))
     : "-";
   const profileLabel = selectedCapacity?.perfil || financialStudyStrategyLabel(item.best_contemplation_strategy);
-  return `<section class="financial-study-group-projection"><div class="financial-study-group-section-title"><strong>Gráfico de projeção</strong><span>${escapeHtml(profileLabel || "Perfil não classificado")} · média ${escapeHtml(String(average))} contemplações</span></div><div class="financial-study-group-projection-chart"><canvas id="${escapeHtml(chartId)}" aria-label="Gráfico de projeção do grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}"></canvas></div></section>`;
+  return `<section class="financial-study-group-projection"><div class="financial-study-group-section-title"><strong>Gráfico de projeção</strong><span>${escapeHtml(profileLabel || "Perfil não classificado")} · ${escapeHtml(String(average))} mês(es) contemplados na janela</span></div><div class="financial-study-group-projection-chart"><canvas id="${escapeHtml(chartId)}" aria-label="Gráfico de projeção do grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}"></canvas></div></section>`;
 }
 
 function financialStudyGroupProfileSection(item) {

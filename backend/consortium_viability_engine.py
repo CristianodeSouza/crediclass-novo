@@ -41,22 +41,22 @@ CONTEMPLATION_PROFILE_TARGETS = (
 
 CONTEMPLATION_CAPACITY_WINDOWS = {
     "urgent": 3,
-    "fast": 3,
+    "fast": 6,
     "moderate": 12,
-    "conservative": 12,
-    "long_term": 12,
+    "conservative": 24,
+    "long_term": 36,
 }
 
 
 def map_declared_objective_to_preference(objective: str) -> str | None:
     """Map the declared objective only for presentation and ranking priority."""
     text = normalize_text(objective)
+    if "36 mes" in text:
+        return "long_term"
     if text.startswith("investidor"):
         return "investment"
-    if not text.startswith("contemplar"):
+    if not text.startswith("contemplar") and not any(keyword in text for keyword in {"urgente", "rapido", "moderado", "conservador"}):
         return None
-    if "investidor" in text or "36 mes" in text:
-        return "long_term"
     if "conservador" in text or "24 mes" in text:
         return "conservative"
     if "moderado" in text or "12 mes" in text:
@@ -125,23 +125,26 @@ def _reference_name(strategy: str | None) -> str | None:
 
 def _contemplation_capacity(group: dict[str, Any]) -> dict[str, dict[str, Any]]:
     history = [
-        item for item in (group.get("historico_12_meses") or [])
+        item for item in (group.get("historico_periodos") or group.get("historico_12_meses") or [])
         if item.get("qtd_contemplacoes") is not None
     ]
     capacities: dict[str, dict[str, Any]] = {}
     for strategy, months in CONTEMPLATION_CAPACITY_WINDOWS.items():
-        quantities = [int(item["qtd_contemplacoes"]) for item in history[-months:]]
-        total = sum(quantities)
-        average = round(total / len(quantities), 2) if quantities else None
+        window = history[-months:]
+        quantities = [int(item["qtd_contemplacoes"]) for item in window]
+        contemplated_months = sum(1 for quantity in quantities if quantity > 0)
         capacities[strategy] = {
             "perfil": _reference_name(strategy),
             "janela_meses": months,
-            "meses_com_dados": len(quantities),
+            "meses_com_dados": len(window),
             "quantidades": quantities,
-            "total_contemplacoes": total,
-            "media_contemplacoes": average,
-            "limite_cotas": math.floor(average) if average is not None else None,
-            "fonte": "Quantidades mensais de contemplacoes da planilha oficial",
+            "total_contemplacoes": sum(quantities),
+            "meses_contemplados": contemplated_months,
+            "media_contemplacoes": contemplated_months,
+            "limite_cotas": contemplated_months if contemplated_months > 0 else None,
+            "regra_minima": 2,
+            "atinge_regra_minima": contemplated_months >= 2,
+            "fonte": "Meses com contemplacoes registradas dentro da janela do objetivo declarado",
         }
     return capacities
 

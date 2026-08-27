@@ -926,7 +926,13 @@ def short_history_month_label(month_key: str | None) -> str:
 
 
 def history_last_12_rows(historico: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
-    months = sorted((month for month in (historico or {}) if re.fullmatch(r"\d{4}-\d{2}", str(month))))[-12:]
+    return history_rows(historico, limit=12)
+
+
+def history_rows(historico: dict[str, dict[str, Any]], limit: int | None = None) -> list[dict[str, Any]]:
+    months = sorted((month for month in (historico or {}) if re.fullmatch(r"\d{4}-\d{2}", str(month))))
+    if limit is not None:
+        months = months[-limit:]
     return [
         {
             "mes": month,
@@ -1006,6 +1012,7 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "vencimento_parcela": clean_text(get_optional_field(row, "vencimento_parcela")),
         "atualizado": short_history_month_label(updated_month),
         "historico_12_meses": history_last_12_rows(historico),
+        "historico_periodos": history_rows(historico),
         "primeira_assembleia": clean_text(get_field(row, "primeira_assembleia")),
         "ultima_assembleia": clean_text(get_field(row, "ultima_assembleia")),
         "status": clean_text(get_field(row, "status") or "Ativo"),
