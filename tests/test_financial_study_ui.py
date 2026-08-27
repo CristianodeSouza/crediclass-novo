@@ -5,6 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APP_JS = ROOT / "backend" / "static" / "js" / "app.js"
 STYLE_CSS = ROOT / "backend" / "static" / "css" / "style.css"
+INDEX_HTML = ROOT / "backend" / "static" / "index.html"
 
 
 class FinancialStudyUiTest(unittest.TestCase):
@@ -12,6 +13,7 @@ class FinancialStudyUiTest(unittest.TestCase):
     def setUpClass(cls):
         cls.javascript = APP_JS.read_text(encoding="utf-8")
         cls.styles = STYLE_CSS.read_text(encoding="utf-8")
+        cls.index_html = INDEX_HTML.read_text(encoding="utf-8")
 
     def test_estudo_carrega_agenda_de_assembleias(self):
         self.assertIn('apiGet("/mapa-assembleia")', self.javascript)
@@ -28,6 +30,13 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn(".financial-study-agenda-cycles", self.styles)
         self.assertIn("@media (max-width: 900px)", self.styles)
         self.assertIn("@media print", self.styles)
+
+    def test_previa_do_pdf_e_renderizada_em_modal_dedicado(self):
+        self.assertIn('id="financialStudyPreviewModal"', self.index_html)
+        self.assertIn('id="financialStudyPreviewContent"', self.index_html)
+        self.assertIn('data-study-open-preview', self.javascript)
+        self.assertIn('bootstrap.Modal.getOrCreateInstance(previewModal).show()', self.javascript)
+        self.assertIn(".financial-study-preview-dialog", self.styles)
 
 
 if __name__ == "__main__":

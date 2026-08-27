@@ -2973,12 +2973,24 @@ async function renderFinancialStudyScreen() {
   }
   if (renderToken !== financialStudyRenderToken) return;
   screen.removeAttribute("aria-busy");
+  const documentPreview = renderFinancialStudyPdfDocument({ items, profile, preferences, clientName, generatedAt, issueDate, proposalId, highlightedGroup, highlightedStrategy, assemblyData, assemblyError });
+  const previewModal = document.getElementById("financialStudyPreviewModal");
+  const previewContent = document.getElementById("financialStudyPreviewContent");
+  previewContent?.replaceChildren();
+  if (previewContent) previewContent.innerHTML = documentPreview;
+
   screen.innerHTML = `<div class="financial-study-page">
-    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Documento dinâmico criado com os dados disponíveis no perfil e nos grupos selecionados.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-outline-primary" type="button" data-study-generate>Gerar Estudo</button><button class="btn btn-primary" type="button" data-study-print>Imprimir / Salvar PDF</button></div></div>
+    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Abra a prévia em HTML para revisar o documento que será enviado ao cliente.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-outline-primary" type="button" data-study-generate>Gerar Estudo</button><button class="btn btn-primary" type="button" data-study-open-preview>Ver prévia do PDF</button></div></div>
     <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
-    ${renderFinancialStudyPdfDocument({ items, profile, preferences, clientName, generatedAt, issueDate, proposalId, highlightedGroup, highlightedStrategy, assemblyData, assemblyError })}
+    <section class="financial-study-preview-launcher no-print"><div><span>Prévia HTML</span><h3>Documento pronto para revisão</h3><p>A prévia é aberta em uma janela dedicada, sem comprimir o conteúdo ao lado da navegação do sistema.</p></div><button class="btn btn-primary" type="button" data-study-open-preview>Abrir prévia do PDF</button></section>
   </div>`;
-  screen.querySelector("[data-study-print]")?.addEventListener("click", () => window.print());
+  const openPreview = () => {
+    if (!previewModal || typeof bootstrap === "undefined") return;
+    bootstrap.Modal.getOrCreateInstance(previewModal).show();
+  };
+  screen.querySelectorAll("[data-study-open-preview]").forEach((button) => button.addEventListener("click", openPreview));
+  const previewPrintButton = previewModal?.querySelector("[data-study-preview-print]");
+  if (previewPrintButton) previewPrintButton.onclick = () => window.print();
   screen.querySelector("[data-study-customize]")?.addEventListener("click", () => screen.querySelector("[data-study-customizer-panel]")?.classList.toggle("d-none"));
   screen.querySelector("[data-study-generate]")?.addEventListener("click", async () => {
     const button = screen.querySelector("[data-study-generate]");
@@ -3013,8 +3025,9 @@ async function renderFinancialStudyScreen() {
   screen.querySelectorAll("[data-study-section]").forEach((input) => input.addEventListener("change", () => {
     preferences[input.dataset.studySection] = input.checked;
     localStorage.setItem(FINANCIAL_STUDY_SECTIONS_KEY, JSON.stringify(preferences));
-    screen.querySelector(`[data-study-content="${input.dataset.studySection}"]`)?.classList.toggle("d-none", !input.checked);
+    previewContent?.querySelector(`[data-study-content="${input.dataset.studySection}"]`)?.classList.toggle("d-none", !input.checked);
   }));
+  window.setTimeout(openPreview, 0);
 }
 
 function persistMotor360Selection() {
