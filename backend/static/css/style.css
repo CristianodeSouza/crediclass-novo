@@ -5254,9 +5254,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-pdf-cover-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(300px, 0.95fr);
+  grid-template-columns: minmax(0, 1.72fr) minmax(280px, 320px);
   gap: 18px;
   align-items: start;
+}
+
+.financial-study-pdf-cover-main {
+  align-self: stretch;
 }
 
 .financial-study-pdf-cover-layout > *,
@@ -5303,6 +5307,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-cover-notes {
   display: grid;
   gap: 10px;
+  align-content: start;
 }
 
 .financial-study-pdf-cover-note {
@@ -5347,7 +5352,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 12px;
-  margin-top: 0;
+  margin-top: 14px;
   padding: 14px 16px;
   border: 1px solid #ecd9cb;
   background: #fffdfa;
