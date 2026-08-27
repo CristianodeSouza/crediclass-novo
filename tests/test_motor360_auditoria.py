@@ -11,10 +11,13 @@ class Motor360AuditoriaTest(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.previous_file = motor360_auditoria.AUDIT_FILE
+        self.previous_dir = motor360_auditoria.AUDIT_DIR
         motor360_auditoria.AUDIT_FILE = Path(self.temp_dir.name) / "auditorias.json"
+        motor360_auditoria.AUDIT_DIR = Path(self.temp_dir.name) / "auditorias"
 
     def tearDown(self):
         motor360_auditoria.AUDIT_FILE = self.previous_file
+        motor360_auditoria.AUDIT_DIR = self.previous_dir
         self.temp_dir.cleanup()
 
     def test_generates_persistable_snapshot_with_filters_and_formulas(self):

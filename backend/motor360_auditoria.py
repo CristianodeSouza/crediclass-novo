@@ -3,6 +3,7 @@ from __future__ import annotations
 from copy import deepcopy
 from datetime import datetime, timezone
 import json
+import os
 import textwrap
 import unicodedata
 from pathlib import Path
@@ -12,6 +13,7 @@ from uuid import uuid4
 
 RUNTIME_DIR = Path(__file__).resolve().parent / "runtime_data"
 AUDIT_FILE = RUNTIME_DIR / "auditorias_motor_360.json"
+AUDIT_DIR = RUNTIME_DIR / "auditorias_motor_360"
 
 
 def new_audit_id(now: datetime | None = None) -> str:
@@ -31,12 +33,24 @@ def _load_all() -> dict[str, dict[str, Any]]:
 
 def _save_all(data: dict[str, dict[str, Any]]) -> None:
     RUNTIME_DIR.mkdir(parents=True, exist_ok=True)
-    AUDIT_FILE.write_text(json.dumps(data, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    _write_json_atomic(AUDIT_FILE, data)
+
+
+def _write_json_atomic(path: Path, data: Any) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(f"{path.name}.{os.getpid()}.{uuid4().hex}.tmp")
+    temp_path.write_text(json.dumps(data, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    temp_path.replace(path)
+
+
+def _audit_path(audit_id: str) -> Path:
+    return AUDIT_DIR / f"{audit_id}.json"
 
 
 def save_motor360_audit(audit: dict[str, Any]) -> dict[str, Any]:
     snapshot = deepcopy(audit)
     audit_id = str(snapshot["metadata"]["audit_id"])
+    _write_json_atomic(_audit_path(audit_id), snapshot)
     records = _load_all()
     records[audit_id] = snapshot
     _save_all(records)
@@ -44,6 +58,14 @@ def save_motor360_audit(audit: dict[str, Any]) -> dict[str, Any]:
 
 
 def get_motor360_audit(audit_id: str) -> dict[str, Any] | None:
+    path = _audit_path(str(audit_id))
+    if path.exists():
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            payload = None
+        if isinstance(payload, dict):
+            return deepcopy(payload)
     record = _load_all().get(str(audit_id))
     return deepcopy(record) if isinstance(record, dict) else None
 
