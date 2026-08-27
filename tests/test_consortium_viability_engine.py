@@ -129,6 +129,32 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(capacity["meses_contemplados"], 5)
         self.assertTrue(capacity["atinge_regra_minima"])
 
+    def test_capacidade_selecionada_no_motor360_segue_o_objetivo_declarado(self):
+        history = [
+            {"mes": "2026-04", "qtd_contemplacoes": 1},
+            {"mes": "2026-05", "qtd_contemplacoes": 1},
+            {"mes": "2026-06", "qtd_contemplacoes": 1},
+        ]
+        result = analyze_client_consortium_viability(
+            payload(objetivo="Urgente - 3 meses"),
+            [
+                group(
+                    historico_12_meses=history,
+                    lance_super_agressivo_3m="90%",
+                    lance_agressivo_6m="20%",
+                    lance_moderado_12m="20%",
+                    lance_conservador_24m="20%",
+                    lance_investidor="20%",
+                )
+            ],
+        )
+
+        item = result["items"][0]
+        self.assertEqual(item["best_contemplation_strategy"], "Rapido - 6 meses")
+        self.assertEqual(item["capacidade_contemplacoes_selecionada"]["perfil"], "Urgente - 3 meses")
+        self.assertEqual(item["capacidade_contemplacoes_selecionada"]["janela_meses"], 3)
+        self.assertEqual(item["capacidade_contemplacoes_selecionada"]["meses_contemplados"], 3)
+
     def test_official_scenarios_preserve_credit_and_do_not_share_values(self):
         result = analyze_client_consortium_viability(payload(), [group()])
         scenarios = result["items"][0]["cenarios"]

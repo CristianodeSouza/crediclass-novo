@@ -511,6 +511,7 @@ def analyze_client_consortium_viability(
             credit_matches = [strategy for scenario in credit_scenarios for strategy in scenario["compatible_contemplation_strategies"]]
             credit_distinct_matches = [key for key, _, _, _ in STRATEGY_TARGETS if key in credit_matches]
             credit_selected = credit_scenarios[0]
+            selected_capacity_key = preference if preference in contemplation_capacities else (credit_distinct_matches[0] if credit_distinct_matches else "")
             credit_eligible_items.append({
                 **group_ref,
                 "grupo_id": str(group.get("grupo_id") or group_ref["grupo"]),
@@ -538,7 +539,7 @@ def analyze_client_consortium_viability(
                 "compatible_contemplation_strategies": credit_distinct_matches,
                 "best_contemplation_strategy": _reference_name(preference if preference in credit_distinct_matches else (credit_distinct_matches[0] if credit_distinct_matches else None)),
                 "capacidade_contemplacoes": contemplation_capacities,
-                "capacidade_contemplacoes_selecionada": contemplation_capacities.get(preference if preference in credit_distinct_matches else (credit_distinct_matches[0] if credit_distinct_matches else "")),
+                "capacidade_contemplacoes_selecionada": contemplation_capacities.get(selected_capacity_key),
                 "historico_12_meses": list(group.get("historico_12_meses") or []),
                 "destaque_preferencia": preference in credit_distinct_matches,
                 "source_values": source_values,
@@ -564,6 +565,7 @@ def analyze_client_consortium_viability(
         all_matches = [strategy for scenario in approved_scenarios for strategy in scenario["compatible_contemplation_strategies"]]
         distinct_matches = [key for key, _, _, _ in STRATEGY_TARGETS if key in all_matches]
         best_strategy = preference if preference in distinct_matches else (distinct_matches[0] if distinct_matches else None)
+        selected_capacity_key = preference if preference in contemplation_capacities else (best_strategy or "")
         ignored_contemplation_scenarios = [
             {
                 "scenario_id": scenario["id"],
@@ -605,7 +607,7 @@ def analyze_client_consortium_viability(
             "compatible_contemplation_strategies": distinct_matches,
             "best_contemplation_strategy": _reference_name(best_strategy),
             "capacidade_contemplacoes": contemplation_capacities,
-            "capacidade_contemplacoes_selecionada": contemplation_capacities.get(best_strategy or ""),
+            "capacidade_contemplacoes_selecionada": contemplation_capacities.get(selected_capacity_key),
             "historico_12_meses": list(group.get("historico_12_meses") or []),
             "contemplation_classification": contemplation_classification,
             "destaque_preferencia": preference in distinct_matches,
