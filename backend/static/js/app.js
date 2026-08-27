@@ -826,17 +826,17 @@ function showGroupHistoryHoverModal(trigger, item, capacity = null) {
   const modalId = trigger?.dataset?.motor360HistoryGroup ? "motor360HistoryHoverModal" : "historyHoverModal";
   const modal = document.getElementById(modalId);
   if (!item || !modal) return;
-  const contemplatedMonths = Number.isFinite(Number(capacity?.meses_contemplados))
-    ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(Number(capacity.meses_contemplados))} meses contemplados`
+  const average = Number.isFinite(Number(capacity?.media_contemplacoes))
+    ? `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(capacity.media_contemplacoes))} contemplações`
     : "Sem histórico suficiente";
   const averageCalculation = capacity?.meses_com_dados
-    ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(Number(capacity.meses_contemplados || 0))} mês(es) com contemplação nos últimos ${escapeHtml(String(capacity.janela_meses || capacity.meses_com_dados))} meses`
+    ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(Number(capacity.total_contemplacoes || 0))} contemplações ÷ ${escapeHtml(String(capacity.janela_meses || capacity.meses_com_dados))} meses = ${escapeHtml(average)}`
     : "Quantidade mensal não disponível";
   const capacitySummary = capacity ? `
     <div class="history-hover-capacity">
       <span>Regra do objetivo · ${escapeHtml(capacity.perfil || "Perfil não classificado")}</span>
-      <strong>${escapeHtml(contemplatedMonths)}</strong>
-      <small>${escapeHtml(averageCalculation)}${capacity.atinge_regra_minima ? " · atende a regra mínima de 2 meses" : " · abaixo da regra mínima de 2 meses"}</small>
+      <strong>Média de ${escapeHtml(average)}</strong>
+      <small>${escapeHtml(averageCalculation)}${capacity.atinge_regra_minima ? " · média igual ou superior a 2" : " · média inferior a 2"}</small>
     </div>
   ` : "";
   modal.innerHTML = `

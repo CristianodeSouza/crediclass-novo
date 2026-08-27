@@ -133,18 +133,20 @@ def _contemplation_capacity(group: dict[str, Any]) -> dict[str, dict[str, Any]]:
         window = history[-months:]
         quantities = [int(item["qtd_contemplacoes"]) for item in window]
         contemplated_months = sum(1 for quantity in quantities if quantity > 0)
+        total_contemplacoes = sum(quantities)
+        average = round(total_contemplacoes / len(window), 2) if window else None
         capacities[strategy] = {
             "perfil": _reference_name(strategy),
             "janela_meses": months,
             "meses_com_dados": len(window),
             "quantidades": quantities,
-            "total_contemplacoes": sum(quantities),
+            "total_contemplacoes": total_contemplacoes,
             "meses_contemplados": contemplated_months,
-            "media_contemplacoes": contemplated_months,
-            "limite_cotas": contemplated_months if contemplated_months > 0 else None,
+            "media_contemplacoes": average,
+            "limite_cotas": math.floor(average) if average is not None else None,
             "regra_minima": 2,
-            "atinge_regra_minima": contemplated_months >= 2,
-            "fonte": "Meses com contemplacoes registradas dentro da janela do objetivo declarado",
+            "atinge_regra_minima": average is not None and average >= 2,
+            "fonte": "Media de contemplacoes registradas dentro da janela do objetivo declarado",
         }
     return capacities
 

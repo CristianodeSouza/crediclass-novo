@@ -82,7 +82,7 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(capacity["perfil"], "Rapido - 6 meses")
         self.assertEqual(capacity["janela_meses"], 6)
         self.assertEqual(capacity["meses_contemplados"], 3)
-        self.assertEqual(capacity["media_contemplacoes"], 3)
+        self.assertEqual(capacity["media_contemplacoes"], 3.0)
         self.assertEqual(capacity["limite_cotas"], 3)
         self.assertEqual(result["items"][0]["historico_12_meses"], history)
 
@@ -127,7 +127,8 @@ class Motor360RfcTest(unittest.TestCase):
         capacity = result["items"][0]["capacidade_contemplacoes_selecionada"]
         self.assertEqual(capacity["janela_meses"], 36)
         self.assertEqual(capacity["meses_contemplados"], 5)
-        self.assertTrue(capacity["atinge_regra_minima"])
+        self.assertAlmostEqual(capacity["media_contemplacoes"], 0.17, places=2)
+        self.assertFalse(capacity["atinge_regra_minima"])
 
     def test_capacidade_selecionada_no_motor360_segue_o_objetivo_declarado(self):
         history = [
@@ -154,6 +155,8 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(item["capacidade_contemplacoes_selecionada"]["perfil"], "Urgente - 3 meses")
         self.assertEqual(item["capacidade_contemplacoes_selecionada"]["janela_meses"], 3)
         self.assertEqual(item["capacidade_contemplacoes_selecionada"]["meses_contemplados"], 3)
+        self.assertEqual(item["capacidade_contemplacoes_selecionada"]["media_contemplacoes"], 1.0)
+        self.assertFalse(item["capacidade_contemplacoes_selecionada"]["atinge_regra_minima"])
 
     def test_official_scenarios_preserve_credit_and_do_not_share_values(self):
         result = analyze_client_consortium_viability(payload(), [group()])
