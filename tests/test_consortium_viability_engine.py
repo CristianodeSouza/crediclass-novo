@@ -211,6 +211,30 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(embedded["creation_reason"], "percentual_x_ausente")
         self.assertIsNone(embedded["credito_contratado"])
 
+    def test_empty_reserve_fund_is_informational_and_does_not_block_calculation(self):
+        result = analyze_client_consortium_viability(
+            payload(credito_desejado=400000, lance_proprio=200000, fgts=100000, parcela_desejada=6000, parcela_limite=12000, renda_total=40000),
+            [group("40038", fundo_reserva=None, percentual_lance_embutido=None, taxa_adm="36%", prazo_restante=192, credito_minimo=296216, credito_maximo=575970)],
+        )
+
+        self.assertEqual(result["total_grupos_preselecionados"], 1)
+        item = result["items"][0]
+        without = next(entry for entry in item["cenarios"] if entry["id"] == "without_embedded")
+        self.assertEqual(without["fundo_reserva"], 0.0)
+        self.assertEqual(without["saldo_devedor"], 544000.0)
+        self.assertEqual(without["parcela_inicial"], 2833.33)
+        self.assertEqual(without["parcela_pos_contemplacao"], 1262.65)
+        self.assertTrue(without["term_compatible"])
+
+        audit = result["audit"]
+        self.assertEqual(audit["summary"]["groups_with_incomplete_data"], 0)
+        self.assertEqual(audit["summary"]["incomplete_field_occurrences"], 0)
+        self.assertEqual(audit["execution_steps"][3]["incomplete_count"], 0)
+
+        group_audit = next(entry for entry in audit["group_results"] if entry["grupo"] == "40038")
+        reserve_field = next(field for field in group_audit["missing_fields"] if field["column"] == "AA")
+        self.assertEqual(reserve_field["impact"], "informational_only")
+
     def test_credit_range_uses_nominal_contracted_credit_not_debt(self):
         result = analyze_client_consortium_viability(payload(fgts=0), [
             group("outside", credito_minimo=100000, credito_maximo=949999),

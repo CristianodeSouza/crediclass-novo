@@ -2097,6 +2097,21 @@ function profileHasVisibleReference(byScenario, profileId) {
   });
 }
 
+function motor360ScenarioStatus(scenario) {
+  if (!scenario || scenario.creation_status === "not_created") {
+    return {
+      label: "Não disponível",
+      detail: formatMotor360Reason(scenario?.creation_reason),
+      compatible: false,
+    };
+  }
+  return {
+    label: scenario.credit_compatible ? "Crédito OK" : "Fora da faixa",
+    detail: scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível",
+    compatible: Boolean(scenario.credit_compatible),
+  };
+}
+
 function renderMotor360VisibleCapacitySummary(item) {
   const capacity = motor360QuotaCapacity(item);
   if (!capacity) return "";
@@ -2154,8 +2169,8 @@ function renderMotor360GroupCard(item) {
   const quotaControl = selected ? `<div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}"><div class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="50" value="${quotaCount}" data-quota-action="input" data-group-id="${auditId}" aria-label="Quantidade de cotas do grupo ${auditId}"></div>${quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : ""}</div>` : "";
   const scaledScenarioCards = scenarios.map((scenario) => {
     const title = scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido";
-    const compatible = scenario.credit_compatible;
-    return `<article class="motor360-scenario-card ${compatible ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${compatible ? "Crédito OK" : "Fora da faixa"}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado</small><b>${formatMoney(scaleMoney(scenario.credito_contratado))}</b></div><div><small>Lance do cliente</small><b>${formatMoney(scenario.lance_cliente_total)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Lance embutido</small><b>${formatMoney(scaleMoney(scenario.lance_embutido))}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(scaleMoney(scenario.lance_total_cenario))} <em>(${formatPercent(scenario.percentual_lance_efetivo)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(scaleMoney(scenario.saldo_devedor))}</b></div><div><small>Parcela inicial</small><b>${formatMoney(scaleMoney(scenario.parcela_inicial))}</b></div><div><small>Parcela pós-contemplação</small><b>${scenario.parcela_pos_contemplacao == null ? "Não calculada" : formatMoney(scaleMoney(scenario.parcela_pos_contemplacao))}</b></div></div><small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
+    const statusInfo = motor360ScenarioStatus(scenario);
+    return `<article class="motor360-scenario-card ${statusInfo.compatible ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusInfo.label}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado</small><b>${formatMoney(scaleMoney(scenario.credito_contratado))}</b></div><div><small>Lance do cliente</small><b>${formatMoney(scenario.lance_cliente_total)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Lance embutido</small><b>${formatMoney(scaleMoney(scenario.lance_embutido))}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(scaleMoney(scenario.lance_total_cenario))} <em>(${formatPercent(scenario.percentual_lance_efetivo)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(scaleMoney(scenario.saldo_devedor))}</b></div><div><small>Parcela inicial</small><b>${formatMoney(scaleMoney(scenario.parcela_inicial))}</b></div><div><small>Parcela pós-contemplação</small><b>${scenario.parcela_pos_contemplacao == null ? "Não calculada" : formatMoney(scaleMoney(scenario.parcela_pos_contemplacao))}</b></div></div><small class="motor360-scenario-note">${scenario.creation_status === "not_created" ? `Status: ${statusInfo.detail}` : `Prazo após lance: ${statusInfo.detail}`}</small></article>`;
   }).join("");
   const scaledProfileCards = profiles.map((profile) => {
     const values = ["without_embedded", "with_embedded"].map((scenarioId) => {
@@ -2257,7 +2272,8 @@ function renderSelectedGroupComparisonColumn(item, index) {
     const scenario = byScenario[scenarioId];
     if (!scenario) return "";
     const embedded = scenarioId === "with_embedded";
-    return `<article class="selected-comparison-scenario"><div class="selected-comparison-scenario-title"><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><span>${scenario.credit_compatible ? "Crédito OK" : "Fora da faixa"}</span></div><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado))}</dd></div><div><dt>Lance total</dt><dd>${item.composition_candidate ? "Rateado no resumo" : formatMoney(scale(scenario.lance_total_cenario))}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>${item.composition_candidate || scenario.parcela_pos_contemplacao == null ? "Pendente da distribuição do lance" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</dd></div></dl><small>Prazo após lance: ${item.composition_candidate ? "validado na composição" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
+    const statusInfo = motor360ScenarioStatus(scenario);
+    return `<article class="selected-comparison-scenario"><div class="selected-comparison-scenario-title"><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><span>${statusInfo.label}</span></div><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado))}</dd></div><div><dt>Lance total</dt><dd>${item.composition_candidate ? "Rateado no resumo" : formatMoney(scale(scenario.lance_total_cenario))}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>${item.composition_candidate || scenario.parcela_pos_contemplacao == null ? "Pendente da distribuição do lance" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</dd></div></dl><small>${item.composition_candidate ? "Prazo após lance: validado na composição" : scenario.creation_status === "not_created" ? `Status: ${statusInfo.detail}` : `Prazo após lance: ${statusInfo.detail}`}</small></article>`;
   }).join("");
   const profiles = (byScenario.without_embedded?.perfis_contemplacao || byScenario.with_embedded?.perfis_contemplacao || [])
     .filter((profile) => profileHasVisibleReference(byScenario, profile.id));
@@ -3118,8 +3134,10 @@ function renderMotor360ChanceChart(items) {
     moderate: "#1d9b59",
   };
   const byScenario = (item, id) => (item.cenarios || []).find((scenario) => scenario.id === id) || {};
+  const availableScenarioCount = (scenarioId) => groups.reduce((total, item) => total + (byScenario(item, scenarioId).creation_status === "created" ? 1 : 0), 0);
   const countHits = (scenarioId, profileId) => groups.reduce((total, item) => {
     const scenario = byScenario(item, scenarioId);
+    if (scenario.creation_status !== "created") return total;
     const profile = (scenario.perfis_contemplacao || []).find((entry) => entry.id === profileId);
     return total + (profile?.atinge_perfil ? 1 : 0);
   }, 0);
@@ -3128,7 +3146,7 @@ function renderMotor360ChanceChart(items) {
     <div class="motor360-chance-scenario-summary">
       <div class="motor360-chance-scenario-label">${scenarioLabels[scenarioId]}</div>
       <div class="motor360-chance-summary">
-        ${profileIds.map((profileId) => `<div class="motor360-chance-summary-card"><span class="motor360-profile-marker motor360-profile-marker-${profileId}" aria-hidden="true"></span><strong>${profileLabels[profileId]}</strong><b>${countHits(scenarioId, profileId)}/${groups.length}</b><small>grupos que atingem</small></div>`).join("")}
+        ${profileIds.map((profileId) => `<div class="motor360-chance-summary-card"><span class="motor360-profile-marker motor360-profile-marker-${profileId}" aria-hidden="true"></span><strong>${profileLabels[profileId]}</strong><b>${countHits(scenarioId, profileId)}/${availableScenarioCount(scenarioId)}</b><small>${availableScenarioCount(scenarioId) ? "grupos que atingem" : "cenário indisponível"}</small></div>`).join("")}
       </div>
     </div>
   `;

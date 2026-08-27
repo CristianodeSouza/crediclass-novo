@@ -105,8 +105,6 @@ def _scenario_reasons(scenario: dict[str, Any], matches: list[str], has_ranges: 
         reasons.append("credito_maximo_nao_informado")
     if scenario["taxa_administracao"] is None:
         reasons.append("taxa_administracao_nao_informada")
-    if scenario["fundo_reserva"] is None:
-        reasons.append("fundo_reserva_nao_informado")
     if scenario["prazo_apos_lance_limite_renda_meses"] is None:
         reasons.append("prazo_restante_nao_informado")
     if scenario["credit_compatible"] is False:
@@ -490,13 +488,14 @@ def analyze_client_consortium_viability(
             {"field": "Credito minimo", "column": "O", "raw_value": group.get("credito_minimo"), "reason": "Necessario para validar a faixa de credito.", "impact": "group_excluded"} if minimum is None else None,
             {"field": "Credito maximo", "column": "U", "raw_value": group.get("credito_maximo"), "reason": "Necessario para validar a faixa de credito.", "impact": "group_excluded"} if maximum is None else None,
             {"field": "Taxa ADM total", "column": "AC", "raw_value": group.get("taxa_adm"), "reason": "Necessaria para calcular saldo e prazo.", "impact": "scenario_unavailable"} if fee is None else None,
-            {"field": "Fundo de reserva total", "column": "AA", "raw_value": group.get("fundo_reserva"), "reason": "Necessario para calcular saldo e prazo.", "impact": "scenario_unavailable"} if fund is None else None,
+            {"field": "Fundo de reserva total", "column": "AA", "raw_value": group.get("fundo_reserva"), "reason": "Nao informado na base; o Motor 360 aplica 0 por padrao para manter o calculo financeiro.", "impact": "informational_only"} if fund is None else None,
             {"field": "Prazo remanescente", "column": "F", "raw_value": group.get("prazo_restante", group.get("prazo_remanescente")), "reason": "Necessario para validar prazo/renda.", "impact": "group_excluded"} if remaining_term is None else None,
             {"field": "Faixas de contemplacao", "column": "BL:BP", "raw_value": raw_ranges, "reason": "Usadas somente na classificacao informativa posterior.", "impact": "informational_only"} if not has_ranges else None,
         ]
         missing_fields = [field for field in missing_fields if field]
-        if missing_fields:
-            incomplete_groups.append({**group_ref, "missing_fields": missing_fields})
+        blocking_missing_fields = [field for field in missing_fields if field.get("impact") not in {"informational_only"}]
+        if blocking_missing_fields:
+            incomplete_groups.append({**group_ref, "missing_fields": blocking_missing_fields})
         stage_results = {
             "credito": {"approved": bool(credit_scenarios), "scenario_ids": [scenario["id"] for scenario in credit_scenarios], "rule": "O <= crédito contratado <= U"},
             "prazo": {"approved": bool(term_scenarios), "scenario_ids": [scenario["id"] for scenario in term_scenarios], "rule": "F >= ceil(saldo após lance / parcela máxima)"},
@@ -716,7 +715,7 @@ def analyze_client_consortium_viability(
             {"order": 1, "id": "status", "name": "Status", "formula_or_rule": "Somente status Ativo", "input_count": len(groups), "approved_count": counters["active"], "rejected_count": counters["status_rejected"], "incomplete_count": 0, "duration_ms": round(durations["status"] * 1000, 3)},
             {"order": 2, "id": "type", "name": "Tipo de bem", "formula_or_rule": "Aplicado somente quando explicitamente informado", "input_count": counters["active"], "approved_count": counters["active"] - counters["type_rejected"], "rejected_count": counters["type_rejected"], "incomplete_count": 0, "duration_ms": round(durations["type"] * 1000, 3)},
             {"order": 3, "id": "credit", "name": "Faixa de credito", "formula_or_rule": "Cenarios independentes sem e com X; O <= credito contratado <= U", "input_count": counters["active"] - counters["type_rejected"], "approved_count": counters["credit_approved"], "rejected_count": counters["credit_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"O", "U"} for field in item["missing_fields"])), "duration_ms": round((durations["scenario"] + durations["credit_decision"]) * 1000, 3)},
-            {"order": 4, "id": "term", "name": "Prazo e renda", "formula_or_rule": "F >= ceil(saldo apos lance / parcela maxima); parcela desejada tambem permanece auditada", "input_count": counters["credit_approved"], "approved_count": counters["term_approved"], "rejected_count": counters["term_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"F", "AA", "AC"} for field in item["missing_fields"])), "duration_ms": round(durations["term"] * 1000, 3)},
+            {"order": 4, "id": "term", "name": "Prazo e renda", "formula_or_rule": "F >= ceil(saldo apos lance / parcela maxima); parcela desejada tambem permanece auditada", "input_count": counters["credit_approved"], "approved_count": counters["term_approved"], "rejected_count": counters["term_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"F", "AC"} for field in item["missing_fields"])), "duration_ms": round(durations["term"] * 1000, 3)},
             {"order": 5, "id": "administrator_rules", "name": "Regras da administradora", "formula_or_rule": "Nenhuma regra adicional foi definida nos documentos oficiais; nenhuma exclusao aplicada.", "input_count": counters["term_approved"], "approved_count": counters["administrator_approved"], "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["administrator_rules"] * 1000, 3)},
             {"order": 6, "id": "contemplation", "name": "Contemplacao", "formula_or_rule": "Lance do cliente >= pelo menos uma faixa BL:BP; objetivo declarado somente prioriza o ranking", "input_count": counters["administrator_approved"], "approved_count": counters["contemplation_approved"], "rejected_count": counters["contemplation_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] == "BL:BP" for field in item["missing_fields"])), "duration_ms": round(durations["contemplation"] * 1000, 3)},
             {"order": 7, "id": "ranking", "name": "Ranking", "formula_or_rule": "Preferências configuráveis apenas reordenam os grupos finais", "input_count": counters["contemplation_approved"], "approved_count": len(eligible_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
@@ -744,6 +743,7 @@ def analyze_client_consortium_viability(
         "warnings": [
             {"level": "info", "message": "O/U participa exclusivamente da elegibilidade de crédito. AJ, AK e AL são referências e não aprovam nem eliminam grupos nesta fase."},
             {"level": "info", "message": "As fórmulas de crédito contratado, saldo devedor e prazo são registradas por cenário e por grupo na auditoria."},
+            {"level": "info", "message": "Quando a coluna AA estiver vazia, o Motor 360 assume fundo de reserva igual a zero e mantém esse caso apenas como observação informativa."},
         ],
     }
     audit["execution_steps"] = audit["execution_steps"][:4] + [
