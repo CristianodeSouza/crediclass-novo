@@ -117,16 +117,23 @@ let investorAnalysisRequestId = 0;
 const HISTORY_START_MONTH = "2024-01";
 const CLIENT_PROFILE_STORAGE_KEY = "crediclass.clientProfile.v1";
 const CLIENT_OBJECTIVE_RULES = {
-  "Contemplar - urgente - 3 meses": { prazo: 3, conceito: "Super Agressivo", tipoBem: "Imovel", estadoBem: "Pronto" },
-  "Contemplar - rapido - 6 meses": { prazo: 6, conceito: "Agressivo", tipoBem: "Imovel", estadoBem: "Pronto" },
-  "Contemplar - moderado - 12 meses": { prazo: 12, conceito: "Moderado", tipoBem: "Imovel", estadoBem: "Pronto" },
-  "Contemplar - conservador - 24 meses": { prazo: 24, conceito: "Conservador", tipoBem: "Imovel", estadoBem: "Pronto" },
-  "Contemplar - investidor - 36 meses": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Pronto" },
-  "Investidor - Adquirir imovel e alugar (pagar parcelas com aluguel)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Pronto" },
-  "Investidor - Adquirir terreno, construir e alugar (pagar parcelas com aluguel)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Construcao" },
-  "Investidor - Adquirir terreno, construir e vender (ganhar lucro)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Construcao" },
-  "Investidor - Vender carta contemplada (ganhar agil)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Indefinido" },
-  "Investidor - Carta de credito aposentadoria (alavancagem, rendimento e flexibilidade)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Indefinido" },
+  "Urgente - 3 meses": { prazo: 3, conceito: "Super Agressivo", tipoBem: "Imovel", estadoBem: "Pronto" },
+  "Rapido - 6 meses": { prazo: 6, conceito: "Agressivo", tipoBem: "Imovel", estadoBem: "Pronto" },
+  "Moderado - 12 meses": { prazo: 12, conceito: "Moderado", tipoBem: "Imovel", estadoBem: "Pronto" },
+  "Conservador - 24 meses": { prazo: 24, conceito: "Conservador", tipoBem: "Imovel", estadoBem: "Pronto" },
+  "Investidor - 36 meses": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Pronto" },
+};
+const CLIENT_OBJECTIVE_ALIASES = {
+  "Contemplar - urgente - 3 meses": "Urgente - 3 meses",
+  "Contemplar - rapido - 6 meses": "Rapido - 6 meses",
+  "Contemplar - moderado - 12 meses": "Moderado - 12 meses",
+  "Contemplar - conservador - 24 meses": "Conservador - 24 meses",
+  "Contemplar - investidor - 36 meses": "Investidor - 36 meses",
+  "Investidor - Adquirir imovel e alugar (pagar parcelas com aluguel)": "Investidor - 36 meses",
+  "Investidor - Adquirir terreno, construir e alugar (pagar parcelas com aluguel)": "Investidor - 36 meses",
+  "Investidor - Adquirir terreno, construir e vender (ganhar lucro)": "Investidor - 36 meses",
+  "Investidor - Vender carta contemplada (ganhar agil)": "Investidor - 36 meses",
+  "Investidor - Carta de credito aposentadoria (alavancagem, rendimento e flexibilidade)": "Investidor - 36 meses",
 };
 const CLIENT_CONTRACTING_MODES = {
   pf_individual: { label: "Pessoa fisica individual", pfCount: 1 },
@@ -1666,7 +1673,8 @@ function clientProfileConcept(months) {
 }
 
 function clientObjectiveRule(objective) {
-  return CLIENT_OBJECTIVE_RULES[objective] || CLIENT_OBJECTIVE_RULES["Contemplar - urgente - 3 meses"];
+  const normalizedObjective = CLIENT_OBJECTIVE_ALIASES[objective] || objective;
+  return CLIENT_OBJECTIVE_RULES[normalizedObjective] || CLIENT_OBJECTIVE_RULES["Urgente - 3 meses"];
 }
 
 function emptyPessoaFisica(index) {
@@ -3946,7 +3954,7 @@ function loadClientProfile() {
   setMoneyInputValue("clientProfileCredito", profile.credito_desejado);
   setMoneyInputValue("clientProfileLanceProprio", profile.lance_proprio);
   setMoneyInputValue("clientProfileParcelaIdeal", profile.parcela_ideal ?? profile.parcela_desejada);
-  const objective = CLIENT_OBJECTIVE_RULES[profile.objetivo] ? profile.objetivo : "Contemplar - urgente - 3 meses";
+  const objective = CLIENT_OBJECTIVE_ALIASES[profile.objetivo] || (CLIENT_OBJECTIVE_RULES[profile.objetivo] ? profile.objetivo : "Urgente - 3 meses");
   setInputValue("clientProfileObjetivo", objective);
   updateClientProfileTipoBemOptions(mapState.tipos_bem || [], profile.tipo_bem || "");
   updateClientProfileTotals();

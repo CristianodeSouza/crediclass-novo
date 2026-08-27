@@ -9,7 +9,7 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <link href="/static/css/style.css?v=4.0.70" rel="stylesheet">
+    <link href="/static/css/style.css?v=4.0.71" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -352,19 +352,14 @@
                   <label><span>Credito Desejado Liquido</span><input id="clientProfileCredito" class="form-control" inputmode="decimal"></label>
                   <label><span>Parcela maxima desejada</span><input id="clientProfileParcelaIdeal" class="form-control" inputmode="decimal"></label>
                   <label><span>Lance maximo com recurso proprio</span><input id="clientProfileLanceProprio" class="form-control" inputmode="decimal"></label>
-                  <label class="profile-objective-field">
-                    <span>Objetivo do consorcio</span>
-                    <select id="clientProfileObjetivo" class="form-select">
-                      <option value="Contemplar - urgente - 3 meses">Contemplar - urgente - 3 meses</option>
-                      <option value="Contemplar - rapido - 6 meses">Contemplar - rapido - 6 meses</option>
-                      <option value="Contemplar - moderado - 12 meses">Contemplar - moderado - 12 meses</option>
-                      <option value="Contemplar - conservador - 24 meses">Contemplar - conservador - 24 meses</option>
-                      <option value="Contemplar - investidor - 36 meses">Contemplar - investidor - 36 meses</option>
-                      <option value="Investidor - Adquirir imovel e alugar (pagar parcelas com aluguel)">Investidor - Adquirir imovel e alugar (pagar parcelas com aluguel)</option>
-                      <option value="Investidor - Adquirir terreno, construir e alugar (pagar parcelas com aluguel)">Investidor - Adquirir terreno, construir e alugar (pagar parcelas com aluguel)</option>
-                      <option value="Investidor - Adquirir terreno, construir e vender (ganhar lucro)">Investidor - Adquirir terreno, construir e vender (ganhar lucro)</option>
-                      <option value="Investidor - Vender carta contemplada (ganhar agil)">Investidor - Vender carta contemplada (ganhar agil)</option>
-                      <option value="Investidor - Carta de credito aposentadoria (alavancagem, rendimento e flexibilidade)">Investidor - Carta de credito aposentadoria (alavancagem, rendimento e flexibilidade)</option>
+                    <label class="profile-objective-field">
+                      <span>Objetivo do consorcio</span>
+                      <select id="clientProfileObjetivo" class="form-select">
+                      <option value="Urgente - 3 meses">Urgente - 3 meses</option>
+                      <option value="Rapido - 6 meses">Rapido - 6 meses</option>
+                      <option value="Moderado - 12 meses">Moderado - 12 meses</option>
+                      <option value="Conservador - 24 meses">Conservador - 24 meses</option>
+                      <option value="Investidor - 36 meses">Investidor - 36 meses</option>
                     </select>
                   </label>
                   <input id="clientProfilePrazo" type="hidden" value="3">
@@ -1246,7 +1241,7 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.70"></script>
-    <script src="/static/js/app.js?v=4.0.70"></script>
+    <script src="/static/js/api.js?v=4.0.71"></script>
+    <script src="/static/js/app.js?v=4.0.71"></script>
   </body>
 </html>

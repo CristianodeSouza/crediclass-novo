@@ -560,17 +560,19 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
         for label in [
-            "Contemplar - urgente - 3 meses",
-            "Contemplar - rapido - 6 meses",
-            "Contemplar - moderado - 12 meses",
-            "Contemplar - conservador - 24 meses",
-            "Contemplar - investidor - 36 meses",
+            "Urgente - 3 meses",
+            "Rapido - 6 meses",
+            "Moderado - 12 meses",
+            "Conservador - 24 meses",
+            "Investidor - 36 meses",
         ]:
             self.assertIn(label, index_html)
+        self.assertNotIn("Investidor - Adquirir imovel e alugar (pagar parcelas com aluguel)", index_html)
         self.assertIn("Parcela maxima desejada", index_html)
         self.assertIn("Lance maximo com recurso proprio", index_html)
         self.assertIn("function clientProfileConcept(months)", app_js)
         self.assertIn("CLIENT_OBJECTIVE_RULES", app_js)
+        self.assertIn("CLIENT_OBJECTIVE_ALIASES", app_js)
         self.assertIn('id="clientProfileTipoBem"', index_html)
         self.assertIn('<select id="clientProfileTipoBem" class="form-select"><option value=""></option></select>', index_html)
         self.assertIn("function updateClientProfileTipoBemOptions(tipos = [], selected = \"\")", app_js)
