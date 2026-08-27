@@ -1672,9 +1672,13 @@ function clientProfileConcept(months) {
   return "Investidor";
 }
 
-function clientObjectiveRule(objective) {
+function normalizeClientObjectiveValue(objective) {
   const normalizedObjective = CLIENT_OBJECTIVE_ALIASES[objective] || objective;
-  return CLIENT_OBJECTIVE_RULES[normalizedObjective] || CLIENT_OBJECTIVE_RULES["Urgente - 3 meses"];
+  return CLIENT_OBJECTIVE_RULES[normalizedObjective] ? normalizedObjective : "Urgente - 3 meses";
+}
+
+function clientObjectiveRule(objective) {
+  return CLIENT_OBJECTIVE_RULES[normalizeClientObjectiveValue(objective)] || CLIENT_OBJECTIVE_RULES["Urgente - 3 meses"];
 }
 
 function emptyPessoaFisica(index) {
@@ -3610,7 +3614,7 @@ async function loadInvestorAnalysis() {
   const controller = new AbortController();
   investorAnalysisController = controller;
   addMotor360ExecutionLog("Execução do Motor 360 iniciada", `Requisição ${requestId}.`);
-  const profile = collectClientProfile();
+  const profile = saveClientProfile({ silent: true });
   if (!(Number(profile.credito_desejado) > 0)) {
     addMotor360ExecutionLog("Perfil não disponível para análise", "Crédito desejado ausente ou igual a zero.", "warning");
     status.textContent = "Aguardando perfil do cliente";
@@ -3721,7 +3725,7 @@ function evaluatePjCapacityScenarios({
 }
 
 function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
-  const objetivo = document.getElementById("clientProfileObjetivo").value;
+  const objetivo = normalizeClientObjectiveValue(document.getElementById("clientProfileObjetivo").value);
   const credito = toNumber(document.getElementById("clientProfileCredito").value);
   const parcelaDesejada = toNumber(document.getElementById("clientProfileParcelaIdeal").value);
   const lanceManual = toNumber(document.getElementById("clientProfileLanceProprio").value);
@@ -3902,7 +3906,10 @@ function updateClientProfileTotals() {
   const lanceManual = toNumber(document.getElementById("clientProfileLanceProprio").value);
   const lance = Number(holderSummary.lance_recursos_proprios || 0);
   const renda = holderSummary.renda_total;
-  const objectiveRule = clientObjectiveRule(document.getElementById("clientProfileObjetivo").value);
+  const objectiveField = document.getElementById("clientProfileObjetivo");
+  const normalizedObjective = normalizeClientObjectiveValue(objectiveField.value);
+  if (objectiveField.value !== normalizedObjective) objectiveField.value = normalizedObjective;
+  const objectiveRule = clientObjectiveRule(normalizedObjective);
   const conceito = objectiveRule.conceito || clientProfileConcept(objectiveRule.prazo);
   document.getElementById("clientProfileNome").value = holderSummary.nome;
   document.getElementById("clientProfileConjuge").value = holderSummary.nome_conjuge;
@@ -3929,6 +3936,7 @@ function updateClientProfileTotals() {
 function collectClientProfile() {
   const totals = updateClientProfileTotals();
   const summary = totals.holderSummary;
+  const objetivo = normalizeClientObjectiveValue(document.getElementById("clientProfileObjetivo").value);
   return {
     tipo_contratacao: totals.titulares.tipo_contratacao,
     titulares: totals.titulares,
@@ -3953,7 +3961,7 @@ function collectClientProfile() {
     parcela_desejada: toNumber(document.getElementById("clientProfileParcelaIdeal").value),
     data_nascimento: summary.data_nascimento,
     data_nascimento_conjuge: summary.data_nascimento_conjuge,
-    objetivo: document.getElementById("clientProfileObjetivo").value,
+    objetivo,
     tipo_bem: document.getElementById("clientProfileTipoBem").value,
     tipo_bem_explicit: Boolean(document.getElementById("clientProfileTipoBem").value),
     estado_bem: document.getElementById("clientProfileEstadoBem").value,
@@ -4009,7 +4017,7 @@ function loadClientProfile() {
   setMoneyInputValue("clientProfileCredito", profile.credito_desejado);
   setMoneyInputValue("clientProfileLanceProprio", profile.lance_proprio);
   setMoneyInputValue("clientProfileParcelaIdeal", profile.parcela_ideal ?? profile.parcela_desejada);
-  const objective = CLIENT_OBJECTIVE_ALIASES[profile.objetivo] || (CLIENT_OBJECTIVE_RULES[profile.objetivo] ? profile.objetivo : "Urgente - 3 meses");
+  const objective = normalizeClientObjectiveValue(profile.objetivo);
   setInputValue("clientProfileObjetivo", objective);
   updateClientProfileTipoBemOptions(mapState.tipos_bem || [], profile.tipo_bem || "");
   updateClientProfileTotals();
