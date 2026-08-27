@@ -172,8 +172,9 @@ def calculate_scenario(data: ScenarioInput, *, with_embedded: bool) -> Calculate
     credito = base_liquida / (Decimal("1") - embedded) if with_embedded else base_liquida
     valor_embutido = credito * embedded
     taxa = credito * data.taxa_administracao_total if data.taxa_administracao_total is not None else None
-    fundo = credito * data.fundo_reserva_total if data.fundo_reserva_total is not None else None
-    saldo = credito + taxa + fundo if taxa is not None and fundo is not None else None
+    fundo_percentual = data.fundo_reserva_total if data.fundo_reserva_total is not None else Decimal("0")
+    fundo = credito * fundo_percentual
+    saldo = credito + taxa + fundo if taxa is not None else None
     lance = data.recurso_proprio + data.fgts + valor_embutido
     percentual_lance = lance / credito if credito > 0 else None
     saldo_apos_lance = max(Decimal("0"), saldo - lance) if saldo is not None else None
@@ -198,7 +199,6 @@ def calculate_scenario(data: ScenarioInput, *, with_embedded: bool) -> Calculate
         data.credito_minimo is not None,
         data.credito_maximo is not None,
         data.taxa_administracao_total is not None,
-        data.fundo_reserva_total is not None,
         data.prazo_remanescente is not None,
     ))
     return CalculatedScenario(

@@ -2090,6 +2090,13 @@ function motor360QuotaCapacity(item) {
   return capacities.find((capacity) => capacity?.perfil === item?.best_contemplation_strategy) || null;
 }
 
+function profileHasVisibleReference(byScenario, profileId) {
+  return ["without_embedded", "with_embedded"].some((scenarioId) => {
+    const value = (byScenario?.[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profileId);
+    return value && value.percentual_referencia !== null && value.percentual_referencia !== undefined;
+  });
+}
+
 function renderMotor360VisibleCapacitySummary(item) {
   const capacity = motor360QuotaCapacity(item);
   if (!capacity) return "";
@@ -2131,7 +2138,8 @@ function focusMotor360Group(anchorId) {
 function renderMotor360GroupCard(item) {
   const scenarios = Array.isArray(item.cenarios) ? item.cenarios : [];
   const byId = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
-  const profiles = byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [];
+  const profiles = (byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [])
+    .filter((profile) => profileHasVisibleReference(byId, profile.id));
   const status = item.result === "preselected" ? "Pré-selecionado" : item.alerts?.length ? formatMotor360Reason(item.alerts[0]) : "Compatível por crédito";
   const groupId = String(item.grupo || item.grupo_id || "");
   const auditId = escapeHtml(groupId);
@@ -2251,7 +2259,8 @@ function renderSelectedGroupComparisonColumn(item, index) {
     const embedded = scenarioId === "with_embedded";
     return `<article class="selected-comparison-scenario"><div class="selected-comparison-scenario-title"><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><span>${scenario.credit_compatible ? "Crédito OK" : "Fora da faixa"}</span></div><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado))}</dd></div><div><dt>Lance total</dt><dd>${item.composition_candidate ? "Rateado no resumo" : formatMoney(scale(scenario.lance_total_cenario))}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>${item.composition_candidate || scenario.parcela_pos_contemplacao == null ? "Pendente da distribuição do lance" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</dd></div></dl><small>Prazo após lance: ${item.composition_candidate ? "validado na composição" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
   }).join("");
-  const profiles = byScenario.without_embedded?.perfis_contemplacao || byScenario.with_embedded?.perfis_contemplacao || [];
+  const profiles = (byScenario.without_embedded?.perfis_contemplacao || byScenario.with_embedded?.perfis_contemplacao || [])
+    .filter((profile) => profileHasVisibleReference(byScenario, profile.id));
   const profileRows = profiles.map((profile) => {
     const values = ["without_embedded", "with_embedded"].map((scenarioId) => {
       const value = (byScenario[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profile.id);
@@ -2467,6 +2476,7 @@ function financialStudyGroupProfileSection(item) {
   const profileIds = ["urgent", "fast", "moderate", "conservative", "long_term"];
   const labels = { urgent: "Urgente", fast: "Rápido", moderate: "Moderado", conservative: "Conservador", long_term: "Investidor" };
   const scenarios = Object.fromEntries((item.cenarios || []).map((scenario) => [scenario.id, scenario]));
+  const visibleProfileIds = profileIds.filter((profileId) => profileHasVisibleReference(scenarios, profileId));
   const valueFor = (scenarioId, profileId) => (scenarios[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profileId);
   const renderValue = (value, scenarioLabel) => {
     if (value?.percentual_referencia == null) return `<span class="financial-study-profile-empty"><small>${scenarioLabel}</small><em>Sem referência</em></span>`;
@@ -2474,7 +2484,7 @@ function financialStudyGroupProfileSection(item) {
     const result = value.atinge_perfil ? "Lance atinge o perfil" : `Faltam ${formatMoney(value.falta_para_ideal)}`;
     return `<span class="financial-study-profile-result ${state}"><small>${scenarioLabel}</small><b>${formatPercent(value.percentual_referencia)}</b><em>${result}</em></span>`;
   };
-  return `<section class="financial-study-group-profile"><div class="financial-study-group-section-title"><strong>Perfil de contemplação</strong><span>Leitura do grupo por cenário financeiro</span></div><div class="financial-study-profile-list"><article class="financial-study-profile-group"><header><strong>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</strong><span>${escapeHtml(item.administradora || "-")}</span></header><div>${profileIds.map((profileId) => `<section><h4>${labels[profileId]}</h4>${renderValue(valueFor("without_embedded", profileId), "Sem embutido")}${renderValue(valueFor("with_embedded", profileId), "Com embutido")}</section>`).join("")}</div></article></div></section>`;
+  return `<section class="financial-study-group-profile"><div class="financial-study-group-section-title"><strong>Perfil de contemplação</strong><span>Leitura do grupo por cenário financeiro</span></div><div class="financial-study-profile-list"><article class="financial-study-profile-group"><header><strong>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</strong><span>${escapeHtml(item.administradora || "-")}</span></header><div>${visibleProfileIds.map((profileId) => `<section><h4>${labels[profileId]}</h4>${renderValue(valueFor("without_embedded", profileId), "Sem embutido")}${renderValue(valueFor("with_embedded", profileId), "Com embutido")}</section>`).join("")}</div></article></div></section>`;
 }
 
 function financialStudyProjectionDataset(item) {
@@ -2944,8 +2954,9 @@ function financialStudyProfileMatrix(items) {
   return `<div class="financial-study-profile-list">${items.map((item) => {
     const groupId = String(item.grupo || item.grupo_id || "-");
     const scenarios = Object.fromEntries((item.cenarios || []).map((scenario) => [scenario.id, scenario]));
+    const visibleProfileIds = profileIds.filter((profileId) => profileHasVisibleReference(scenarios, profileId));
     const valueFor = (scenarioId, profileId) => (scenarios[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profileId);
-    return `<article class="financial-study-profile-group"><header><strong>Grupo ${escapeHtml(groupId)}</strong><span>${escapeHtml(item.administradora || "-")}</span></header><div>${profileIds.map((profileId) => {
+    return `<article class="financial-study-profile-group"><header><strong>Grupo ${escapeHtml(groupId)}</strong><span>${escapeHtml(item.administradora || "-")}</span></header><div>${visibleProfileIds.map((profileId) => {
       const without = valueFor("without_embedded", profileId);
       const withEmbedded = valueFor("with_embedded", profileId);
       const renderValue = (value, scenarioLabel) => {
