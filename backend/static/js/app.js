@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.87";
+const APP_BUNDLE_VERSION = "4.0.88";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -2798,12 +2798,8 @@ function financialStudyPdfMetric(label, value, detail = "") {
   return `<div class="financial-study-pdf-metric"><span>${escapeHtml(label)}</span><strong>${value}</strong>${detail ? `<small>${escapeHtml(detail)}</small>` : ""}</div>`;
 }
 
-function financialStudyPdfMetaItem(label, value, extraClass = "") {
-  return `<div class="financial-study-pdf-meta-item${extraClass ? ` ${extraClass}` : ""}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "-")}</strong></div>`;
-}
-
 function financialStudyPdfIntroSection({ clientName, objective, highlightedGroup, highlightedStrategy, proposalId, introNotes }) {
-  return `<section class="financial-study-pdf-cover financial-study-pdf-intro-sheet" data-study-content="cliente"><div class="financial-study-pdf-cover-title">ESTUDO FINANCEIRO</div><div class="financial-study-pdf-intro-copy"><p><strong>Prezado,</strong></p>${introNotes.map((note) => `<p>${escapeHtml(note)}</p>`).join("")}</div><div class="financial-study-pdf-client-meta">${financialStudyPdfMetaItem("Cliente", clientName)}${financialStudyPdfMetaItem("Objetivo", objective, "is-wide")}${financialStudyPdfMetaItem("Opção em destaque", `Grupo ${highlightedGroup} (${highlightedStrategy})`)}${financialStudyPdfMetaItem("Identificador", proposalId)}</div></section>`;
+  return `<section class="financial-study-pdf-cover financial-study-pdf-intro-sheet" data-study-content="cliente"><div class="financial-study-pdf-cover-title">ESTUDO FINANCEIRO</div><div class="financial-study-pdf-intro-copy"><p><strong>Prezado,</strong></p>${introNotes.map((note) => `<p>${escapeHtml(note)}</p>`).join("")}</div></section>`;
 }
 
 function financialStudyPdfValue(value, extraClass = "") {

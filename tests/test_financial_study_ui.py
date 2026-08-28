@@ -48,6 +48,7 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn('class="financial-study-pdf-intro-copy"', self.javascript)
         self.assertIn(".financial-study-pdf-intro-copy", self.styles)
         self.assertIn("width: min(1240px, 100%)", self.styles)
+        self.assertNotIn("financial-study-pdf-client-meta", self.javascript)
 
 
 if __name__ == "__main__":
