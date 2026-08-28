@@ -50,6 +50,12 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn("width: min(1240px, 100%)", self.styles)
         self.assertNotIn("financial-study-pdf-client-meta", self.javascript)
 
+    def test_bloco_melhores_consorcios_tem_texto_padrao_e_administradora_dinamica(self):
+        self.assertIn('Administradora selecionada: <strong>${escapeHtml(administrator)}</strong>', self.javascript)
+        self.assertIn("Os grupos apresentados foram selecionados", self.javascript)
+        self.assertIn("Contemplações Mensais:", self.javascript)
+        self.assertIn("Uso da Carta de Crédito:", self.javascript)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.88";
+const APP_BUNDLE_VERSION = "4.0.89";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -2834,25 +2834,12 @@ function financialStudyInvestmentSimulation(items, profile) {
 }
 
 function financialStudySelectionNarrative(highlightedAdmin) {
-  const criteria = [
-    "Grupos antigos: maior participação histórica e estabilidade de contemplações.",
-    "Histórico de lance: leitura dos menores e maiores lances dos últimos 12 meses.",
-    "Estabilidade nos lances: menor volatilidade observada na base atual.",
-    "Saúde financeira: priorização de grupos com dados completos e comportamento auditável.",
-    "Lance embutido: comparação separada entre cenários sem e com embutido.",
-  ];
-  const usages = [
-    "Comprar imóveis residenciais, comerciais, novos, usados, na planta e terrenos.",
-    "Usar para construção e reforma, conforme regras da administradora.",
-    "Quitar financiamento imobiliário quando permitido nas regras do grupo.",
-    "Compor estratégia patrimonial de médio e longo prazo.",
-  ];
-  const visual = financialStudyPdfVisualPanel({
-    eyebrow: "Administradora selecionada",
-    title: String(highlightedAdmin || "-"),
-    caption: "Os grupos apresentados foram selecionados a partir dos critérios técnicos definidos pela Crediclass, considerando indicadores históricos, estabilidade e consistência operacional.",
-  });
-  return financialStudyPdfSection("SIMULAÇÃO MELHORES CONSÓRCIOS", `<div class="financial-study-pdf-selection-layout"><div>${visual}</div><div><table class="financial-study-pdf-table financial-study-pdf-editorial-table financial-study-pdf-table-editorial"><tbody><tr><th>Critérios de seleção</th><td>${criteria.map((item) => `<p>${escapeHtml(item)}</p>`).join("")}</td></tr><tr><th>Como funciona</th><td><p>O consórcio é uma modalidade de crédito planejado que permite a aquisição de imóveis por meio da formação de um fundo comum entre participantes.</p><p>Mensalmente, são realizadas contemplações por sorteio e lance, permitindo acesso à carta de crédito conforme o perfil financeiro do cliente.</p></td></tr><tr><th>Uso da carta de crédito</th><td>${usages.map((item) => `<p>${escapeHtml(item)}</p>`).join("")}</td></tr></tbody></table></div></div>`, "");
+  const administrator = String(highlightedAdmin || "-");
+  return financialStudyPdfSection(
+    "SIMULAÇÃO MELHORES CONSÓRCIOS",
+    `<div class="financial-study-pdf-selection-admin">Administradora selecionada: <strong>${escapeHtml(administrator)}</strong></div><table class="financial-study-pdf-table financial-study-pdf-editorial-table financial-study-pdf-table-editorial"><tbody><tr><th>Critérios de seleção:</th><td><p>Os grupos apresentados foram selecionados a partir de critérios técnicos definidos pela Crediclass, considerando indicadores históricos e condições disponíveis na data da análise.</p><p>1 - <strong>Grupos antigos:</strong> mais participantes já contemplados, menor concorrência nos lances;</p><p>2 - <strong>Histórico de lance:</strong> concorrência de lances abaixo da média mercado para grupos com prazo similar;</p><p>3 - <strong>Estabilidade nos lances:</strong> menor volatilidade nos últimos 11 meses, o que traz maior segurança;</p><p>4 - <strong>Saúde financeira:</strong> grupos saudáveis, contemplaram em média 25 cartas por mês, nos últimos 11 meses;</p><p>5 - <strong>Lance embutido:</strong> permite utilizar até 30% da carta de crédito para pagamento do lance ofertado;</p></td></tr><tr><th>Como funciona:</th><td><p>O consórcio é uma modalidade de crédito planejado que permite a aquisição de imóveis e outros bens por meio da formação de um fundo comum entre participantes.</p><p>Mensalmente, são realizadas contemplações por sorteio e lance, possibilitando o acesso à carta de crédito e oferecendo flexibilidade para diferentes objetivos patrimoniais.</p></td></tr><tr><th>Contemplações Mensais:</th><td><p><strong>1) Sorteio:</strong></p><p>Participam do sorteio todos consorciados que estão com suas mensalidades em dia.</p><p><strong>2) Lance Livre:</strong></p><p>Modalidade que permite ofertar qualquer valor de lance. São contempladas as cartas com as maiores ofertas com múltiplos ganhadores mensalmente. É utilizada pelos consorciados que desejam acessar a sua carta de crédito sem depender do sorteio.</p></td></tr><tr><th>Uso da Carta de Crédito:</th><td><p>- Comprar imóveis residenciais, comerciais, novos, usados, na planta, terrenos, casa de praia ou de campo;</p><p>- Usar para construção e reforma;</p><p>- Quitação de financiamento imobiliário;</p><p>- Deixar aplicada obtendo rendimentos, e retirar corrigida ao fim do grupo.</p></td></tr></tbody></table>`,
+    "",
+  );
 }
 
 function financialStudySummaryTable(items) {
