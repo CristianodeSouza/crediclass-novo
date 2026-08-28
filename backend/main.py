@@ -25,6 +25,7 @@ from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
+from .pdf_bridge import react_pdf_service_status, render_react_study_pdf
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -610,6 +611,34 @@ def estudos_exportar_pdf(estudo_id: str):
     if not filename:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
     return {"success": True, "download_url": f"/files/{filename}"}
+
+
+@app.get("/api/estudos/pdf-engine-status")
+def estudos_pdf_engine_status():
+    logger.info("GET /api/estudos/pdf-engine-status")
+    return {"success": True, "engine": "react-pdf", "status": react_pdf_service_status()}
+
+
+@app.post("/api/estudos/{estudo_id}/exportar-pdf-react")
+def estudos_exportar_pdf_react(estudo_id: str):
+    logger.info("POST /api/estudos/%s/exportar-pdf-react", estudo_id)
+    estudo = get_estudo(estudo_id)
+    if not estudo:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
+    status = react_pdf_service_status()
+    if not status["available"]:
+        return JSONResponse(
+            status_code=503,
+            content={"success": False, "error": "React-pdf indisponivel neste ambiente", "status": status},
+        )
+    try:
+        filename = f"{estudo_id}-react-pdf.pdf"
+        path = FILES_DIR / filename
+        path.write_bytes(render_react_study_pdf(estudo, get_settings().version))
+    except RuntimeError as error:
+        logger.exception("Erro ao renderizar estudo %s com React-pdf", estudo_id)
+        return JSONResponse(status_code=500, content={"success": False, "error": str(error)})
+    return {"success": True, "download_url": f"/files/{filename}", "engine": "react-pdf"}
 
 
 @app.get("/api/configuracoes")

@@ -16,6 +16,7 @@ env/
 build/
 dist/
 *.log
+node_modules/
 backend/runtime_data/
 .DS_Store
 Thumbs.db
