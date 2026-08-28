@@ -18,7 +18,11 @@ class FinancialStudyUiTest(unittest.TestCase):
     def test_estudo_carrega_agenda_de_assembleias(self):
         self.assertIn('apiGet("/mapa-assembleia")', self.javascript)
         self.assertIn("financialStudyAssemblyAgenda", self.javascript)
-        self.assertIn("Agenda de contratação e assembleias", self.javascript)
+        self.assertIn("Limite Adesão - Reserva Vagas Grupos", self.javascript)
+        self.assertIn("Limite Adesão - Assembleia", self.javascript)
+        self.assertIn("Vencimento Pagamento Lance", self.javascript)
+        self.assertIn("byId.pagamento_lance", self.javascript)
+        self.assertNotIn("financial-study-pdf-table-deadlines-agenda", self.javascript)
 
     def test_agenda_filtra_datas_anteriores_a_emissao(self):
         self.assertIn("start.setHours(0, 0, 0, 0)", self.javascript)

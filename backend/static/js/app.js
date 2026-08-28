@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.91";
+const APP_BUNDLE_VERSION = "4.0.92";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -2920,17 +2920,7 @@ function financialStudyProjectionTable(items, title, profileId, scenarioId) {
 }
 
 function financialStudyPdfAgendaTables(items, assemblyData, generatedAt) {
-  const cards = items.map((item) => {
-    const cycles = financialStudyGroupAssemblyCycles(item, assemblyData, generatedAt).slice(0, 2);
-    if (!cycles.length) {
-      return `<div class="financial-study-pdf-cycle-card"><div class="financial-study-pdf-cycle-head"><strong>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</strong><span>${escapeHtml(item.administradora || "-")}</span></div><div class="financial-study-pdf-cycle-empty">Sem ciclos futuros cadastrados.</div></div>`;
-    }
-    return cycles.map((cycle) => {
-      const byId = Object.fromEntries((cycle.events || []).map((event) => [event.id, event]));
-      return `<div class="financial-study-pdf-cycle-card"><div class="financial-study-pdf-cycle-head"><strong>${escapeHtml(cycle.month)}</strong><span>${escapeHtml(item.administradora || "-")}${cycle.faixa ? ` · ciclo ${escapeHtml(cycle.faixa)}` : ""}</span></div><table class="financial-study-pdf-table financial-study-pdf-cycle-table"><tbody><tr><th>Adesão</th><td>${financialStudyPdfValue(byId.adesao ? financialStudyFormatCalendarDate(byId.adesao.date) : "-")}</td></tr><tr><th>Oferta</th><td>${financialStudyPdfValue(byId.oferta ? financialStudyFormatCalendarDate(byId.oferta.date) : "-")}</td></tr><tr><th>Assembleia</th><td>${financialStudyPdfValue(byId.assembleia ? financialStudyFormatCalendarDate(byId.assembleia.date) : "-")}</td></tr><tr><th>1ª Parcela</th><td>${financialStudyPdfValue(byId.vencimento_parcela ? financialStudyFormatCalendarDate(byId.vencimento_parcela.date) : "-")}</td></tr><tr><th>Pagto lance</th><td>${financialStudyPdfValue(byId.pagamento_lance ? financialStudyFormatCalendarDate(byId.pagamento_lance.date) : "-")}</td></tr></tbody></table></div>`;
-    }).join("");
-  }).join("");
-  return cards ? `<div class="financial-study-pdf-cycle-grid">${cards}</div>` : "";
+  return "";
 }
 
 function financialStudyDeadlinesTable(items, assemblyData, generatedAt) {
@@ -2938,10 +2928,17 @@ function financialStudyDeadlinesTable(items, assemblyData, generatedAt) {
     const cycles = financialStudyGroupAssemblyCycles(item, assemblyData, generatedAt);
     const cycle = cycles[0];
     const byId = Object.fromEntries((cycle?.events || []).map((event) => [event.id, event]));
-    return `<tr><td>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</td><td>${financialStudyPdfValue(byId.adesao ? financialStudyFormatCalendarDate(byId.adesao.date) : "-")}</td><td>${financialStudyPdfValue(byId.assembleia ? financialStudyFormatCalendarDate(byId.assembleia.date) : "-")}</td><td>${financialStudyPdfValue(byId.vencimento_parcela ? financialStudyFormatCalendarDate(byId.vencimento_parcela.date) : "-")}</td><td>${financialStudyPdfValue(byId.vencimento_boleto_adesao ? financialStudyFormatCalendarDate(byId.vencimento_boleto_adesao.date) : "-")}</td></tr>`;
+    const adhesionDate = byId.adesao ? financialStudyFormatCalendarDate(byId.adesao.date) : "-";
+    const assemblyDate = byId.assembleia ? financialStudyFormatCalendarDate(byId.assembleia.date) : "-";
+    const firstInstallmentDate = byId.vencimento_parcela ? financialStudyFormatCalendarDate(byId.vencimento_parcela.date) : "-";
+    const bidPaymentDate = byId.pagamento_lance
+      ? financialStudyFormatCalendarDate(byId.pagamento_lance.date)
+      : byId.vencimento_boleto_adesao
+        ? financialStudyFormatCalendarDate(byId.vencimento_boleto_adesao.date)
+        : "-";
+    return `<tr><td>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</td><td>${financialStudyPdfValue(adhesionDate)}</td><td>${financialStudyPdfValue(adhesionDate)}</td><td>${financialStudyPdfValue(firstInstallmentDate)}</td><td>${financialStudyPdfValue(assemblyDate)}</td><td>${financialStudyPdfValue(bidPaymentDate)}</td></tr>`;
   }).join("");
-  const agenda = financialStudyPdfAgendaTables(items, assemblyData, generatedAt);
-  return financialStudyPdfSection("DATAS LIMITES PARA ADESÃO", `<table class="financial-study-pdf-table financial-study-pdf-table-deadlines"><thead><tr><th>Grupo</th><th>Limite Adesão</th><th>Próxima Assembleia</th><th>Vencimento Primeira Parcela</th><th>Vencimento Pagamento Lance</th></tr></thead><tbody>${rows}</tbody></table><div class="financial-study-pdf-agenda-note"><strong>Agenda de contratação e assembleias</strong></div>${agenda}`);
+  return financialStudyPdfSection("DATAS LIMITES PARA ADESÃO", `<table class="financial-study-pdf-table financial-study-pdf-table-deadlines"><thead><tr><th>Grupo</th><th>Limite Adesão - Reserva Vagas Grupos</th><th>Limite Adesão - Assembleia</th><th>Vencimento Primeira Parcela</th><th>Próxima Assembleia</th><th>Vencimento Pagamento Lance</th></tr></thead><tbody>${rows}</tbody></table>`);
 }
 
 function financialStudyConsiderationsSection() {

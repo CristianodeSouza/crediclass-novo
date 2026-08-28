@@ -5974,7 +5974,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-pdf-table-deadlines th:nth-child(1),
 .financial-study-pdf-table-deadlines td:nth-child(1) {
-  width: 16%;
+  width: 12%;
 }
 
 .financial-study-pdf-table-deadlines th:nth-child(2),
@@ -5984,8 +5984,33 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-table-deadlines th:nth-child(4),
 .financial-study-pdf-table-deadlines td:nth-child(4),
 .financial-study-pdf-table-deadlines th:nth-child(5),
-.financial-study-pdf-table-deadlines td:nth-child(5) {
-  width: 21%;
+.financial-study-pdf-table-deadlines td:nth-child(5),
+.financial-study-pdf-table-deadlines th:nth-child(6),
+.financial-study-pdf-table-deadlines td:nth-child(6) {
+  width: 17.6%;
+}
+
+.financial-study-pdf-table-deadlines-agenda th:nth-child(1),
+.financial-study-pdf-table-deadlines-agenda td:nth-child(1) {
+  width: 14%;
+}
+
+.financial-study-pdf-table-deadlines-agenda th:nth-child(2),
+.financial-study-pdf-table-deadlines-agenda td:nth-child(2) {
+  width: 14%;
+}
+
+.financial-study-pdf-table-deadlines-agenda th:nth-child(3),
+.financial-study-pdf-table-deadlines-agenda td:nth-child(3),
+.financial-study-pdf-table-deadlines-agenda th:nth-child(4),
+.financial-study-pdf-table-deadlines-agenda td:nth-child(4),
+.financial-study-pdf-table-deadlines-agenda th:nth-child(5),
+.financial-study-pdf-table-deadlines-agenda td:nth-child(5),
+.financial-study-pdf-table-deadlines-agenda th:nth-child(6),
+.financial-study-pdf-table-deadlines-agenda td:nth-child(6),
+.financial-study-pdf-table-deadlines-agenda th:nth-child(7),
+.financial-study-pdf-table-deadlines-agenda td:nth-child(7) {
+  width: 14.4%;
 }
 
 .financial-study-pdf-table-investment td:nth-child(n + 2),
