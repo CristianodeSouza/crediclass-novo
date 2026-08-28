@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.main import estudos_criar, estudos_excluir, estudos_listar, estudos_obter
+from backend.main import estudos_criar, estudos_excluir, estudos_exportar_pdf, estudos_listar, estudos_obter
 from backend.models import EstudoCliente, EstudoRequest
 from backend import estudos as estudos_module
 from backend.estudos import export_estudo_pdf
@@ -139,6 +139,28 @@ class EstudosTest(unittest.TestCase):
 
         self.assertEqual(filename, f"{created['estudo_id']}.pdf")
         self.assertTrue(content.startswith(b"%PDF"))
+
+    def test_exportar_pdf_faz_fallback_legado_quando_react_pdf_quebra(self):
+        study = {
+            "estudo_id": "EST-TESTE",
+            "cliente": {"nome": "Cliente Teste"},
+            "grupo": {"grupo": "40004"},
+            "financeiro": {"estrategias": [{"estrategia": "Investidor", "percentual_lance": "42,43%"}]},
+        }
+
+        with (
+            patch("backend.main.get_estudo", return_value=study),
+            patch("backend.main.react_pdf_service_status", return_value={"available": True}),
+            patch("backend.main.render_react_study_pdf", side_effect=ValueError("payload invalido")),
+            patch("backend.main.export_estudo_pdf", return_value="EST-TESTE.pdf") as legacy_export,
+        ):
+            result = estudos_exportar_pdf("EST-TESTE")
+
+        self.assertEqual(result["engine"], "legacy")
+        self.assertEqual(result["download_url"], "/files/EST-TESTE.pdf")
+        self.assertEqual(result["warning"], "React-pdf indisponivel para este estudo. PDF gerado com motor legado.")
+        legacy_export.assert_called_once()
+        self.assertEqual(legacy_export.call_args.args[0], "EST-TESTE")
 
     def test_persistencia_estudos_json(self):
         original_studies = dict(estudos_module._studies)

@@ -114,6 +114,20 @@ class ReactPdfStackTest(unittest.TestCase):
         self.assertEqual(payload["sections"]["deadlineRows"][0]["nextAssembly"], "25/09/2026")
         self.assertGreaterEqual(len(payload["sections"]["selectionCriteria"]), 5)
 
+    def test_bridge_tolera_percentuais_e_valores_localizados(self):
+        study = json.loads(json.dumps(self.sample_study))
+        study["financeiro"]["credito_original"] = "337.409,00"
+        study["financeiro"]["estrategias"][0]["percentual_lance"] = "42,43%"
+        payload = build_react_pdf_payload(study, "4.0.104")
+        self.assertEqual(payload["sections"]["projectionRows"][0]["percent"], "42,43%")
+        self.assertEqual(payload["sections"]["projectionRows"][0]["totalBid"], "R$ 143.162,64")
+
+    def test_bridge_procura_node_local_empacotado(self):
+        bridge = BRIDGE.read_text(encoding="utf-8")
+        self.assertIn('PDF_SERVICE_NODEENV_DIR = PDF_SERVICE_DIR / ".nodeenv"', bridge)
+        self.assertIn('PDF_SERVICE_NODEENV_DIR / "bin" / "node"', bridge)
+        self.assertIn('PDF_SERVICE_NODEENV_DIR / "Scripts" / "node.exe"', bridge)
+
     def test_renderer_outputs_pdf_bytes(self):
         if not react_pdf_service_status()["available"]:
             self.skipTest("React-pdf indisponivel no ambiente de teste.")

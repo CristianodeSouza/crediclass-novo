@@ -619,13 +619,17 @@ def estudos_exportar_pdf(estudo_id: str):
         try:
             path.write_bytes(render_react_study_pdf(estudo, get_settings().version))
             engine = "react-pdf"
-        except RuntimeError:
+        except Exception:
             logger.exception("Falha no React-pdf para estudo %s; aplicando fallback legado", estudo_id)
             warning = "React-pdf indisponivel para este estudo. PDF gerado com motor legado."
     else:
         warning = "React-pdf indisponivel neste ambiente. PDF gerado com motor legado."
     if engine == "legacy":
-        legacy_filename = export_estudo_pdf(estudo_id, FILES_DIR)
+        try:
+            legacy_filename = export_estudo_pdf(estudo_id, FILES_DIR)
+        except Exception:
+            logger.exception("Falha ao gerar PDF legado para estudo %s", estudo_id)
+            return JSONResponse(status_code=500, content={"success": False, "error": "Nao foi possivel gerar o PDF deste estudo."})
         if not legacy_filename:
             return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
         filename = legacy_filename

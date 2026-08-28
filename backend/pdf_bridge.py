@@ -13,6 +13,7 @@ PDF_SERVICE_DIR = BASE_DIR / "pdf_service"
 PDF_SERVICE_ENTRYPOINT = PDF_SERVICE_DIR / "render-study-pdf.mjs"
 PDF_SERVICE_PACKAGE = PDF_SERVICE_DIR / "package.json"
 PDF_SERVICE_NODE_MODULE = PDF_SERVICE_DIR / "node_modules" / "@react-pdf" / "renderer"
+PDF_SERVICE_NODEENV_DIR = PDF_SERVICE_DIR / ".nodeenv"
 
 MONTH_LABELS = {
     "01": "jan",
@@ -30,8 +31,24 @@ MONTH_LABELS = {
 }
 
 
+def _local_node_candidates() -> list[Path]:
+    return [
+        PDF_SERVICE_NODEENV_DIR / "bin" / "node",
+        PDF_SERVICE_NODEENV_DIR / "Scripts" / "node.exe",
+    ]
+
+
 def _node_binary() -> str | None:
-    return shutil.which("node")
+    explicit = str(Path(shutil.which("node") or "")).strip()
+    env_path = str(Path(__import__("os").getenv("REACT_PDF_NODE_PATH", "")).expanduser()).strip() if __import__("os").getenv("REACT_PDF_NODE_PATH") else ""
+    if env_path and Path(env_path).exists():
+        return env_path
+    for candidate in _local_node_candidates():
+        if candidate.exists():
+            return str(candidate)
+    if explicit:
+        return explicit
+    return None
 
 
 def react_pdf_service_status() -> dict[str, Any]:
@@ -46,9 +63,8 @@ def react_pdf_service_status() -> dict[str, Any]:
 
 
 def _format_money(value: Any) -> str:
-    try:
-        amount = float(value)
-    except (TypeError, ValueError):
+    amount = _to_float(value)
+    if amount is None:
         return "-"
     negative = amount < 0
     amount = abs(amount)
@@ -59,12 +75,35 @@ def _format_money(value: Any) -> str:
 
 
 def _format_percent(value: Any) -> str:
-    try:
-        number = float(value) * 100
-    except (TypeError, ValueError):
+    parsed = _to_float(value)
+    if parsed is None:
         return "-"
+    number = parsed * 100
     inteiro = f"{number:.2f}".rstrip("0").rstrip(".").replace(".", ",")
     return f"{inteiro}%"
+
+
+def _to_float(value: Any) -> float | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    raw = str(value).strip()
+    if not raw:
+        return None
+    had_percent = "%" in raw
+    raw = raw.replace("R$", "").replace("%", "").replace(" ", "")
+    if "," in raw and "." in raw:
+        raw = raw.replace(".", "").replace(",", ".")
+    elif "," in raw:
+        raw = raw.replace(",", ".")
+    try:
+        parsed = float(raw)
+    except (TypeError, ValueError):
+        return None
+    if had_percent:
+        return parsed / 100
+    return parsed
 
 
 def _format_date(value: Any) -> str:
@@ -166,7 +205,7 @@ def _contract_rows(estudo: dict[str, Any], grupo: dict[str, Any], financeiro: di
 
 def _projection_rows(financeiro: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
-    credito_base = float(financeiro.get("credito_original") or financeiro.get("credito") or 0)
+    credito_base = _to_float(financeiro.get("credito_original") or financeiro.get("credito")) or 0.0
     parcela_base = financeiro.get("parcela_inicial")
     prazo_base = financeiro.get("prazo_apos_contemplacao") or financeiro.get("prazo_operacional") or "-"
     labels = {
@@ -178,7 +217,8 @@ def _projection_rows(financeiro: dict[str, Any]) -> list[dict[str, Any]]:
     }
     for strategy in financeiro.get("estrategias", [])[:5]:
         percentual = strategy.get("percentual_lance")
-        total_bid = credito_base * float(percentual) if percentual is not None else None
+        percentual_base = _to_float(percentual)
+        total_bid = credito_base * percentual_base if percentual_base is not None else None
         rows.append(
             {
                 "title": labels.get(strategy.get("estrategia"), strategy.get("estrategia") or "-"),
