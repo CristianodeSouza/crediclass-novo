@@ -219,24 +219,24 @@ function Header({ pageNumber }) {
       React.createElement(Text, { style: styles.brandSubtitle }, "AQUISICOES INTELIGENTES"),
     ),
     React.createElement(Text, { style: styles.headerCenter }, "Estudo Financeiro | Aquisicao de Imovel"),
-    React.createElement(Text, { style: styles.headerRight }, `Pagina ${pageNumber}`),
+    React.createElement(Text, { style: styles.headerRight, render: ({ pageNumber: currentPage }) => `Pagina ${currentPage}` }),
   );
 }
 
-function Footer({ payload, pageNumber, totalPages }) {
+function Footer({ payload }) {
   return React.createElement(
     View,
     { style: styles.footer, fixed: true },
     React.createElement(Text, null, formatDate(payload.meta.generatedAt)),
     React.createElement(Text, null, `Validade: ${text(payload.meta.validityDays)} dias apos o recebimento`),
-    React.createElement(Text, null, `${pageNumber} de ${totalPages}`),
+    React.createElement(Text, { render: ({ pageNumber, totalPages }) => `${pageNumber} de ${totalPages}` }),
   );
 }
 
 function Section({ title, children }) {
   return React.createElement(
     View,
-    { style: styles.section },
+    { style: styles.section, wrap: false },
     React.createElement(Text, { style: styles.sectionTitle }, title),
     children,
   );
@@ -708,7 +708,13 @@ function StudyDocument({ payload }) {
       content: [
         React.createElement(IntroSection, { key: "intro", payload }),
         React.createElement(InvestmentSection, { key: "investment", payload }),
+      ],
+    },
+    {
+      title: null,
+      content: [
         React.createElement(FinancialSummarySection, { key: "summary", payload }),
+        React.createElement(StrategyRowsSection, { key: "strategy-rows", payload }),
       ],
     },
     {
@@ -716,29 +722,32 @@ function StudyDocument({ payload }) {
       content: [
         React.createElement(EditorialRowsSection, { key: "editorial", payload }),
         React.createElement(SpecialistsSection, { key: "specialists", payload }),
-        React.createElement(BenefitsSection, { key: "benefits", payload }),
       ],
     },
     {
       title: null,
       content: [
+        React.createElement(BenefitsSection, { key: "benefits", payload }),
         React.createElement(ContractSection, { key: "contract", payload }),
         React.createElement(StrategySection, { key: "narrative" }),
-        React.createElement(HistorySection, { key: "history", payload }),
       ],
     },
     {
       title: null,
       content: [
+        React.createElement(HistorySection, { key: "history", payload }),
         React.createElement(ProjectionSection, { key: "projection", payload }),
+      ].filter(Boolean),
+    },
+    {
+      title: null,
+      content: [
         React.createElement(DeadlinesSection, { key: "deadlines", payload }),
-        React.createElement(StrategyRowsSection, { key: "strategy-rows", payload }),
         React.createElement(OperatorNotesSection, { key: "notes", payload }),
         React.createElement(ConsiderationsSection, { key: "considerations", payload }),
       ].filter(Boolean),
     },
   ];
-  const totalPages = pages.length;
   return React.createElement(
     Document,
     {
@@ -757,7 +766,7 @@ function StudyDocument({ payload }) {
           ? [React.createElement(View, { key: `title-${index}`, style: styles.titleBar }, React.createElement(Text, null, page.title))]
           : []),
         ...page.content,
-        React.createElement(Footer, { payload, pageNumber: index + 1, totalPages }),
+        React.createElement(Footer, { payload }),
       ),
     ),
   );

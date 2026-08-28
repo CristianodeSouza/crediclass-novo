@@ -38,11 +38,15 @@ class FinancialStudyUiTest(unittest.TestCase):
     def test_previa_do_pdf_e_renderizada_em_modal_dedicado(self):
         self.assertIn('id="financialStudyPreviewModal"', self.index_html)
         self.assertIn('id="financialStudyPreviewContent"', self.index_html)
+        self.assertIn('id="financialStudyPreviewSubtitle"', self.index_html)
         self.assertIn('data-study-open-preview', self.javascript)
         self.assertIn('bootstrap.Modal.getOrCreateInstance(previewModal).show()', self.javascript)
+        self.assertIn("generateStudyPdfArtifact()", self.javascript)
+        self.assertIn('previewContent.innerHTML = `<iframe class="financial-study-preview-frame"', self.javascript)
         self.assertIn('previewPrintButton.onclick = () => exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"))', self.javascript)
         self.assertNotIn("previewPrintButton.onclick = () => window.print()", self.javascript)
         self.assertIn(".financial-study-preview-dialog", self.styles)
+        self.assertIn(".financial-study-preview-frame", self.styles)
         self.assertIn("--financial-study-a4-width: 210mm;", self.styles)
         self.assertIn("--financial-study-a4-height: 297mm;", self.styles)
         self.assertIn("width: var(--financial-study-a4-width);", self.styles)
@@ -63,6 +67,7 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertNotIn("financial-study-pdf-client-meta", self.javascript)
         self.assertIn("const totalPages = pages.length;", self.javascript)
         self.assertNotIn("financialStudyPdfPage(1, 4", self.javascript)
+        self.assertIn("Prévia em PDF", self.javascript)
 
     def test_bloco_melhores_consorcios_tem_texto_padrao_e_administradora_dinamica(self):
         self.assertIn('Administradora selecionada: <strong>${escapeHtml(administrator)}</strong>', self.javascript)

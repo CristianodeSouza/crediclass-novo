@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.100";
+const APP_BUNDLE_VERSION = "4.0.101";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -3189,15 +3189,34 @@ async function renderFinancialStudyScreen() {
   if (previewContent) previewContent.innerHTML = documentPreview;
 
   screen.innerHTML = `<div class="financial-study-page">
-    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Abra a prévia em HTML para revisar o documento que será enviado ao cliente.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-outline-primary" type="button" data-study-generate>Gerar Estudo</button><button class="btn btn-primary" type="button" data-study-open-preview>Ver prévia do PDF</button></div></div>
+    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Revise o documento e abra a prévia do PDF real gerado pelo backend antes do envio ao cliente.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-outline-primary" type="button" data-study-generate>Gerar Estudo</button><button class="btn btn-primary" type="button" data-study-open-preview>Ver prévia do PDF</button></div></div>
     <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
-    <section class="financial-study-preview-launcher no-print"><div><span>Prévia HTML</span><h3>Documento pronto para revisão</h3><p>A prévia é aberta em uma janela dedicada, sem comprimir o conteúdo ao lado da navegação do sistema.</p></div><button class="btn btn-primary" type="button" data-study-open-preview>Abrir prévia do PDF</button></section>
+    <section class="financial-study-preview-launcher no-print"><div><span>Prévia em PDF</span><h3>Documento pronto para revisão</h3><p>A prévia abre o arquivo PDF gerado pelo backend, mantendo a mesma base usada para impressão e salvamento.</p></div><button class="btn btn-primary" type="button" data-study-open-preview>Abrir prévia do PDF</button></section>
   </div>`;
-  const openPreview = () => {
-    if (!previewModal || typeof bootstrap === "undefined") return;
+  const previewSubtitle = document.getElementById("financialStudyPreviewSubtitle");
+  const openPreview = async () => {
+    if (!previewModal || typeof bootstrap === "undefined" || !previewContent) return;
+    previewContent.innerHTML = `<div class="table-state">Gerando PDF...</div>`;
+    previewSubtitle.textContent = "PDF gerado pelo backend com os dados mais recentes do estudo atual.";
     bootstrap.Modal.getOrCreateInstance(previewModal).show();
+    try {
+      const result = await generateStudyPdfArtifact();
+      if (!result) return;
+      if (result.warning) {
+        showToast(result.warning, "warning");
+      }
+      previewSubtitle.textContent = result.engine === "react-pdf"
+        ? "Prévia do PDF real gerado pelo motor React-pdf."
+        : "Prévia do PDF gerado com fallback legado.";
+      previewContent.innerHTML = `<iframe class="financial-study-preview-frame" title="Prévia do PDF do estudo financeiro" src="${result.download_url}#toolbar=1&navpanes=0&view=FitH"></iframe>`;
+    } catch (error) {
+      previewSubtitle.textContent = "Nao foi possivel gerar a prévia do PDF neste momento.";
+      previewContent.innerHTML = `<div class="table-state table-state-error">Nao foi possivel carregar a prévia do PDF.</div>`;
+    }
   };
-  screen.querySelectorAll("[data-study-open-preview]").forEach((button) => button.addEventListener("click", openPreview));
+  screen.querySelectorAll("[data-study-open-preview]").forEach((button) => button.addEventListener("click", () => {
+    openPreview().catch(() => showToast("Nao foi possivel carregar a prévia do PDF.", "danger"));
+  }));
   const previewPrintButton = previewModal?.querySelector("[data-study-preview-print]");
   if (previewPrintButton) previewPrintButton.onclick = () => exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
   screen.querySelector("[data-study-customize]")?.addEventListener("click", () => screen.querySelector("[data-study-customizer-panel]")?.classList.toggle("d-none"));
@@ -4568,6 +4587,23 @@ async function exportStudyPdf(studyId) {
   }
   showToast(result.engine === "react-pdf" ? "PDF gerado com React-pdf." : "PDF gerado com motor legado.", "success");
   window.open(result.download_url, "_blank", "noopener");
+}
+
+async function generateStudyPdfArtifact(studyId) {
+  let targetStudyId = studyId;
+  if (!targetStudyId && currentStudy) {
+    if (!currentStudy.savedStudyId) {
+      const result = await saveCurrentStudy();
+      targetStudyId = result?.estudo_id;
+    } else {
+      targetStudyId = currentStudy.savedStudyId;
+    }
+  }
+  if (!targetStudyId) {
+    showToast("Salve ou selecione um estudo antes de abrir a prévia.", "warning");
+    return null;
+  }
+  return apiPost(`/estudos/${encodeURIComponent(targetStudyId)}/exportar-pdf`, {});
 }
 
 async function ensureCurrentStudySaved(options = {}) {

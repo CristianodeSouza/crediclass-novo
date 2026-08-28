@@ -5134,6 +5134,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
   overflow: auto;
 }
 
+.financial-study-preview-frame {
+  width: 100%;
+  min-height: 82vh;
+  border: 0;
+  border-radius: 18px;
+  background: #f3f6f9;
+  box-shadow: inset 0 0 0 1px rgba(24, 39, 55, 0.08);
+}
+
 .financial-study-preview-body .financial-study-pdf-document {
   width: min(calc(var(--financial-study-a4-width) + 24mm), 100%);
   margin: 0 auto;
@@ -5158,6 +5167,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
   .financial-study-preview-body {
     padding: 0;
+  }
+
+  .financial-study-preview-frame {
+    min-height: 100vh;
+    border-radius: 0;
   }
 
   .financial-study-preview-body .financial-study-pdf-document {
