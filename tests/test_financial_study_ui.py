@@ -59,6 +59,12 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn("<strong>1) Sorteio:</strong> Participam do sorteio", self.javascript)
         self.assertIn(".financial-study-pdf-table-editorial td p {", self.styles)
 
+    def test_simulacao_de_investimento_usa_apenas_tabela_expandida(self):
+        self.assertIn("Simulação dinâmica usando o estudo atual e o grupo em destaque.", self.javascript)
+        self.assertIn("financial-study-pdf-table-investment-wide", self.javascript)
+        self.assertIn(".financial-study-pdf-table-investment-wide", self.styles)
+        self.assertNotIn('eyebrow: "Simulação dinâmica"', self.javascript)
+
 
 if __name__ == "__main__":
     unittest.main()

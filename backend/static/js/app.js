@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.90";
+const APP_BUNDLE_VERSION = "4.0.91";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -2815,22 +2815,11 @@ function financialStudyInvestmentSimulation(items, profile) {
   const quotas = financialStudyQuotaCount(highlighted);
   const without = financialStudyScenario(highlighted, "without_embedded");
   const ownResources = Number(profile.lance_proprio || 0) + Number(profile.fgts || 0);
-  const visual = financialStudyPdfVisualPanel({
-    eyebrow: "Simulação dinâmica",
-    title: `Grupo ${String(highlighted.grupo || highlighted.grupo_id || "-")}`,
-    caption: "Composição resumida do cenário principal considerando o estudo atual e a opção em destaque.",
-    metrics: [
-      financialStudyPdfMetric("Administradora", escapeHtml(highlighted.administradora || "-")),
-      financialStudyPdfMetric("Recurso próprio", formatMoney(ownResources)),
-      financialStudyPdfMetric("Crédito contratado", formatMoney(financialStudyScaleValue(without.credito_contratado, quotas))),
-      financialStudyPdfMetric("Prazo", `${escapeHtml(String(highlighted.prazo_restante || "-"))} meses`),
-    ],
-  });
   const rows = [
     ["À Vista", financialStudyPdfValue(formatMoney(ownResources)), financialStudyPdfValue("-"), financialStudyPdfValue("1"), financialStudyPdfValue("-")],
     ["Consórcio selecionado", financialStudyPdfValue(formatMoney(financialStudyScaleValue(without.credito_contratado, quotas))), financialStudyPdfValue(formatMoney(financialStudyScaleValue(without.parcela_inicial, quotas))), financialStudyPdfValue(String(highlighted.prazo_restante || "-")), financialStudyPdfValue(formatMoney(financialStudyScaleValue(without.saldo_devedor, quotas)))],
   ];
-  return financialStudyPdfSection("SIMULAÇÃO DE INVESTIMENTO", `<div class="financial-study-pdf-split-layout"><div>${visual}</div><div><table class="financial-study-pdf-table financial-study-pdf-table-investment"><thead><tr><th>Uso de Recurso Próprio</th><th>Valor base</th><th>Parcela inicial</th><th>Prazo em Meses</th><th>Saldo / custo no período</th></tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table></div></div>`, "Simulação dinâmica usando o estudo atual e o grupo em destaque.");
+  return financialStudyPdfSection("SIMULAÇÃO DE INVESTIMENTO", `<table class="financial-study-pdf-table financial-study-pdf-table-investment financial-study-pdf-table-investment-wide"><thead><tr><th>Uso de Recurso Próprio</th><th>Valor base</th><th>Parcela inicial</th><th>Prazo em Meses</th><th>Saldo / custo no período</th></tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table>`, "Simulação dinâmica usando o estudo atual e o grupo em destaque.");
 }
 
 function financialStudySelectionNarrative(highlightedAdmin) {

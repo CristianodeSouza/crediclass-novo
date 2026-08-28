@@ -5852,6 +5852,35 @@ body[data-theme="escuro"] .btn-outline-secondary {
   width: 10%;
 }
 
+.financial-study-pdf-table-investment-wide {
+  width: 100%;
+}
+
+.financial-study-pdf-table-investment-wide th:nth-child(1),
+.financial-study-pdf-table-investment-wide td:nth-child(1) {
+  width: 30%;
+}
+
+.financial-study-pdf-table-investment-wide th:nth-child(2),
+.financial-study-pdf-table-investment-wide td:nth-child(2) {
+  width: 18%;
+}
+
+.financial-study-pdf-table-investment-wide th:nth-child(3),
+.financial-study-pdf-table-investment-wide td:nth-child(3) {
+  width: 16%;
+}
+
+.financial-study-pdf-table-investment-wide th:nth-child(4),
+.financial-study-pdf-table-investment-wide td:nth-child(4) {
+  width: 10%;
+}
+
+.financial-study-pdf-table-investment-wide th:nth-child(5),
+.financial-study-pdf-table-investment-wide td:nth-child(5) {
+  width: 26%;
+}
+
 .financial-study-pdf-table-summary th:nth-child(1),
 .financial-study-pdf-table-summary td:nth-child(1) {
   width: 19%;
