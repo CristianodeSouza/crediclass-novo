@@ -2501,7 +2501,26 @@ function financialStudyScenario(item, scenarioId) {
 
 function scenarioMissingPrimaryFinancials(scenario) {
   if (!scenario) return true;
-  return ["credito_contratado", "saldo_devedor", "parcela_inicial", "lance_total_cenario"].every((key) => scenario[key] == null);
+  return ["credito_contratado", "saldo_devedor", "parcela_inicial"].every((key) => scenario[key] == null);
+}
+
+function fallbackProfilesForDisplay(withoutScenario, scenario) {
+  const sourceProfiles = Array.isArray(withoutScenario?.perfis_contemplacao) ? withoutScenario.perfis_contemplacao : [];
+  const currentProfiles = new Map(((scenario?.perfis_contemplacao) || []).map((profile) => [profile.id, profile]));
+  return sourceProfiles.map((profile) => {
+    const current = currentProfiles.get(profile.id) || {};
+    return {
+      ...profile,
+      ...current,
+      lance_ideal: profile.lance_ideal ?? current.lance_ideal ?? null,
+      lance_ideal_total: profile.lance_ideal_total ?? current.lance_ideal_total ?? null,
+      lance_embutido: current.lance_embutido ?? 0,
+      lance_cliente: profile.lance_cliente ?? current.lance_cliente ?? null,
+      percentual_lance_efetivo: profile.percentual_lance_efetivo ?? current.percentual_lance_efetivo ?? null,
+      falta_para_ideal: profile.falta_para_ideal ?? current.falta_para_ideal ?? null,
+      atinge_perfil: profile.atinge_perfil ?? current.atinge_perfil ?? false,
+    };
+  });
 }
 
 function fallbackScenarioForDisplay(item, scenarioId) {
@@ -2526,6 +2545,7 @@ function fallbackScenarioForDisplay(item, scenarioId) {
     lance_total_cenario: without.lance_cliente_total ?? without.lance_total_cenario ?? scenario.lance_total_cenario,
     percentual_lance_cliente: without.percentual_lance_cliente ?? scenario.percentual_lance_cliente,
     percentual_lance_efetivo: without.percentual_lance_cliente ?? without.percentual_lance_efetivo ?? scenario.percentual_lance_efetivo,
+    perfis_contemplacao: fallbackProfilesForDisplay(without, scenario),
   };
 }
 
