@@ -5346,6 +5346,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   page-break-after: always;
   break-after: page;
   position: relative;
+  overflow: hidden;
 }
 
 .financial-study-pdf-page.is-last {
@@ -5391,6 +5392,19 @@ body[data-theme="escuro"] .btn-outline-secondary {
   gap: 4.2mm;
   min-height: calc(var(--financial-study-a4-height) - var(--financial-study-page-padding-top) - var(--financial-study-page-padding-bottom) - 24mm);
   align-content: start;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.financial-study-pdf-body > *,
+.financial-study-pdf-section,
+.financial-study-pdf-section-group,
+.financial-study-pdf-cover,
+.financial-study-pdf-considerations {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .financial-study-pdf-intro-sheet {
@@ -5737,6 +5751,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   table-layout: fixed;
   background: #fff;
   font-size: 12.5px;
+  max-width: 100%;
 }
 
 .financial-study-pdf-table th,
@@ -5745,7 +5760,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   border: 1px solid #d8dde3;
   vertical-align: middle;
   overflow-wrap: break-word;
-  word-break: normal;
+  word-break: break-word;
   line-height: 1.4;
   font-variant-numeric: tabular-nums;
 }
@@ -5773,17 +5788,17 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-value {
   display: inline-flex;
   max-width: 100%;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .financial-study-pdf-editorial-table th {
-  width: 180px;
+  width: 156px;
   background: #fff;
   color: #20242a;
   font-weight: 800;
   text-align: left;
   vertical-align: top;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .financial-study-pdf-editorial-table td {
@@ -6240,6 +6255,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
     padding: 12mm 12mm 18mm;
     page-break-after: always;
     break-after: page;
+    overflow: hidden;
   }
 
   .financial-study-pdf-page.is-last {
@@ -6274,9 +6290,19 @@ body[data-theme="escuro"] .btn-outline-secondary {
     font-size: 10pt;
   }
 
+  .financial-study-pdf-body {
+    min-height: calc(297mm - 30mm);
+  }
+
   .financial-study-pdf-table th,
   .financial-study-pdf-table td {
     padding: 4px 6px;
+  }
+
+  .financial-study-pdf-header-title,
+  .financial-study-pdf-header-page,
+  .financial-study-pdf-footer {
+    font-size: 9.5pt;
   }
 
   .financial-study-pdf-section,

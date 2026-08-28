@@ -45,6 +45,8 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn("--financial-study-a4-height: 297mm;", self.styles)
         self.assertIn("width: var(--financial-study-a4-width);", self.styles)
         self.assertIn("min-height: var(--financial-study-a4-height);", self.styles)
+        self.assertIn("overflow: hidden;", self.styles)
+        self.assertIn("word-break: break-word;", self.styles)
 
     def test_estudo_reaproveita_cenario_sem_embutido_quando_x_ausente(self):
         self.assertIn("function fallbackScenarioForDisplay(item, scenarioId)", self.javascript)
