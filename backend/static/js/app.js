@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.95";
+const APP_BUNDLE_VERSION = "4.0.96";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -2965,11 +2965,19 @@ function renderFinancialStudyPdfDocument({ items, profile, preferences, clientNa
   ];
   const introWrapperClass = sectionClass("cliente");
   const intro = `<div${introWrapperClass ? ` class="${introWrapperClass.trim()}"` : ""}>${financialStudyPdfIntroSection({ clientName, objective, highlightedGroup, highlightedStrategy, proposalId, introNotes })}</div>`;
-  const page1 = intro + `<div class="financial-study-pdf-section-group${sectionClass("resumo")}" data-study-content="resumo">${financialStudyInvestmentSimulation(items, profile)}${financialStudySelectionNarrative(items[0]?.administradora)}${financialStudySummaryTable(items)}${financialStudyInvestmentsTable(items)}</div>`;
-  const page2 = `<div class="financial-study-pdf-section-group${sectionClass("grupos")}" data-study-content="grupos">${financialStudySpecialistsSection()}${financialStudyBenefitsSection(items[0]?.administradora)}${financialStudyContractTable(items)}${financialStudyStrategyNarrative()}${financialStudyHistoryTable(items)}${financialStudyProjectionTable(items, "1. Sorteio Geral", "conservative", "without_embedded")}</div>`;
-  const page3 = `<div class="financial-study-pdf-section-group${sectionClass("grupos")}" data-study-content="grupos">${financialStudyProjectionTable(items, "2. Lance Rápido", "fast", "without_embedded")}${financialStudyProjectionTable(items, "3. Lance Moderado", "moderate", "with_embedded")}${assemblyError ? `<div class="financial-study-pdf-warning">${escapeHtml(assemblyError)}</div>` : ""}${financialStudyDeadlinesTable(items, assemblyData || {}, generatedAt)}</div>`;
-  const page4 = financialStudyConsiderationsSection();
-  return `<article class="financial-study-document financial-study-pdf-document">${financialStudyPdfPage(1, 4, issueDateLabel, page1)}${financialStudyPdfPage(2, 4, issueDateLabel, page2)}${financialStudyPdfPage(3, 4, issueDateLabel, page3)}${financialStudyPdfPage(4, 4, issueDateLabel, page4, "is-last")}</article>`;
+  const pages = [
+    intro + `<div class="financial-study-pdf-section-group${sectionClass("resumo")}" data-study-content="resumo">${financialStudyInvestmentSimulation(items, profile)}</div>`,
+    `<div class="financial-study-pdf-section-group${sectionClass("resumo")}" data-study-content="resumo">${financialStudySelectionNarrative(items[0]?.administradora)}</div>`,
+    `<div class="financial-study-pdf-section-group${sectionClass("resumo")}" data-study-content="resumo">${financialStudySummaryTable(items)}${financialStudyInvestmentsTable(items)}</div>`,
+    `<div class="financial-study-pdf-section-group${sectionClass("grupos")}" data-study-content="grupos">${financialStudySpecialistsSection()}${financialStudyBenefitsSection(items[0]?.administradora)}${financialStudyContractTable(items)}</div>`,
+    `<div class="financial-study-pdf-section-group${sectionClass("grupos")}" data-study-content="grupos">${financialStudyStrategyNarrative()}${financialStudyHistoryTable(items)}</div>`,
+    `<div class="financial-study-pdf-section-group${sectionClass("grupos")}" data-study-content="grupos">${financialStudyProjectionTable(items, "1. Sorteio Geral", "conservative", "without_embedded")}</div>`,
+    `<div class="financial-study-pdf-section-group${sectionClass("grupos")}" data-study-content="grupos">${financialStudyProjectionTable(items, "2. Lance Rápido", "fast", "without_embedded")}</div>`,
+    `<div class="financial-study-pdf-section-group${sectionClass("grupos")}" data-study-content="grupos">${financialStudyProjectionTable(items, "3. Lance Moderado", "moderate", "with_embedded")}${assemblyError ? `<div class="financial-study-pdf-warning">${escapeHtml(assemblyError)}</div>` : ""}${financialStudyDeadlinesTable(items, assemblyData || {}, generatedAt)}</div>`,
+    financialStudyConsiderationsSection(),
+  ].filter(Boolean);
+  const totalPages = pages.length;
+  return `<article class="financial-study-document financial-study-pdf-document">${pages.map((body, index) => financialStudyPdfPage(index + 1, totalPages, issueDateLabel, body, index === totalPages - 1 ? "is-last" : "")).join("")}</article>`;
 }
 
 function financialStudyComparable(value) {

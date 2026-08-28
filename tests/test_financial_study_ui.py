@@ -59,6 +59,8 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn(".financial-study-pdf-intro-copy", self.styles)
         self.assertIn("width: min(calc(var(--financial-study-a4-width) + 24mm), 100%);", self.styles)
         self.assertNotIn("financial-study-pdf-client-meta", self.javascript)
+        self.assertIn("const totalPages = pages.length;", self.javascript)
+        self.assertNotIn("financialStudyPdfPage(1, 4", self.javascript)
 
     def test_bloco_melhores_consorcios_tem_texto_padrao_e_administradora_dinamica(self):
         self.assertIn('Administradora selecionada: <strong>${escapeHtml(administrator)}</strong>', self.javascript)
