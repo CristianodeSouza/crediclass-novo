@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.102";
+const APP_BUNDLE_VERSION = "4.0.103";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -3193,11 +3193,14 @@ async function renderFinancialStudyScreen() {
     <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
     <section class="financial-study-preview-launcher no-print"><div><span>Prévia em PDF</span><h3>Documento pronto para revisão</h3><p>A prévia abre o arquivo PDF gerado pelo backend, mantendo a mesma base usada para impressão e salvamento.</p></div><button class="btn btn-primary" type="button" data-study-open-preview>Abrir prévia do PDF</button></section>
   </div>`;
-  const previewSubtitle = document.getElementById("financialStudyPreviewSubtitle");
+  const previewSubtitle = document.getElementById("financialStudyPreviewSubtitle")
+    || previewModal?.querySelector(".modal-subtitle");
   const openPreview = async () => {
     if (!previewModal || typeof bootstrap === "undefined" || !previewContent) return;
     previewContent.innerHTML = `<div class="table-state">Gerando PDF...</div>`;
-    previewSubtitle.textContent = "PDF gerado pelo backend com os dados mais recentes do estudo atual.";
+    if (previewSubtitle) {
+      previewSubtitle.textContent = "PDF gerado pelo backend com os dados mais recentes do estudo atual.";
+    }
     bootstrap.Modal.getOrCreateInstance(previewModal).show();
     try {
       const result = await generateStudyPdfArtifact();
@@ -3205,12 +3208,16 @@ async function renderFinancialStudyScreen() {
       if (result.warning) {
         showToast(result.warning, "warning");
       }
-      previewSubtitle.textContent = result.engine === "react-pdf"
-        ? "Prévia do PDF real gerado pelo motor React-pdf."
-        : "Prévia do PDF gerado com fallback legado.";
+      if (previewSubtitle) {
+        previewSubtitle.textContent = result.engine === "react-pdf"
+          ? "Prévia do PDF real gerado pelo motor React-pdf."
+          : "Prévia do PDF gerado com fallback legado.";
+      }
       previewContent.innerHTML = `<iframe class="financial-study-preview-frame" title="Prévia do PDF do estudo financeiro" src="${result.download_url}#toolbar=1&navpanes=0&view=FitH"></iframe>`;
     } catch (error) {
-      previewSubtitle.textContent = "Nao foi possivel gerar a prévia do PDF neste momento.";
+      if (previewSubtitle) {
+        previewSubtitle.textContent = "Nao foi possivel gerar a prévia do PDF neste momento.";
+      }
       previewContent.innerHTML = `<div class="table-state table-state-error">Nao foi possivel carregar a prévia do PDF.</div>`;
     }
   };
