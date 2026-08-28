@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.85";
+const APP_BUNDLE_VERSION = "4.0.87";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -2160,8 +2160,61 @@ function focusMotor360Group(anchorId) {
   window.setTimeout(() => target.classList.remove("motor360-group--focus"), 1800);
 }
 
+function motor360BuildFallbackProfileRows(referenceScenario) {
+  return (referenceScenario?.perfis_contemplacao || []).map((profile) => ({
+    id: profile.id,
+    label: profile.label,
+    percentual_referencia: profile.percentual_referencia ?? null,
+    lance_ideal: null,
+    lance_ideal_total: null,
+    lance_embutido: 0,
+    lance_cliente: referenceScenario?.lance_cliente_total ?? null,
+    percentual_lance_efetivo: null,
+    falta_para_ideal: null,
+    atinge_perfil: false,
+  }));
+}
+
+function motor360EnsureScenarioPair(rawScenarios, options = {}) {
+  const scenarios = Array.isArray(rawScenarios) ? rawScenarios.filter(Boolean) : [];
+  const byId = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
+  const referenceScenario = byId.without_embedded || byId.with_embedded || null;
+  const placeholder = (scenarioId) => ({
+    id: scenarioId,
+    credito_contratado: null,
+    credito_liquido_projetado: null,
+    lance_embutido: 0,
+    saldo_devedor: null,
+    parcela_inicial: null,
+    parcela_pos_contemplacao: null,
+    parcela_maxima_cliente: referenceScenario?.parcela_maxima_cliente ?? null,
+    parcela_desejada_cliente: referenceScenario?.parcela_desejada_cliente ?? null,
+    lance_cliente_total: referenceScenario?.lance_cliente_total ?? null,
+    lance_total_cenario: referenceScenario?.lance_cliente_total ?? null,
+    percentual_lance_cliente: referenceScenario?.percentual_lance_cliente ?? null,
+    percentual_lance_efetivo: null,
+    initial_installment_compatible: null,
+    within_desired_reference: null,
+    perfis_contemplacao: motor360BuildFallbackProfileRows(referenceScenario),
+    credit_compatible: false,
+    term_compatible: false,
+    creation_status: "not_created",
+    creation_reason: "cenario_ausente_no_retorno",
+    composition_candidate: Boolean(options.composition),
+  });
+  return ["without_embedded", "with_embedded"].map((scenarioId) => byId[scenarioId] || placeholder(scenarioId));
+}
+
+function motor360ProfileGapText(value) {
+  return value == null ? "Faltam -" : `Faltam ${formatMoney(value)}`;
+}
+
+function motor360ProfileIdealText(label, value) {
+  return `${label}: ${value == null ? "-" : formatMoney(value)}`;
+}
+
 function renderMotor360GroupCard(item) {
-  const scenarios = Array.isArray(item.cenarios) ? item.cenarios : [];
+  const scenarios = motor360EnsureScenarioPair(item.cenarios);
   const byId = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
   const profiles = (byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [])
     .filter((profile) => profileHasVisibleReference(byId, profile.id));
@@ -2185,10 +2238,10 @@ function renderMotor360GroupCard(item) {
   const scaledProfileCards = profiles.map((profile) => {
     const values = ["without_embedded", "with_embedded"].map((scenarioId) => {
       const value = (byId[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profile.id);
-      if (!value || value.percentual_referencia === null || value.percentual_referencia === undefined) return `<div class="motor360-profile-card-value is-empty"><small>Não informado</small></div>`;
+      if (!value || value.percentual_referencia === null || value.percentual_referencia === undefined) return `<div class="motor360-profile-card-value is-empty"><small>${scenarioId === "without_embedded" ? "Sem embutido" : "Com embutido"}</small><b>-</b><span>Faltam -</span><em>${scenarioId === "with_embedded" ? "Lance ideal em recursos do cliente" : "Lance ideal"}: -</em></div>`;
       const idealLabel = scenarioId === "with_embedded" ? "Lance ideal em recursos do cliente" : "Lance ideal";
       const embeddedNote = scenarioId === "with_embedded" ? `<small>Embutido considerado: ${formatMoney(scaleMoney(value.lance_embutido))}</small>` : "";
-      return `<div class="motor360-profile-card-value ${value.atinge_perfil ? "is-hit" : "is-gap"}"><small>${scenarioId === "without_embedded" ? "Sem embutido" : "Com embutido"}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${value.atinge_perfil ? "Atinge o perfil" : `Faltam ${formatMoney(scaleMoney(value.falta_para_ideal))}`}</span><em>${idealLabel}: ${formatMoney(scaleMoney(value.lance_ideal))}</em>${embeddedNote}</div>`;
+      return `<div class="motor360-profile-card-value ${value.atinge_perfil ? "is-hit" : "is-gap"}"><small>${scenarioId === "without_embedded" ? "Sem embutido" : "Com embutido"}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${value.atinge_perfil ? "Atinge o perfil" : motor360ProfileGapText(scaleMoney(value.falta_para_ideal))}</span><em>${motor360ProfileIdealText(idealLabel, scaleMoney(value.lance_ideal))}</em>${embeddedNote}</div>`;
     }).join("");
     return `<div class="motor360-profile-card"><strong>${escapeHtml(profile.label)}</strong><div class="motor360-profile-card-values">${values}</div></div>`;
   }).join("");
@@ -2205,24 +2258,48 @@ function renderMotor360CompositionCard(item) {
   const quotaExceeded = selected && quotaLimit !== null && quotaCount > quotaLimit;
   const visibleCapacitySummary = renderMotor360VisibleCapacitySummary(item);
   const quotaWarning = quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : "";
-  const scenarios = item.cenarios || [];
+  const scenarios = motor360EnsureScenarioPair(item.cenarios, { composition: true });
   const byId = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
   const profiles = (byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [])
     .filter((profile) => profileHasVisibleReference(byId, profile.id));
   const status = "Em composição";
   const scaleMoney = (value) => value === null || value === undefined ? value : Number(value) * quotaCount;
+  const compositionScenarioStatus = (scenario) => {
+    if (!scenario || scenario.creation_status === "not_created") {
+      return {
+        label: "Não disponível",
+        detail: formatMotor360Reason(scenario?.creation_reason),
+        compatible: false,
+      };
+    }
+    const totalInstallment = Number(scaleMoney(scenario.parcela_inicial) || 0);
+    const incomeCeiling = Number(scenario.parcela_maxima_cliente || 0);
+    const desiredInstallment = Number(scenario.parcela_desejada_cliente || 0);
+    const withinIncome = incomeCeiling > 0 ? totalInstallment <= incomeCeiling : null;
+    const withinDesired = desiredInstallment > 0 ? totalInstallment <= desiredInstallment : null;
+    return {
+      label: "Em composição",
+      detail: withinIncome === null
+        ? "não analisado"
+        : withinIncome
+          ? (withinDesired === false ? "dentro do teto de renda e acima da parcela desejada" : "dentro do teto de renda")
+          : "acima do teto de renda",
+      compatible: withinIncome !== false,
+    };
+  };
   const scenarioCards = scenarios.map((scenario) => {
     const title = scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
-    const statusInfo = motor360ScenarioStatus(scenario);
+    const statusInfo = compositionScenarioStatus(scenario);
     return `<article class="motor360-scenario-card ${statusInfo.compatible ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusInfo.label}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado por cota</small><b>${formatMoney(scenario.credito_contratado)}</b></div><div><small>Crédito contratado selecionado</small><b>${formatMoney(scaleMoney(scenario.credito_contratado))}</b></div><div><small>Crédito líquido por cota</small><b>${formatMoney(scenario.credito_liquido_projetado)}</b></div><div><small>Crédito líquido selecionado</small><b>${formatMoney(scaleMoney(scenario.credito_liquido_projetado))}</b></div><div><small>Lance do cliente</small><b>${formatMoney(scenario.lance_cliente_total)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Lance embutido total</small><b>${formatMoney(scaleMoney(scenario.lance_embutido))}</b></div><div><small>Parcela por cota</small><b>${formatMoney(scenario.parcela_inicial)}</b></div><div><small>Parcela total</small><b>${formatMoney(scaleMoney(scenario.parcela_inicial))}</b></div><div><small>Saldo devedor por cota</small><b>${formatMoney(scenario.saldo_devedor)}</b></div><div><small>Saldo devedor total</small><b>${formatMoney(scaleMoney(scenario.saldo_devedor))}</b></div><div><small>Parcela pós-contemplação</small><b>${scenario.parcela_pos_contemplacao == null ? "Pendente da distribuição do lance" : formatMoney(scaleMoney(scenario.parcela_pos_contemplacao))}</b></div></div><small class="motor360-scenario-note">${scenario.creation_status === "not_created" ? `Status: ${statusInfo.detail}` : `Parcela inicial: ${statusInfo.detail}`}</small></article>`;
   }).join("");
   const scaledProfileCards = profiles.map((profile) => {
-    const values = ["without_embedded", "with_embedded"].map((scenarioId) => {
+    const values = ["without_embedded", "with_embedded"].flatMap((scenarioId) => {
+      if (!byId[scenarioId]) return [];
       const value = (byId[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profile.id);
-      if (!value || value.percentual_referencia === null || value.percentual_referencia === undefined) return `<div class="motor360-profile-card-value is-empty"><small>Não informado</small></div>`;
+      if (!value || value.percentual_referencia === null || value.percentual_referencia === undefined) return [];
       const idealLabel = scenarioId === "with_embedded" ? "Lance ideal em recursos do cliente" : "Lance ideal";
       const embeddedNote = scenarioId === "with_embedded" ? `<small>Embutido considerado: ${formatMoney(scaleMoney(value.lance_embutido))}</small>` : "";
-      return `<div class="motor360-profile-card-value ${value.atinge_perfil ? "is-hit" : "is-gap"}"><small>${scenarioId === "without_embedded" ? "Sem embutido" : "Com embutido"}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${value.atinge_perfil ? "Atinge o perfil" : `Faltam ${formatMoney(scaleMoney(value.falta_para_ideal))}`}</span><em>${idealLabel}: ${formatMoney(scaleMoney(value.lance_ideal))}</em>${embeddedNote}</div>`;
+      return [`<div class="motor360-profile-card-value ${value.atinge_perfil ? "is-hit" : "is-gap"}"><small>${scenarioId === "without_embedded" ? "Sem embutido" : "Com embutido"}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${value.atinge_perfil ? "Atinge o perfil" : motor360ProfileGapText(scaleMoney(value.falta_para_ideal))}</span><em>${motor360ProfileIdealText(idealLabel, scaleMoney(value.lance_ideal))}</em>${embeddedNote}</div>`];
     }).join("");
     return `<div class="motor360-profile-card"><strong>${escapeHtml(profile.label)}</strong><div class="motor360-profile-card-values">${values}</div></div>`;
   }).join("");

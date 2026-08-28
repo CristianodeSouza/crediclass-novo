@@ -473,8 +473,48 @@ def analyze_client_consortium_viability(
             and remaining_term is not None
         ):
             composition_scenarios = []
+            client_total_bid = own + fgts
+            minimum_quota_count = math.ceil(desired / maximum)
             for with_embedded in (False, True):
-                if with_embedded and (embedded is None or embedded <= 0 or embedded >= 1):
+                embedded_available = embedded is not None and embedded > 0 and embedded < 1
+                if with_embedded and not embedded_available:
+                    profile_rows = []
+                    for profile_id, label, strategy_key in CONTEMPLATION_PROFILE_TARGETS:
+                        threshold = ranges.get(strategy_key)
+                        profile_rows.append({
+                            "id": profile_id,
+                            "label": label,
+                            "percentual_referencia": threshold,
+                            "lance_ideal": None,
+                            "lance_ideal_total": None,
+                            "lance_embutido": money(Decimal("0")),
+                            "lance_cliente": money(client_total_bid),
+                            "percentual_lance_efetivo": None,
+                            "falta_para_ideal": None,
+                            "atinge_perfil": False,
+                        })
+                    composition_scenarios.append({
+                        "id": "with_embedded",
+                        "credito_contratado": None,
+                        "credito_liquido_projetado": None,
+                        "lance_embutido": money(Decimal("0")),
+                        "saldo_devedor": None,
+                        "parcela_inicial": None,
+                        "parcela_pos_contemplacao": None,
+                        "parcela_maxima_cliente": money(income_limit),
+                        "parcela_desejada_cliente": money(desired_installment),
+                        "lance_cliente_total": money(client_total_bid),
+                        "lance_total_cenario": money(client_total_bid),
+                        "percentual_lance_cliente": None,
+                        "percentual_lance_efetivo": None,
+                        "initial_installment_compatible": None,
+                        "perfis_contemplacao": profile_rows,
+                        "credit_compatible": False,
+                        "term_compatible": False,
+                        "creation_status": "not_created",
+                        "creation_reason": "percentual_x_ausente",
+                        "composition_candidate": True,
+                    })
                     continue
                 embedded_amount = maximum * (embedded or Decimal("0")) if with_embedded else Decimal("0")
                 liquid_credit = maximum - embedded_amount
@@ -482,6 +522,16 @@ def analyze_client_consortium_viability(
                 fund_amount = maximum * (fund or Decimal("0"))
                 balance = maximum + fee_amount + fund_amount
                 initial_installment = balance / Decimal(remaining_term)
+                total_bid = client_total_bid + embedded_amount
+                percent_client_bid = (client_total_bid / maximum) if maximum else None
+                percent_effective_bid = (total_bid / maximum) if maximum else None
+                total_installment = initial_installment * Decimal(minimum_quota_count)
+                post_contemplation_installment = None
+                if remaining_term > 1:
+                    post_contemplation_installment = max(
+                        Decimal("0"),
+                        (balance - initial_installment - total_bid) / Decimal(remaining_term - 1),
+                    )
                 profile_rows = []
                 for profile_id, label, strategy_key in CONTEMPLATION_PROFILE_TARGETS:
                     threshold = ranges.get(strategy_key)
@@ -495,6 +545,10 @@ def analyze_client_consortium_viability(
                         "lance_ideal": money(ideal_client),
                         "lance_ideal_total": money(ideal_total),
                         "lance_embutido": money(embedded_amount),
+                        "lance_cliente": money(client_total_bid),
+                        "percentual_lance_efetivo": money(percent_effective_bid),
+                        "falta_para_ideal": money(max(Decimal("0"), ideal_client - client_total_bid)) if ideal_client is not None else None,
+                        "atinge_perfil": bool(ideal_client is not None and client_total_bid >= ideal_client),
                     })
                 composition_scenarios.append({
                     "id": "with_embedded" if with_embedded else "without_embedded",
@@ -503,9 +557,20 @@ def analyze_client_consortium_viability(
                     "lance_embutido": money(embedded_amount),
                     "saldo_devedor": money(balance),
                     "parcela_inicial": money(initial_installment),
+                    "parcela_pos_contemplacao": money(post_contemplation_installment),
+                    "parcela_maxima_cliente": money(income_limit),
+                    "parcela_desejada_cliente": money(desired_installment),
+                    "lance_cliente_total": money(client_total_bid),
+                    "lance_total_cenario": money(total_bid),
+                    "percentual_lance_cliente": money(percent_client_bid),
+                    "percentual_lance_efetivo": money(percent_effective_bid),
+                    "initial_installment_compatible": bool(total_installment <= income_limit),
+                    "within_desired_reference": bool(total_installment <= desired_installment),
+                    "creation_status": "created",
+                    "creation_reason": None,
                     "perfis_contemplacao": profile_rows,
                     "credit_compatible": True,
-                    "term_compatible": None,
+                    "term_compatible": True,
                     "composition_candidate": True,
                 })
             if composition_scenarios and any((parse_decimal(scenario.get("credito_liquido_projetado")) or Decimal("0")) * Decimal("50") >= desired for scenario in composition_scenarios):
@@ -528,7 +593,7 @@ def analyze_client_consortium_viability(
                     "best_contemplation_strategy": _reference_name(composition_capacity_key),
                     "selection_stage": "composition",
                     "composition_candidate": True,
-                    "cotas_minimas_sem_embutido": math.ceil(desired / maximum),
+                    "cotas_minimas_sem_embutido": minimum_quota_count,
                     "cotas_maximas": 50,
                 })
         missing_fields = [

@@ -72,7 +72,7 @@ class Motor360RfcTest(unittest.TestCase):
             {"mes": "2026-06", "qtd_contemplacoes": 3},
         ]
         result = analyze_client_consortium_viability(payload(credito_desejado=600000), [
-            group(credito_minimo=100000, credito_maximo=300000, historico_12_meses=history),
+            group(credito_minimo=100000, credito_maximo=300000, historico_12_meses=history, percentual_lance_embutido=""),
         ])
 
         self.assertEqual(result["items"], [])
@@ -83,6 +83,13 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(item["cenarios"][0]["credito_liquido_projetado"], 300000)
         self.assertTrue(item["capacidade_contemplacoes"])
         self.assertEqual(item["historico_12_meses"], history)
+        self.assertEqual([scenario["id"] for scenario in item["cenarios"]], ["without_embedded", "with_embedded"])
+        self.assertEqual(item["cenarios"][0]["lance_cliente_total"], 150000)
+        self.assertTrue(item["cenarios"][0]["initial_installment_compatible"])
+        self.assertEqual(item["cenarios"][1]["creation_status"], "not_created")
+        self.assertEqual(item["cenarios"][1]["creation_reason"], "percentual_x_ausente")
+        self.assertEqual(item["cenarios"][1]["lance_total_cenario"], 150000)
+        self.assertEqual(item["cenarios"][1]["perfis_contemplacao"][0]["percentual_referencia"], item["cenarios"][0]["perfis_contemplacao"][0]["percentual_referencia"])
 
     def test_expoe_media_maxima_de_contemplacoes_para_controlar_cotas(self):
         history = [
