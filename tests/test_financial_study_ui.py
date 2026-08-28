@@ -55,6 +55,9 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn("Os grupos apresentados foram selecionados", self.javascript)
         self.assertIn("Contemplações Mensais:", self.javascript)
         self.assertIn("Uso da Carta de Crédito:", self.javascript)
+        self.assertIn("<strong>1 - Grupos antigos:</strong> mais participantes já contemplados", self.javascript)
+        self.assertIn("<strong>1) Sorteio:</strong> Participam do sorteio", self.javascript)
+        self.assertIn(".financial-study-pdf-table-editorial td p {", self.styles)
 
 
 if __name__ == "__main__":

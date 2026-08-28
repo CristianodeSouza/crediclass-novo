@@ -5761,12 +5761,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 800;
   text-align: left;
   vertical-align: top;
+  white-space: nowrap;
 }
 
 .financial-study-pdf-editorial-table td {
   background: #fff;
   vertical-align: top;
-  line-height: 1.48;
+  line-height: 1.34;
 }
 
 .financial-study-pdf-table-editorial {
@@ -5776,8 +5777,18 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-table-editorial td,
 .financial-study-pdf-table-editorial th {
   font-size: 12.5px;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.financial-study-pdf-table-editorial td p {
+  margin: 0 0 6px;
+}
+
+.financial-study-pdf-selection-admin {
+  margin-bottom: 6px;
+  font-size: 12.5px;
+  line-height: 1.25;
 }
 
 .financial-study-pdf-editorial-table td p:last-child {
