@@ -43,6 +43,12 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn('scenario.creation_reason !== "percentual_x_ausente"', self.javascript)
         self.assertIn('const withEmbedded = fallbackScenarioForDisplay(item, "with_embedded")', self.javascript)
 
+    def test_previa_html_usa_intro_editorial_sem_coluna_espremida(self):
+        self.assertIn("function financialStudyPdfIntroSection(", self.javascript)
+        self.assertIn('class="financial-study-pdf-intro-copy"', self.javascript)
+        self.assertIn(".financial-study-pdf-intro-copy", self.styles)
+        self.assertIn("width: min(1240px, 100%)", self.styles)
+
 
 if __name__ == "__main__":
     unittest.main()

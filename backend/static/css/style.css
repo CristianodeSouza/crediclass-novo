@@ -5253,12 +5253,14 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-preview-body {
-  padding: 28px;
+  padding: 24px 18px 30px;
   background: #edf1f4;
+  overflow: auto;
 }
 
 .financial-study-preview-body .financial-study-pdf-document {
-  width: min(1120px, 100%);
+  width: min(1240px, 100%);
+  margin: 0 auto;
 }
 
 @media (max-width: 680px) {
@@ -5367,6 +5369,27 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-pdf-body {
   display: grid;
   gap: 14px;
+}
+
+.financial-study-pdf-intro-sheet {
+  display: grid;
+  gap: 16px;
+}
+
+.financial-study-pdf-intro-copy {
+  padding: 0 2px;
+}
+
+.financial-study-pdf-intro-copy p {
+  margin: 0 0 10px;
+  color: #24313a;
+  font-size: 13px;
+  line-height: 1.52;
+  overflow-wrap: anywhere;
+}
+
+.financial-study-pdf-intro-copy p:last-child {
+  margin-bottom: 0;
 }
 
 .financial-study-pdf-cover,
@@ -5524,8 +5547,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 12px;
-  width: min(100%, 596px);
-  margin-top: -6px;
+  width: 100%;
+  margin-top: 0;
   padding: 14px 16px 16px;
   border: 1px solid #ecd9cb;
   background: #fffdfa;
@@ -6090,6 +6113,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-pdf-selection-layout,
   .financial-study-pdf-cycle-grid {
     grid-template-columns: 1fr;
+  }
+
+  .financial-study-pdf-intro-copy {
+    padding: 0;
   }
 
   .financial-study-pdf-cover-hero {
