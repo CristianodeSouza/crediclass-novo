@@ -13,10 +13,10 @@ Font.registerHyphenationCallback((word) => [word]);
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 32,
-    paddingBottom: 36,
-    paddingHorizontal: 30,
-    fontSize: 10,
+    paddingTop: 34,
+    paddingBottom: 38,
+    paddingHorizontal: 28,
+    fontSize: 9.5,
     color: "#24313a",
     fontFamily: "Helvetica",
   },
@@ -27,39 +27,40 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   brand: {
-    width: "28%",
+    width: "30%",
   },
   brandTitle: {
-    fontSize: 22,
-    letterSpacing: 1,
-    marginBottom: 3,
+    fontSize: 21,
+    letterSpacing: 1.1,
+    color: "#2a3942",
+    marginBottom: 2,
   },
   brandSubtitle: {
-    fontSize: 8,
+    fontSize: 7.5,
     color: "#b6734d",
   },
   headerCenter: {
-    width: "44%",
+    width: "42%",
     textAlign: "center",
-    fontSize: 9,
-    color: "#95a1aa",
+    fontSize: 8.5,
+    color: "#98a3ab",
     paddingTop: 6,
   },
   headerRight: {
     width: "28%",
     textAlign: "right",
-    fontSize: 9,
-    color: "#95a1aa",
+    fontSize: 8.5,
+    color: "#98a3ab",
     paddingTop: 6,
   },
   titleBar: {
     backgroundColor: "#31424b",
     color: "#fff",
     textAlign: "center",
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: 700,
     paddingVertical: 4,
-    marginBottom: 10,
+    marginBottom: 8,
   },
   section: {
     marginBottom: 10,
@@ -71,34 +72,40 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 700,
     paddingVertical: 4,
-    marginBottom: 8,
+    marginBottom: 7,
   },
   paragraph: {
-    fontSize: 10,
+    fontSize: 9.5,
     lineHeight: 1.45,
-    marginBottom: 6,
+    marginBottom: 5,
+  },
+  smallParagraph: {
+    fontSize: 9,
+    lineHeight: 1.35,
+    marginBottom: 4,
   },
   metaGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    rowGap: 8,
+    columnGap: 8,
   },
   metaCard: {
-    width: "48%",
+    width: "48.5%",
     borderWidth: 1,
-    borderColor: "#d8dde3",
+    borderColor: "#d9e0e5",
     padding: 8,
-    marginBottom: 8,
   },
   metaLabel: {
-    fontSize: 8,
+    fontSize: 7.5,
     textTransform: "uppercase",
     color: "#66707a",
     marginBottom: 3,
   },
   metaValue: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: 700,
+    color: "#22313b",
   },
   table: {
     display: "table",
@@ -109,35 +116,54 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
   },
-  headCell: {
-    backgroundColor: "#efefef",
-    fontWeight: 700,
-  },
   cell: {
     borderRightWidth: 1,
     borderBottomWidth: 1,
     borderColor: "#d8dde3",
     paddingVertical: 5,
     paddingHorizontal: 6,
-    fontSize: 9,
+    fontSize: 8.5,
+    lineHeight: 1.28,
+  },
+  headCell: {
+    backgroundColor: "#f2f4f6",
+    fontWeight: 700,
+  },
+  leftCell: {
+    fontWeight: 700,
+    width: "21%",
+  },
+  rightCell: {
+    width: "79%",
+  },
+  compactCell: {
+    paddingVertical: 4,
+    paddingHorizontal: 5,
+    fontSize: 8.2,
   },
   lastCell: {
     borderRightWidth: 0,
   },
-  footer: {
-    position: "absolute",
-    left: 30,
-    right: 30,
-    bottom: 18,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    fontSize: 9,
-    color: "#52616b",
+  lastRowCell: {
+    borderBottomWidth: 0,
   },
   bullet: {
+    fontSize: 9.4,
+    lineHeight: 1.4,
     marginBottom: 4,
+  },
+  introBlock: {
+    marginBottom: 8,
+  },
+  introLead: {
     fontSize: 10,
-    lineHeight: 1.35,
+    fontWeight: 700,
+    marginBottom: 6,
+  },
+  miniNote: {
+    fontSize: 8.7,
+    color: "#67717b",
+    marginBottom: 5,
   },
   alert: {
     marginTop: 8,
@@ -145,8 +171,29 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#f0d7bd",
     backgroundColor: "#fff8f2",
-    fontSize: 9,
+    fontSize: 8.8,
     color: "#8a4b08",
+  },
+  subsectionLabel: {
+    fontSize: 9.5,
+    fontWeight: 700,
+    marginBottom: 5,
+  },
+  emphasis: {
+    fontWeight: 700,
+  },
+  historyGroupCell: {
+    width: "16%",
+  },
+  footer: {
+    position: "absolute",
+    left: 28,
+    right: 28,
+    bottom: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    fontSize: 8.5,
+    color: "#52616b",
   },
 });
 
@@ -169,10 +216,10 @@ function Header({ pageNumber }) {
       View,
       { style: styles.brand },
       React.createElement(Text, { style: styles.brandTitle }, "CREDICLASS"),
-      React.createElement(Text, { style: styles.brandSubtitle }, "AQUISIÇÕES INTELIGENTES"),
+      React.createElement(Text, { style: styles.brandSubtitle }, "AQUISICOES INTELIGENTES"),
     ),
-    React.createElement(Text, { style: styles.headerCenter }, "Estudo Financeiro | Aquisição de Imóvel"),
-    React.createElement(Text, { style: styles.headerRight }, `Página ${pageNumber}`),
+    React.createElement(Text, { style: styles.headerCenter }, "Estudo Financeiro | Aquisicao de Imovel"),
+    React.createElement(Text, { style: styles.headerRight }, `Pagina ${pageNumber}`),
   );
 }
 
@@ -181,7 +228,7 @@ function Footer({ payload, pageNumber, totalPages }) {
     View,
     { style: styles.footer, fixed: true },
     React.createElement(Text, null, formatDate(payload.meta.generatedAt)),
-    React.createElement(Text, null, `Validade: ${text(payload.meta.validityDays)} dias após o recebimento`),
+    React.createElement(Text, null, `Validade: ${text(payload.meta.validityDays)} dias apos o recebimento`),
     React.createElement(Text, null, `${pageNumber} de ${totalPages}`),
   );
 }
@@ -195,7 +242,7 @@ function Section({ title, children }) {
   );
 }
 
-function SummaryTable({ rows, columns }) {
+function Table({ columns, rows, compact = false }) {
   return React.createElement(
     View,
     { style: styles.table },
@@ -206,10 +253,11 @@ function SummaryTable({ rows, columns }) {
         React.createElement(
           Text,
           {
-            key: column.key,
+            key: `head-${column.key}`,
             style: [
               styles.cell,
               styles.headCell,
+              compact ? styles.compactCell : null,
               { width: column.width },
               index === columns.length - 1 ? styles.lastCell : null,
             ],
@@ -229,9 +277,10 @@ function SummaryTable({ rows, columns }) {
               key: `${rowIndex}-${column.key}`,
               style: [
                 styles.cell,
+                compact ? styles.compactCell : null,
                 { width: column.width },
                 index === columns.length - 1 ? styles.lastCell : null,
-                rowIndex === rows.length - 1 ? { borderBottomWidth: 0 } : null,
+                rowIndex === rows.length - 1 ? styles.lastRowCell : null,
               ],
             },
             text(row[column.key]),
@@ -242,126 +291,451 @@ function SummaryTable({ rows, columns }) {
   );
 }
 
-function StudyDocument({ payload }) {
-  const pages = [
-    {
-      title: "ESTUDO FINANCEIRO",
-      content: [
-        React.createElement(Text, { key: "p1", style: styles.paragraph }, `Cliente: ${text(payload.client.name)}`),
-        React.createElement(Text, { key: "p2", style: styles.paragraph }, `Objetivo: ${text(payload.client.objective)}`),
-        React.createElement(Text, { key: "p3", style: styles.paragraph }, `Proposta: ${text(payload.meta.proposalId)}`),
+function IntroSection({ payload }) {
+  return React.createElement(
+    Section,
+    { title: "ESTUDO FINANCEIRO" },
+    React.createElement(
+      View,
+      { style: styles.introBlock },
+      React.createElement(Text, { style: styles.introLead }, "Prezado,"),
+      ...(payload.sections.introNotes || []).map((item, index) =>
+        React.createElement(Text, { key: `intro-${index}`, style: styles.paragraph }, text(item)),
+      ),
+    ),
+    React.createElement(
+      View,
+      { style: styles.metaGrid },
+      ...[
+        ["Cliente", payload.client.name],
+        ["Objetivo", payload.client.objective],
+        ["Proposta", payload.meta.proposalId],
+        ["Administradora", payload.group.administrator],
+        ["Grupo", payload.group.groupId],
+        ["Credito desejado", payload.client.desiredCredit],
+        ["Prazo desejado", `${text(payload.client.desiredTerm)} meses`],
+        ["Parcela desejada", payload.client.desiredInstallment],
+        ["Renda total", payload.client.income],
+        ["Estrategia recomendada", payload.financial.recommendedStrategy],
+      ].map(([label, value], index) =>
         React.createElement(
           View,
-          { key: "grid", style: styles.metaGrid },
-          ...[
-            ["Crédito desejado", payload.client.desiredCredit],
-            ["Prazo desejado", payload.client.desiredTerm],
-            ["Parcela desejada", payload.client.desiredInstallment],
-            ["Renda total", payload.client.income],
-            ["Administradora", payload.group.administrator],
-            ["Grupo", payload.group.groupId],
-            ["Estratégia recomendada", payload.financial.recommendedStrategy],
-            ["Chance", payload.financial.chance],
-          ].map(([label, value], index) =>
-            React.createElement(
-              View,
-              { key: `meta-${index}`, style: styles.metaCard },
-              React.createElement(Text, { style: styles.metaLabel }, label),
-              React.createElement(Text, { style: styles.metaValue }, text(value)),
+          { key: `meta-${index}`, style: styles.metaCard },
+          React.createElement(Text, { style: styles.metaLabel }, label),
+          React.createElement(Text, { style: styles.metaValue }, text(value)),
+        ),
+      ),
+    ),
+  );
+}
+
+function InvestmentSection({ payload }) {
+  return React.createElement(
+    Section,
+    { title: "SIMULACAO DE INVESTIMENTO" },
+    React.createElement(
+      Text,
+      { style: styles.miniNote },
+      "Simulacao dinamica usando o estudo atual e o grupo em destaque.",
+    ),
+    React.createElement(Table, {
+      compact: true,
+      columns: [
+        { key: "resource", label: "Uso de Recurso Proprio", width: "24%" },
+        { key: "baseValue", label: "Valor base", width: "18%" },
+        { key: "initialInstallment", label: "Parcela inicial", width: "18%" },
+        { key: "term", label: "Prazo em Meses", width: "12%" },
+        { key: "periodCost", label: "Saldo / custo no periodo", width: "28%" },
+      ],
+      rows: [
+        {
+          resource: "A Vista",
+          baseValue: payload.financial.ownResources,
+          initialInstallment: "-",
+          term: "1",
+          periodCost: "-",
+        },
+        {
+          resource: "Consorcio selecionado",
+          baseValue: payload.financial.contractedCredit,
+          initialInstallment: payload.financial.initialInstallment,
+          term: payload.group.remainingTerm,
+          periodCost: payload.financial.effectiveTotalCost,
+        },
+      ],
+    }),
+  );
+}
+
+function EditorialRowsSection({ payload }) {
+  const sections = [
+    {
+      label: "Criterios de selecao",
+      paragraphs: [
+        "Os grupos apresentados foram selecionados a partir de criterios tecnicos definidos pela Crediclass, considerando indicadores historicos e condicoes disponiveis na data da analise.",
+        ...(payload.sections.selectionCriteria || []),
+      ],
+    },
+    {
+      label: "Como funciona",
+      paragraphs: payload.sections.howItWorks || [],
+    },
+    {
+      label: "Contemplacoes Mensais",
+      paragraphs: payload.sections.monthlyContemplations || [],
+    },
+    {
+      label: "Uso da Carta de Credito",
+      paragraphs: payload.sections.creditUses || [],
+    },
+  ];
+  return React.createElement(
+    Section,
+    { title: "SIMULACAO MELHORES CONSORCIOS" },
+    React.createElement(
+      Text,
+      { style: styles.paragraph },
+      `Administradora selecionada: ${text(payload.group.administrator)}`,
+    ),
+    React.createElement(
+      View,
+      { style: styles.table },
+      ...sections.flatMap((item, rowIndex) => [
+        React.createElement(
+          View,
+          { key: `row-${rowIndex}`, style: styles.row },
+          React.createElement(
+            View,
+            {
+              style: [
+                styles.cell,
+                styles.leftCell,
+                rowIndex === sections.length - 1 ? styles.lastRowCell : null,
+              ],
+            },
+            React.createElement(Text, null, item.label),
+          ),
+          React.createElement(
+            View,
+            {
+              style: [
+                styles.cell,
+                styles.rightCell,
+                styles.lastCell,
+                rowIndex === sections.length - 1 ? styles.lastRowCell : null,
+              ],
+            },
+            ...(item.paragraphs || []).map((paragraph, index) =>
+              React.createElement(
+                Text,
+                {
+                  key: `${rowIndex}-${index}`,
+                  style: index === item.paragraphs.length - 1 ? styles.smallParagraph : styles.smallParagraph,
+                },
+                text(paragraph),
+              ),
             ),
           ),
         ),
+      ]),
+    ),
+  );
+}
+
+function SpecialistsSection({ payload }) {
+  return React.createElement(
+    Section,
+    { title: "ESPECIALISTAS EM TODA JORNADA" },
+    React.createElement(
+      View,
+      { style: styles.table },
+      ...(payload.sections.specialists || []).map((item, index, array) =>
+        React.createElement(
+          View,
+          { key: `specialist-${index}`, style: styles.row },
+          React.createElement(
+            Text,
+            {
+              style: [
+                styles.cell,
+                styles.leftCell,
+                index === array.length - 1 ? styles.lastRowCell : null,
+              ],
+            },
+            `${text(item.label)}:`,
+          ),
+          React.createElement(
+            Text,
+            {
+              style: [
+                styles.cell,
+                styles.rightCell,
+                styles.lastCell,
+                index === array.length - 1 ? styles.lastRowCell : null,
+              ],
+            },
+            text(item.text),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+function BenefitsSection({ payload }) {
+  return React.createElement(
+    Section,
+    { title: `${text(payload.group.administrator).toUpperCase()}\nPRINCIPAIS BENEFICIOS` },
+    React.createElement(
+      View,
+      null,
+      ...(payload.sections.benefits || []).map((item, index) =>
+        React.createElement(Text, { key: `benefit-${index}`, style: styles.bullet }, `- ${text(item)}`),
+      ),
+    ),
+  );
+}
+
+function ContractSection({ payload }) {
+  return React.createElement(
+    Section,
+    { title: "CONTRATACAO" },
+    React.createElement(Table, {
+      compact: true,
+      columns: [
+        { key: "group", label: "Grupo", width: "22%" },
+        { key: "credit", label: "Credito", width: "22%" },
+        { key: "installment", label: "Parcelas (s/ seguro)", width: "24%" },
+        { key: "term", label: "Prazo", width: "10%" },
+        { key: "rateTotal", label: "Tx ADM Total", width: "12%" },
+        { key: "rateYear", label: "Tx ADM ao Ano", width: "10%" },
+      ],
+      rows: payload.sections.contractRows || [],
+    }),
+  );
+}
+
+function StrategySection() {
+  return React.createElement(
+    Section,
+    { title: "ESTRATEGIAS DE CONTEMPLACAO" },
+    React.createElement(
+      View,
+      null,
+      React.createElement(
+        Text,
+        { style: styles.paragraph },
+        "Para sua comodidade, oferecemos o servico de consultoria, oferta de lance e acompanhamento mensal de contemplacao, conforme as estrategias sugeridas abaixo:",
+      ),
+      React.createElement(
+        Text,
+        { style: styles.bullet },
+        "Estrategia 1) Investidor -> Sorteio + leitura da evolucao historica do grupo para preservar caixa e liquidez.",
+      ),
+      React.createElement(
+        Text,
+        { style: styles.bullet },
+        "Estrategia 2) Conservadora -> Sorteio + lance livre conservador, observando um patamar que ja apareceu na serie historica.",
+      ),
+      React.createElement(
+        Text,
+        { style: styles.bullet },
+        "Estrategia 3) Moderada -> Sorteio + lance livre moderado, aproximando a operacao do perfil classificado no estudo atual.",
+      ),
+      React.createElement(
+        Text,
+        { style: styles.smallParagraph },
+        "As estrategias apresentadas possuem carater meramente ilustrativo e foram desenvolvidas com base em dados historicos dos grupos analisados.",
+      ),
+    ),
+  );
+}
+
+function HistorySection({ payload }) {
+  const matrix = payload.sections.historyMatrix || { months: [], rows: [] };
+  const monthCount = Math.max(1, matrix.months?.length || 0);
+  const monthWidth = `${84 / monthCount}%`;
+  const columns = [
+    { key: "group", label: "Grupo", width: "16%" },
+    ...(matrix.months || []).map((month, index) => ({ key: `m${index}`, label: month, width: monthWidth })),
+  ];
+  const rows = (matrix.rows || []).map((row) => {
+    const item = {
+      group: `${text(row.group)}\n${text(row.administrator)}`,
+    };
+    (row.cells || []).forEach((cell, index) => {
+      item[`m${index}`] = `${text(cell.value)}\n${text(cell.detail)}`;
+    });
+    return item;
+  });
+  return React.createElement(
+    Section,
+    { title: "HISTORICO DE LANCES CONTEMPLADOS" },
+    React.createElement(Table, {
+      compact: true,
+      columns,
+      rows: rows.length ? rows : [{ group: "Sem historico", m0: "-" }],
+    }),
+  );
+}
+
+function ProjectionSection({ payload }) {
+  return React.createElement(
+    Section,
+    { title: "PROJECAO DE CONTEMPLACAO" },
+    React.createElement(Table, {
+      compact: true,
+      columns: [
+        { key: "title", label: "Estrategia", width: "22%" },
+        { key: "percent", label: "Percentual", width: "12%" },
+        { key: "totalBid", label: "Lance Total", width: "16%" },
+        { key: "cardPayment", label: "Pagto Carta", width: "14%" },
+        { key: "ownPayment", label: "Pagto Rec Proprio", width: "14%" },
+        { key: "credit", label: "Credito", width: "12%" },
+        { key: "installment", label: "Parcelas", width: "10%" },
+      ],
+      rows: payload.sections.projectionRows || [],
+    }),
+  );
+}
+
+function DeadlinesSection({ payload }) {
+  return React.createElement(
+    Section,
+    { title: "DATAS LIMITES PARA ADESAO" },
+    React.createElement(Table, {
+      compact: true,
+      columns: [
+        { key: "group", label: "Grupo", width: "17%" },
+        { key: "reservationLimit", label: "Limite Adesao - Reserva Vagas Grupos", width: "21%" },
+        { key: "assemblyLimit", label: "Limite Adesao - Assembleia", width: "18%" },
+        { key: "firstInstallment", label: "Vencimento Primeira Parcela", width: "18%" },
+        { key: "nextAssembly", label: "Proxima Assembleia", width: "13%" },
+        { key: "bidPayment", label: "Vencimento Pagamento Lance", width: "13%" },
+      ],
+      rows: payload.sections.deadlineRows || [],
+    }),
+  );
+}
+
+function OperatorNotesSection({ payload }) {
+  if (!(payload.sections.operatorNotes || []).length) return null;
+  return React.createElement(
+    Section,
+    { title: "NOTAS DO OPERADOR" },
+    React.createElement(
+      View,
+      null,
+      ...(payload.sections.operatorNotes || []).map((item, index) =>
+        React.createElement(Text, { key: `note-${index}`, style: styles.bullet }, `- ${text(item)}`),
+      ),
+    ),
+  );
+}
+
+function ConsiderationsSection({ payload }) {
+  return React.createElement(
+    Section,
+    { title: "CONSIDERACOES IMPORTANTES" },
+    React.createElement(
+      View,
+      null,
+      ...(payload.sections.considerations || []).map((item, index) =>
+        React.createElement(Text, { key: `consideration-${index}`, style: styles.paragraph }, text(item)),
+      ),
+    ),
+  );
+}
+
+function FinancialSummarySection({ payload }) {
+  return React.createElement(
+    Section,
+    { title: "RESUMO FINANCEIRO" },
+    React.createElement(Table, {
+      compact: true,
+      columns: [
+        { key: "label", label: "Indicador", width: "38%" },
+        { key: "value", label: "Valor", width: "62%" },
+      ],
+      rows: [
+        { label: "Credito liquido", value: payload.financial.credit },
+        { label: "Credito contratado", value: payload.financial.contractedCredit },
+        { label: "Recurso proprio", value: payload.financial.ownResources },
+        { label: "FGTS", value: payload.financial.fgts },
+        { label: "Lance embutido", value: payload.financial.embeddedBid },
+        { label: "Lance total", value: payload.financial.totalBid },
+        { label: "Percentual do lance", value: payload.financial.bidPercent },
+        { label: "Parcela inicial", value: payload.financial.initialInstallment },
+        { label: "Custo efetivo total", value: payload.financial.effectiveTotalCost },
+        { label: "Chance", value: payload.financial.chance },
+      ],
+    }),
+    ...(payload.financial.alerts || []).length
+      ? [
+          React.createElement(
+            View,
+            { key: "alerts", style: styles.alert },
+            React.createElement(Text, null, `Alertas: ${payload.financial.alerts.join(" | ")}`),
+          ),
+        ]
+      : [],
+  );
+}
+
+function StrategyRowsSection({ payload }) {
+  return React.createElement(
+    Section,
+    { title: "ESTRATEGIAS OPERACIONAIS" },
+    React.createElement(Table, {
+      compact: true,
+      columns: [
+        { key: "label", label: "Estrategia", width: "22%" },
+        { key: "bidPercent", label: "% Lance", width: "12%" },
+        { key: "ownBid", label: "Rec. proprio", width: "18%" },
+        { key: "embeddedBid", label: "Embutido", width: "15%" },
+        { key: "creditAvailable", label: "Credito", width: "18%" },
+        { key: "operationalWindow", label: "Janela", width: "15%" },
+      ],
+      rows: payload.sections.strategyRows || [],
+    }),
+  );
+}
+
+function StudyDocument({ payload }) {
+  const pages = [
+    {
+      title: null,
+      content: [
+        React.createElement(IntroSection, { key: "intro", payload }),
+        React.createElement(InvestmentSection, { key: "investment", payload }),
+        React.createElement(FinancialSummarySection, { key: "summary", payload }),
       ],
     },
     {
-      title: "RESUMO FINANCEIRO",
+      title: null,
       content: [
-        React.createElement(
-          SummaryTable,
-          {
-            key: "financial-table",
-            columns: [
-              { key: "label", label: "Indicador", width: "38%" },
-              { key: "value", label: "Valor", width: "62%" },
-            ],
-            rows: [
-              { label: "Crédito líquido", value: payload.financial.credit },
-              { label: "Crédito contratado", value: payload.financial.contractedCredit },
-              { label: "Recurso próprio", value: payload.financial.ownResources },
-              { label: "FGTS", value: payload.financial.fgts },
-              { label: "Lance embutido", value: payload.financial.embeddedBid },
-              { label: "Lance total", value: payload.financial.totalBid },
-              { label: "Percentual do lance", value: payload.financial.bidPercent },
-              { label: "Parcela inicial", value: payload.financial.initialInstallment },
-              { label: "Custo efetivo total", value: payload.financial.effectiveTotalCost },
-            ],
-          },
-        ),
-        ...(payload.financial.alerts || []).length
-          ? [
-              React.createElement(
-                View,
-                { key: "alerts", style: styles.alert },
-                React.createElement(Text, null, `Alertas: ${payload.financial.alerts.join(" | ")}`),
-              ),
-            ]
-          : [],
+        React.createElement(EditorialRowsSection, { key: "editorial", payload }),
+        React.createElement(SpecialistsSection, { key: "specialists", payload }),
+        React.createElement(BenefitsSection, { key: "benefits", payload }),
       ],
     },
     {
-      title: "ESTRATÉGIAS OPERACIONAIS",
+      title: null,
       content: [
-        React.createElement(
-          SummaryTable,
-          {
-            key: "strategy-table",
-            columns: [
-              { key: "label", label: "Estratégia", width: "22%" },
-              { key: "bidPercent", label: "% Lance", width: "12%" },
-              { key: "ownBid", label: "Rec. próprio", width: "18%" },
-              { key: "embeddedBid", label: "Embutido", width: "15%" },
-              { key: "creditAvailable", label: "Crédito", width: "18%" },
-              { key: "operationalWindow", label: "Janela", width: "15%" },
-            ],
-            rows: payload.sections.strategyRows || [],
-          },
-        ),
+        React.createElement(ContractSection, { key: "contract", payload }),
+        React.createElement(StrategySection, { key: "narrative" }),
+        React.createElement(HistorySection, { key: "history", payload }),
       ],
     },
     {
-      title: "HISTÓRICO E OBSERVAÇÕES",
+      title: null,
       content: [
-        React.createElement(
-          SummaryTable,
-          {
-            key: "history-table",
-            columns: [
-              { key: "month", label: "Período", width: "28%" },
-              { key: "lowestBid", label: "Menor lance", width: "24%" },
-              { key: "highestBid", label: "Maior lance", width: "24%" },
-              { key: "contemplations", label: "Contemplações", width: "24%" },
-            ],
-            rows: payload.sections.historyRows?.length
-              ? payload.sections.historyRows
-              : [{ month: "Sem histórico", lowestBid: "-", highestBid: "-", contemplations: "-" }],
-          },
-        ),
-        ...((payload.sections.operatorNotes || []).length
-          ? [
-              React.createElement(
-                Section,
-                { key: "notes", title: "NOTAS DO OPERADOR" },
-                React.createElement(
-                  View,
-                  null,
-                  ...(payload.sections.operatorNotes || []).map((item, index) =>
-                    React.createElement(Text, { key: `note-${index}`, style: styles.bullet }, `- ${text(item)}`),
-                  ),
-                ),
-              ),
-            ]
-          : []),
-      ],
+        React.createElement(ProjectionSection, { key: "projection", payload }),
+        React.createElement(DeadlinesSection, { key: "deadlines", payload }),
+        React.createElement(StrategyRowsSection, { key: "strategy-rows", payload }),
+        React.createElement(OperatorNotesSection, { key: "notes", payload }),
+        React.createElement(ConsiderationsSection, { key: "considerations", payload }),
+      ].filter(Boolean),
     },
   ];
   const totalPages = pages.length;
@@ -379,7 +753,9 @@ function StudyDocument({ payload }) {
         Page,
         { key: `page-${index}`, size: "A4", style: styles.page, wrap: true },
         React.createElement(Header, { pageNumber: index + 1 }),
-        React.createElement(View, { style: styles.titleBar }, React.createElement(Text, null, page.title)),
+        ...(page.title
+          ? [React.createElement(View, { key: `title-${index}`, style: styles.titleBar }, React.createElement(Text, null, page.title))]
+          : []),
         ...page.content,
         React.createElement(Footer, { payload, pageNumber: index + 1, totalPages }),
       ),
