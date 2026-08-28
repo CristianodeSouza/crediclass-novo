@@ -2214,7 +2214,7 @@ function motor360ProfileIdealText(label, value) {
 }
 
 function renderMotor360GroupCard(item) {
-  const scenarios = motor360EnsureScenarioPair(item.cenarios);
+  const scenarios = motor360EnsureScenarioPair(item.cenarios).map((scenario) => fallbackScenarioForDisplay(item, scenario.id));
   const byId = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
   const profiles = (byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [])
     .filter((profile) => profileHasVisibleReference(byId, profile.id));
@@ -2258,7 +2258,7 @@ function renderMotor360CompositionCard(item) {
   const quotaExceeded = selected && quotaLimit !== null && quotaCount > quotaLimit;
   const visibleCapacitySummary = renderMotor360VisibleCapacitySummary(item);
   const quotaWarning = quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : "";
-  const scenarios = motor360EnsureScenarioPair(item.cenarios, { composition: true });
+  const scenarios = motor360EnsureScenarioPair(item.cenarios, { composition: true }).map((scenario) => fallbackScenarioForDisplay(item, scenario.id));
   const byId = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
   const profiles = (byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [])
     .filter((profile) => profileHasVisibleReference(byId, profile.id));
@@ -2499,12 +2499,42 @@ function financialStudyScenario(item, scenarioId) {
   return (item.cenarios || []).find((scenario) => scenario.id === scenarioId) || {};
 }
 
+function scenarioMissingPrimaryFinancials(scenario) {
+  if (!scenario) return true;
+  return ["credito_contratado", "saldo_devedor", "parcela_inicial", "lance_total_cenario"].every((key) => scenario[key] == null);
+}
+
+function fallbackScenarioForDisplay(item, scenarioId) {
+  const scenarios = Object.fromEntries(((item?.cenarios) || []).map((scenario) => [scenario.id, scenario]));
+  const scenario = scenarios[scenarioId] || {};
+  if (scenarioId !== "with_embedded") return scenario;
+  if (scenario.creation_status !== "not_created") return scenario;
+  if (scenario.creation_reason !== "percentual_x_ausente") return scenario;
+  if (!scenarioMissingPrimaryFinancials(scenario)) return scenario;
+  const without = scenarios.without_embedded || {};
+  if (scenarioMissingPrimaryFinancials(without)) return scenario;
+  return {
+    ...without,
+    ...scenario,
+    credito_contratado: without.credito_contratado ?? scenario.credito_contratado,
+    credito_liquido_projetado: without.credito_liquido_projetado ?? without.credito_contratado ?? scenario.credito_liquido_projetado,
+    lance_embutido: scenario.lance_embutido ?? 0,
+    saldo_devedor: without.saldo_devedor ?? scenario.saldo_devedor,
+    parcela_inicial: without.parcela_inicial ?? scenario.parcela_inicial,
+    parcela_pos_contemplacao: without.parcela_pos_contemplacao ?? scenario.parcela_pos_contemplacao,
+    lance_cliente_total: without.lance_cliente_total ?? scenario.lance_cliente_total,
+    lance_total_cenario: without.lance_cliente_total ?? without.lance_total_cenario ?? scenario.lance_total_cenario,
+    percentual_lance_cliente: without.percentual_lance_cliente ?? scenario.percentual_lance_cliente,
+    percentual_lance_efetivo: without.percentual_lance_cliente ?? without.percentual_lance_efetivo ?? scenario.percentual_lance_efetivo,
+  };
+}
+
 function financialStudyGroupRow(item) {
   const groupId = String(item.grupo || item.grupo_id || "-");
   const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
   const scale = (value) => value === null || value === undefined ? null : Number(value) * quotas;
-  const without = financialStudyScenario(item, "without_embedded");
-  const withEmbedded = financialStudyScenario(item, "with_embedded");
+  const without = fallbackScenarioForDisplay(item, "without_embedded");
+  const withEmbedded = fallbackScenarioForDisplay(item, "with_embedded");
   const source = item.source_values || {};
   const rate = source.taxa_adm ?? item.taxa_total ?? item.taxa_adm;
   return `<tr>
@@ -2657,8 +2687,8 @@ function financialStudyGroupCard(item, assemblyData, generatedAt, assemblyError 
   const groupId = String(item.grupo || item.grupo_id || "-");
   const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
   const scale = (value) => value === null || value === undefined ? null : Number(value) * quotas;
-  const without = financialStudyScenario(item, "without_embedded");
-  const withEmbedded = financialStudyScenario(item, "with_embedded");
+  const without = fallbackScenarioForDisplay(item, "without_embedded");
+  const withEmbedded = fallbackScenarioForDisplay(item, "with_embedded");
   const source = item.source_values || {};
   const rate = source.taxa_adm ?? item.taxa_total ?? item.taxa_adm;
   const dueDay = financialStudyGroupDueDay(item, assemblyData);
@@ -2692,8 +2722,8 @@ function financialStudyPortfolioSummary(items) {
   items.forEach((item) => {
     const groupId = String(item.grupo || item.grupo_id || "-");
     const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
-    const without = financialStudyScenario(item, "without_embedded");
-    const withEmbedded = financialStudyScenario(item, "with_embedded");
+    const without = fallbackScenarioForDisplay(item, "without_embedded");
+    const withEmbedded = fallbackScenarioForDisplay(item, "with_embedded");
     totals.quotas += quotas;
     totals.maxCredit += Number(item.credito_maximo || 0) * quotas;
     totals.withoutCredit += Number(without.credito_contratado || 0) * quotas;
@@ -2808,8 +2838,8 @@ function financialStudySelectionNarrative(highlightedAdmin) {
 function financialStudySummaryTable(items) {
   const rows = items.map((item) => {
     const quotas = financialStudyQuotaCount(item);
-    const without = financialStudyScenario(item, "without_embedded");
-    const withEmbedded = financialStudyScenario(item, "with_embedded");
+    const without = fallbackScenarioForDisplay(item, "without_embedded");
+    const withEmbedded = fallbackScenarioForDisplay(item, "with_embedded");
     const rate = item.source_values?.taxa_adm ?? item.taxa_total ?? item.taxa_adm;
     return `<tr><td><strong>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</strong><small>${escapeHtml(item.administradora || "-")}</small></td><td>${financialStudyPdfValue(formatMoney(financialStudyScaleValue(without.credito_contratado, quotas)))}</td><td>${financialStudyPdfValue(formatMoney(financialStudyScaleValue(without.parcela_inicial, quotas)))}</td><td>${financialStudyPdfValue(formatMoney(financialStudyScaleValue(withEmbedded.credito_contratado, quotas)))}</td><td>${financialStudyPdfValue(formatMoney(financialStudyScaleValue(withEmbedded.parcela_inicial, quotas)))}</td><td>${financialStudyPdfValue(escapeHtml(String(item.prazo_restante ?? "-")))}</td><td>${financialStudyPdfValue(rate == null ? "-" : formatPercent(rate))}</td></tr>`;
   }).join("");
@@ -2849,7 +2879,7 @@ function financialStudyBenefitsSection(highlightedAdmin) {
 function financialStudyContractTable(items) {
   const rows = items.map((item) => {
     const quotas = financialStudyQuotaCount(item);
-    const without = financialStudyScenario(item, "without_embedded");
+    const without = fallbackScenarioForDisplay(item, "without_embedded");
     const rate = item.source_values?.taxa_adm ?? item.taxa_total ?? item.taxa_adm;
     return `<tr><td>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</td><td>${financialStudyPdfValue(formatMoney(financialStudyScaleValue(without.credito_contratado, quotas)))}</td><td>${financialStudyPdfValue(formatMoney(financialStudyScaleValue(without.parcela_inicial, quotas)))}</td><td>${financialStudyPdfValue(String(item.prazo_restante ?? "-"))}</td><td>${financialStudyPdfValue(rate == null ? "-" : formatPercent(rate))}</td><td>${financialStudyPdfValue(item.taxa_ano == null ? "-" : formatPercent(item.taxa_ano))}</td></tr>`;
   }).join("");

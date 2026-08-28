@@ -38,6 +38,11 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn('bootstrap.Modal.getOrCreateInstance(previewModal).show()', self.javascript)
         self.assertIn(".financial-study-preview-dialog", self.styles)
 
+    def test_estudo_reaproveita_cenario_sem_embutido_quando_x_ausente(self):
+        self.assertIn("function fallbackScenarioForDisplay(item, scenarioId)", self.javascript)
+        self.assertIn('scenario.creation_reason !== "percentual_x_ausente"', self.javascript)
+        self.assertIn('const withEmbedded = fallbackScenarioForDisplay(item, "with_embedded")', self.javascript)
+
 
 if __name__ == "__main__":
     unittest.main()
