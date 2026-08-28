@@ -475,6 +475,17 @@ def analyze_client_consortium_viability(
             composition_scenarios = []
             client_total_bid = own + fgts
             minimum_quota_count = math.ceil(desired / maximum)
+            fee_amount = maximum * fee
+            fund_amount = maximum * (fund or Decimal("0"))
+            base_balance = maximum + fee_amount + fund_amount
+            base_initial_installment = base_balance / Decimal(remaining_term)
+            base_post_contemplation_installment = None
+            if remaining_term > 1:
+                base_post_contemplation_installment = max(
+                    Decimal("0"),
+                    (base_balance - base_initial_installment - client_total_bid) / Decimal(remaining_term - 1),
+                )
+            percent_client_bid_base = (client_total_bid / maximum) if maximum else None
             for with_embedded in (False, True):
                 embedded_available = embedded is not None and embedded > 0 and embedded < 1
                 if with_embedded and not embedded_available:
@@ -495,19 +506,20 @@ def analyze_client_consortium_viability(
                         })
                     composition_scenarios.append({
                         "id": "with_embedded",
-                        "credito_contratado": None,
-                        "credito_liquido_projetado": None,
+                        "credito_contratado": money(maximum),
+                        "credito_liquido_projetado": money(maximum),
                         "lance_embutido": money(Decimal("0")),
-                        "saldo_devedor": None,
-                        "parcela_inicial": None,
-                        "parcela_pos_contemplacao": None,
+                        "saldo_devedor": money(base_balance),
+                        "parcela_inicial": money(base_initial_installment),
+                        "parcela_pos_contemplacao": money(base_post_contemplation_installment),
                         "parcela_maxima_cliente": money(income_limit),
                         "parcela_desejada_cliente": money(desired_installment),
                         "lance_cliente_total": money(client_total_bid),
                         "lance_total_cenario": money(client_total_bid),
-                        "percentual_lance_cliente": None,
-                        "percentual_lance_efetivo": None,
-                        "initial_installment_compatible": None,
+                        "percentual_lance_cliente": money(percent_client_bid_base),
+                        "percentual_lance_efetivo": money(percent_client_bid_base),
+                        "initial_installment_compatible": bool(base_initial_installment * Decimal(minimum_quota_count) <= income_limit),
+                        "within_desired_reference": bool(base_initial_installment * Decimal(minimum_quota_count) <= desired_installment),
                         "perfis_contemplacao": profile_rows,
                         "credit_compatible": False,
                         "term_compatible": False,

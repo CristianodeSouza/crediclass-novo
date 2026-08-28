@@ -88,6 +88,10 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertTrue(item["cenarios"][0]["initial_installment_compatible"])
         self.assertEqual(item["cenarios"][1]["creation_status"], "not_created")
         self.assertEqual(item["cenarios"][1]["creation_reason"], "percentual_x_ausente")
+        self.assertEqual(item["cenarios"][1]["credito_contratado"], 300000)
+        self.assertEqual(item["cenarios"][1]["credito_liquido_projetado"], 300000)
+        self.assertIsNotNone(item["cenarios"][1]["parcela_inicial"])
+        self.assertIsNotNone(item["cenarios"][1]["saldo_devedor"])
         self.assertEqual(item["cenarios"][1]["lance_total_cenario"], 150000)
         self.assertEqual(item["cenarios"][1]["perfis_contemplacao"][0]["percentual_referencia"], item["cenarios"][0]["perfis_contemplacao"][0]["percentual_referencia"])
 
