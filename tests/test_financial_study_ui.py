@@ -41,6 +41,10 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn('data-study-open-preview', self.javascript)
         self.assertIn('bootstrap.Modal.getOrCreateInstance(previewModal).show()', self.javascript)
         self.assertIn(".financial-study-preview-dialog", self.styles)
+        self.assertIn("--financial-study-a4-width: 210mm;", self.styles)
+        self.assertIn("--financial-study-a4-height: 297mm;", self.styles)
+        self.assertIn("width: var(--financial-study-a4-width);", self.styles)
+        self.assertIn("min-height: var(--financial-study-a4-height);", self.styles)
 
     def test_estudo_reaproveita_cenario_sem_embutido_quando_x_ausente(self):
         self.assertIn("function fallbackScenarioForDisplay(item, scenarioId)", self.javascript)
@@ -51,7 +55,7 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn("function financialStudyPdfIntroSection(", self.javascript)
         self.assertIn('class="financial-study-pdf-intro-copy"', self.javascript)
         self.assertIn(".financial-study-pdf-intro-copy", self.styles)
-        self.assertIn("width: min(1240px, 100%)", self.styles)
+        self.assertIn("width: min(calc(var(--financial-study-a4-width) + 24mm), 100%);", self.styles)
         self.assertNotIn("financial-study-pdf-client-meta", self.javascript)
 
     def test_bloco_melhores_consorcios_tem_texto_padrao_e_administradora_dinamica(self):

@@ -5179,7 +5179,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-pdf-document {
-  width: min(1120px, 100%);
+  --financial-study-a4-width: 210mm;
+  --financial-study-a4-height: 297mm;
+  --financial-study-page-padding-top: 12mm;
+  --financial-study-page-padding-side: 11mm;
+  --financial-study-page-padding-bottom: 16mm;
+  --financial-study-page-gap: 18px;
+  width: min(calc(var(--financial-study-a4-width) + 24mm), 100%);
   margin: 0 auto;
   border: 1px solid #d6dbe1;
   border-radius: 0;
@@ -5259,7 +5265,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-preview-body .financial-study-pdf-document {
-  width: min(1240px, 100%);
+  width: min(calc(var(--financial-study-a4-width) + 24mm), 100%);
   margin: 0 auto;
 }
 
@@ -5282,6 +5288,17 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
   .financial-study-preview-body {
     padding: 0;
+  }
+
+  .financial-study-preview-body .financial-study-pdf-document {
+    width: 100%;
+  }
+
+  .financial-study-pdf-page {
+    width: 100%;
+    min-height: auto;
+    margin-bottom: 12px;
+    padding: 18px 16px 24px;
   }
 }
 
@@ -5319,9 +5336,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-pdf-page {
-  width: 100%;
-  min-height: 1140px;
-  padding: 28px 34px 84px;
+  width: var(--financial-study-a4-width);
+  min-height: var(--financial-study-a4-height);
+  margin: 0 auto var(--financial-study-page-gap);
+  padding: var(--financial-study-page-padding-top) var(--financial-study-page-padding-side) var(--financial-study-page-padding-bottom);
+  box-sizing: border-box;
   background: #fff;
   color: #1f2933;
   page-break-after: always;
@@ -5330,6 +5349,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-pdf-page.is-last {
+  margin-bottom: 0;
   page-break-after: auto;
   break-after: auto;
 }
@@ -5343,7 +5363,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-pdf-header {
   gap: 14px;
-  margin-bottom: 24px;
+  margin-bottom: 8mm;
 }
 
 .financial-study-pdf-header-title,
@@ -5361,14 +5381,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-pdf-brand img {
-  width: 220px;
+  width: 44mm;
   max-width: 100%;
   height: auto;
 }
 
 .financial-study-pdf-body {
   display: grid;
-  gap: 14px;
+  gap: 4.2mm;
+  min-height: calc(var(--financial-study-a4-height) - var(--financial-study-page-padding-top) - var(--financial-study-page-padding-bottom) - 24mm);
+  align-content: start;
 }
 
 .financial-study-pdf-intro-sheet {
@@ -6212,7 +6234,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .financial-study-pdf-page {
-    min-height: 0;
+    width: auto;
+    min-height: 297mm;
+    margin: 0;
     padding: 12mm 12mm 18mm;
     page-break-after: always;
     break-after: page;
