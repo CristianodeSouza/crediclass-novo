@@ -151,6 +151,8 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
+const APP_BUNDLE_VERSION = "4.0.85";
+const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
 const businessRuleStatuses = ["Pendente", "Em revisao", "Revisado", "Corrigir regra"];
@@ -5181,6 +5183,16 @@ async function restartSystemSync() {
 
 async function loadHealth() {
   const health = await apiGet("/health");
+  const serverVersion = String(health.version || "").trim();
+  const reloadGuard = sessionStorage.getItem(APP_VERSION_SYNC_KEY) || "";
+  if (serverVersion && serverVersion !== APP_BUNDLE_VERSION && reloadGuard !== serverVersion) {
+    sessionStorage.setItem(APP_VERSION_SYNC_KEY, serverVersion);
+    window.location.reload();
+    return;
+  }
+  if (reloadGuard && reloadGuard === serverVersion) {
+    sessionStorage.removeItem(APP_VERSION_SYNC_KEY);
+  }
   document.getElementById("environmentLabel").textContent = health.environment;
   document.getElementById("systemVersionLabel").textContent = health.version;
 }
