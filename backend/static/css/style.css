@@ -5206,6 +5206,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-pdf-page {
+  display: flex;
+  flex-direction: column;
   width: var(--financial-study-a4-width);
   min-height: var(--financial-study-a4-height);
   margin: 0 auto var(--financial-study-page-gap);
@@ -5233,6 +5235,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-pdf-header {
+  flex: 0 0 auto;
   gap: 14px;
   margin-bottom: 8mm;
 }
@@ -5258,13 +5261,14 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-pdf-body {
+  flex: 1 1 auto;
   display: grid;
   gap: 3.2mm;
-  min-height: calc(var(--financial-study-a4-height) - var(--financial-study-page-padding-top) - var(--financial-study-page-padding-bottom) - 22mm);
   align-content: start;
   width: 100%;
   max-width: 100%;
-  overflow: hidden;
+  min-width: 0;
+  overflow: visible;
 }
 
 .financial-study-pdf-body > *,
@@ -5275,6 +5279,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+}
+
+.financial-study-pdf-footer {
+  flex: 0 0 auto;
+  margin-top: auto;
 }
 
 .financial-study-pdf-intro-sheet {
@@ -6121,6 +6130,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .financial-study-pdf-page {
+    display: flex;
+    flex-direction: column;
     width: auto;
     min-height: 297mm;
     margin: 0;
@@ -6147,10 +6158,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .financial-study-pdf-footer {
-    position: absolute;
-    left: 12mm;
-    right: 12mm;
-    bottom: 8mm;
+    position: static;
+    margin-top: auto;
     font-size: 10pt;
   }
 
@@ -6163,7 +6172,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .financial-study-pdf-body {
-    min-height: calc(297mm - 30mm);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: visible;
   }
 
   .financial-study-pdf-table th,
