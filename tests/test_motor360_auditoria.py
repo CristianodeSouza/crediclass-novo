@@ -27,7 +27,7 @@ class Motor360AuditoriaTest(unittest.TestCase):
             parcela_desejada=6500, parcela_limite=15000, tipo_bem="", tipo_bem_explicit=False,
         )
         groups = [
-            {"grupo": "100", "administradora": "ITAU", "status": "Ativo", "tipo_bem": "Imovel", "credito_minimo": 100000, "credito_maximo": 1700000, "percentual_lance_embutido": "30%", "taxa_adm": "16%", "fundo_reserva": "3%", "prazo_remanescente": 240, "parcela_inicial_grupo": 6000, "lance_super_agressivo_3m": "40%", "lance_agressivo_6m": "30%", "lance_moderado_12m": "10%", "lance_conservador_24m": "5%", "lance_investidor": "2%"},
+            {"grupo": "100", "administradora": "ITAU", "status": "Ativo", "tipo_bem": "Imovel", "credito_minimo": 100000, "credito_maximo": 1700000, "percentual_lance_embutido": "30%", "taxa_adm": "16%", "fundo_reserva": "3%", "prazo_remanescente": 240, "parcela_inicial_grupo": 6000, "lance_super_agressivo_3m": "40%", "lance_agressivo_6m": "30%", "lance_moderado_12m": "10%", "lance_conservador_24m": "5%", "lance_investidor": "2%", "historico_12_meses": [{"mes": "2026-04", "qtd_contemplacoes": 3}, {"mes": "2026-05", "qtd_contemplacoes": 3}, {"mes": "2026-06", "qtd_contemplacoes": 3}]},
             {"grupo": "101", "administradora": "ITAU", "status": "Inativo", "credito_maximo": 1700000},
         ]
         result = analyze_client_consortium_viability(payload, groups)
@@ -41,7 +41,7 @@ class Motor360AuditoriaTest(unittest.TestCase):
         )
         self.assertEqual(audit["execution_steps"][2]["approved_count"], 1)
         self.assertEqual(audit["formulas"][0]["result"], 950000.0)
-        self.assertEqual(audit["excluded_groups"][0]["reason"], "status_inativo")
+        self.assertIn("status_inativo", [item["reason"] for item in audit["excluded_groups"]])
 
         motor360_auditoria.save_motor360_audit(audit)
         stored = motor360_auditoria.get_motor360_audit(audit["metadata"]["audit_id"])

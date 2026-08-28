@@ -42,13 +42,29 @@ def group(identifier="G1", **overrides):
         "parcela_inicial_grupo": 6000,
         "parcela_apos_lance_grupo": 5000,
         "parcela_reduzida": 3000,
-        "historico_12_meses": [],
+        "historico_12_meses": [
+            {"mes": "2025-07", "qtd_contemplacoes": 3},
+            {"mes": "2025-08", "qtd_contemplacoes": 3},
+            {"mes": "2025-09", "qtd_contemplacoes": 3},
+            {"mes": "2025-10", "qtd_contemplacoes": 3},
+            {"mes": "2025-11", "qtd_contemplacoes": 3},
+            {"mes": "2025-12", "qtd_contemplacoes": 3},
+            {"mes": "2026-01", "qtd_contemplacoes": 3},
+            {"mes": "2026-02", "qtd_contemplacoes": 3},
+            {"mes": "2026-03", "qtd_contemplacoes": 3},
+            {"mes": "2026-04", "qtd_contemplacoes": 3},
+            {"mes": "2026-05", "qtd_contemplacoes": 3},
+            {"mes": "2026-06", "qtd_contemplacoes": 3},
+        ],
     }
     values.update(overrides)
     return values
 
 
 class Motor360RfcTest(unittest.TestCase):
+    def test_investidor_objective_maps_to_long_term_profile(self):
+        self.assertEqual(map_declared_objective_to_preference("Investidor - 36 meses"), "long_term")
+
     def test_lista_grupo_menor_para_composicao_manual_de_ate_50_cotas(self):
         history = [
             {"mes": "2026-04", "qtd_contemplacoes": 2},
@@ -124,7 +140,8 @@ class Motor360RfcTest(unittest.TestCase):
             [group(historico_12_meses=history[-12:], historico_periodos=history)],
         )
 
-        capacity = result["items"][0]["capacidade_contemplacoes_selecionada"]
+        self.assertEqual(result["items"], [])
+        capacity = result["credit_items"][0]["capacidade_contemplacoes_selecionada"]
         self.assertEqual(capacity["janela_meses"], 36)
         self.assertEqual(capacity["meses_contemplados"], 5)
         self.assertAlmostEqual(capacity["media_contemplacoes"], 0.17, places=2)
@@ -132,31 +149,31 @@ class Motor360RfcTest(unittest.TestCase):
 
     def test_capacidade_selecionada_no_motor360_segue_o_objetivo_declarado(self):
         history = [
-            {"mes": "2026-04", "qtd_contemplacoes": 1},
-            {"mes": "2026-05", "qtd_contemplacoes": 1},
-            {"mes": "2026-06", "qtd_contemplacoes": 1},
+            {"mes": "2026-04", "qtd_contemplacoes": 2},
+            {"mes": "2026-05", "qtd_contemplacoes": 2},
+            {"mes": "2026-06", "qtd_contemplacoes": 2},
         ]
         result = analyze_client_consortium_viability(
             payload(objetivo="Urgente - 3 meses"),
             [
                 group(
                     historico_12_meses=history,
-                    lance_super_agressivo_3m="90%",
-                    lance_agressivo_6m="20%",
-                    lance_moderado_12m="20%",
-                    lance_conservador_24m="20%",
-                    lance_investidor="20%",
+                    lance_super_agressivo_3m="10%",
+                    lance_agressivo_6m="10%",
+                    lance_moderado_12m="10%",
+                    lance_conservador_24m="10%",
+                    lance_investidor="10%",
                 )
             ],
         )
 
         item = result["items"][0]
-        self.assertEqual(item["best_contemplation_strategy"], "Rapido - 6 meses")
+        self.assertEqual(item["best_contemplation_strategy"], "Urgente - 3 meses")
         self.assertEqual(item["capacidade_contemplacoes_selecionada"]["perfil"], "Urgente - 3 meses")
         self.assertEqual(item["capacidade_contemplacoes_selecionada"]["janela_meses"], 3)
         self.assertEqual(item["capacidade_contemplacoes_selecionada"]["meses_contemplados"], 3)
-        self.assertEqual(item["capacidade_contemplacoes_selecionada"]["media_contemplacoes"], 1.0)
-        self.assertFalse(item["capacidade_contemplacoes_selecionada"]["atinge_regra_minima"])
+        self.assertEqual(item["capacidade_contemplacoes_selecionada"]["media_contemplacoes"], 2.0)
+        self.assertTrue(item["capacidade_contemplacoes_selecionada"]["atinge_regra_minima"])
         self.assertEqual(
             [profile["label"] for profile in item["cenarios"][0]["perfis_contemplacao"]],
             ["Urgente", "Rápido", "Moderado", "Conservador", "Investidor"],
@@ -243,14 +260,14 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual([item["grupo"] for item in result["items"]], ["inside"])
         self.assertEqual(result["items"][0]["cenarios"][0]["saldo_devedor"], 1130500.0)
 
-    def test_remaining_term_is_compared_to_ceil_after_bid_income_term(self):
+    def test_initial_installment_must_respect_income_limit(self):
         result = analyze_client_consortium_viability(payload(), [
-            group("enough", prazo_restante=66, percentual_lance_embutido=None),
-            group("short", prazo_restante=65, percentual_lance_embutido=None),
+            group("enough", prazo_restante=300, percentual_lance_embutido=None, taxa_adm="16%"),
+            group("above-limit", prazo_restante=60, percentual_lance_embutido=None, taxa_adm="80%"),
         ])
         self.assertEqual([item["grupo"] for item in result["items"]], ["enough"])
         reasons = result["audit"]["excluded_groups"][0]["detail"]
-        self.assertIn("prazo_remanescente_insuficiente", reasons)
+        self.assertIn("parcela_inicial_acima_do_limite_de_renda", reasons)
 
     def test_credit_stage_remains_visible_when_later_rules_reject_group(self):
         result = analyze_client_consortium_viability(payload(), [
@@ -260,13 +277,14 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(result["total_grupos_credito_compativeis"], 1)
         self.assertEqual([item["grupo"] for item in result["credit_items"]], ["credit-only"])
 
-    def test_objective_is_priority_not_an_exclusion_rule(self):
+    def test_objective_is_an_exclusion_rule_for_preselection(self):
         result = analyze_client_consortium_viability(payload(objetivo="Contemplar - urgente - 3 meses"), [
             group(percentual_lance_embutido=None, lance_super_agressivo_3m="90%", lance_agressivo_6m="80%", lance_moderado_12m="10%"),
         ])
-        item = result["items"][0]
-        self.assertIn("moderate", item["compatible_contemplation_strategies"])
-        self.assertFalse(item["destaque_preferencia"])
+        self.assertEqual(result["items"], [])
+        self.assertEqual(result["total_grupos_credito_compativeis"], 1)
+        self.assertEqual(result["credit_items"][0]["objective_compatible"], False)
+        self.assertIn("perfil_objetivo_nao_atingido", result["audit"]["excluded_groups"][0]["detail"])
 
     def test_embedded_bid_reduces_required_client_resources_and_counts_in_profile(self):
         result = analyze_client_consortium_viability(
@@ -310,20 +328,25 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(embedded_moderate["lance_ideal"], 0.0)
         self.assertEqual(embedded_moderate["falta_para_ideal"], 0.0)
 
-    def test_contemplation_never_eliminates_a_credit_and_term_preselected_group(self):
+    def test_preselection_requires_history_average_for_declared_objective(self):
         result = analyze_client_consortium_viability(payload(), [
             group(
+                historico_12_meses=[
+                    {"mes": "2026-04", "qtd_contemplacoes": 1},
+                    {"mes": "2026-05", "qtd_contemplacoes": 1},
+                    {"mes": "2026-06", "qtd_contemplacoes": 1},
+                ],
                 percentual_lance_embutido=None,
-                lance_super_agressivo_3m="99%",
-                lance_agressivo_6m="99%",
-                lance_moderado_12m="99%",
-                lance_conservador_24m="99%",
-                lance_investidor="99%",
+                lance_super_agressivo_3m="10%",
+                lance_agressivo_6m="10%",
+                lance_moderado_12m="10%",
+                lance_conservador_24m="10%",
+                lance_investidor="10%",
             ),
         ])
         self.assertEqual(result["total_grupos_credito_compativeis"], 1)
-        self.assertEqual(result["total_grupos_preselecionados"], 1)
-        self.assertEqual(result["items"][0]["selection_stage"], "preselection")
+        self.assertEqual(result["total_grupos_preselecionados"], 0)
+        self.assertIn("media_contemplacao_abaixo_da_regra_minima", result["audit"]["excluded_groups"][0]["detail"])
 
     def test_golden_preselection_split_keeps_credit_and_term_stages_separate(self):
         approved = ["40112", "40174", "40105", "40098", "40090", "40086", "1820", "1038", "1031", "1026", "1019"]
@@ -345,7 +368,7 @@ class Motor360RfcTest(unittest.TestCase):
         ])
         audit_entry = result["audit"]["group_results"][0]
         self.assertEqual(audit_entry["result"], "excluded_term_income")
-        self.assertEqual(audit_entry["justification"], ["prazo_remanescente_insuficiente"])
+        self.assertEqual(audit_entry["justification"], ["parcela_inicial_acima_do_limite_de_renda"])
 
     def test_audit_reports_raw_identifier_source_row_and_decision_usage(self):
         result = analyze_client_consortium_viability(payload(), [
@@ -365,13 +388,13 @@ class Motor360RfcTest(unittest.TestCase):
                 credito_maximo=1100000,
                 lance_super_agressivo_3m="30%",
                 lance_agressivo_6m="30%",
-                lance_moderado_12m="30%",
+                lance_moderado_12m="10%",
                 lance_conservador_24m="30%",
                 lance_investidor="30%",
             ),
         ])
         classification = result["items"][0]["contemplation_classification"]
-        self.assertEqual(classification["strategies"], [])
+        self.assertEqual(classification["strategies"], ["moderate"])
         self.assertEqual(classification["ignored_scenarios"][0]["scenario_id"], "with_embedded")
         self.assertEqual(classification["ignored_scenarios"][0]["reason"], "credito_fora_da_faixa")
 
@@ -427,7 +450,7 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(map_declared_objective_to_preference("Moderado - 12 meses"), "moderate")
         self.assertEqual(map_declared_objective_to_preference("Conservador - 24 meses"), "conservative")
         self.assertEqual(map_declared_objective_to_preference("Investidor - 36 meses"), "long_term")
-        self.assertEqual(map_declared_objective_to_preference("Investidor - carta"), "investment")
+        self.assertEqual(map_declared_objective_to_preference("Investidor - carta"), "long_term")
 
 
 if __name__ == "__main__":

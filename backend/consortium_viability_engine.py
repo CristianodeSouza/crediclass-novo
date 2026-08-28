@@ -55,7 +55,7 @@ def map_declared_objective_to_preference(objective: str) -> str | None:
     if "36 mes" in text:
         return "long_term"
     if text.startswith("investidor"):
-        return "investment"
+        return "long_term"
     if not text.startswith("contemplar") and not any(keyword in text for keyword in {"urgente", "rapido", "moderado", "conservador"}):
         return None
     if "conservador" in text or "24 mes" in text:
@@ -109,7 +109,9 @@ def _scenario_reasons(scenario: dict[str, Any], matches: list[str], has_ranges: 
         reasons.append("prazo_restante_nao_informado")
     if scenario["credit_compatible"] is False:
         reasons.append("credito_fora_da_faixa")
-    if scenario["term_compatible"] is False:
+    if scenario.get("initial_installment_compatible") is False:
+        reasons.append("parcela_inicial_acima_do_limite_de_renda")
+    elif scenario["term_compatible"] is False:
         reasons.append("prazo_remanescente_insuficiente")
     # Contemplation ranges are informational during pre-selection. They do
     # not eliminate a group before the later classification/ranking phase.
@@ -120,6 +122,25 @@ def _scenario_reasons(scenario: dict[str, Any], matches: list[str], has_ranges: 
 
 def _reference_name(strategy: str | None) -> str | None:
     return next((label for key, _, _, label in STRATEGY_TARGETS if key == strategy), None)
+
+
+def _objective_rule_for_preselection(
+    preference: str | None,
+    scenario: dict[str, Any],
+    contemplation_capacities: dict[str, dict[str, Any]],
+) -> tuple[bool, str | None]:
+    if not preference:
+        return True, None
+    if preference not in CONTEMPLATION_CAPACITY_WINDOWS:
+        return True, None
+    if preference not in (scenario.get("compatible_contemplation_strategies") or []):
+        return False, "perfil_objetivo_nao_atingido"
+    selected_capacity = contemplation_capacities.get(preference)
+    if not selected_capacity:
+        return False, "historico_contemplacao_indisponivel"
+    if selected_capacity.get("atinge_regra_minima") is not True:
+        return False, "media_contemplacao_abaixo_da_regra_minima"
+    return True, None
 
 
 def _contemplation_capacity(group: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -309,10 +330,13 @@ def analyze_client_consortium_viability(
             scenario["credito_maximo"] = money(maximum)
             scenario["parcela_inicial"] = _parcela_inicial_por_cenario(scenario)
             scenario["parcela_inicial_formula"] = "saldo devedor / prazo remanescente (coluna F)"
+            scenario["parcela_desejada_cliente"] = money(desired_installment)
+            scenario["parcela_maxima_cliente"] = money(income_limit)
             client_bid = own + fgts
             contracted_credit = parse_decimal(scenario.get("credito_contratado"))
             embedded_amount = parse_decimal(scenario.get("valor_lance_embutido")) or Decimal("0")
             total_bid = client_bid + embedded_amount
+            initial_installment = parse_decimal(scenario.get("parcela_inicial"))
             client_bid_percent = (
                 client_bid / contracted_credit
                 if contracted_credit is not None and contracted_credit > 0
@@ -330,6 +354,16 @@ def analyze_client_consortium_viability(
             scenario["percentual_lance_efetivo"] = float(total_bid_percent) if total_bid_percent is not None else None
             scenario["parcela_pos_contemplacao"] = _parcela_pos_contemplacao_por_cenario(scenario)
             scenario["parcela_pos_contemplacao_formula"] = "(saldo devedor - parcela inicial - lance total ofertado) / (prazo remanescente - 1)"
+            scenario["term_compatible_audit"] = scenario.get("term_compatible")
+            scenario["income_compatible_audit"] = scenario.get("income_compatible")
+            scenario["initial_installment_compatible"] = (
+                initial_installment is not None and initial_installment <= income_limit
+            )
+            scenario["within_desired_reference"] = (
+                initial_installment is not None and initial_installment <= desired_installment
+            )
+            scenario["term_compatible"] = scenario["initial_installment_compatible"]
+            scenario["income_compatible"] = scenario["initial_installment_compatible"]
             profile_rows = []
             for profile_id, label, strategy_key in CONTEMPLATION_PROFILE_TARGETS:
                 threshold = ranges.get(strategy_key)
@@ -386,7 +420,7 @@ def analyze_client_consortium_viability(
         step_started = time.perf_counter()
         term_scenarios = [
             scenario for scenario in credit_scenarios
-            if scenario["data_complete"] and scenario["term_compatible"] is True
+            if scenario["data_complete"] and scenario.get("initial_installment_compatible") is True
         ]
         durations["term"] += time.perf_counter() - step_started
         # The official architecture has a dedicated administrator stage.  Its
@@ -395,16 +429,30 @@ def analyze_client_consortium_viability(
         step_started = time.perf_counter()
         administrator_scenarios = list(term_scenarios)
         durations["administrator_rules"] += time.perf_counter() - step_started
-        step_started = time.perf_counter()
-        contemplation_scenarios = [
-            scenario for scenario in administrator_scenarios
-            if scenario["contemplation_compatible"] is True
-        ]
-        durations["contemplation"] += time.perf_counter() - step_started
-        # A pre-selected group passed credit and term/income in the same
-        # scenario. Contemplation is deliberately not an exclusion here.
-        approved_scenarios = term_scenarios
         contemplation_capacities = _contemplation_capacity(group)
+        step_started = time.perf_counter()
+        contemplation_scenarios = []
+        objective_rejected_scenarios: list[dict[str, Any]] = []
+        objective_rejection_reasons: set[str] = set()
+        for scenario in administrator_scenarios:
+            objective_ok, objective_reason = _objective_rule_for_preselection(
+                preference,
+                scenario,
+                contemplation_capacities,
+            )
+            scenario["objective_compatible"] = objective_ok
+            scenario["objective_incompatibility_reason"] = objective_reason
+            if objective_ok:
+                contemplation_scenarios.append(scenario)
+            else:
+                objective_rejected_scenarios.append(scenario)
+                if objective_reason:
+                    objective_rejection_reasons.add(objective_reason)
+        durations["contemplation"] += time.perf_counter() - step_started
+        # A pre-selected group must satisfy the financial scenario and, when an
+        # objective/profile is declared, the same scenario must also satisfy
+        # the selected contemplation profile window.
+        approved_scenarios = contemplation_scenarios
         source_values = {
             "prazo_restante": remaining_term,
             "credito_minimo": money(minimum),
@@ -422,7 +470,6 @@ def analyze_client_consortium_viability(
             and maximum < desired
             and maximum * Decimal("50") >= desired
             and fee is not None
-            and fund is not None
             and remaining_term is not None
         ):
             composition_scenarios = []
@@ -432,7 +479,7 @@ def analyze_client_consortium_viability(
                 embedded_amount = maximum * (embedded or Decimal("0")) if with_embedded else Decimal("0")
                 liquid_credit = maximum - embedded_amount
                 fee_amount = maximum * fee
-                fund_amount = maximum * fund
+                fund_amount = maximum * (fund or Decimal("0"))
                 balance = maximum + fee_amount + fund_amount
                 initial_installment = balance / Decimal(remaining_term)
                 profile_rows = []
@@ -500,7 +547,7 @@ def analyze_client_consortium_viability(
             "credito": {"approved": bool(credit_scenarios), "scenario_ids": [scenario["id"] for scenario in credit_scenarios], "rule": "O <= crédito contratado <= U"},
             "prazo": {"approved": bool(term_scenarios), "scenario_ids": [scenario["id"] for scenario in term_scenarios], "rule": "F >= ceil(saldo após lance / parcela máxima)"},
             "administradora": {"approved": bool(administrator_scenarios), "scenario_ids": [scenario["id"] for scenario in administrator_scenarios], "rule": "Sem regra adicional definida"},
-            "contemplacao": {"approved": bool(contemplation_scenarios), "scenario_ids": [scenario["id"] for scenario in contemplation_scenarios], "rule": "Lance do cliente >= uma faixa BL:BP"},
+            "contemplacao": {"approved": bool(contemplation_scenarios), "scenario_ids": [scenario["id"] for scenario in contemplation_scenarios], "rule": "Mesmo cenário deve atender à faixa BL:BP do objetivo e à média mínima de 2 contemplações na janela selecionada"},
         }
         counters["credit_approved"] += int(bool(credit_scenarios))
         counters["credit_rejected"] += int(not credit_scenarios)
@@ -535,6 +582,8 @@ def analyze_client_consortium_viability(
                 "credit_compatible": True,
                 "term_compatible": any(scenario["term_compatible"] is True for scenario in credit_scenarios),
                 "income_compatible": any(scenario["income_compatible"] is True for scenario in credit_scenarios),
+                "objective_compatible": any(scenario.get("objective_compatible") is True for scenario in credit_scenarios) if preference else True,
+                "objective_rule_label": _reference_name(preference),
                 "data_completeness": "complete" if any(scenario["data_complete"] for scenario in credit_scenarios) else "incomplete",
                 "financial_data_complete": any(scenario["financial_data_complete"] for scenario in credit_scenarios),
                 "recommendable": bool(approved_scenarios),
@@ -545,7 +594,10 @@ def analyze_client_consortium_viability(
                 "historico_12_meses": list(group.get("historico_12_meses") or []),
                 "destaque_preferencia": preference in credit_distinct_matches,
                 "source_values": source_values,
-                "alerts": sorted({reason for scenario in credit_scenarios for reason in scenario["eligibility_reasons"] if reason != "credito_fora_da_faixa"}),
+                "alerts": sorted(
+                    {reason for scenario in credit_scenarios for reason in scenario["eligibility_reasons"] if reason != "credito_fora_da_faixa"}
+                    | objective_rejection_reasons
+                ),
                 "selected_scenario": credit_selected["id"],
                 "selection_stage": "credit",
                 "stage_results": stage_results,
@@ -554,11 +606,15 @@ def analyze_client_consortium_viability(
             reasons = sorted({reason for scenario in scenarios for reason in scenario["eligibility_reasons"]})
             for reason in reasons:
                 counters[reason] += 1
-            reason = "prazo_remanescente_insuficiente" if credit_scenarios and not term_scenarios else (reasons[0] if reasons else "nao_elegivel")
+            if credit_scenarios and term_scenarios and objective_rejected_scenarios:
+                reason = next(iter(sorted(objective_rejection_reasons)), "perfil_objetivo_nao_atingido")
+                consolidated_reasons = sorted(objective_rejection_reasons) or ["perfil_objetivo_nao_atingido"]
+            else:
+                reason = "parcela_inicial_acima_do_limite_de_renda" if credit_scenarios and not term_scenarios else (reasons[0] if reasons else "nao_elegivel")
             if credit_scenarios and not term_scenarios:
                 incomplete_reasons = [reason for reason in reasons if reason.endswith("nao_informada") or reason.endswith("nao_informado")]
-                consolidated_reasons = incomplete_reasons or ["prazo_remanescente_insuficiente"]
-            else:
+                consolidated_reasons = incomplete_reasons or ["parcela_inicial_acima_do_limite_de_renda"]
+            elif not (credit_scenarios and term_scenarios and objective_rejected_scenarios):
                 consolidated_reasons = reasons
             excluded.append({**group_ref, "reason": reason, "detail": ", ".join(consolidated_reasons) or "Nenhum cenario aprovado."})
             group_results.append({**group_ref, "result": "excluded_term_income" if credit_scenarios else "excluded_credit", "justification": consolidated_reasons, "scenarios": scenarios, "source_values": source_values, "stage_results": stage_results, "missing_fields": missing_fields})
@@ -581,6 +637,18 @@ def analyze_client_consortium_viability(
             "strategies": distinct_matches,
             "ignored_scenarios": ignored_contemplation_scenarios,
         }
+        def preferred_scenario_key(scenario: dict[str, Any]) -> tuple[Any, ...]:
+            objective_ok = preference in (scenario.get("compatible_contemplation_strategies") or []) if preference else True
+            desired_ok = scenario.get("within_desired_reference") is True
+            initial_installment = parse_decimal(scenario.get("parcela_inicial"))
+            return (
+                0 if objective_ok else 1,
+                0 if desired_ok else 1,
+                float(initial_installment) if initial_installment is not None else math.inf,
+                0 if scenario.get("id") == "without_embedded" else 1,
+            )
+
+        approved_scenarios.sort(key=preferred_scenario_key)
         selected = approved_scenarios[0]
         item = {
             **group_ref,
@@ -603,6 +671,8 @@ def analyze_client_consortium_viability(
             "credit_compatible": True,
             "term_compatible": True,
             "income_compatible": True,
+            "objective_compatible": True,
+            "objective_rule_label": _reference_name(preference),
             "data_completeness": "complete",
             "financial_data_complete": True,
             "recommendable": True,
@@ -715,7 +785,7 @@ def analyze_client_consortium_viability(
             {"order": 1, "id": "status", "name": "Status", "formula_or_rule": "Somente status Ativo", "input_count": len(groups), "approved_count": counters["active"], "rejected_count": counters["status_rejected"], "incomplete_count": 0, "duration_ms": round(durations["status"] * 1000, 3)},
             {"order": 2, "id": "type", "name": "Tipo de bem", "formula_or_rule": "Aplicado somente quando explicitamente informado", "input_count": counters["active"], "approved_count": counters["active"] - counters["type_rejected"], "rejected_count": counters["type_rejected"], "incomplete_count": 0, "duration_ms": round(durations["type"] * 1000, 3)},
             {"order": 3, "id": "credit", "name": "Faixa de credito", "formula_or_rule": "Cenarios independentes sem e com X; O <= credito contratado <= U", "input_count": counters["active"] - counters["type_rejected"], "approved_count": counters["credit_approved"], "rejected_count": counters["credit_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"O", "U"} for field in item["missing_fields"])), "duration_ms": round((durations["scenario"] + durations["credit_decision"]) * 1000, 3)},
-            {"order": 4, "id": "term", "name": "Prazo e renda", "formula_or_rule": "F >= ceil(saldo apos lance / parcela maxima); parcela desejada tambem permanece auditada", "input_count": counters["credit_approved"], "approved_count": counters["term_approved"], "rejected_count": counters["term_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"F", "AC"} for field in item["missing_fields"])), "duration_ms": round(durations["term"] * 1000, 3)},
+            {"order": 4, "id": "term", "name": "Prazo e renda", "formula_or_rule": "Parcela inicial calculada no cenário deve ser menor ou igual ao teto de 30% da renda; valores abaixo da parcela desejada continuam válidos.", "input_count": counters["credit_approved"], "approved_count": counters["term_approved"], "rejected_count": counters["term_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"F", "AC"} for field in item["missing_fields"])), "duration_ms": round(durations["term"] * 1000, 3)},
             {"order": 5, "id": "administrator_rules", "name": "Regras da administradora", "formula_or_rule": "Nenhuma regra adicional foi definida nos documentos oficiais; nenhuma exclusao aplicada.", "input_count": counters["term_approved"], "approved_count": counters["administrator_approved"], "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["administrator_rules"] * 1000, 3)},
             {"order": 6, "id": "contemplation", "name": "Contemplacao", "formula_or_rule": "Lance do cliente >= pelo menos uma faixa BL:BP; objetivo declarado somente prioriza o ranking", "input_count": counters["administrator_approved"], "approved_count": counters["contemplation_approved"], "rejected_count": counters["contemplation_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] == "BL:BP" for field in item["missing_fields"])), "duration_ms": round(durations["contemplation"] * 1000, 3)},
             {"order": 7, "id": "ranking", "name": "Ranking", "formula_or_rule": "Preferências configuráveis apenas reordenam os grupos finais", "input_count": counters["contemplation_approved"], "approved_count": len(eligible_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
@@ -747,8 +817,8 @@ def analyze_client_consortium_viability(
         ],
     }
     audit["execution_steps"] = audit["execution_steps"][:4] + [
-        {"order": 5, "id": "preselection", "name": "Pre-selecao", "formula_or_rule": "Mesmo cenario deve atender credito, liquidez e prazo/renda. Contemplacao nao elimina nesta etapa.", "input_count": counters["credit_approved"], "approved_count": len(eligible_items), "rejected_count": counters["term_rejected"], "incomplete_count": 0, "duration_ms": round((durations["term"] + durations["administrator_rules"] + durations["contemplation"]) * 1000, 3)},
-        {"order": 6, "id": "contemplation_information", "name": "Classificacao de contemplacao", "formula_or_rule": "BL:BP apenas classificam potencial; nao excluem grupos da pre-selecao.", "input_count": len(eligible_items), "evaluated_count": len(eligible_items), "classified_count": contemplation_classified_count, "unclassified_count": contemplation_unclassified_count, "approved_count": contemplation_classified_count, "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
+        {"order": 5, "id": "preselection", "name": "Pre-selecao", "formula_or_rule": "Mesmo cenário deve atender crédito, liquidez, parcela inicial dentro do teto de renda e, quando houver objetivo declarado, a faixa BL:BP e a média mínima de contemplações da janela escolhida.", "input_count": counters["credit_approved"], "approved_count": len(eligible_items), "rejected_count": counters["term_rejected"] + counters["contemplation_rejected"], "incomplete_count": 0, "duration_ms": round((durations["term"] + durations["administrator_rules"] + durations["contemplation"]) * 1000, 3)},
+        {"order": 6, "id": "contemplation_information", "name": "Classificacao de contemplacao", "formula_or_rule": "Os grupos pré-selecionados exibem o perfil aderente ao objetivo e a média de contemplações da janela selecionada.", "input_count": len(eligible_items), "evaluated_count": len(eligible_items), "classified_count": contemplation_classified_count, "unclassified_count": contemplation_unclassified_count, "approved_count": contemplation_classified_count, "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
         {"order": 7, "id": "preliminary_order", "name": "Ordem preliminar", "formula_or_rule": "Maior prazo remanescente, menor taxa administrativa total, administradora e grupo. Nao e ranking final.", "input_count": len(eligible_items), "approved_count": len(eligible_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["ranking"] * 1000, 3)},
     ]
-    return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(eligible_items), "total_grupos_viaveis": len(eligible_items), "total_grupos_composicao": len(composition_items), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Faixa de credito aplicada por O/U.", "Prazo F e renda aplicados no mesmo cenario aprovado por credito.", "Contemplacao BL:BP apenas classifica; nao elimina a pre-selecao.", "Ordem preliminar aplicada sem ranking definitivo."], "items": eligible_items, "credit_items": credit_eligible_items, "composition_items": composition_items, "audit": audit}
+    return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(eligible_items), "total_grupos_viaveis": len(eligible_items), "total_grupos_composicao": len(composition_items), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Faixa de credito aplicada por O/U.", "Parcela inicial do cenário validada contra o teto de 30% da renda.", "Quando houver objetivo declarado, o mesmo cenário também precisa atender a faixa BL:BP e a média mínima da janela do perfil.", "Ordem preliminar aplicada sem ranking definitivo."], "items": eligible_items, "credit_items": credit_eligible_items, "composition_items": composition_items, "audit": audit}

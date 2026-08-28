@@ -2111,7 +2111,11 @@ function motor360ScenarioStatus(scenario) {
   }
   return {
     label: scenario.credit_compatible ? "Crédito OK" : "Fora da faixa",
-    detail: scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "não compatível",
+    detail: scenario.initial_installment_compatible === null || scenario.initial_installment_compatible === undefined
+      ? "não analisado"
+      : scenario.initial_installment_compatible
+        ? "dentro do teto de renda"
+        : "acima do teto de renda",
     compatible: Boolean(scenario.credit_compatible),
   };
 }
@@ -2174,7 +2178,7 @@ function renderMotor360GroupCard(item) {
   const scaledScenarioCards = scenarios.map((scenario) => {
     const title = scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido";
     const statusInfo = motor360ScenarioStatus(scenario);
-    return `<article class="motor360-scenario-card ${statusInfo.compatible ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusInfo.label}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado</small><b>${formatMoney(scaleMoney(scenario.credito_contratado))}</b></div><div><small>Lance do cliente</small><b>${formatMoney(scenario.lance_cliente_total)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Lance embutido</small><b>${formatMoney(scaleMoney(scenario.lance_embutido))}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(scaleMoney(scenario.lance_total_cenario))} <em>(${formatPercent(scenario.percentual_lance_efetivo)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(scaleMoney(scenario.saldo_devedor))}</b></div><div><small>Parcela inicial</small><b>${formatMoney(scaleMoney(scenario.parcela_inicial))}</b></div><div><small>Parcela pós-contemplação</small><b>${scenario.parcela_pos_contemplacao == null ? "Não calculada" : formatMoney(scaleMoney(scenario.parcela_pos_contemplacao))}</b></div></div><small class="motor360-scenario-note">${scenario.creation_status === "not_created" ? `Status: ${statusInfo.detail}` : `Prazo após lance: ${statusInfo.detail}`}</small></article>`;
+    return `<article class="motor360-scenario-card ${statusInfo.compatible ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusInfo.label}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado</small><b>${formatMoney(scaleMoney(scenario.credito_contratado))}</b></div><div><small>Lance do cliente</small><b>${formatMoney(scenario.lance_cliente_total)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Lance embutido</small><b>${formatMoney(scaleMoney(scenario.lance_embutido))}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(scaleMoney(scenario.lance_total_cenario))} <em>(${formatPercent(scenario.percentual_lance_efetivo)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(scaleMoney(scenario.saldo_devedor))}</b></div><div><small>Parcela inicial</small><b>${formatMoney(scaleMoney(scenario.parcela_inicial))}</b></div><div><small>Parcela pós-contemplação</small><b>${scenario.parcela_pos_contemplacao == null ? "Não calculada" : formatMoney(scaleMoney(scenario.parcela_pos_contemplacao))}</b></div></div><small class="motor360-scenario-note">${scenario.creation_status === "not_created" ? `Status: ${statusInfo.detail}` : `Parcela inicial: ${statusInfo.detail}`}</small></article>`;
   }).join("");
   const scaledProfileCards = profiles.map((profile) => {
     const values = ["without_embedded", "with_embedded"].map((scenarioId) => {
@@ -3426,24 +3430,31 @@ function renderInvestorAnalysis(result) {
   const finalItems = result.items || [];
   const creditItems = result.credit_items || [];
   const compositionItems = result.composition_items || [];
-  const showingCreditStage = !finalItems.length && creditItems.length > 0;
-  const sourceItems = showingCreditStage ? creditItems : finalItems;
-  const selectedAdministrator = syncMotor360AdministratorFilter([...sourceItems, ...compositionItems]);
+  const selectedAdministrator = syncMotor360AdministratorFilter([...finalItems, ...creditItems, ...compositionItems]);
   updateInvestorPreferenceSummary();
   const selectedAdministratorKey = motor360AdministratorKey(selectedAdministrator);
-  const administratorItems = sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey);
+  const administratorItems = finalItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey);
   const items = applyInvestorPreferences(administratorItems, investorState.preferences);
   const administratorCompositionItems = compositionItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey);
-  const creditRejectedByTerm = creditItems.filter((item) => (
+  const creditRejectedAfterFinancialOrProfile = creditItems.filter((item) => (
     motor360AdministratorKey(item) === selectedAdministratorKey && !item.recommendable
   ));
-  const compositionEmptyMessage = creditRejectedByTerm.length
-    ? "Nenhum grupo desta administradora exige composição de múltiplas cotas. Os grupos listados abaixo foram eliminados por prazo/renda, mesmo com crédito atendido em 1 cota."
+  const creditRejectionReason = (item) => {
+    if (item.term_compatible === false || item.income_compatible === false) {
+      return "Parcela inicial acima do teto de 30% da renda no cenário compatível por crédito.";
+    }
+    if (item.objective_compatible === false) {
+      return `Não atende ao objetivo declarado${item.objective_rule_label ? ` (${item.objective_rule_label})` : ""}.`;
+    }
+    return "Eliminado por regra posterior à compatibilidade de crédito.";
+  };
+  const compositionEmptyMessage = creditRejectedAfterFinancialOrProfile.length
+    ? "Nenhum grupo desta administradora exige composição de múltiplas cotas. Os grupos listados abaixo foram eliminados por parcela/renda ou por não atenderem ao objetivo declarado, mesmo com crédito atendido em 1 cota."
     : "Nenhum grupo desta administradora exige composição de múltiplas cotas.";
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
     ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
-    ["Estratégia declarada", result.preferencia_declarada === "investment" ? "Investimento" : result.preferencia_declarada || "Não classificada"],
+    ["Estratégia declarada", result.preferencia_declarada || "Não classificada"],
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
     ["Lance ofertado", formatMoney(client.lance_cliente_total)],
     ["Administradora", selectedAdministrator || "-"],
@@ -3459,17 +3470,15 @@ function renderInvestorAnalysis(result) {
     `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`
   )).join("");
   updateMotor360SelectionSummary();
-  status.textContent = showingCreditStage
-    ? `${items.length} grupos compatíveis por crédito exibidos`
-    : `${items.length} grupos pré-selecionados exibidos`;
-  if (!items.length && !administratorCompositionItems.length) {
-    results.innerHTML = `<div class="table-state">Nenhum grupo atende à faixa de crédito contratada nos cenários calculados.</div>${renderMotor360Audit(investorState.audit)}`;
+  status.textContent = `${items.length} grupos pré-selecionados exibidos`;
+  if (!items.length && !administratorCompositionItems.length && !creditRejectedAfterFinancialOrProfile.length) {
+    results.innerHTML = `<div class="table-state">Nenhum grupo atendeu todas as regras do perfil do cliente nos cenários calculados.</div>${renderMotor360Audit(investorState.audit)}`;
     setInvestorAnalysisState("results");
     return;
   }
   results.innerHTML = `
     <div class="investor-engine-note">
-      <strong>${showingCreditStage ? "Compatíveis por crédito:" : "Pré-seleção de grupos:"}</strong> ${showingCreditStage ? "estes grupos atendem à faixa O/U para pelo menos um cenário." : "cada cenário preserva o crédito líquido, atende à faixa O/U e ao prazo/renda no mesmo cenário financeiro."} A classificação BL:BP é informativa e não elimina nesta etapa. AJ, AK e AL são apenas referências até a seleção da carta exata.
+      <strong>Pré-seleção de grupos:</strong> cada cenário precisa preservar o crédito líquido, atender à faixa O/U, manter a parcela inicial dentro do teto de 30% da renda e, quando houver objetivo declarado, também atender à faixa BL:BP e à média mínima de contemplações da janela do perfil. AJ, AK e AL são apenas referências até a seleção da carta exata.
     </div>
     ${renderMotor360SelectedGroupsDock()}
     <div class="motor360-single-quota-note" role="note">
@@ -3480,7 +3489,7 @@ function renderInvestorAnalysis(result) {
     <div class="motor360-group-list">${items.map(renderMotor360GroupCard).join("")}</div>
     <div class="motor360-multiple-quota-note" role="note"><strong>Composição com mais de uma cota</strong><span>Lista de grupos em que uma cota não atende sozinha ao crédito solicitado. O operador pode adicionar até 50 cotas por grupo ao carrinho e combinar somente grupos desta administradora.</span></div>
     <div class="motor360-composition-list">${administratorCompositionItems.length ? administratorCompositionItems.map(renderMotor360CompositionCard).join("") : `<div class="table-state">${escapeHtml(compositionEmptyMessage)}</div>`}</div>
-    ${creditRejectedByTerm.length ? `<details class="motor360-credit-excluded"><summary>Compatíveis por crédito, mas eliminados por prazo/renda (${creditRejectedByTerm.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Prazo restante</th><th>Motivo</th></tr></thead><tbody>${creditRejectedByTerm.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td><td>Prazo/renda insuficiente no cenário compatível por crédito.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
+    ${creditRejectedAfterFinancialOrProfile.length ? `<details class="motor360-credit-excluded"><summary>Compatíveis por crédito, mas eliminados por parcela/renda ou perfil (${creditRejectedAfterFinancialOrProfile.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Prazo restante</th><th>Motivo</th></tr></thead><tbody>${creditRejectedAfterFinancialOrProfile.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td><td>${escapeHtml(creditRejectionReason(item))}</td></tr>`).join("")}</tbody></table></div></details>` : ""}
     ${renderMotor360ChanceChart(items)}
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
     ${renderMotor360Audit(investorState.audit)}
