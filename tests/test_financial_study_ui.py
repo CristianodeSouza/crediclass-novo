@@ -40,6 +40,8 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn('id="financialStudyPreviewContent"', self.index_html)
         self.assertIn('data-study-open-preview', self.javascript)
         self.assertIn('bootstrap.Modal.getOrCreateInstance(previewModal).show()', self.javascript)
+        self.assertIn('previewPrintButton.onclick = () => exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"))', self.javascript)
+        self.assertNotIn("previewPrintButton.onclick = () => window.print()", self.javascript)
         self.assertIn(".financial-study-preview-dialog", self.styles)
         self.assertIn("--financial-study-a4-width: 210mm;", self.styles)
         self.assertIn("--financial-study-a4-height: 297mm;", self.styles)
@@ -76,6 +78,10 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn("financial-study-pdf-table-investment-wide", self.javascript)
         self.assertIn(".financial-study-pdf-table-investment-wide", self.styles)
         self.assertNotIn('eyebrow: "Simulação dinâmica"', self.javascript)
+
+    def test_exportacao_pdf_exibe_motor_utilizado(self):
+        self.assertIn('result.engine === "react-pdf" ? "PDF gerado com React-pdf." : "PDF gerado com motor legado."', self.javascript)
+        self.assertIn("if (result.warning) {", self.javascript)
 
 
 if __name__ == "__main__":

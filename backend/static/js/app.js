@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.98";
+const APP_BUNDLE_VERSION = "4.0.99";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -3199,7 +3199,7 @@ async function renderFinancialStudyScreen() {
   };
   screen.querySelectorAll("[data-study-open-preview]").forEach((button) => button.addEventListener("click", openPreview));
   const previewPrintButton = previewModal?.querySelector("[data-study-preview-print]");
-  if (previewPrintButton) previewPrintButton.onclick = () => window.print();
+  if (previewPrintButton) previewPrintButton.onclick = () => exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
   screen.querySelector("[data-study-customize]")?.addEventListener("click", () => screen.querySelector("[data-study-customizer-panel]")?.classList.toggle("d-none"));
   screen.querySelector("[data-study-generate]")?.addEventListener("click", async () => {
     const button = screen.querySelector("[data-study-generate]");
@@ -4563,7 +4563,10 @@ async function exportStudyPdf(studyId) {
     return;
   }
   const result = await apiPost(`/estudos/${encodeURIComponent(targetStudyId)}/exportar-pdf`, {});
-  showToast("PDF gerado.", "success");
+  if (result.warning) {
+    showToast(result.warning, "warning");
+  }
+  showToast(result.engine === "react-pdf" ? "PDF gerado com React-pdf." : "PDF gerado com motor legado.", "success");
   window.open(result.download_url, "_blank", "noopener");
 }
 

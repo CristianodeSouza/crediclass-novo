@@ -607,10 +607,29 @@ def estudos_excluir(estudo_id: str):
 @app.post("/api/estudos/{estudo_id}/exportar-pdf")
 def estudos_exportar_pdf(estudo_id: str):
     logger.info("POST /api/estudos/%s/exportar-pdf", estudo_id)
-    filename = export_estudo_pdf(estudo_id, FILES_DIR)
-    if not filename:
+    estudo = get_estudo(estudo_id)
+    if not estudo:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
-    return {"success": True, "download_url": f"/files/{filename}"}
+    filename = f"{estudo_id}.pdf"
+    path = FILES_DIR / filename
+    status = react_pdf_service_status()
+    engine = "legacy"
+    warning = None
+    if status["available"]:
+        try:
+            path.write_bytes(render_react_study_pdf(estudo, get_settings().version))
+            engine = "react-pdf"
+        except RuntimeError:
+            logger.exception("Falha no React-pdf para estudo %s; aplicando fallback legado", estudo_id)
+            warning = "React-pdf indisponivel para este estudo. PDF gerado com motor legado."
+    else:
+        warning = "React-pdf indisponivel neste ambiente. PDF gerado com motor legado."
+    if engine == "legacy":
+        legacy_filename = export_estudo_pdf(estudo_id, FILES_DIR)
+        if not legacy_filename:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
+        filename = legacy_filename
+    return {"success": True, "download_url": f"/files/{filename}", "engine": engine, "warning": warning}
 
 
 @app.get("/api/estudos/pdf-engine-status")

@@ -30,6 +30,9 @@ class ReactPdfStackTest(unittest.TestCase):
         self.assertIn("def render_react_study_pdf(", bridge)
         self.assertIn('/api/estudos/{estudo_id}/exportar-pdf-react', main)
         self.assertIn('/api/estudos/pdf-engine-status', main)
+        self.assertIn('engine = "react-pdf"', main)
+        self.assertIn('warning = "React-pdf indisponivel neste ambiente. PDF gerado com motor legado."', main)
+        self.assertIn('warning = "React-pdf indisponivel para este estudo. PDF gerado com motor legado."', main)
 
 
 if __name__ == "__main__":
