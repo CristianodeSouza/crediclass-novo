@@ -6,7 +6,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from backend.main import AUTH_COOKIE, app
-from backend.pdf_bridge import build_react_pdf_payload, react_pdf_service_status, render_react_study_pdf
+from backend.pdf_bridge import build_react_pdf_payload, ensure_react_pdf_runtime, react_pdf_service_status, render_react_study_pdf
 
 ROOT = Path(__file__).resolve().parents[1]
 PACKAGE_JSON = ROOT / "backend" / "pdf_service" / "package.json"
@@ -133,6 +133,28 @@ class ReactPdfStackTest(unittest.TestCase):
         self.assertIn('PDF_SERVICE_NODEENV_DIR = PDF_SERVICE_DIR / ".nodeenv"', bridge)
         self.assertIn('PDF_SERVICE_NODEENV_DIR / "bin" / "node"', bridge)
         self.assertIn('PDF_SERVICE_NODEENV_DIR / "Scripts" / "node.exe"', bridge)
+        self.assertIn('def _npm_binary() -> str | None:', bridge)
+        self.assertIn('[npm_path, "ci", "--prefix", str(PDF_SERVICE_DIR), "--omit=dev"]', bridge)
+
+    def test_render_blueprint_bootstraps_pdf_runtime_before_start(self):
+        render_yaml = (ROOT / "render.yaml").read_text(encoding="utf-8")
+        self.assertIn("npm ci --prefix backend/pdf_service --omit=dev", render_yaml)
+        self.assertIn("python scripts/ensure_pdf_service.py && python -m uvicorn backend.main:app", render_yaml)
+
+    def test_ensure_runtime_installs_when_dependencies_are_missing(self):
+        with patch("backend.pdf_bridge.react_pdf_service_status", side_effect=[
+            {"available": False, "node": "node", "npm": "npm", "entrypoint": "render-study-pdf.mjs", "package_json": True, "dependencies_installed": False},
+            {"available": True, "node": "node", "npm": "npm", "entrypoint": "render-study-pdf.mjs", "package_json": True, "dependencies_installed": True},
+        ]), patch("backend.pdf_bridge._npm_binary", return_value="npm"), patch("backend.pdf_bridge._node_binary", return_value="node"), patch(
+            "backend.pdf_bridge.PDF_SERVICE_PACKAGE", new=type("Pkg", (), {"exists": staticmethod(lambda: True), "__str__": staticmethod(lambda: "package.json")})()
+        ), patch("backend.pdf_bridge.subprocess.run") as run_mock:
+            run_mock.return_value.returncode = 0
+            run_mock.return_value.stdout = b""
+            run_mock.return_value.stderr = b""
+            status = ensure_react_pdf_runtime()
+
+        self.assertTrue(status["available"])
+        run_mock.assert_called_once()
 
     def test_renderer_outputs_pdf_bytes(self):
         if not react_pdf_service_status()["available"]:

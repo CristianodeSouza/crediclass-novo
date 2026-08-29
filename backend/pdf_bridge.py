@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from datetime import datetime
@@ -38,9 +39,18 @@ def _local_node_candidates() -> list[Path]:
     ]
 
 
+def _local_npm_candidates() -> list[Path]:
+    return [
+        PDF_SERVICE_NODEENV_DIR / "bin" / "npm",
+        PDF_SERVICE_NODEENV_DIR / "bin" / "npm.cmd",
+        PDF_SERVICE_NODEENV_DIR / "Scripts" / "npm.cmd",
+        PDF_SERVICE_NODEENV_DIR / "Scripts" / "npm.exe",
+    ]
+
+
 def _node_binary() -> str | None:
     explicit = str(Path(shutil.which("node") or "")).strip()
-    env_path = str(Path(__import__("os").getenv("REACT_PDF_NODE_PATH", "")).expanduser()).strip() if __import__("os").getenv("REACT_PDF_NODE_PATH") else ""
+    env_path = str(Path(os.getenv("REACT_PDF_NODE_PATH", "")).expanduser()).strip() if os.getenv("REACT_PDF_NODE_PATH") else ""
     if env_path and Path(env_path).exists():
         return env_path
     for candidate in _local_node_candidates():
@@ -51,15 +61,58 @@ def _node_binary() -> str | None:
     return None
 
 
+def _npm_binary() -> str | None:
+    explicit = str(Path(shutil.which("npm") or "")).strip()
+    env_path = str(Path(os.getenv("REACT_PDF_NPM_PATH", "")).expanduser()).strip() if os.getenv("REACT_PDF_NPM_PATH") else ""
+    if env_path and Path(env_path).exists():
+        return env_path
+    for candidate in _local_npm_candidates():
+        if candidate.exists():
+            return str(candidate)
+    if explicit:
+        return explicit
+    return None
+
+
 def react_pdf_service_status() -> dict[str, Any]:
     node_path = _node_binary()
+    npm_path = _npm_binary()
     return {
-        "available": bool(node_path and PDF_SERVICE_ENTRYPOINT.exists() and PDF_SERVICE_NODE_MODULE.exists()),
+        "available": bool(node_path and npm_path and PDF_SERVICE_ENTRYPOINT.exists() and PDF_SERVICE_NODE_MODULE.exists()),
         "node": node_path,
+        "npm": npm_path,
         "entrypoint": str(PDF_SERVICE_ENTRYPOINT),
         "package_json": PDF_SERVICE_PACKAGE.exists(),
         "dependencies_installed": PDF_SERVICE_NODE_MODULE.exists(),
     }
+
+
+def ensure_react_pdf_runtime(install_if_missing: bool = True) -> dict[str, Any]:
+    status = react_pdf_service_status()
+    if status["available"]:
+        return status
+    if not install_if_missing:
+        return status
+    if not PDF_SERVICE_PACKAGE.exists():
+        raise RuntimeError(f"package.json do React-pdf nao encontrado em {PDF_SERVICE_PACKAGE}")
+    npm_path = _npm_binary()
+    node_path = _node_binary()
+    if not npm_path or not node_path:
+        raise RuntimeError("Node.js/NPM indisponiveis para inicializar o motor React-pdf.")
+    result = subprocess.run(
+        [npm_path, "ci", "--prefix", str(PDF_SERVICE_DIR), "--omit=dev"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        cwd=str(BASE_DIR),
+    )
+    if result.returncode != 0:
+        detail = result.stderr.decode("utf-8", errors="replace").strip() or result.stdout.decode("utf-8", errors="replace").strip()
+        raise RuntimeError(f"Falha ao instalar dependencias do React-pdf: {detail or 'erro desconhecido'}")
+    status = react_pdf_service_status()
+    if not status["available"]:
+        raise RuntimeError("React-pdf continuou indisponivel apos npm ci.")
+    return status
 
 
 def _format_money(value: Any) -> str:
@@ -371,7 +424,7 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
 
 
 def render_react_study_pdf(estudo: dict[str, Any], version: str) -> bytes:
-    status = react_pdf_service_status()
+    status = ensure_react_pdf_runtime()
     if not status["available"]:
         raise RuntimeError("React-pdf service unavailable")
     payload = build_react_pdf_payload(estudo, version)
