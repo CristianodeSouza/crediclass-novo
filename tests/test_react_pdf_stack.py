@@ -180,7 +180,7 @@ class ReactPdfStackTest(unittest.TestCase):
         self.assertEqual(login.status_code, 200)
         self.assertIn(AUTH_COOKIE, login.cookies)
         with patch("backend.main.get_grupo", return_value={"grupo": "40004", "administradora": "Itau"}), patch(
-            "backend.main.react_pdf_service_status",
+            "backend.main.ensure_react_pdf_runtime",
             return_value={"available": True, "node": "node", "entrypoint": "render-study-pdf.mjs", "dependencies_installed": True},
         ), patch("backend.main.render_react_study_pdf", return_value=b"%PDF-1.4\nmock"):
             response = client.post(
@@ -205,7 +205,7 @@ class ReactPdfStackTest(unittest.TestCase):
         client = TestClient(app)
         client.post("/api/auth/login", json={"usuario": "adm", "senha": "cristiano"})
         with patch("backend.main.get_grupo", return_value={"grupo": "40004", "administradora": "Itau"}), patch(
-            "backend.main.react_pdf_service_status",
+            "backend.main.ensure_react_pdf_runtime",
             return_value={"available": False, "node": None, "entrypoint": "render-study-pdf.mjs", "dependencies_installed": False},
         ):
             response = client.post(
@@ -220,6 +220,26 @@ class ReactPdfStackTest(unittest.TestCase):
         self.assertFalse(payload["success"])
         self.assertEqual(payload["engine"], "react-pdf")
         self.assertIn("motor PDF canonico", payload["error"])
+
+    def test_preview_endpoint_attempts_runtime_bootstrap_before_failing(self):
+        client = TestClient(app)
+        client.post("/api/auth/login", json={"usuario": "adm", "senha": "cristiano"})
+        with patch("backend.main.get_grupo", return_value={"grupo": "40004", "administradora": "Itau"}), patch(
+            "backend.main.ensure_react_pdf_runtime",
+            side_effect=RuntimeError("Falha ao instalar dependencias do React-pdf: npm ci error"),
+        ) as ensure_mock:
+            response = client.post(
+                "/api/estudos/preview-pdf",
+                json={
+                    "cliente": {"nome": "Cliente Teste", "credito_desejado": 300000},
+                    "grupo_id": "40004",
+                },
+            )
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(ensure_mock.call_count, 1)
+        payload = response.json()
+        self.assertEqual(payload["engine"], "react-pdf")
+        self.assertIn("Falha ao instalar dependencias do React-pdf", payload["error"])
 
     def test_pdf_engine_healthcheck_reports_failure_with_503(self):
         client = TestClient(app)

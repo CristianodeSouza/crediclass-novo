@@ -25,7 +25,7 @@ from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, export_estudo_pdf_payload, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
-from .pdf_bridge import react_pdf_service_status, render_react_study_pdf
+from .pdf_bridge import ensure_react_pdf_runtime, react_pdf_service_status, render_react_study_pdf
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -185,7 +185,7 @@ def health():
 
 
 def _react_pdf_status_or_error() -> dict:
-    status = react_pdf_service_status()
+    status = ensure_react_pdf_runtime(install_if_missing=True)
     if not status["available"]:
         raise RuntimeError("React-pdf indisponivel neste ambiente. O motor PDF canonico nao esta operacional.")
     return status
