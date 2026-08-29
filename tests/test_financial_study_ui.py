@@ -39,7 +39,7 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn('id="financialStudyPreviewModal"', self.index_html)
         self.assertIn('id="financialStudyPreviewContent"', self.index_html)
         self.assertIn('id="financialStudyPreviewSubtitle"', self.index_html)
-        self.assertIn('/static/js/app.js?v=4.0.104', self.index_html)
+        self.assertIn('/static/js/app.js?v=4.0.105', self.index_html)
         self.assertIn('data-study-open-preview', self.javascript)
         self.assertIn('bootstrap.Modal.getOrCreateInstance(previewModal).show()', self.javascript)
         self.assertIn("generateStudyPdfArtifact()", self.javascript)

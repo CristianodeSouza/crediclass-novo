@@ -23,7 +23,7 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
-from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
+from .estudos import create_estudo, delete_estudo, export_estudo_pdf, export_estudo_pdf_payload, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .pdf_bridge import react_pdf_service_status, render_react_study_pdf
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
@@ -626,12 +626,10 @@ def estudos_exportar_pdf(estudo_id: str):
         warning = "React-pdf indisponivel neste ambiente. PDF gerado com motor legado."
     if engine == "legacy":
         try:
-            legacy_filename = export_estudo_pdf(estudo_id, FILES_DIR)
+            legacy_filename = export_estudo_pdf_payload(estudo, FILES_DIR, filename=filename)
         except Exception:
             logger.exception("Falha ao gerar PDF legado para estudo %s", estudo_id)
             return JSONResponse(status_code=500, content={"success": False, "error": "Nao foi possivel gerar o PDF deste estudo."})
-        if not legacy_filename:
-            return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
         filename = legacy_filename
     return {"success": True, "download_url": f"/files/{filename}", "engine": engine, "warning": warning}
 

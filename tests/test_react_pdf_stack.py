@@ -118,7 +118,7 @@ class ReactPdfStackTest(unittest.TestCase):
         study = json.loads(json.dumps(self.sample_study))
         study["financeiro"]["credito_original"] = "337.409,00"
         study["financeiro"]["estrategias"][0]["percentual_lance"] = "42,43%"
-        payload = build_react_pdf_payload(study, "4.0.104")
+        payload = build_react_pdf_payload(study, "4.0.105")
         self.assertEqual(payload["sections"]["projectionRows"][0]["percent"], "42,43%")
         self.assertEqual(payload["sections"]["projectionRows"][0]["totalBid"], "R$ 143.162,64")
 

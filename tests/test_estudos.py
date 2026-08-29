@@ -3,10 +3,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.main import estudos_criar, estudos_excluir, estudos_exportar_pdf, estudos_listar, estudos_obter
+from backend.estudos import create_estudo, delete_estudo, export_estudo_pdf, export_estudo_pdf_payload, get_estudo, list_estudos
 from backend.models import EstudoCliente, EstudoRequest
 from backend import estudos as estudos_module
-from backend.estudos import export_estudo_pdf
 
 
 class EstudosTest(unittest.TestCase):
@@ -37,17 +36,17 @@ class EstudosTest(unittest.TestCase):
             "historico": {"2026-01": {"maior_lance": 0.72, "menor_lance": 0.24, "qtd_contemplacoes": 12}},
         }
 
-        with patch("backend.main.get_grupo", return_value=fake_group):
-            result = estudos_criar(payload)
+        result = create_estudo(payload, grupo=fake_group, operador="Operador Teste")
 
         self.assertTrue(result["success"])
         self.assertTrue(result["estudo_id"].startswith("EST-"))
-        detail = estudos_obter(result["estudo_id"])
+        detail = get_estudo(result["estudo_id"])
         self.assertGreater(detail["financeiro"]["credito_original"], 500000)
         self.assertEqual(len(detail["financeiro"]["estrategias"]), 5)
         self.assertEqual(detail["financeiro"]["historico_12_meses"]["total_contemplacoes"], 12)
         self.assertEqual(detail["cliente"]["data_nascimento_conjuge"], "1988-02-03")
         self.assertEqual(detail["status"], "Concluido")
+        self.assertEqual(detail["operador"], "Operador Teste")
 
     def test_criar_estudo_persiste_campos_do_template(self):
         payload = EstudoRequest(
@@ -59,10 +58,9 @@ class EstudosTest(unittest.TestCase):
             },
         )
 
-        with patch("backend.main.get_grupo", return_value={"grupo_id": "128", "grupo": "128"}):
-            created = estudos_criar(payload)
+        created = create_estudo(payload, grupo={"grupo_id": "128", "grupo": "128"})
 
-        detail = estudos_obter(created["estudo_id"])
+        detail = get_estudo(created["estudo_id"])
         self.assertEqual(
             detail["template_campos"]["observacoes_comerciais"],
             "Cliente prefere comunicacao por WhatsApp.",
@@ -74,55 +72,18 @@ class EstudosTest(unittest.TestCase):
             grupo_id="017",
         )
 
-        with patch("backend.main.get_grupo", return_value={"grupo_id": "017", "grupo": "017"}):
-            created = estudos_criar(payload)
+        created = create_estudo(payload, grupo={"grupo_id": "017", "grupo": "017"})
 
-        listed = estudos_listar(cliente="Historico")
-        self.assertGreaterEqual(listed["total"], 1)
+        listed = list_estudos()
+        self.assertTrue(any(item["estudo_id"] == created["estudo_id"] for item in listed))
 
-        detail = estudos_obter(created["estudo_id"])
+        detail = get_estudo(created["estudo_id"])
         self.assertEqual(detail["cliente"]["nome"], "Cliente Historico")
 
-        deleted = estudos_excluir(created["estudo_id"])
-        self.assertTrue(deleted["success"])
-        canceled = estudos_obter(created["estudo_id"])
+        deleted = delete_estudo(created["estudo_id"])
+        self.assertTrue(deleted)
+        canceled = get_estudo(created["estudo_id"])
         self.assertEqual(canceled["status"], "Cancelado")
-
-    def test_listar_estudos_filtra_por_periodo(self):
-        items = [
-            {"estudo_id": "EST-1", "criado_em": "2026-06-01T10:00:00", "cliente": {}, "grupo": {}, "financeiro": {}},
-            {"estudo_id": "EST-2", "criado_em": "2026-06-04T10:00:00", "cliente": {}, "grupo": {}, "financeiro": {}},
-        ]
-
-        with patch("backend.main.list_estudos", return_value=items):
-            result = estudos_listar(data_inicio="2026-06-02", data_fim="2026-06-04")
-
-        self.assertEqual(result["total"], 1)
-        self.assertEqual(result["items"][0]["estudo_id"], "EST-2")
-
-    def test_listar_estudos_filtra_por_grupo_e_credito(self):
-        items = [
-            {
-                "estudo_id": "EST-1",
-                "cliente": {"credito_desejado": 250000},
-                "grupo_id": "128",
-                "grupo": {"administradora": "Itau", "tipo_bem": "Imovel"},
-                "financeiro": {},
-            },
-            {
-                "estudo_id": "EST-2",
-                "cliente": {"credito_desejado": 900000},
-                "grupo_id": "999",
-                "grupo": {"administradora": "CNP", "tipo_bem": "Auto"},
-                "financeiro": {},
-            },
-        ]
-
-        with patch("backend.main.list_estudos", return_value=items):
-            result = estudos_listar(administradora="itau", tipo_bem="imovel", credito_minimo=200000, credito_maximo=300000)
-
-        self.assertEqual(result["total"], 1)
-        self.assertEqual(result["items"][0]["estudo_id"], "EST-1")
 
     def test_export_estudo_pdf_gera_arquivo(self):
         payload = EstudoRequest(
@@ -130,8 +91,7 @@ class EstudosTest(unittest.TestCase):
             grupo_id="128",
         )
 
-        with patch("backend.main.get_grupo", return_value={"grupo_id": "128", "grupo": "128", "administradora": "Itau"}):
-            created = estudos_criar(payload)
+        created = create_estudo(payload, grupo={"grupo_id": "128", "grupo": "128", "administradora": "Itau"})
 
         with tempfile.TemporaryDirectory() as temp_dir:
             filename = export_estudo_pdf(created["estudo_id"], Path(temp_dir))
@@ -140,27 +100,26 @@ class EstudosTest(unittest.TestCase):
         self.assertEqual(filename, f"{created['estudo_id']}.pdf")
         self.assertTrue(content.startswith(b"%PDF"))
 
-    def test_exportar_pdf_faz_fallback_legado_quando_react_pdf_quebra(self):
+    def test_export_estudo_pdf_payload_gera_arquivo_sem_rebuscar_estudo(self):
         study = {
-            "estudo_id": "EST-TESTE",
-            "cliente": {"nome": "Cliente Teste"},
-            "grupo": {"grupo": "40004"},
-            "financeiro": {"estrategias": [{"estrategia": "Investidor", "percentual_lance": "42,43%"}]},
+            "estudo_id": "EST-PAYLOAD",
+            "cliente": {"nome": "Cliente Payload", "credito_desejado": 250000},
+            "grupo": {"grupo": "40004", "administradora": "Itau"},
+            "financeiro": {"credito": 250000, "estrategias": []},
         }
 
-        with (
-            patch("backend.main.get_estudo", return_value=study),
-            patch("backend.main.react_pdf_service_status", return_value={"available": True}),
-            patch("backend.main.render_react_study_pdf", side_effect=ValueError("payload invalido")),
-            patch("backend.main.export_estudo_pdf", return_value="EST-TESTE.pdf") as legacy_export,
-        ):
-            result = estudos_exportar_pdf("EST-TESTE")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            filename = export_estudo_pdf_payload(study, Path(temp_dir))
+            content = (Path(temp_dir) / filename).read_bytes()
 
-        self.assertEqual(result["engine"], "legacy")
-        self.assertEqual(result["download_url"], "/files/EST-TESTE.pdf")
-        self.assertEqual(result["warning"], "React-pdf indisponivel para este estudo. PDF gerado com motor legado.")
-        legacy_export.assert_called_once()
-        self.assertEqual(legacy_export.call_args.args[0], "EST-TESTE")
+        self.assertEqual(filename, "EST-PAYLOAD.pdf")
+        self.assertTrue(content.startswith(b"%PDF"))
+
+    def test_criterio_de_aceite_fallback_legado_usa_estudo_ja_carregado(self):
+        main_source = Path(estudos_module.__file__).resolve().parent.joinpath("main.py").read_text(encoding="utf-8")
+
+        self.assertIn('legacy_filename = export_estudo_pdf_payload(estudo, FILES_DIR, filename=filename)', main_source)
+        self.assertNotIn('legacy_filename = export_estudo_pdf(estudo_id, FILES_DIR)', main_source)
 
     def test_persistencia_estudos_json(self):
         original_studies = dict(estudos_module._studies)

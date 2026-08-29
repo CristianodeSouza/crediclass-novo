@@ -419,12 +419,16 @@ def study_pdf_lines(estudo: dict) -> list[str]:
     return lines
 
 
+def export_estudo_pdf_payload(estudo: dict, output_dir: Path, filename: str | None = None) -> str:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    target_filename = filename or f"{estudo.get('estudo_id', 'estudo')}.pdf"
+    path = output_dir / target_filename
+    path.write_bytes(build_pdf_bytes(study_pdf_lines(estudo)))
+    return target_filename
+
+
 def export_estudo_pdf(estudo_id: str, output_dir: Path) -> str | None:
     estudo = get_estudo(estudo_id)
     if not estudo:
         return None
-    output_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"{estudo_id}.pdf"
-    path = output_dir / filename
-    path.write_bytes(build_pdf_bytes(study_pdf_lines(estudo)))
-    return filename
+    return export_estudo_pdf_payload(estudo, output_dir, filename=f"{estudo_id}.pdf")
