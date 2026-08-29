@@ -13,6 +13,7 @@ PACKAGE_JSON = ROOT / "backend" / "pdf_service" / "package.json"
 RENDERER = ROOT / "backend" / "pdf_service" / "render-study-pdf.mjs"
 BRIDGE = ROOT / "backend" / "pdf_bridge.py"
 MAIN = ROOT / "backend" / "main.py"
+DOCKERFILE = ROOT / "Dockerfile"
 
 
 class ReactPdfStackTest(unittest.TestCase):
@@ -138,8 +139,18 @@ class ReactPdfStackTest(unittest.TestCase):
 
     def test_render_blueprint_bootstraps_pdf_runtime_before_start(self):
         render_yaml = (ROOT / "render.yaml").read_text(encoding="utf-8")
-        self.assertIn("npm ci --prefix backend/pdf_service --omit=dev", render_yaml)
-        self.assertIn("python scripts/ensure_pdf_service.py && python -m uvicorn backend.main:app", render_yaml)
+        self.assertIn("runtime: docker", render_yaml)
+        self.assertIn("dockerfilePath: ./Dockerfile", render_yaml)
+        self.assertIn("dockerContext: .", render_yaml)
+
+    def test_dockerfile_bakes_python_node_and_react_pdf_runtime(self):
+        dockerfile = DOCKERFILE.read_text(encoding="utf-8")
+        self.assertIn("FROM python:3.12.4-slim", dockerfile)
+        self.assertIn("https://deb.nodesource.com/node_24.x", dockerfile)
+        self.assertIn("RUN pip install --no-cache-dir -r requirements.txt", dockerfile)
+        self.assertIn("RUN npm ci --prefix backend/pdf_service --omit=dev", dockerfile)
+        self.assertIn("RUN python scripts/ensure_pdf_service.py", dockerfile)
+        self.assertIn("python scripts/ensure_pdf_service.py && python -m uvicorn backend.main:app", dockerfile)
 
     def test_ensure_runtime_installs_when_dependencies_are_missing(self):
         with patch("backend.pdf_bridge.react_pdf_service_status", side_effect=[
