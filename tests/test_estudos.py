@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.estudos import build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, export_estudo_pdf_payload, get_estudo, list_estudos
+from backend.estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, export_estudo_pdf_payload, get_estudo, list_estudos
 from backend.models import EstudoCliente, EstudoRequest
 from backend import estudos as estudos_module
 
@@ -122,6 +122,7 @@ class EstudosTest(unittest.TestCase):
             grupo={"grupo": "40004", "administradora": "Itau"},
             cenario={"credito_liquido_total": 300000, "credito_contratado_total": 337409, "estrategia": "Rapido - 6 meses"},
             template_campos={"observacao": "teste"},
+            motor360_audit_id="AUD-TESTE",
         )
         preview = build_estudo_preview(payload, grupo=payload.grupo, operador="Operador Preview")
 
@@ -130,12 +131,40 @@ class EstudosTest(unittest.TestCase):
         self.assertEqual(preview["grupo"]["administradora"], "Itau")
         self.assertEqual(preview["operador"], "Operador Preview")
 
-    def test_criterio_de_aceite_fallback_legado_usa_estudo_ja_carregado(self):
+    def test_build_estudo_audit_payload_consolida_rastreabilidade(self):
+        payload = estudos_module.EstudoPreviewRequest(
+            cliente=EstudoCliente(nome="Cliente Auditoria", credito_desejado=320000),
+            grupo_id="40004",
+            grupo={"grupo": "40004", "administradora": "Itau"},
+            cenario={"credito_liquido_total": 300000},
+            template_campos={"observacao": "teste"},
+            motor360_audit_id="AUD-TESTE",
+        )
+        audit = build_estudo_audit_payload(
+            payload,
+            grupo=payload.grupo,
+            operador="Operador Auditoria",
+            motor360_audit={"metadata": {"audit_id": "AUD-TESTE"}},
+            group_audit=[{"acao": "Leitura"}],
+            pdf_engine_status={"available": True},
+        )
+
+        self.assertEqual(audit["audit_type"], "financial_study_runtime")
+        self.assertEqual(audit["study"]["grupo_id"], "40004")
+        self.assertEqual(audit["study"]["operador"], "Operador Auditoria")
+        self.assertEqual(audit["motor360_audit_id"], "AUD-TESTE")
+        self.assertEqual(audit["group_audit_trail"][0]["acao"], "Leitura")
+        self.assertTrue(audit["pdf_engine_status"]["available"])
+
+    def test_criterio_de_aceite_pipeline_pdf_canonico_usa_react_pdf(self):
         main_source = Path(estudos_module.__file__).resolve().parent.joinpath("main.py").read_text(encoding="utf-8")
 
-        self.assertIn('legacy_filename = export_estudo_pdf_payload(estudo, FILES_DIR, filename=filename)', main_source)
-        self.assertNotIn('legacy_filename = export_estudo_pdf(estudo_id, FILES_DIR)', main_source)
+        self.assertIn("def _render_study_pdf_file(estudo: dict, filename: str) -> dict:", main_source)
+        self.assertIn('raise RuntimeError("React-pdf indisponivel neste ambiente. O motor PDF canonico nao esta operacional.")', main_source)
         self.assertIn('@app.post("/api/estudos/preview-pdf")', main_source)
+        self.assertIn('@app.get("/api/health/pdf-engine")', main_source)
+        self.assertIn('@app.post("/api/estudos/preview-audit")', main_source)
+        self.assertNotIn("PDF gerado com motor legado", main_source)
 
     def test_persistencia_estudos_json(self):
         original_studies = dict(estudos_module._studies)

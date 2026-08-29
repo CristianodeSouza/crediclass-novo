@@ -39,16 +39,21 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertIn('id="financialStudyPreviewModal"', self.index_html)
         self.assertIn('id="financialStudyPreviewContent"', self.index_html)
         self.assertIn('id="financialStudyPreviewSubtitle"', self.index_html)
-        self.assertIn('/static/js/app.js?v=4.0.106', self.index_html)
+        self.assertIn('/static/js/app.js?v=4.0.107', self.index_html)
         self.assertIn('data-study-open-preview', self.javascript)
         self.assertIn('bootstrap.Modal.getOrCreateInstance(previewModal).show()', self.javascript)
         self.assertIn("generateStudyPdfArtifact()", self.javascript)
+        self.assertIn("generateStudyAuditArtifact()", self.javascript)
+        self.assertIn('data-study-download-audit', self.javascript)
+        self.assertIn('downloadJson(`auditoria-estudo-financeiro-${targetGroupId}-${new Date().toISOString().slice(0, 10)}.json`, result.audit)', self.javascript)
         self.assertIn('return apiPost("/estudos/preview-pdf", previewPayload)', self.javascript)
+        self.assertIn('return apiPost("/estudos/preview-audit", buildCurrentStudyPreviewPayload())', self.javascript)
         self.assertIn('|| previewModal?.querySelector(".modal-subtitle")', self.javascript)
         self.assertIn("if (previewSubtitle) {", self.javascript)
         self.assertIn('previewContent.innerHTML = `<iframe class="financial-study-preview-frame"', self.javascript)
         self.assertIn('previewPrintButton.onclick = () => exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"))', self.javascript)
         self.assertNotIn("previewPrintButton.onclick = () => window.print()", self.javascript)
+        self.assertNotIn("fallback legado", self.javascript)
         self.assertIn(".financial-study-preview-dialog", self.styles)
         self.assertIn(".financial-study-preview-frame", self.styles)
         self.assertIn("--financial-study-a4-width: 210mm;", self.styles)
@@ -89,8 +94,10 @@ class FinancialStudyUiTest(unittest.TestCase):
         self.assertNotIn('eyebrow: "Simulação dinâmica"', self.javascript)
 
     def test_exportacao_pdf_exibe_motor_utilizado(self):
-        self.assertIn('result.engine === "react-pdf" ? "PDF gerado com React-pdf." : "PDF gerado com motor legado."', self.javascript)
-        self.assertIn("if (result.warning) {", self.javascript)
+        self.assertIn('showToast("PDF gerado com React-pdf.", "success");', self.javascript)
+        self.assertNotIn('PDF gerado com motor legado.', self.javascript)
+        self.assertNotIn("if (result.warning) {", self.javascript)
+        self.assertIn("motor360_audit_id: investorState.audit?.metadata?.audit_id || null", self.javascript)
 
 
 if __name__ == "__main__":

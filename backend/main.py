@@ -23,7 +23,7 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
-from .estudos import build_estudo_preview, build_pdf_bytes, create_estudo, delete_estudo, export_estudo_pdf, export_estudo_pdf_payload, get_estudo, list_estudos, study_pdf_lines
+from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, export_estudo_pdf_payload, get_estudo, list_estudos
 from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .pdf_bridge import react_pdf_service_status, render_react_study_pdf
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
@@ -134,7 +134,7 @@ def _verify_session(token: str | None) -> str | None:
 
 
 def _public_auth_path(path: str) -> bool:
-    return path in {"/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/health"}
+    return path in {"/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/health", "/api/health/pdf-engine"}
 
 
 @app.middleware("http")
@@ -182,6 +182,41 @@ def health():
         "version": settings.version,
         "environment": settings.environment,
     }
+
+
+def _react_pdf_status_or_error() -> dict:
+    status = react_pdf_service_status()
+    if not status["available"]:
+        raise RuntimeError("React-pdf indisponivel neste ambiente. O motor PDF canonico nao esta operacional.")
+    return status
+
+
+def _render_study_pdf_file(estudo: dict, filename: str) -> dict:
+    path = FILES_DIR / filename
+    status = _react_pdf_status_or_error()
+    path.write_bytes(render_react_study_pdf(estudo, get_settings().version))
+    return {
+        "success": True,
+        "download_url": f"/files/{filename}",
+        "engine": "react-pdf",
+        "status": status,
+    }
+
+
+@app.get("/api/health/pdf-engine")
+def pdf_engine_health():
+    logger.info("GET /api/health/pdf-engine")
+    status = react_pdf_service_status()
+    return JSONResponse(
+        status_code=200 if status["available"] else 503,
+        content={
+            "success": status["available"],
+            "status": "ok" if status["available"] else "error",
+            "engine": "react-pdf",
+            "details": status,
+            "version": get_settings().version,
+        },
+    )
 
 
 @app.post("/api/reload")
@@ -610,28 +645,11 @@ def estudos_exportar_pdf(estudo_id: str):
     estudo = get_estudo(estudo_id)
     if not estudo:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
-    filename = f"{estudo_id}.pdf"
-    path = FILES_DIR / filename
-    status = react_pdf_service_status()
-    engine = "legacy"
-    warning = None
-    if status["available"]:
-        try:
-            path.write_bytes(render_react_study_pdf(estudo, get_settings().version))
-            engine = "react-pdf"
-        except Exception:
-            logger.exception("Falha no React-pdf para estudo %s; aplicando fallback legado", estudo_id)
-            warning = "React-pdf indisponivel para este estudo. PDF gerado com motor legado."
-    else:
-        warning = "React-pdf indisponivel neste ambiente. PDF gerado com motor legado."
-    if engine == "legacy":
-        try:
-            legacy_filename = export_estudo_pdf_payload(estudo, FILES_DIR, filename=filename)
-        except Exception:
-            logger.exception("Falha ao gerar PDF legado para estudo %s", estudo_id)
-            return JSONResponse(status_code=500, content={"success": False, "error": "Nao foi possivel gerar o PDF deste estudo."})
-        filename = legacy_filename
-    return {"success": True, "download_url": f"/files/{filename}", "engine": engine, "warning": warning}
+    try:
+        return _render_study_pdf_file(estudo, f"{estudo_id}.pdf")
+    except Exception as error:
+        logger.exception("Falha no pipeline canonico React-pdf para estudo %s", estudo_id)
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error), "engine": "react-pdf"})
 
 
 @app.post("/api/estudos/preview-pdf")
@@ -644,54 +662,46 @@ def estudos_preview_pdf(payload: EstudoPreviewRequest, request: Request):
         username = getattr(request.state, "auth_user", "")
         operador = AUTH_USERS.get(username, {}).get("name", username)
         estudo = build_estudo_preview(payload, grupo, operador)
-        filename = f"preview-{uuid4().hex}.pdf"
-        path = FILES_DIR / filename
-        status = react_pdf_service_status()
-        engine = "legacy"
-        warning = None
-        if status["available"]:
-            try:
-                path.write_bytes(render_react_study_pdf(estudo, get_settings().version))
-                engine = "react-pdf"
-            except Exception:
-                logger.exception("Falha no React-pdf para prévia do grupo %s; aplicando fallback legado", payload.grupo_id)
-                warning = "React-pdf indisponivel para esta prévia. PDF gerado com motor legado."
-        else:
-            warning = "React-pdf indisponivel neste ambiente. PDF gerado com motor legado."
-        if engine == "legacy":
-            path.write_bytes(build_pdf_bytes(study_pdf_lines(estudo)))
-        return {"success": True, "download_url": f"/files/{filename}", "engine": engine, "warning": warning}
+        return _render_study_pdf_file(estudo, f"preview-{uuid4().hex}.pdf")
     except Exception as error:
         logger.exception("Erro ao gerar prévia transitória do estudo")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error), "engine": "react-pdf"})
+
+
+@app.post("/api/estudos/preview-audit")
+def estudos_preview_audit(payload: EstudoPreviewRequest, request: Request):
+    logger.info("POST /api/estudos/preview-audit grupo_id=%s", payload.grupo_id)
+    try:
+        grupo = payload.grupo or get_grupo(payload.grupo_id)
+        if not grupo:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
+        username = getattr(request.state, "auth_user", "")
+        operador = AUTH_USERS.get(username, {}).get("name", username)
+        audit = build_estudo_audit_payload(
+            payload,
+            grupo=grupo,
+            operador=operador,
+            motor360_audit=get_motor360_audit(payload.motor360_audit_id) if payload.motor360_audit_id else None,
+            group_audit=list_auditoria(payload.grupo_id),
+            pdf_engine_status=react_pdf_service_status(),
+        )
+        return {"success": True, "audit": audit}
+    except Exception as error:
+        logger.exception("Erro ao montar auditoria transitória do estudo")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
 
 
 @app.get("/api/estudos/pdf-engine-status")
 def estudos_pdf_engine_status():
     logger.info("GET /api/estudos/pdf-engine-status")
-    return {"success": True, "engine": "react-pdf", "status": react_pdf_service_status()}
+    status = react_pdf_service_status()
+    return {"success": status["available"], "engine": "react-pdf", "status": status, "canonical": True}
 
 
 @app.post("/api/estudos/{estudo_id}/exportar-pdf-react")
 def estudos_exportar_pdf_react(estudo_id: str):
     logger.info("POST /api/estudos/%s/exportar-pdf-react", estudo_id)
-    estudo = get_estudo(estudo_id)
-    if not estudo:
-        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
-    status = react_pdf_service_status()
-    if not status["available"]:
-        return JSONResponse(
-            status_code=503,
-            content={"success": False, "error": "React-pdf indisponivel neste ambiente", "status": status},
-        )
-    try:
-        filename = f"{estudo_id}-react-pdf.pdf"
-        path = FILES_DIR / filename
-        path.write_bytes(render_react_study_pdf(estudo, get_settings().version))
-    except RuntimeError as error:
-        logger.exception("Erro ao renderizar estudo %s com React-pdf", estudo_id)
-        return JSONResponse(status_code=500, content={"success": False, "error": str(error)})
-    return {"success": True, "download_url": f"/files/{filename}", "engine": "react-pdf"}
+    return estudos_exportar_pdf(estudo_id)
 
 
 @app.get("/api/configuracoes")

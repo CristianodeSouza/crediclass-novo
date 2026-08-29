@@ -299,6 +299,43 @@ def build_estudo_preview(payload: EstudoPreviewRequest, grupo: dict | None = Non
     }
 
 
+def build_estudo_audit_payload(
+    payload: EstudoPreviewRequest,
+    grupo: dict | None = None,
+    operador: str = "",
+    *,
+    motor360_audit: dict[str, Any] | None = None,
+    group_audit: list[dict[str, Any]] | None = None,
+    pdf_engine_status: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    estudo = build_estudo_preview(payload, grupo=grupo, operador=operador)
+    settings = get_settings()
+    grupo_data = grupo or payload.grupo or {}
+    return {
+        "audit_type": "financial_study_runtime",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "system": {
+            "app": settings.app_name,
+            "version": settings.version,
+            "environment": settings.environment,
+        },
+        "study": {
+            "mode": "preview",
+            "engine_target": "react-pdf",
+            "operador": operador or "Não informado",
+            "grupo_id": str(payload.grupo_id),
+            "administradora": grupo_data.get("administradora") or grupo_data.get("adm") or "",
+        },
+        "request_payload": payload.model_dump(),
+        "resolved_group": grupo_data,
+        "study_preview": estudo,
+        "pdf_engine_status": pdf_engine_status or {},
+        "group_audit_trail": list(group_audit or []),
+        "motor360_audit_id": payload.motor360_audit_id,
+        "motor360_audit_snapshot": motor360_audit,
+    }
+
+
 def list_estudos() -> list[dict]:
     if sheets_enabled():
         items = [item for _, item in read_studies_from_sheet()]

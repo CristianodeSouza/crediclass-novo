@@ -1,7 +1,11 @@
 import json
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
+from fastapi.testclient import TestClient
+
+from backend.main import AUTH_COOKIE, app
 from backend.pdf_bridge import build_react_pdf_payload, react_pdf_service_status, render_react_study_pdf
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -103,9 +107,10 @@ class ReactPdfStackTest(unittest.TestCase):
         self.assertIn('/api/estudos/{estudo_id}/exportar-pdf-react', main)
         self.assertIn('/api/estudos/preview-pdf', main)
         self.assertIn('/api/estudos/pdf-engine-status', main)
-        self.assertIn('engine = "react-pdf"', main)
-        self.assertIn('warning = "React-pdf indisponivel neste ambiente. PDF gerado com motor legado."', main)
-        self.assertIn('warning = "React-pdf indisponivel para este estudo. PDF gerado com motor legado."', main)
+        self.assertIn('/api/health/pdf-engine', main)
+        self.assertIn('raise RuntimeError("React-pdf indisponivel neste ambiente. O motor PDF canonico nao esta operacional.")', main)
+        self.assertIn('"engine": "react-pdf"', main)
+        self.assertNotIn("PDF gerado com motor legado", main)
 
     def test_bridge_builds_enriched_payload(self):
         payload = build_react_pdf_payload(self.sample_study, "4.0.99")
@@ -135,6 +140,65 @@ class ReactPdfStackTest(unittest.TestCase):
         content = render_react_study_pdf(self.sample_study, "4.0.99")
         self.assertTrue(content.startswith(b"%PDF"))
         self.assertGreater(len(content), 1000)
+
+    def test_preview_endpoint_returns_real_react_pdf(self):
+        client = TestClient(app)
+        login = client.post("/api/auth/login", json={"usuario": "adm", "senha": "cristiano"})
+        self.assertEqual(login.status_code, 200)
+        self.assertIn(AUTH_COOKIE, login.cookies)
+        with patch("backend.main.get_grupo", return_value={"grupo": "40004", "administradora": "Itau"}), patch(
+            "backend.main.react_pdf_service_status",
+            return_value={"available": True, "node": "node", "entrypoint": "render-study-pdf.mjs", "dependencies_installed": True},
+        ), patch("backend.main.render_react_study_pdf", return_value=b"%PDF-1.4\nmock"):
+            response = client.post(
+                "/api/estudos/preview-pdf",
+                json={
+                    "cliente": {"nome": "Cliente Teste", "credito_desejado": 300000},
+                    "grupo_id": "40004",
+                    "grupo": {"grupo": "40004", "administradora": "Itau"},
+                    "cenario": {"credito_liquido_total": 300000},
+                    "template_campos": {},
+                },
+            )
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertTrue(payload["success"])
+        self.assertEqual(payload["engine"], "react-pdf")
+        pdf_response = client.get(payload["download_url"])
+        self.assertEqual(pdf_response.status_code, 200)
+        self.assertTrue(pdf_response.content.startswith(b"%PDF"))
+
+    def test_preview_endpoint_fails_clearly_when_react_pdf_is_unavailable(self):
+        client = TestClient(app)
+        client.post("/api/auth/login", json={"usuario": "adm", "senha": "cristiano"})
+        with patch("backend.main.get_grupo", return_value={"grupo": "40004", "administradora": "Itau"}), patch(
+            "backend.main.react_pdf_service_status",
+            return_value={"available": False, "node": None, "entrypoint": "render-study-pdf.mjs", "dependencies_installed": False},
+        ):
+            response = client.post(
+                "/api/estudos/preview-pdf",
+                json={
+                    "cliente": {"nome": "Cliente Teste", "credito_desejado": 300000},
+                    "grupo_id": "40004",
+                },
+            )
+        self.assertEqual(response.status_code, 503)
+        payload = response.json()
+        self.assertFalse(payload["success"])
+        self.assertEqual(payload["engine"], "react-pdf")
+        self.assertIn("motor PDF canonico", payload["error"])
+
+    def test_pdf_engine_healthcheck_reports_failure_with_503(self):
+        client = TestClient(app)
+        with patch(
+            "backend.main.react_pdf_service_status",
+            return_value={"available": False, "node": None, "entrypoint": "render-study-pdf.mjs", "dependencies_installed": False},
+        ):
+            response = client.get("/api/health/pdf-engine")
+        self.assertEqual(response.status_code, 503)
+        payload = response.json()
+        self.assertFalse(payload["success"])
+        self.assertEqual(payload["engine"], "react-pdf")
 
 
 if __name__ == "__main__":

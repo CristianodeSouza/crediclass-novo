@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.106";
+const APP_BUNDLE_VERSION = "4.0.107";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -3189,7 +3189,7 @@ async function renderFinancialStudyScreen() {
   if (previewContent) previewContent.innerHTML = documentPreview;
 
   screen.innerHTML = `<div class="financial-study-page">
-    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Revise o documento e abra a prévia do PDF real gerado pelo backend antes do envio ao cliente.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-outline-primary" type="button" data-study-generate>Gerar Estudo</button><button class="btn btn-primary" type="button" data-study-open-preview>Ver prévia do PDF</button></div></div>
+    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Revise o documento e abra a prévia do PDF real gerado pelo backend antes do envio ao cliente.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-outline-secondary" type="button" data-study-download-audit>Baixar Auditoria JSON</button><button class="btn btn-outline-primary" type="button" data-study-generate>Gerar Estudo</button><button class="btn btn-primary" type="button" data-study-open-preview>Ver prévia do PDF</button></div></div>
     <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
     <section class="financial-study-preview-launcher no-print"><div><span>Prévia em PDF</span><h3>Documento pronto para revisão</h3><p>A prévia abre o arquivo PDF gerado pelo backend, mantendo a mesma base usada para impressão e salvamento.</p></div><button class="btn btn-primary" type="button" data-study-open-preview>Abrir prévia do PDF</button></section>
   </div>`;
@@ -3205,13 +3205,8 @@ async function renderFinancialStudyScreen() {
     try {
       const result = await generateStudyPdfArtifact();
       if (!result) return;
-      if (result.warning) {
-        showToast(result.warning, "warning");
-      }
       if (previewSubtitle) {
-        previewSubtitle.textContent = result.engine === "react-pdf"
-          ? "Prévia do PDF real gerado pelo motor React-pdf."
-          : "Prévia do PDF gerado com fallback legado.";
+        previewSubtitle.textContent = "Prévia do PDF real gerado pelo motor React-pdf.";
       }
       previewContent.innerHTML = `<iframe class="financial-study-preview-frame" title="Prévia do PDF do estudo financeiro" src="${result.download_url}#toolbar=1&navpanes=0&view=FitH"></iframe>`;
     } catch (error) {
@@ -3224,6 +3219,27 @@ async function renderFinancialStudyScreen() {
   screen.querySelectorAll("[data-study-open-preview]").forEach((button) => button.addEventListener("click", () => {
     openPreview().catch(() => showToast("Nao foi possivel carregar a prévia do PDF.", "danger"));
   }));
+  screen.querySelector("[data-study-download-audit]")?.addEventListener("click", async () => {
+    const button = screen.querySelector("[data-study-download-audit]");
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Gerando auditoria...";
+    }
+    try {
+      const result = await generateStudyAuditArtifact();
+      if (!result?.audit) throw new Error("Nao foi possivel montar a auditoria.");
+      const targetGroupId = currentStudy?.groupId || "preview";
+      downloadJson(`auditoria-estudo-financeiro-${targetGroupId}-${new Date().toISOString().slice(0, 10)}.json`, result.audit);
+      showToast("Auditoria JSON gerada com sucesso.", "success");
+    } catch (error) {
+      showToast(error.message || "Nao foi possivel gerar a auditoria JSON.", "danger");
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = "Baixar Auditoria JSON";
+      }
+    }
+  });
   const previewPrintButton = previewModal?.querySelector("[data-study-preview-print]");
   if (previewPrintButton) previewPrintButton.onclick = () => exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
   screen.querySelector("[data-study-customize]")?.addEventListener("click", () => screen.querySelector("[data-study-customizer-panel]")?.classList.toggle("d-none"));
@@ -4589,10 +4605,7 @@ async function exportStudyPdf(studyId) {
     return;
   }
   const result = await apiPost(`/estudos/${encodeURIComponent(targetStudyId)}/exportar-pdf`, {});
-  if (result.warning) {
-    showToast(result.warning, "warning");
-  }
-  showToast(result.engine === "react-pdf" ? "PDF gerado com React-pdf." : "PDF gerado com motor legado.", "success");
+  showToast("PDF gerado com React-pdf.", "success");
   window.open(result.download_url, "_blank", "noopener");
 }
 
@@ -4601,28 +4614,7 @@ async function generateStudyPdfArtifact(studyId) {
   if (!targetStudyId && currentStudy) {
     if (!currentStudy.savedStudyId) {
       if (currentStudy.groupId) {
-        const previewPayload = {
-          cliente: {
-            nome: currentStudy.payload.nome || "Cliente em estudo",
-            nome_conjuge: currentStudy.payload.nome_conjuge || "",
-            tipo_contratacao: currentStudy.payload.tipo_contratacao,
-            titulares: currentStudy.payload.titulares,
-            credito_desejado: currentStudy.payload.credito_desejado,
-            objetivo: currentStudy.payload.objetivo,
-            prazo_desejado: currentStudy.payload.prazo_desejado,
-            lance_proprio: currentStudy.payload.lance_proprio,
-            fgts: currentStudy.payload.fgts,
-            renda_total: currentStudy.payload.renda_total,
-            parcela_desejada: currentStudy.payload.parcela_desejada,
-            data_nascimento: currentStudy.payload.data_nascimento,
-            data_nascimento_conjuge: currentStudy.payload.data_nascimento_conjuge,
-            estado_bem: currentStudy.payload.estado_bem || "",
-          },
-          grupo_id: currentStudy.groupId,
-          grupo: currentStudy.group || null,
-          cenario: currentStudy.cenario || null,
-          template_campos: collectStudyOperatorFields(),
-        };
+        const previewPayload = buildCurrentStudyPreviewPayload();
         return apiPost("/estudos/preview-pdf", previewPayload);
       }
       const result = await saveCurrentStudy();
@@ -4636,6 +4628,40 @@ async function generateStudyPdfArtifact(studyId) {
     return null;
   }
   return apiPost(`/estudos/${encodeURIComponent(targetStudyId)}/exportar-pdf`, {});
+}
+
+function buildCurrentStudyPreviewPayload() {
+  return {
+    cliente: {
+      nome: currentStudy?.payload?.nome || "Cliente em estudo",
+      nome_conjuge: currentStudy?.payload?.nome_conjuge || "",
+      tipo_contratacao: currentStudy?.payload?.tipo_contratacao,
+      titulares: currentStudy?.payload?.titulares,
+      credito_desejado: currentStudy?.payload?.credito_desejado,
+      objetivo: currentStudy?.payload?.objetivo,
+      prazo_desejado: currentStudy?.payload?.prazo_desejado,
+      lance_proprio: currentStudy?.payload?.lance_proprio,
+      fgts: currentStudy?.payload?.fgts,
+      renda_total: currentStudy?.payload?.renda_total,
+      parcela_desejada: currentStudy?.payload?.parcela_desejada,
+      data_nascimento: currentStudy?.payload?.data_nascimento,
+      data_nascimento_conjuge: currentStudy?.payload?.data_nascimento_conjuge,
+      estado_bem: currentStudy?.payload?.estado_bem || "",
+    },
+    grupo_id: currentStudy?.groupId,
+    grupo: currentStudy?.group || null,
+    cenario: currentStudy?.cenario || null,
+    template_campos: collectStudyOperatorFields(),
+    motor360_audit_id: investorState.audit?.metadata?.audit_id || null,
+  };
+}
+
+async function generateStudyAuditArtifact() {
+  if (!currentStudy?.groupId) {
+    showToast("Abra um estudo com grupo selecionado antes de baixar a auditoria.", "warning");
+    return null;
+  }
+  return apiPost("/estudos/preview-audit", buildCurrentStudyPreviewPayload());
 }
 
 async function ensureCurrentStudySaved(options = {}) {
