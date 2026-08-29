@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from backend.estudos import create_estudo, delete_estudo, export_estudo_pdf, export_estudo_pdf_payload, get_estudo, list_estudos
+from backend.estudos import build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, export_estudo_pdf_payload, get_estudo, list_estudos
 from backend.models import EstudoCliente, EstudoRequest
 from backend import estudos as estudos_module
 
@@ -115,11 +115,27 @@ class EstudosTest(unittest.TestCase):
         self.assertEqual(filename, "EST-PAYLOAD.pdf")
         self.assertTrue(content.startswith(b"%PDF"))
 
+    def test_build_estudo_preview_usa_dados_em_memoria_sem_persistir(self):
+        payload = estudos_module.EstudoPreviewRequest(
+            cliente=EstudoCliente(nome="Cliente Prévia", credito_desejado=300000),
+            grupo_id="40004",
+            grupo={"grupo": "40004", "administradora": "Itau"},
+            cenario={"credito_liquido_total": 300000, "credito_contratado_total": 337409, "estrategia": "Rapido - 6 meses"},
+            template_campos={"observacao": "teste"},
+        )
+        preview = build_estudo_preview(payload, grupo=payload.grupo, operador="Operador Preview")
+
+        self.assertEqual(preview["estudo_id"], "PREVIEW")
+        self.assertEqual(preview["status"], "Previa")
+        self.assertEqual(preview["grupo"]["administradora"], "Itau")
+        self.assertEqual(preview["operador"], "Operador Preview")
+
     def test_criterio_de_aceite_fallback_legado_usa_estudo_ja_carregado(self):
         main_source = Path(estudos_module.__file__).resolve().parent.joinpath("main.py").read_text(encoding="utf-8")
 
         self.assertIn('legacy_filename = export_estudo_pdf_payload(estudo, FILES_DIR, filename=filename)', main_source)
         self.assertNotIn('legacy_filename = export_estudo_pdf(estudo_id, FILES_DIR)', main_source)
+        self.assertIn('@app.post("/api/estudos/preview-pdf")', main_source)
 
     def test_persistencia_estudos_json(self):
         original_studies = dict(estudos_module._studies)

@@ -455,6 +455,14 @@ class EstudoRequest(BaseModel):
     template_campos: dict[str, str] = Field(default_factory=dict)
 
 
+class EstudoPreviewRequest(BaseModel):
+    cliente: EstudoCliente
+    grupo_id: str
+    grupo: dict[str, Any] | None = None
+    cenario: dict[str, Any] | None = None
+    template_campos: dict[str, str] = Field(default_factory=dict)
+
+
 class EstudoCreateResponse(BaseModel):
     estudo_id: str
     proposal_id: str

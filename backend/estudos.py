@@ -6,7 +6,7 @@ from typing import Any
 
 from .config import get_settings
 from .financial_study_engine import build_financeiro
-from .models import EstudoRequest
+from .models import EstudoPreviewRequest, EstudoRequest
 from .sheets_client import get_service
 
 RUNTIME_DIR = Path(__file__).resolve().parent / "runtime_data"
@@ -272,6 +272,31 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: s
         _studies[estudo_id] = study_item
         save_studies_to_disk()
     return {"estudo_id": estudo_id, "proposal_id": proposal_id, "success": True}
+
+
+def build_estudo_preview(payload: EstudoPreviewRequest, grupo: dict | None = None, operador: str = "") -> dict:
+    grupo_data = grupo or payload.grupo or {}
+    estudo_payload = EstudoRequest(
+        cliente=payload.cliente,
+        grupo_id=payload.grupo_id,
+        cenario=payload.cenario,
+        template_campos=payload.template_campos,
+    )
+    financeiro = build_financeiro(estudo_payload, grupo_data)
+    return {
+        "estudo_id": "PREVIEW",
+        "proposal_id": "PREVIEW",
+        "cliente": payload.cliente.model_dump(),
+        "grupo_id": payload.grupo_id,
+        "grupo": grupo_data,
+        "cenario": payload.cenario,
+        "financeiro": financeiro,
+        "template_campos": payload.template_campos,
+        "estrategia": financeiro["estrategia_recomendada"],
+        "status": "Previa",
+        "operador": operador or "Não informado",
+        "criado_em": datetime.now().isoformat(timespec="seconds"),
+    }
 
 
 def list_estudos() -> list[dict]:

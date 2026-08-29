@@ -101,6 +101,7 @@ class ReactPdfStackTest(unittest.TestCase):
         self.assertIn("def react_pdf_service_status()", bridge)
         self.assertIn("def render_react_study_pdf(", bridge)
         self.assertIn('/api/estudos/{estudo_id}/exportar-pdf-react', main)
+        self.assertIn('/api/estudos/preview-pdf', main)
         self.assertIn('/api/estudos/pdf-engine-status', main)
         self.assertIn('engine = "react-pdf"', main)
         self.assertIn('warning = "React-pdf indisponivel neste ambiente. PDF gerado com motor legado."', main)
@@ -118,7 +119,7 @@ class ReactPdfStackTest(unittest.TestCase):
         study = json.loads(json.dumps(self.sample_study))
         study["financeiro"]["credito_original"] = "337.409,00"
         study["financeiro"]["estrategias"][0]["percentual_lance"] = "42,43%"
-        payload = build_react_pdf_payload(study, "4.0.105")
+        payload = build_react_pdf_payload(study, "4.0.106")
         self.assertEqual(payload["sections"]["projectionRows"][0]["percent"], "42,43%")
         self.assertEqual(payload["sections"]["projectionRows"][0]["totalBid"], "R$ 143.162,64")
 

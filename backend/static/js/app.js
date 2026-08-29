@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.105";
+const APP_BUNDLE_VERSION = "4.0.106";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -4600,6 +4600,31 @@ async function generateStudyPdfArtifact(studyId) {
   let targetStudyId = studyId;
   if (!targetStudyId && currentStudy) {
     if (!currentStudy.savedStudyId) {
+      if (currentStudy.groupId) {
+        const previewPayload = {
+          cliente: {
+            nome: currentStudy.payload.nome || "Cliente em estudo",
+            nome_conjuge: currentStudy.payload.nome_conjuge || "",
+            tipo_contratacao: currentStudy.payload.tipo_contratacao,
+            titulares: currentStudy.payload.titulares,
+            credito_desejado: currentStudy.payload.credito_desejado,
+            objetivo: currentStudy.payload.objetivo,
+            prazo_desejado: currentStudy.payload.prazo_desejado,
+            lance_proprio: currentStudy.payload.lance_proprio,
+            fgts: currentStudy.payload.fgts,
+            renda_total: currentStudy.payload.renda_total,
+            parcela_desejada: currentStudy.payload.parcela_desejada,
+            data_nascimento: currentStudy.payload.data_nascimento,
+            data_nascimento_conjuge: currentStudy.payload.data_nascimento_conjuge,
+            estado_bem: currentStudy.payload.estado_bem || "",
+          },
+          grupo_id: currentStudy.groupId,
+          grupo: currentStudy.group || null,
+          cenario: currentStudy.cenario || null,
+          template_campos: collectStudyOperatorFields(),
+        };
+        return apiPost("/estudos/preview-pdf", previewPayload);
+      }
       const result = await saveCurrentStudy();
       targetStudyId = result?.estudo_id;
     } else {
