@@ -10,10 +10,35 @@ from backend.models import GrupoCreateRequest, GrupoUpdateRequest, HistoricoBatc
 from backend import sheets_client
 from backend.defasagem import build_defasagem_report, update_defasagem_task
 from backend.sheets_client import get_grupo as sheets_get_grupo
-from backend.sheets_client import build_historico, clean_text, create_grupo, delete_grupo, format_history_value, parse_credit, payload_to_row_values, row_to_grupo, row_to_grupo_detalhe, update_grupo, update_historico_mensal
+from backend.sheets_client import MAPA_GRUPOS_COLUMN_INDEXES, apply_mapa_grupos_fixed_columns, build_historico, clean_text, create_grupo, delete_grupo, format_history_value, parse_credit, payload_to_row_values, row_to_grupo, row_to_grupo_detalhe, update_grupo, update_historico_mensal
 
 
 class MapaGruposTest(unittest.TestCase):
+    def test_motor360_reads_embedded_percentage_from_column_y(self):
+        values = [""] * (max(MAPA_GRUPOS_COLUMN_INDEXES.values()) + 1)
+        values[22] = "CC, Fixo 3% e 5%"  # W: indexador
+        values[23] = "NAO"  # X: modalidades de assembleia
+        values[24] = "30%"  # Y: lance embutido
+        values[25] = "Sobre o Credito"  # Z: base de calculo
+        values[26] = "Fixo e Livre"  # AA: modalidades do embutido
+        values[27] = "3%"  # AB: fundo de reserva
+
+        headers = [f"Coluna {index}" for index in range(len(values))]
+        headers[22] = "Indexador"
+        headers[23] = "Assembleias: Permite participar do lance fixo, fidelidade e livre?"
+        headers[24] = "Lance Embutido"
+        headers[25] = "Lance Embutido: Calculo do embutido"
+        headers[26] = "Lance Embutido: Permite utilizar em quais modalidades?"
+        headers[27] = "Fundo RSV Total"
+        row = dict(zip(headers, values))
+        apply_mapa_grupos_fixed_columns(row, values)
+
+        self.assertEqual(row["__percentual_lance_embutido"], "30%")
+        self.assertEqual(row["__base_calculo_embutido"], "Sobre o Credito")
+        self.assertEqual(row["__modalidades_embutido"], "Fixo e Livre")
+        self.assertEqual(row["__fundo_reserva"], "3%")
+        self.assertTrue(row_to_grupo(row)["lance_embutido"])
+
     def test_defasagem_calcula_meses_pendentes_e_ordena_prioridade(self):
         groups = [
             {

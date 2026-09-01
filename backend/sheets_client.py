@@ -97,23 +97,23 @@ MAPA_GRUPOS_COLUMN_INDEXES = {
     "aliquota_seguro": 13,  # N
     "credito_minimo": 14,  # O
     "credito_maximo": 20,  # U
-    "indexador": 21,  # V
-    "modalidades_assembleia": 22,  # W
-    "percentual_lance_embutido": 23,  # X
-    "base_calculo_embutido": 24,  # Y
-    "modalidades_embutido": 25,  # Z
-    "fundo_reserva": 26,  # AA
-    "fundo_reserva_ano": 27,  # AB
-    "taxa_adm": 28,  # AC
-    "taxa_adm_ano": 29,  # AD
-    "parcela_inicial_grupo": 35,  # AJ
-    "parcela_apos_lance_grupo": 36,  # AK
-    "parcela_reduzida": 37,  # AL
-    "lance_investidor": 63,  # BL
-    "lance_conservador_24m": 64,  # BM
-    "lance_moderado_12m": 65,  # BN
-    "lance_agressivo_6m": 66,  # BO
-    "lance_super_agressivo_3m": 67,  # BP
+    "indexador": 21,  # V (fallback for legacy sheets)
+    "modalidades_assembleia": 22,  # W (fallback for legacy sheets)
+    "percentual_lance_embutido": 23,  # X (fallback for legacy sheets)
+    "base_calculo_embutido": 24,  # Y (fallback for legacy sheets)
+    "modalidades_embutido": 25,  # Z (fallback for legacy sheets)
+    "fundo_reserva": 26,  # AA (fallback for legacy sheets)
+    "fundo_reserva_ano": 27,  # AB (fallback for legacy sheets)
+    "taxa_adm": 28,  # AC (fallback for legacy sheets)
+    "taxa_adm_ano": 29,  # AD (fallback for legacy sheets)
+    "parcela_inicial_grupo": 35,  # AJ (fallback for legacy sheets)
+    "parcela_apos_lance_grupo": 36,  # AK (fallback for legacy sheets)
+    "parcela_reduzida": 37,  # AL (fallback for legacy sheets)
+    "lance_investidor": 63,  # BL (fallback for legacy sheets)
+    "lance_conservador_24m": 64,  # BM (fallback for legacy sheets)
+    "lance_moderado_12m": 65,  # BN (fallback for legacy sheets)
+    "lance_agressivo_6m": 66,  # BO (fallback for legacy sheets)
+    "lance_super_agressivo_3m": 67,  # BP (fallback for legacy sheets)
 }
 
 MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES: dict[str, int] = {}
@@ -172,11 +172,11 @@ FIELD_ALIASES = {
     "indexador": ["indexador"],
     "taxa_adm": ["taxa administracao", "taxa adm", "taxa adm original", "taxa de administracao", "taxa administrativa", "tx adm", "tx administracao"],
     "taxa_adm_ano": ["taxa administracao ao ano", "taxa adm ao ano", "taxa adm ano", "taxa anual administracao"],
-    "fundo_reserva": ["fundo reserva", "fundo de reserva", "fundo rsv"],
+    "fundo_reserva": ["fundo reserva", "fundo de reserva", "fundo rsv", "fundo rsv total"],
     "fundo_reserva_ano": ["fundo reserva ao ano", "fundo rsv ao ano"],
     "modalidades_assembleia": ["assembleias modalidades", "modalidades assembleia", "permite participar do lance fixo fidelidade e livre"],
-    "base_calculo_embutido": ["base calculo embutido", "calculo do embutido", "lance embutido calculo"],
-    "modalidades_embutido": ["modalidades embutido", "permite utilizar em quais modalidades"],
+    "base_calculo_embutido": ["base calculo embutido", "calculo do embutido", "lance embutido calculo", "lance embutido calculo do embutido"],
+    "modalidades_embutido": ["modalidades embutido", "permite utilizar em quais modalidades", "lance embutido permite utilizar em quais modalidades"],
     "seguro_obrigatorio": ["seguro obrigatorio"],
     "idade_maxima_seguro": ["idade maxima seguro", "idade maxima para seguro"],
     "aliquota_seguro": ["aliquota seguro", "aliquota seguro mensal sobre saldo devedor"],
@@ -200,7 +200,7 @@ FIELD_ALIASES = {
     "lance_embutido": ["lance embutido"],
     "fgts": ["fgts", "fgts permitido"],
     "categoria": ["categoria"],
-    "percentual_lance_embutido": ["percentual lance embutido", "lance embutido percentual", "lance embutido maximo"],
+    "percentual_lance_embutido": ["percentual lance embutido", "lance embutido percentual", "lance embutido maximo", "lance embutido"],
     "percentual_lance_fixo": ["percentual lance fixo", "lance fixo", "lance quitacao"],
     "lance_super_conservador": ["lance super conservador", "super conservador", "s cons", "s conservador"],
     "lance_conservador": ["lance conservador", "conservador", "cons"],
@@ -332,8 +332,15 @@ def canonical_field_header(field: str) -> str:
 
 
 def apply_mapa_grupos_fixed_columns(row: dict[str, Any], values: list[Any]) -> None:
-    for field, index in MAPA_GRUPOS_COLUMN_INDEXES.items():
-        row[canonical_field_header(field)] = fixed_column_value(field, values)
+    headers = list(row)
+    header_positions = headers_index(headers)
+    for field in MAPA_GRUPOS_COLUMN_INDEXES:
+        header = find_header(headers, field)
+        if header is not None:
+            index = header_positions[header]
+            row[canonical_field_header(field)] = values[index] if index < len(values) else ""
+        else:
+            row[canonical_field_header(field)] = fixed_column_value(field, values)
 
 
 def fixed_column_value(field: str, values: list[Any], base_index: int = 0) -> Any:
@@ -1016,7 +1023,10 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "primeira_assembleia": clean_text(get_field(row, "primeira_assembleia")),
         "ultima_assembleia": clean_text(get_field(row, "ultima_assembleia")),
         "status": clean_text(get_field(row, "status") or "Ativo"),
-        "lance_embutido": parse_bool(get_optional_field(row, "lance_embutido")) if get_optional_field(row, "lance_embutido") not in (None, "") else bool(parse_percent(get_optional_field(row, "percentual_lance_embutido") or 0) > 0),
+        "lance_embutido": (
+            parse_bool(get_optional_field(row, "lance_embutido"))
+            or bool(parse_percent(get_optional_field(row, "percentual_lance_embutido") or 0) > 0)
+        ),
         "fgts": parse_bool(get_optional_field(row, "fgts")),
         "percentual_lance_embutido": parse_percent(get_optional_field(row, "percentual_lance_embutido")),
         "percentual_lance_fixo": parse_percent(get_optional_field(row, "percentual_lance_fixo")),

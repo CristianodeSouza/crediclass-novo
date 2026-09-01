@@ -107,16 +107,16 @@ O backend declara como colunas usadas:
 - `F` Prazo remanescente
 - `O` Menor crédito
 - `U` Maior crédito
-- `V` Indexador
-- `W` Modalidades de assembleia
-- `X` Lance embutido
-- `Y` Base de cálculo do embutido
-- `Z` Modalidades do embutido
-- `AA` Fundo de reserva total
-- `AC` Taxa ADM total
-- `AJ` Parcela inicial
-- `AK` Parcela após lance
-- `AL` Parcela reduzida
+- `W` Indexador
+- `X` Modalidades de assembleia
+- `Y` Lance embutido
+- `Z` Base de cálculo do embutido
+- `AA` Modalidades do embutido
+- `AB` Fundo de reserva total
+- `AD` Taxa ADM total
+- `AK` Parcela inicial
+- `AL` Parcela após lance
+- `AM` Parcela reduzida
 - `BL` Investidor - 36 meses
 - `BM` Conservador - 24 meses
 - `BN` Moderado - 12 meses
@@ -268,7 +268,7 @@ Hoje `data_complete` exige:
 - `F` informado
 
 Observação:
-- `AA` não entra em `data_complete`; vazio em `AA` não bloqueia.
+- `AB` não entra em `data_complete`; vazio em `AB` não bloqueia.
 
 Se o grupo passou no crédito mas nenhum cenário passou em prazo/renda:
 - ele sai da pré-seleção;
@@ -322,14 +322,14 @@ Importante:
 - não é “teve contemplação em pelo menos 2 meses distintos”;
 - por isso um grupo pode mostrar, por exemplo, `35 contemplações ÷ 3 meses = 11,67`.
 
-## 9. Como as faixas BL:BP são usadas hoje
+## 9. Como as faixas BM:BQ são usadas hoje
 
-As colunas `BL:BP` viram percentuais de referência de perfis:
-- `BL` Investidor - 36 meses
-- `BM` Conservador - 24 meses
-- `BN` Moderado - 12 meses
-- `BO` Rápido - 6 meses
-- `BP` Urgente - 3 meses
+As colunas `BM:BQ` viram percentuais de referência de perfis:
+- `BM` Investidor - 36 meses
+- `BN` Conservador - 24 meses
+- `BO` Moderado - 12 meses
+- `BP` Rápido - 6 meses
+- `BQ` Urgente - 3 meses
 
 Para cada cenário, o Motor 360:
 - calcula o percentual total de lance do cenário;
