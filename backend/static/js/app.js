@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.116";
+const APP_BUNDLE_VERSION = "4.0.117";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -3844,6 +3844,9 @@ async function loadInvestorAnalysis() {
     }
     if (!response.ok) throw new Error(result.error || "Falha ao calcular a viabilidade dos grupos.");
     if (requestId !== investorAnalysisRequestId) return;
+    // A new analysis cannot inherit an administrator chosen for an old result.
+    // Keep it only while the operator has an active cart selection to preserve.
+    if (investorState.selectedGroupIds.size === 0) investorState.administrator = "";
     investorState.result = result;
     investorState.audit = null;
     addMotor360ExecutionLog("Análise concluída", `${result.total_grupos_analisados ?? 0} analisados · ${result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0} pré-selecionados.`);

@@ -65,6 +65,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("Composição atual", app_js)
         self.assertIn("estimativa mínima", app_js)
         self.assertIn("Crédito contratado ${compositionQuantityLabel}", app_js)
+        self.assertIn('if (investorState.selectedGroupIds.size === 0) investorState.administrator = "";', app_js)
         self.assertIn('const credit = sum("credito_contratado", "credito_liquido_projetado")', app_js)
         self.assertIn("Dentro de 30% da renda", app_js)
         self.assertIn('max="50"', app_js)

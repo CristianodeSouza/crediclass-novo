@@ -10,7 +10,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: APP_VERSION
-        value: 4.0.116
+        value: 4.0.117
       - key: NODE_VERSION
         value: 24.14.1
       - key: DEBUG
