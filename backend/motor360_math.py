@@ -169,9 +169,8 @@ def calculate_scenario(data: ScenarioInput, *, with_embedded: bool) -> Calculate
             creation_reason=reason,
         )
 
-    # The configured percentage is an addition to the desired liquid credit.
-    credito = base_liquida * (Decimal("1") + embedded) if with_embedded else base_liquida
-    valor_embutido = base_liquida * embedded
+    credito = base_liquida / (Decimal("1") - embedded) if with_embedded else base_liquida
+    valor_embutido = credito * embedded
     taxa = credito * data.taxa_administracao_total if data.taxa_administracao_total is not None else None
     fundo_percentual = data.fundo_reserva_total if data.fundo_reserva_total is not None else Decimal("0")
     fundo = credito * fundo_percentual

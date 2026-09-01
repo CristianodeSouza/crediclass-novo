@@ -174,7 +174,7 @@ Esses cenários são calculados em `calculate_scenario()` no arquivo `backend/mo
 #### 3.2 Cenário com embutido
 - só existe se `X` for válido e estiver entre `0` e `1`
 - fórmula:
-  - `credito_contratado = credito_liquido_desejado x (1 + Y)`; `lance_embutido = credito_liquido_desejado x Y`
+  - `credito_contratado = credito_liquido_desejado / (1 - Y)`; `lance_embutido = credito_contratado x Y`
 
 Se `X` estiver ausente ou inválido:
 - o cenário com embutido não é criado;

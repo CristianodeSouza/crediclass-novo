@@ -475,7 +475,7 @@ def analyze_client_consortium_viability(
             composition_scenarios = []
             client_total_bid = own + fgts
             contracted_target_without_embedded = desired
-            contracted_target_with_embedded = desired * (Decimal("1") + (embedded or Decimal("0")))
+            contracted_target_with_embedded = desired / (Decimal("1") - (embedded or Decimal("0"))) if embedded else desired
             minimum_quota_count = math.ceil(contracted_target_without_embedded / maximum)
             minimum_quota_count_with_embedded = math.ceil(contracted_target_with_embedded / maximum)
             fee_amount = maximum * fee
@@ -872,7 +872,7 @@ def analyze_client_consortium_viability(
         "execution_steps": [
             {"order": 1, "id": "status", "name": "Status", "formula_or_rule": "Somente status Ativo", "input_count": len(groups), "approved_count": counters["active"], "rejected_count": counters["status_rejected"], "incomplete_count": 0, "duration_ms": round(durations["status"] * 1000, 3)},
             {"order": 2, "id": "type", "name": "Tipo de bem", "formula_or_rule": "Aplicado somente quando explicitamente informado", "input_count": counters["active"], "approved_count": counters["active"] - counters["type_rejected"], "rejected_count": counters["type_rejected"], "incomplete_count": 0, "duration_ms": round(durations["type"] * 1000, 3)},
-            {"order": 3, "id": "credit", "name": "Faixa de credito", "formula_or_rule": "Sem embutido: desejado; com embutido: desejado x (1 + Y); O <= credito contratado <= U", "input_count": counters["active"] - counters["type_rejected"], "approved_count": counters["credit_approved"], "rejected_count": counters["credit_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"O", "U"} for field in item["missing_fields"])), "duration_ms": round((durations["scenario"] + durations["credit_decision"]) * 1000, 3)},
+            {"order": 3, "id": "credit", "name": "Faixa de credito", "formula_or_rule": "Sem embutido: desejado; com embutido: desejado / (1 - Y); O <= credito contratado <= U", "input_count": counters["active"] - counters["type_rejected"], "approved_count": counters["credit_approved"], "rejected_count": counters["credit_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"O", "U"} for field in item["missing_fields"])), "duration_ms": round((durations["scenario"] + durations["credit_decision"]) * 1000, 3)},
             {"order": 4, "id": "term", "name": "Prazo e renda", "formula_or_rule": "Parcela inicial calculada no cenário deve ser menor ou igual ao teto de 30% da renda; valores abaixo da parcela desejada continuam válidos.", "input_count": counters["credit_approved"], "approved_count": counters["term_approved"], "rejected_count": counters["term_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"F", "AC"} for field in item["missing_fields"])), "duration_ms": round(durations["term"] * 1000, 3)},
             {"order": 5, "id": "administrator_rules", "name": "Regras da administradora", "formula_or_rule": "Nenhuma regra adicional foi definida nos documentos oficiais; nenhuma exclusao aplicada.", "input_count": counters["term_approved"], "approved_count": counters["administrator_approved"], "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["administrator_rules"] * 1000, 3)},
             {"order": 6, "id": "contemplation", "name": "Contemplacao", "formula_or_rule": "Lance do cliente >= pelo menos uma faixa BL:BP; objetivo declarado somente prioriza o ranking", "input_count": counters["administrator_approved"], "approved_count": counters["contemplation_approved"], "rejected_count": counters["contemplation_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] == "BL:BP" for field in item["missing_fields"])), "duration_ms": round(durations["contemplation"] * 1000, 3)},
@@ -881,7 +881,7 @@ def analyze_client_consortium_viability(
         "formulas": [
             {"id": "base_liquida", "name": "Base liquida", "expression": "credito liquido desejado", "result": money(desired)},
             {"id": "credito_sem_embutido", "name": "Credito sem embutido", "expression": "base liquida", "result": money(desired)},
-            {"id": "credito_com_embutido", "name": "Credito com embutido", "expression": "base liquida x (1 + Y); lance embutido = base liquida x Y", "result": "calculado por grupo"},
+            {"id": "credito_com_embutido", "name": "Credito com embutido", "expression": "base liquida / (1 - Y); lance embutido = credito contratado x Y", "result": "calculado por grupo"},
             {"id": "taxa", "name": "Taxa", "expression": "credito contratado x AD", "result": "calculado por cenario"},
             {"id": "fundo", "name": "Fundo", "expression": "credito contratado x AB", "result": "calculado por cenario"},
             {"id": "saldo", "name": "Saldo devedor", "expression": "credito + taxa + fundo", "result": "calculado por cenario"},

@@ -7,8 +7,8 @@ class CreditCompositionTest(unittest.TestCase):
     def test_credito_contratado_com_lance_embutido(self):
         result = contracted_credit_for_liquid(450000, 0.50)
 
-        self.assertEqual(result["credito_contratado"], 675000)
-        self.assertEqual(result["lance_embutido"], 225000)
+        self.assertEqual(result["credito_contratado"], 900000)
+        self.assertEqual(result["lance_embutido"], 450000)
         self.assertEqual(result["credito_liquido"], 450000)
 
     def test_fgts_nao_permitido_nao_e_utilizado(self):

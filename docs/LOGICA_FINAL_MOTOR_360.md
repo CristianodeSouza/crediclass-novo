@@ -135,7 +135,7 @@ Primeiro é lido o percentual de lance embutido da coluna X.
 ```text
 Crédito contratado com embutido =
     Crédito contratado sem embutido
-    x (1 + Percentual de Lance Embutido)
+    / (1 - Percentual de Lance Embutido)
 ```
 
 Depois:

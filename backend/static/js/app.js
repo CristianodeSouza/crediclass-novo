@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.113";
+const APP_BUNDLE_VERSION = "4.0.114";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -189,7 +189,7 @@ const businessRulesFlow = [
     etapa: "4. Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance",
     regras: [
       "O sistema seleciona grupos conforme o objetivo do consorcio, usando filtros de contemplacao ou beneficios de investimento.",
-      "Quando houver lance embutido: credito_contratado = credito_liquido_desejado x (1 + percentual_lance_embutido), e lance_embutido = credito_liquido_desejado x percentual_lance_embutido.",
+      "Quando houver lance embutido: credito_contratado = credito_liquido_desejado / (1 - percentual_lance_embutido), e lance_embutido = credito_contratado x percentual_lance_embutido.",
       "Credito liquido da carta = credito_contratado - lance_embutido. O ranking da selecao usa os creditos liquidos das cartas candidatas.",
       "Lance total = lance embutido + recurso proprio utilizado + FGTS utilizado.",
       "Parcela total do cenario = soma das parcelas de todas as cartas.",
@@ -4263,8 +4263,8 @@ function computeStudy(payload, viabilityItem, group) {
   }
   const creditoDesejado = payload.credito_desejado || viabilityItem.credito || 0;
   const percentualEmbutido = group.percentual_lance_embutido || 0;
-  const creditoContratado = percentualEmbutido >= 1 ? creditoDesejado : creditoDesejado * (1 + percentualEmbutido);
-  const lanceEmbutido = creditoDesejado * percentualEmbutido;
+  const creditoContratado = percentualEmbutido >= 1 ? creditoDesejado : creditoDesejado / (1 - percentualEmbutido);
+  const lanceEmbutido = creditoContratado * percentualEmbutido;
   const lanceProprio = payload.lance_proprio || 0;
   const fgts = payload.fgts || 0;
   const lanceTotal = lanceEmbutido + lanceProprio + fgts;

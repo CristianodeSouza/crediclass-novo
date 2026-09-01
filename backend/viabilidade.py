@@ -189,8 +189,8 @@ def analyze_viabilidade(payload: ViabilidadeRequest, groups: list[dict[str, Any]
         if percentual_lance_embutido < 0 or percentual_lance_embutido >= 1:
             percentual_lance_embutido = 0
 
-        credito_contratado = payload.credito_desejado * (1 + percentual_lance_embutido)
-        lance_embutido = payload.credito_desejado * percentual_lance_embutido
+        credito_contratado = payload.credito_desejado / (1 - percentual_lance_embutido)
+        lance_embutido = credito_contratado * percentual_lance_embutido
         lance_maximo_disponivel = payload.lance_proprio + fgts_utilizado
         lance_total_formula = lance_embutido + lance_maximo_disponivel
         lance_total = lance_total_formula
