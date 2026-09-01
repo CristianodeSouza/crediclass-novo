@@ -83,9 +83,9 @@ SUMMARY_FIELDS = [
     "status",
 ]
 
-# The Itaú motor uses the column contract from the new group base.  These
-# positions are intentionally explicit so a renamed sheet header cannot move
-# a financial parameter to a different field silently.
+# The official group base has fixed financial columns from W onward.  Keep
+# these positions explicit so a renamed header cannot silently change a
+# financial input used by Motor 360.
 MAPA_GRUPOS_COLUMN_INDEXES = {
     "administradora": 0,  # A
     "grupo": 1,  # B
@@ -97,15 +97,15 @@ MAPA_GRUPOS_COLUMN_INDEXES = {
     "aliquota_seguro": 13,  # N
     "credito_minimo": 14,  # O
     "credito_maximo": 20,  # U
-    "indexador": 21,  # V
-    "modalidades_assembleia": 22,  # W
-    "percentual_lance_embutido": 23,  # X
-    "base_calculo_embutido": 24,  # Y
-    "modalidades_embutido": 25,  # Z
-    "fundo_reserva": 26,  # AA
-    "fundo_reserva_ano": 27,  # AB
-    "taxa_adm": 28,  # AC
-    "taxa_adm_ano": 29,  # AD
+    "indexador": 22,  # W
+    "modalidades_assembleia": 23,  # X
+    "percentual_lance_embutido": 24,  # Y
+    "base_calculo_embutido": 25,  # Z
+    "modalidades_embutido": 26,  # AA
+    "fundo_reserva": 27,  # AB
+    "fundo_reserva_ano": 28,  # AC
+    "taxa_adm": 29,  # AD
+    "taxa_adm_ano": 30,  # AE
     "parcela_inicial_grupo": 35,  # AJ
     "parcela_apos_lance_grupo": 36,  # AK
     "parcela_reduzida": 37,  # AL

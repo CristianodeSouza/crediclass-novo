@@ -252,6 +252,30 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(grupo["lance_moderado"], 0.3)
         self.assertEqual(grupo["lance_agressivo"], 0.4)
 
+    def test_colunas_financeiras_atuais_preservam_o_embutido(self):
+        row = [""] * 31
+        row[0] = "ITAU"
+        row[1] = "40047"
+        row[2] = "Imovel"
+        row[5] = "192"
+        row[14] = "600.000,00"
+        row[20] = "900.000,00"
+        row[22] = "IPCA"
+        row[23] = "Fixo e Livre"
+        row[24] = "30%"
+        row[25] = "Sobre o Credito"
+        row[26] = "Fixo e Livre"
+        row[27] = "3%"
+        row[29] = "16%"
+        mapped = {}
+        sheets_client.apply_mapa_grupos_fixed_columns(mapped, row)
+
+        grupo = row_to_grupo(mapped)
+
+        self.assertEqual(grupo["percentual_lance_embutido"], 0.30)
+        self.assertEqual(grupo["fundo_reserva"], 0.03)
+        self.assertEqual(grupo["taxa_adm"], 0.16)
+
     def test_read_summary_rows_usa_taxa_do_maior_credito_quando_coluna_s_vazia(self):
         sheets_client.clear_rows_cache()
         headers = [f"Coluna {index}" for index in range(63)]

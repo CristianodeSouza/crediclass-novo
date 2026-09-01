@@ -309,9 +309,9 @@ class Motor360RfcTest(unittest.TestCase):
     def test_audit_records_rfc_version_calculations_and_group_columns(self):
         result = analyze_client_consortium_viability(payload(), [group()])
         audit = result["audit"]
-        self.assertEqual(audit["metadata"]["engine_version"], "4.0.28")
+        self.assertEqual(audit["metadata"]["engine_version"], "4.0.29")
         self.assertEqual(audit["metadata"]["rules_version"], "RFC-001-architecture-v4.0")
-        self.assertIn("X", [item["column"] for item in audit["columns_used"]])
+        self.assertIn("Y", [item["column"] for item in audit["columns_used"]])
         self.assertIn("BL", [item["column"] for item in audit["columns_used"]])
         self.assertEqual(len(audit["group_results"]), 1)
 

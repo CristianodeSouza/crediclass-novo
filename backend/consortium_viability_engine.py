@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.28"
+MOTOR_VERSION = "4.0.29"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -665,14 +665,14 @@ def analyze_client_consortium_viability(
         ("A", "Administradora", "administradora", "Identificacao"), ("B", "Grupo", "grupo", "Identificacao"),
         ("C", "Tipo de bem", "tipo_bem", "Filtro explicito"), ("F", "Prazo remanescente", "prazo_remanescente", "Elegibilidade de prazo"),
         ("O", "Menor Credito", "credito_minimo", "Limite inferior de credito"), ("U", "Maior Credito", "credito_maximo", "Limite superior de credito"),
-        ("V", "Indexador", "indexador", "Parametro do grupo"), ("W", "Modalidades de assembleia", "modalidades_assembleia", "Parametro operacional"),
-        ("X", "Lance embutido", "percentual_lance_embutido", "Cenario com embutido"), ("Y", "Calculo do embutido", "base_calculo_embutido", "Parametro operacional"),
-        ("Z", "Modalidades do embutido", "modalidades_embutido", "Parametro operacional"), ("AA", "Fundo reserva total", "fundo_reserva", "Saldo devedor"),
-        ("AC", "Taxa ADM total", "taxa_adm", "Saldo devedor"), ("AJ", "Parcela inicial", "parcela_inicial_grupo", "Referencia apos selecao da carta"),
+        ("W", "Indexador", "indexador", "Parametro do grupo"), ("X", "Modalidades de assembleia", "modalidades_assembleia", "Parametro operacional"),
+        ("Y", "Lance embutido", "percentual_lance_embutido", "Cenario com embutido"), ("Z", "Calculo do embutido", "base_calculo_embutido", "Parametro operacional"),
+        ("AA", "Modalidades do embutido", "modalidades_embutido", "Parametro operacional"), ("AB", "Fundo reserva total", "fundo_reserva", "Saldo devedor"),
+        ("AD", "Taxa ADM total", "taxa_adm", "Saldo devedor"), ("AJ", "Parcela inicial", "parcela_inicial_grupo", "Referencia apos selecao da carta"),
         ("AK", "Parcela apos lance", "parcela_apos_lance_grupo", "Referencia apos selecao da carta"), ("AL", "Parcela reduzida", "parcela_reduzida", "Ranking configuravel"),
         *[(column, label, field, "Faixa de contemplacao") for _, field, column, label in STRATEGY_TARGETS],
     ]
-    decision_columns = {"A", "B", "F", "O", "U", "X", "AA", "AC"}
+    decision_columns = {"A", "B", "F", "O", "U", "Y", "AB", "AD"}
     if explicit_type:
         decision_columns.add("C")
     source_snapshot = [

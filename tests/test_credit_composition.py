@@ -11,6 +11,13 @@ class CreditCompositionTest(unittest.TestCase):
         self.assertEqual(result["lance_embutido"], 450000)
         self.assertEqual(result["credito_liquido"], 450000)
 
+    def test_credito_liquido_de_seiscentos_mil_com_embutido_de_trinta_porcento(self):
+        result = contracted_credit_for_liquid(600000, 0.30)
+
+        self.assertEqual(result["credito_contratado"], 857142.86)
+        self.assertEqual(result["lance_embutido"], 257142.86)
+        self.assertEqual(result["credito_liquido"], 600000)
+
     def test_fgts_nao_permitido_nao_e_utilizado(self):
         card = build_card_from_liquid(
             {"grupo_id": "1", "lance_embutido": False, "fgts": False, "prazo_total": 100},
