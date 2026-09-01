@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.112";
+const APP_BUNDLE_VERSION = "4.0.113";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -2313,7 +2313,15 @@ function selectedMotor360Items() {
     ...(investorState.result?.credit_items || []),
     ...(investorState.result?.composition_items || []),
   ].map((item) => [String(item.grupo || item.grupo_id || ""), item]));
-  return [...investorState.selectedGroupIds].map((id) => currentItems.get(id) || investorState.selectedGroupData.get(id)).filter(Boolean);
+  return [...investorState.selectedGroupIds].map((id) => {
+    const item = currentItems.get(id) || investorState.selectedGroupData.get(id);
+    if (item?.composition_candidate) {
+      const minimum = Math.max(1, Number(item.cotas_minimas_com_embutido || item.cotas_minimas_sem_embutido || 1));
+      const current = Number(investorState.quotaCounts.get(id) || 1);
+      if (current < minimum) investorState.quotaCounts.set(id, minimum);
+    }
+    return item;
+  }).filter(Boolean);
 }
 
 function renderMotor360SelectedGroupsDock() {
@@ -3689,7 +3697,10 @@ function renderInvestorAnalysis(result) {
       }
       investorState.selectedGroupIds.add(groupId);
       if (selectedItem) investorState.selectedGroupData.set(groupId, selectedItem);
-      if (!investorState.quotaCounts.has(groupId)) investorState.quotaCounts.set(groupId, 1);
+      if (!investorState.quotaCounts.has(groupId)) {
+        const minimum = Math.max(1, Number(selectedItem?.cotas_minimas_com_embutido || selectedItem?.cotas_minimas_sem_embutido || 1));
+        investorState.quotaCounts.set(groupId, minimum);
+      }
     } else {
       investorState.selectedGroupIds.delete(groupId);
       investorState.quotaCounts.delete(groupId);
