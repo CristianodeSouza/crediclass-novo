@@ -39,6 +39,20 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(row["__fundo_reserva"], "3%")
         self.assertTrue(row_to_grupo(row)["lance_embutido"])
 
+    def test_current_sheet_headers_read_tax_and_remaining_term(self):
+        headers = [f"Coluna {index}" for index in range(30)]
+        headers[5] = "Prazo remanescente"
+        headers[29] = "Taxa ADM total"
+        values = [""] * 30
+        values[5] = "200"
+        values[29] = "35%"
+        row = dict(zip(headers, values))
+
+        sheets_client.apply_mapa_grupos_fixed_columns(row, values)
+
+        self.assertEqual(row["__prazo_restante"], "200")
+        self.assertEqual(row["__taxa_adm"], "35%")
+
     def test_defasagem_calcula_meses_pendentes_e_ordena_prioridade(self):
         groups = [
             {
