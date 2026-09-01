@@ -151,7 +151,7 @@ const CLIENT_PJ_SOCIOS_LIMIT = 5;
 const DEFAULT_INCOME_COMMITMENT_PERCENT = 0.3;
 const DEFAULT_PJ_COMMITMENT_PERCENT = DEFAULT_INCOME_COMMITMENT_PERCENT;
 const DEFAULT_CPF_COMMITMENT_PERCENT = 0.3;
-const APP_BUNDLE_VERSION = "4.0.111";
+const APP_BUNDLE_VERSION = "4.0.112";
 const APP_VERSION_SYNC_KEY = "crediclass.app.version.sync";
 const authState = { user: null };
 let appBootstrapped = false;
@@ -189,7 +189,7 @@ const businessRulesFlow = [
     etapa: "4. Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance",
     regras: [
       "O sistema seleciona grupos conforme o objetivo do consorcio, usando filtros de contemplacao ou beneficios de investimento.",
-      "Quando houver lance embutido: credito_contratado = credito_liquido_desejado / (1 - percentual_lance_embutido).",
+      "Quando houver lance embutido: credito_contratado = credito_liquido_desejado x (1 + percentual_lance_embutido), e lance_embutido = credito_liquido_desejado x percentual_lance_embutido.",
       "Credito liquido da carta = credito_contratado - lance_embutido. O ranking da selecao usa os creditos liquidos das cartas candidatas.",
       "Lance total = lance embutido + recurso proprio utilizado + FGTS utilizado.",
       "Parcela total do cenario = soma das parcelas de todas as cartas.",
@@ -2252,12 +2252,13 @@ function renderMotor360CompositionCard(item) {
   const groupId = String(item.grupo || item.grupo_id || "");
   const anchorId = motor360GroupAnchorId(groupId);
   const selected = investorState.selectedGroupIds.has(groupId);
-  const quotaCount = selected ? Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1))) : Math.max(1, Number(item.cotas_minimas_sem_embutido || 1));
+  const minimumCompositionQuotas = Math.max(1, Number(item.cotas_minimas_com_embutido || item.cotas_minimas_sem_embutido || 1));
+  const quotaCount = selected ? Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || minimumCompositionQuotas))) : minimumCompositionQuotas;
   const quotaCapacity = motor360QuotaCapacity(item);
   const quotaLimit = Number.isFinite(Number(quotaCapacity?.limite_cotas)) ? Number(quotaCapacity.limite_cotas) : null;
   const quotaExceeded = selected && quotaLimit !== null && quotaCount > quotaLimit;
   const visibleCapacitySummary = renderMotor360VisibleCapacitySummary(item);
-  const quotaWarning = quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : "";
+  const quotaWarning = quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : quotaCount < minimumCompositionQuotas ? `<div class="motor360-quota-warning" role="alert"><strong>Crédito líquido insuficiente</strong><span>Com embutido, são necessárias pelo menos ${minimumCompositionQuotas} cotas para atingir o crédito contratado mínimo de ${formatMoney(item.cenarios?.find((scenario) => scenario.id === "with_embedded")?.credito_contratado_minimo || 0)}.</span></div>` : "";
   const scenarios = motor360EnsureScenarioPair(item.cenarios, { composition: true }).map((scenario) => fallbackScenarioForDisplay(item, scenario.id));
   const byId = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
   const profiles = (byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [])
@@ -3503,7 +3504,7 @@ function renderMotor360GroupAudit(groupId) {
   dialog.id = "motor360GroupAuditDialog";
   dialog.className = "motor360-group-audit-dialog";
   const reasons = (entry.justification || []).map(formatMotor360Reason).join(", ");
-  dialog.innerHTML = `<div class="motor360-group-audit-dialog-header"><div><h3>Justificativa do grupo ${escapeHtml(entry.grupo)}</h3><p>${escapeHtml(entry.administradora || "-")} · Resultado: ${escapeHtml(entry.result || "-")} · Ordem ${escapeHtml(String(entry.ranking || "-"))}</p></div><button class="btn btn-outline-secondary btn-sm" type="button">Fechar</button></div><div class="motor360-group-audit-scenarios">${scenarios}</div><div class="motor360-group-audit-alerts"><strong>Dados da base utilizados</strong><p>Prazo restante (F): ${escapeHtml(String(entry.source_values?.prazo_restante ?? "-"))} | Embutido (X): ${escapeHtml(String(entry.source_values?.percentual_lance_embutido ?? "-"))}</p><strong>Motivos e alertas</strong><p>${escapeHtml(reasons || "Nenhum alerta registrado.")}</p></div>`;
+  dialog.innerHTML = `<div class="motor360-group-audit-dialog-header"><div><h3>Justificativa do grupo ${escapeHtml(entry.grupo)}</h3><p>${escapeHtml(entry.administradora || "-")} · Resultado: ${escapeHtml(entry.result || "-")} · Ordem ${escapeHtml(String(entry.ranking || "-"))}</p></div><button class="btn btn-outline-secondary btn-sm" type="button">Fechar</button></div><div class="motor360-group-audit-scenarios">${scenarios}</div><div class="motor360-group-audit-alerts"><strong>Dados da base utilizados</strong><p>Prazo restante (F): ${escapeHtml(String(entry.source_values?.prazo_restante ?? "-"))} | Embutido (Y): ${escapeHtml(String(entry.source_values?.percentual_lance_embutido ?? "-"))}</p><strong>Motivos e alertas</strong><p>${escapeHtml(reasons || "Nenhum alerta registrado.")}</p></div>`;
   dialog.querySelector("button")?.addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => dialog.remove());
   document.body.append(dialog);
@@ -4251,8 +4252,8 @@ function computeStudy(payload, viabilityItem, group) {
   }
   const creditoDesejado = payload.credito_desejado || viabilityItem.credito || 0;
   const percentualEmbutido = group.percentual_lance_embutido || 0;
-  const creditoContratado = percentualEmbutido >= 1 ? creditoDesejado : creditoDesejado / (1 - percentualEmbutido);
-  const lanceEmbutido = creditoContratado * percentualEmbutido;
+  const creditoContratado = percentualEmbutido >= 1 ? creditoDesejado : creditoDesejado * (1 + percentualEmbutido);
+  const lanceEmbutido = creditoDesejado * percentualEmbutido;
   const lanceProprio = payload.lance_proprio || 0;
   const fgts = payload.fgts || 0;
   const lanceTotal = lanceEmbutido + lanceProprio + fgts;

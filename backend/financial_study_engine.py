@@ -104,8 +104,8 @@ def build_financeiro(payload: EstudoRequest, grupo: dict) -> dict:
     cliente = payload.cliente
     credito_desejado = as_number(cliente.credito_desejado)
     percentual_embutido = as_number(grupo.get("percentual_lance_embutido"))
-    credito_original = credito_desejado / (1 - percentual_embutido) if 0 < percentual_embutido < 1 else credito_desejado
-    lance_embutido = credito_original * percentual_embutido
+    credito_original = credito_desejado * (1 + percentual_embutido) if 0 < percentual_embutido < 1 else credito_desejado
+    lance_embutido = credito_desejado * percentual_embutido
     recurso_proprio = as_number(cliente.lance_proprio) + as_number(cliente.fgts)
     valor_total_lance = lance_embutido + recurso_proprio
     percentual_lance_total = valor_total_lance / credito_original if credito_original else 0

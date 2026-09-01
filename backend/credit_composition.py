@@ -24,8 +24,8 @@ def embedded_bid_percent(group: dict[str, Any], considerar_lance_embutido: bool 
 
 def contracted_credit_for_liquid(credito_liquido: float, percentual_lance_embutido: float) -> dict[str, float]:
     percent = max(0.0, min(float(percentual_lance_embutido or 0), 0.95))
-    credito_contratado = float(credito_liquido) / (1 - percent)
-    lance_embutido = credito_contratado * percent
+    credito_contratado = float(credito_liquido) * (1 + percent)
+    lance_embutido = float(credito_liquido) * percent
     return {
         "credito_contratado": round(credito_contratado, 2),
         "lance_embutido": round(lance_embutido, 2),

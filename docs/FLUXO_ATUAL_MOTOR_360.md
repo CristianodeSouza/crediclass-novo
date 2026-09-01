@@ -175,7 +175,7 @@ Só é criado se a coluna X contiver percentual válido maior que zero e menor q
 
 ```text
 Base a preservar = Crédito líquido desejado + Recurso próprio + FGTS
-Crédito contratado com embutido = Base a preservar / (1 - percentual embutido)
+Crédito contratado com embutido = Base a preservar x (1 + percentual embutido)
 Valor do embutido = Crédito contratado com embutido x percentual embutido
 Lance total com embutido = Recurso próprio + FGTS + Valor do embutido
 Percentual de lance com embutido = Lance total com embutido / Crédito contratado
