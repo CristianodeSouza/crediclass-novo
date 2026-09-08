@@ -2018,14 +2018,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-execution-log-error strong { color: #b42318; }
 .motor360-execution-log-empty { padding: 12px; color: var(--muted); font-size: 0.72rem; }
 .motor360-group-card { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); box-shadow: 0 2px 8px rgb(31 45 51 / 6%); }
-.motor360-group-card-header { display: grid; grid-template-columns: minmax(180px, 1fr) auto; align-items: center; gap: 16px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: #f7f9f9; }
-.motor360-group-identity { display: flex; align-items: center; gap: 11px; min-width: 150px; }
+.motor360-group-card-header { display: flex; align-items: center; gap: 18px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: #f7f9f9; }
+.motor360-group-identity { display: grid; grid-template-columns: auto minmax(125px, 1fr) 165px; align-items: center; gap: 0 11px; flex: 1 1 auto; min-width: 0; }
+.motor360-group-identity > div { display: contents; }
 .motor360-group-order { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 50%; background: var(--brand-navy); color: #fff; font-weight: 800; }
 .motor360-group-identity h3 { margin: 0; color: var(--brand-navy); font-size: 0.95rem; }
 .motor360-group-identity p { margin: 2px 0 0; color: var(--muted); font-size: 0.75rem; }
 .motor360-group-title { align-items: center; display: inline-flex; gap: 7px; }
 .motor360-group-title h3 { margin: 0; }
-.motor360-history-averages { margin-top: 7px; padding: 7px 10px; border: 1px solid rgba(235, 112, 22, .24); border-radius: 10px; background: #fff8f1; color: var(--muted); font-size: 0.68rem; line-height: 1.35; }
+.motor360-history-averages { grid-column: 3; grid-row: 1 / span 2; margin: 0; padding: 7px 10px; border: 1px solid rgba(235, 112, 22, .24); border-radius: 10px; background: #fff8f1; color: var(--muted); font-size: 0.68rem; line-height: 1.35; }
 .motor360-history-averages strong { display: block; margin-bottom: 2px; color: var(--brand-navy); font-size: 0.7rem; }
 .motor360-history-averages span { display: block; white-space: nowrap; }
 .motor360-history-trigger { align-items: center; background: var(--primary-soft); border: 1px solid rgba(235, 112, 22, .42); border-radius: 50%; color: var(--primary); cursor: help; display: inline-flex; font-size: .65rem; font-weight: 800; height: 18px; justify-content: center; line-height: 1; padding: 0; width: 18px; }
@@ -2282,6 +2283,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 @media (max-width: 900px) {
   .motor360-group-card-header, .motor360-profile-section-title { align-items: flex-start; flex-direction: column; }
+  .motor360-group-identity { display: flex; width: 100%; align-items: center; gap: 11px; }
+  .motor360-group-identity > div { display: block; }
+  .motor360-history-averages { flex: 0 0 auto; }
   .motor360-group-summary { justify-content: flex-start; flex-wrap: wrap; gap: 12px; }
   .motor360-scenario-list, .motor360-profile-card-list { grid-template-columns: 1fr 1fr; }
   .motor360-chance-header { flex-direction: column; }
