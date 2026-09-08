@@ -2031,8 +2031,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-history-averages span { display: block; white-space: nowrap; }
 .motor360-history-trigger { align-items: center; background: var(--primary-soft); border: 1px solid rgba(235, 112, 22, .42); border-radius: 50%; color: var(--primary); cursor: help; display: inline-flex; font-size: .65rem; font-weight: 800; height: 18px; justify-content: center; line-height: 1; padding: 0; width: 18px; }
 .motor360-history-trigger:hover, .motor360-history-trigger:focus-visible { background: var(--primary); color: #fff; outline: none; }
-.motor360-group-summary { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
-.motor360-group-summary div { display: grid; gap: 2px; min-width: 92px; }
+.motor360-group-summary { display: flex; align-items: center; justify-content: center; gap: 12px; min-width: 0; }
+.motor360-group-summary div { display: grid; justify-items: center; gap: 2px; min-width: 92px; text-align: center; }
+.motor360-group-summary .motor360-group-status { text-align: center; }
 .motor360-group-summary small, .motor360-scenario-grid small, .motor360-profile-card-value small { color: var(--muted); font-size: 0.68rem; }
 .motor360-group-summary b { color: var(--brand-navy); font-size: 0.82rem; }
 .motor360-group-status { padding: 5px 9px; border-radius: 999px; background: #e9f8ef; color: #147a48; font-size: 0.7rem; font-weight: 800; }
