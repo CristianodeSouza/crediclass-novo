@@ -41,7 +41,7 @@ CONTEMPLATION_PROFILE_TARGETS = (
 
 CONTEMPLATION_CAPACITY_WINDOWS = {
     "urgent": 3,
-    "fast": 3,
+    "fast": 6,
     "moderate": 12,
     "conservative": 12,
     "long_term": 12,

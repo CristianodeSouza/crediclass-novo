@@ -80,7 +80,7 @@ class Motor360RfcTest(unittest.TestCase):
 
         capacity = result["items"][0]["capacidade_contemplacoes_selecionada"]
         self.assertEqual(capacity["perfil"], "Rapido - 6 meses")
-        self.assertEqual(capacity["janela_meses"], 3)
+        self.assertEqual(capacity["janela_meses"], 6)
         self.assertEqual(capacity["media_contemplacoes"], 3.0)
         self.assertEqual(capacity["limite_cotas"], 3)
         self.assertEqual(result["items"][0]["historico_12_meses"], history)
