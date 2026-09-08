@@ -421,7 +421,7 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
             row: dict[str, Any] = {}
             for field, header, index in selected:
                 relative_index = index - min_index
-                row[header] = fixed_column_value(field, row_values, min_index) if field in MAPA_GRUPOS_COLUMN_INDEXES else row_values[relative_index] if relative_index < len(row_values) else ""
+                row[header] = row_values[relative_index] if relative_index < len(row_values) else ""
             row["__source_row"] = offset + 2
             if not any(str(value).strip() for value in row.values()):
                 continue
