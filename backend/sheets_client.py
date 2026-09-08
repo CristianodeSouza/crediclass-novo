@@ -345,6 +345,17 @@ def fixed_column_value(field: str, values: list[Any], base_index: int = 0) -> An
     return value
 
 
+def summary_field_index(headers: list[str], field: str, header_positions: dict[str, int]) -> tuple[str, int]:
+    """Use the live sheet header when present, with fixed columns as fallback."""
+    header = find_header(headers, field)
+    if header is not None:
+        return header, header_positions[header]
+    fixed_index = MAPA_GRUPOS_COLUMN_INDEXES.get(field)
+    if fixed_index is not None:
+        return canonical_field_header(field), fixed_index
+    raise KeyError(field)
+
+
 def read_sheet_headers(force_reload: bool = False) -> list[str]:
     now = time.time()
     with _cache_lock:
@@ -375,15 +386,11 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
     selected: list[tuple[str, str, int]] = []
     header_positions = headers_index(headers)
     for field in SUMMARY_FIELDS:
-        fixed_index = MAPA_GRUPOS_COLUMN_INDEXES.get(field)
-        if fixed_index is not None:
-            selected.append((field, canonical_field_header(field), fixed_index))
-        else:
-            header = find_header(headers, field)
-            if header is None:
-                continue
-            index = header_positions[header]
-            selected.append((field, header, index))
+        try:
+            header, index = summary_field_index(headers, field, header_positions)
+        except KeyError:
+            continue
+        selected.append((field, header, index))
     selected_indexes = {index for _, _, index in selected}
     for header, index in header_positions.items():
         history_key = history_key_from_header(header)

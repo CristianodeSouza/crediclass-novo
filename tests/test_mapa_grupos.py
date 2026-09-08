@@ -276,6 +276,48 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(grupo["fundo_reserva"], 0.03)
         self.assertEqual(grupo["taxa_adm"], 0.16)
 
+    def test_read_summary_rows_prioriza_cabecalho_real_da_base_atual(self):
+        sheets_client.clear_rows_cache()
+        headers = [f"Coluna {index}" for index in range(31)]
+        headers[0] = "ADM"
+        headers[1] = "Grupo"
+        headers[2] = "Tipo de Bem"
+        headers[5] = "Prazo remanescente"
+        headers[17] = "Menor Credito"
+        headers[20] = "Maior Credito"
+        headers[26] = "Fundo Reserva"
+        headers[28] = "Taxa Adm Original"
+        row = [""] * 31
+        row[0], row[1], row[2], row[5] = "ITAU", "126", "Imovel", "192"
+        row[17], row[20], row[26], row[28] = "400.000,00", "1.200.000,00", "3,0%", "16,0%"
+
+        class ExecuteMock:
+            def execute(self):
+                return {"values": [row]}
+
+        class ValuesMock:
+            def get(self, **kwargs):
+                return ExecuteMock()
+
+        class ServiceMock:
+            def spreadsheets(self):
+                return self
+
+            def values(self):
+                return ValuesMock()
+
+        with (
+            patch("backend.sheets_client.read_sheet_headers", return_value=headers),
+            patch("backend.sheets_client.get_service", return_value=ServiceMock()),
+            patch("backend.sheets_client.get_settings", return_value=SimpleNamespace(google_sheets_id="sheet-id", google_sheet_name="Grupos")),
+        ):
+            grupo = row_to_grupo(sheets_client.read_summary_rows(include_history=True)[0])
+
+        self.assertEqual(grupo["credito_minimo"], 400000)
+        self.assertEqual(grupo["credito_maximo"], 1200000)
+        self.assertEqual(grupo["fundo_reserva"], 0.03)
+        self.assertEqual(grupo["taxa_adm"], 0.16)
+
     def test_read_summary_rows_usa_taxa_do_maior_credito_quando_coluna_s_vazia(self):
         sheets_client.clear_rows_cache()
         headers = [f"Coluna {index}" for index in range(63)]

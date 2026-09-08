@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.29"
+MOTOR_VERSION = "4.0.64"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -702,7 +702,7 @@ def analyze_client_consortium_viability(
             _audit_field("Parcela maxima", "parcela_maxima", money(income_limit), "system_configuration", "Renda x comprometimento"),
         ], "consolidated_values": client, "participants": getattr(payload, "titulares", []) or []},
         "data_source": {"source_name": "Tabela de Grupos 3.0", "current_or_historical": "historical" if mode == "historical_audit" else "current", "loaded_at": completed_at.isoformat(), "total_rows": len(groups), "base_snapshot": {"row_count": len(groups), "fingerprint_algorithm": "sha256", "fingerprint": source_fingerprint}},
-        "parameters": {"commitment_percent": float(commitment), "requested_type": requested_type or None, "explicit_type_filter": bool(explicit_type), "base_mode": mode, "embedded_column": "X", "decision_columns": sorted(decision_columns)},
+        "parameters": {"commitment_percent": float(commitment), "requested_type": requested_type or None, "explicit_type_filter": bool(explicit_type), "base_mode": mode, "embedded_column": "Y", "decision_columns": sorted(decision_columns)},
         "columns_used": [{"column": column, "header": header, "technical_field": field, "purpose": purpose, "loaded": True, "used_in_decision": column in decision_columns, "used": column in decision_columns} for column, header, field, purpose in columns],
         "execution_steps": [
             {"order": 1, "id": "status", "name": "Status", "formula_or_rule": "Somente status Ativo", "input_count": len(groups), "approved_count": counters["active"], "rejected_count": counters["status_rejected"], "incomplete_count": 0, "duration_ms": round(durations["status"] * 1000, 3)},
