@@ -2025,9 +2025,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-identity p { margin: 2px 0 0; color: var(--muted); font-size: 0.75rem; }
 .motor360-group-title { align-items: center; display: inline-flex; gap: 7px; }
 .motor360-group-title h3 { margin: 0; }
-.motor360-history-averages { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 8px; margin-top: 6px; color: var(--muted); font-size: 0.68rem; line-height: 1.25; }
-.motor360-history-averages strong { flex-basis: 100%; color: var(--brand-navy); font-size: 0.7rem; }
-.motor360-history-averages span { white-space: nowrap; }
+.motor360-history-averages { margin-top: 7px; padding: 7px 10px; border: 1px solid rgba(235, 112, 22, .24); border-radius: 10px; background: #fff8f1; color: var(--muted); font-size: 0.68rem; line-height: 1.35; }
+.motor360-history-averages strong { display: block; margin-bottom: 2px; color: var(--brand-navy); font-size: 0.7rem; }
+.motor360-history-averages span { display: block; white-space: nowrap; }
 .motor360-history-trigger { align-items: center; background: var(--primary-soft); border: 1px solid rgba(235, 112, 22, .42); border-radius: 50%; color: var(--primary); cursor: help; display: inline-flex; font-size: .65rem; font-weight: 800; height: 18px; justify-content: center; line-height: 1; padding: 0; width: 18px; }
 .motor360-history-trigger:hover, .motor360-history-trigger:focus-visible { background: var(--primary); color: #fff; outline: none; }
 .motor360-group-summary { display: flex; align-items: center; justify-content: flex-end; gap: 12px; min-width: 0; }
