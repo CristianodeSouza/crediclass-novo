@@ -6,7 +6,7 @@ from typing import Any
 
 from .config import get_settings
 from .financial_study_engine import build_financeiro
-from .models import EstudoRequest
+from .models import EstudoPreviewRequest, EstudoRequest
 from .sheets_client import get_service
 
 RUNTIME_DIR = Path(__file__).resolve().parent / "runtime_data"
@@ -274,6 +274,68 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: s
     return {"estudo_id": estudo_id, "proposal_id": proposal_id, "success": True}
 
 
+def build_estudo_preview(payload: EstudoPreviewRequest, grupo: dict | None = None, operador: str = "") -> dict:
+    grupo_data = grupo or payload.grupo or {}
+    estudo_payload = EstudoRequest(
+        cliente=payload.cliente,
+        grupo_id=payload.grupo_id,
+        cenario=payload.cenario,
+        template_campos=payload.template_campos,
+    )
+    financeiro = build_financeiro(estudo_payload, grupo_data)
+    return {
+        "estudo_id": "PREVIEW",
+        "proposal_id": "PREVIEW",
+        "cliente": payload.cliente.model_dump(),
+        "grupo_id": payload.grupo_id,
+        "grupo": grupo_data,
+        "cenario": payload.cenario,
+        "financeiro": financeiro,
+        "template_campos": payload.template_campos,
+        "estrategia": financeiro["estrategia_recomendada"],
+        "status": "Previa",
+        "operador": operador or "Não informado",
+        "criado_em": datetime.now().isoformat(timespec="seconds"),
+    }
+
+
+def build_estudo_audit_payload(
+    payload: EstudoPreviewRequest,
+    grupo: dict | None = None,
+    operador: str = "",
+    *,
+    motor360_audit: dict[str, Any] | None = None,
+    group_audit: list[dict[str, Any]] | None = None,
+    pdf_engine_status: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    estudo = build_estudo_preview(payload, grupo=grupo, operador=operador)
+    settings = get_settings()
+    grupo_data = grupo or payload.grupo or {}
+    return {
+        "audit_type": "financial_study_runtime",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "system": {
+            "app": settings.app_name,
+            "version": settings.version,
+            "environment": settings.environment,
+        },
+        "study": {
+            "mode": "preview",
+            "engine_target": "react-pdf",
+            "operador": operador or "Não informado",
+            "grupo_id": str(payload.grupo_id),
+            "administradora": grupo_data.get("administradora") or grupo_data.get("adm") or "",
+        },
+        "request_payload": payload.model_dump(),
+        "resolved_group": grupo_data,
+        "study_preview": estudo,
+        "pdf_engine_status": pdf_engine_status or {},
+        "group_audit_trail": list(group_audit or []),
+        "motor360_audit_id": payload.motor360_audit_id,
+        "motor360_audit_snapshot": motor360_audit,
+    }
+
+
 def list_estudos() -> list[dict]:
     if sheets_enabled():
         items = [item for _, item in read_studies_from_sheet()]
@@ -419,12 +481,16 @@ def study_pdf_lines(estudo: dict) -> list[str]:
     return lines
 
 
+def export_estudo_pdf_payload(estudo: dict, output_dir: Path, filename: str | None = None) -> str:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    target_filename = filename or f"{estudo.get('estudo_id', 'estudo')}.pdf"
+    path = output_dir / target_filename
+    path.write_bytes(build_pdf_bytes(study_pdf_lines(estudo)))
+    return target_filename
+
+
 def export_estudo_pdf(estudo_id: str, output_dir: Path) -> str | None:
     estudo = get_estudo(estudo_id)
     if not estudo:
         return None
-    output_dir.mkdir(parents=True, exist_ok=True)
-    filename = f"{estudo_id}.pdf"
-    path = output_dir / filename
-    path.write_bytes(build_pdf_bytes(study_pdf_lines(estudo)))
-    return filename
+    return export_estudo_pdf_payload(estudo, output_dir, filename=f"{estudo_id}.pdf")
