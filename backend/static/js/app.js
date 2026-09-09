@@ -2282,7 +2282,13 @@ function renderSelectedGroupsScreen() {
   if (!empty || !results) return;
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
-  results.innerHTML = items.length ? `${renderSelectedGroupsCartSummary(items)}<div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div>` : "";
+  results.innerHTML = items.length ? renderSelectedGroupsCartSummary(items) + '<div class="selected-groups-comparison">' + items.map(renderSelectedGroupComparisonColumn).join("") + '</div><section class="selected-groups-next-step"><div><span>Próxima etapa</span><h3>Estudo Financeiro</h3><p>Revise a composição e avance. Nenhum estudo será salvo nesta etapa.</p></div><button class="btn btn-primary" type="button" data-follow-selected-groups>Seguir para Estudo Financeiro</button></section>' : "";
+  results.querySelector("[data-follow-selected-groups]")?.addEventListener("click", () => {
+    persistMotor360Selection();
+    currentStudy = null;
+    activateScreen("estudo");
+    showToast("Composição validada. Revise o estudo e abra a prévia do PDF quando estiver pronto.", "success");
+  });
 }
 
 const FINANCIAL_STUDY_SECTIONS_KEY = "crediclass.financialStudy.sections";
