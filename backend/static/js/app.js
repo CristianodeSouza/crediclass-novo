@@ -2745,7 +2745,7 @@ async function renderFinancialStudyScreen() {
   if (renderToken !== financialStudyRenderToken) return;
   screen.removeAttribute("aria-busy");
   screen.innerHTML = `<div class="financial-study-page">
-    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Documento dinâmico criado com os dados disponíveis no perfil e nos grupos selecionados.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-outline-primary" type="button" data-study-generate>Gerar Estudo</button><button class="btn btn-primary" type="button" data-study-print>Imprimir / Salvar PDF</button></div></div>
+    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Documento dinamico criado com os dados disponiveis no perfil e nos grupos selecionados.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-primary" type="button" data-study-preview>Abrir previa do PDF</button></div></div>
     <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
     <article class="financial-study-document">
       <header class="financial-study-cover"><div class="financial-study-cover-brand"><span class="financial-study-kicker">CREDICLASS</span><h2>Estudo Financeiro</h2><p>Comparativo dos grupos selecionados para apoiar uma decisão clara e auditável.</p></div><dl><div><dt>Nome do cliente</dt><dd id="financialStudyHeaderClient">${escapeHtml(clientName)}</dd></div><div><dt>Data do estudo</dt><dd id="financialStudyHeaderDate">${escapeHtml(issueDate)}</dd></div><div><dt>Número do estudo</dt><dd id="financialStudyHeaderNumber">${escapeHtml(proposalId)}</dd></div></dl></header>
@@ -2757,7 +2757,7 @@ async function renderFinancialStudyScreen() {
       <footer class="financial-study-footer"><span>Crediclass · Estudo Financeiro</span><span>${escapeHtml(proposalId)} · versão ${escapeHtml(systemVersion)}</span></footer>
     </article>
   </div>`;
-  screen.querySelector("[data-study-print]")?.addEventListener("click", () => window.print());
+  screen.querySelector("[data-study-preview]")?.addEventListener("click", () => previewStudyPdf().catch(() => showToast("Nao foi possivel gerar a previa do PDF.", "danger")));
   screen.querySelector("[data-study-customize]")?.addEventListener("click", () => screen.querySelector("[data-study-customizer-panel]")?.classList.toggle("d-none"));
   screen.querySelector("[data-study-generate]")?.addEventListener("click", async () => {
     const button = screen.querySelector("[data-study-generate]");
