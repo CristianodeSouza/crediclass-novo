@@ -2584,6 +2584,8 @@ async function financialStudyAssemblyData() {
   return data;
 }
 
+// Agenda de contratacao e assembleias
+// Agenda de contratação e assembleias
 function financialStudyAssemblyAgenda(data, administrators, generatedAt) {
   const wanted = new Set(administrators.map(financialStudyComparable));
   const start = new Date(generatedAt);
@@ -4083,6 +4085,48 @@ async function saveCurrentStudy(options = {}) {
   return result;
 }
 
+function buildStudyPreviewPayload() {
+  if (!currentStudy || !currentStudy.groupId || !currentStudy.group) {
+    throw new Error("Abra um estudo antes de gerar a previa.");
+  }
+  return {
+    cliente: {
+      nome: currentStudy.payload.nome || "Cliente em estudo",
+      nome_conjuge: currentStudy.payload.nome_conjuge || "",
+      tipo_contratacao: currentStudy.payload.tipo_contratacao,
+      titulares: currentStudy.payload.titulares,
+      credito_desejado: currentStudy.payload.credito_desejado,
+      objetivo: currentStudy.payload.objetivo,
+      prazo_desejado: currentStudy.payload.prazo_desejado,
+      lance_proprio: currentStudy.payload.lance_proprio,
+      fgts: currentStudy.payload.fgts,
+      renda_total: currentStudy.payload.renda_total,
+      parcela_desejada: currentStudy.payload.parcela_desejada,
+      data_nascimento: currentStudy.payload.data_nascimento,
+      data_nascimento_conjuge: currentStudy.payload.data_nascimento_conjuge,
+      estado_bem: currentStudy.payload.estado_bem || "",
+    },
+    grupo_id: currentStudy.groupId,
+    grupo: currentStudy.group,
+    cenario: currentStudy.cenario,
+    template_campos: collectStudyOperatorFields(),
+  };
+}
+
+async function previewStudyPdf() {
+  const result = await apiPost("/estudos/preview-pdf", buildStudyPreviewPayload());
+  const dialog = document.createElement("div");
+  dialog.className = "modal fade";
+  dialog.tabIndex = -1;
+  dialog.innerHTML = '<div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><div><h2 class="modal-title h5">Previa do PDF do Estudo Financeiro</h2><p class="modal-subtitle">Revise o documento antes de salvar ou imprimir.</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div><div class="modal-body p-0"><iframe title="Previa do PDF do estudo financeiro" style="width:100%;height:72vh;border:0" src="' + result.download_url + '#toolbar=1&navpanes=0&view=FitH"></iframe></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-preview-save>Salvar estudo</button><button type="button" class="btn btn-primary" data-preview-print>Imprimir</button></div></div></div>';
+  document.body.append(dialog);
+  const modal = bootstrap.Modal.getOrCreateInstance(dialog);
+  dialog.querySelector("[data-preview-save]").addEventListener("click", () => saveCurrentStudy().catch(() => showToast("Nao foi possivel salvar o estudo.", "danger")));
+  dialog.querySelector("[data-preview-print]").addEventListener("click", () => window.open(result.download_url, "_blank", "noopener"));
+  dialog.addEventListener("hidden.bs.modal", () => dialog.remove(), { once: true });
+  modal.show();
+}
+
 async function exportStudyPdf(studyId) {
   let targetStudyId = studyId;
   if (!targetStudyId && currentStudy) {
@@ -5298,7 +5342,7 @@ document.getElementById("studyStrategyTabs").addEventListener("click", (event) =
   renderStudyStrategyTable();
 });
 document.getElementById("studyPdfBtn").addEventListener("click", () => {
-  exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
+  previewStudyPdf().catch(() => showToast("Nao foi possivel gerar a previa do PDF.", "danger"));
 });
 document.getElementById("studyShareBtn").addEventListener("click", () => {
   shareCurrentStudy().catch(() => showToast("Nao foi possivel compartilhar o estudo.", "danger"));

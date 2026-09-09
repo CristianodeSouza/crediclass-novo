@@ -23,8 +23,8 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
-from .estudos import create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
-from .models import EstudoCreateResponse, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
+from .estudos import build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, export_estudo_pdf_payload, get_estudo, list_estudos
+from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -516,13 +516,13 @@ def auth_me(request: Request):
 
 
 @app.post("/api/estudos", response_model=EstudoCreateResponse)
-def estudos_criar(payload: EstudoRequest, request: Request):
+def estudos_criar(payload: EstudoRequest, request: Request = None):
     logger.info("POST /api/estudos grupo_id=%s", payload.grupo_id)
     try:
         item = get_grupo(payload.grupo_id)
         if not item:
             return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
-        username = getattr(request.state, "auth_user", "")
+        username = getattr(getattr(request, "state", None), "auth_user", "")
         operador = AUTH_USERS.get(username, {}).get("name", username)
         result = create_estudo(payload, item, operador)
     except Exception as error:
@@ -610,6 +610,23 @@ def estudos_exportar_pdf(estudo_id: str):
     if not filename:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
     return {"success": True, "download_url": f"/files/{filename}"}
+
+
+@app.post("/api/estudos/preview-pdf")
+def estudos_preview_pdf(payload: EstudoPreviewRequest, request: Request):
+    grupo = payload.grupo or get_grupo(payload.grupo_id)
+    if not grupo:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
+    username = getattr(request.state, "auth_user", "")
+    operador = AUTH_USERS.get(username, {}).get("name", username)
+    estudo = build_estudo_preview(payload, grupo, operador)
+    filename = f"preview-{uuid4().hex}.pdf"
+    try:
+        export_estudo_pdf_payload(estudo, FILES_DIR, filename=filename)
+    except Exception as error:
+        logger.exception("Erro ao gerar previa transitoria")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+    return {"success": True, "download_url": f"/files/{filename}", "engine": "legacy"}
 
 
 @app.get("/api/configuracoes")
