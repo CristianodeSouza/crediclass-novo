@@ -4086,7 +4086,7 @@ async function saveCurrentStudy(options = {}) {
 }
 
 function buildStudyPreviewPayload() {
-  if (!currentStudy || !currentStudy.groupId || !currentStudy.group) {
+  if (!currentStudy || !currentStudy.groupId) {
     throw new Error("Abra um estudo antes de gerar a previa.");
   }
   return {
@@ -4107,7 +4107,7 @@ function buildStudyPreviewPayload() {
       estado_bem: currentStudy.payload.estado_bem || "",
     },
     grupo_id: currentStudy.groupId,
-    grupo: currentStudy.group,
+    grupo: currentStudy.group || undefined,
     cenario: currentStudy.cenario,
     template_campos: collectStudyOperatorFields(),
   };
