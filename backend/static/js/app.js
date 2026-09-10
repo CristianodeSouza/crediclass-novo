@@ -2290,7 +2290,11 @@ function renderSelectedGroupsScreen() {
   const missingScenarioGroups = items.filter((item) => !investorState.selectedScenarioIds.get(String(item.grupo || item.grupo_id || "")));
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
-  results.innerHTML = items.length ? renderSelectedGroupsCartSummary(items) + '<div class="selected-groups-comparison">' + items.map(renderSelectedGroupComparisonColumn).join("") + '</div><section class="selected-groups-next-step"><div><span>Próxima etapa</span><h3>Estudo Financeiro</h3><p>${missingScenarioGroups.length ? `Escolha um cenário para contratação em ${missingScenarioGroups.length} grupo(s) antes de avançar.` : "Composição pronta para o estudo. Nenhum estudo será salvo nesta etapa."}</p></div><button class="btn btn-primary" type="button" data-follow-selected-groups ${missingScenarioGroups.length ? "disabled" : ""}>Seguir para Estudo Financeiro</button></section>' : "";
+  const nextStepMessage = missingScenarioGroups.length
+    ? "Escolha um cenário para contratação em " + missingScenarioGroups.length + " grupo(s) antes de avançar."
+    : "Composição pronta para o estudo. Nenhum estudo será salvo nesta etapa.";
+  const nextStepDisabled = missingScenarioGroups.length ? "disabled" : "";
+  results.innerHTML = items.length ? renderSelectedGroupsCartSummary(items) + '<div class="selected-groups-comparison">' + items.map(renderSelectedGroupComparisonColumn).join("") + '</div><section class="selected-groups-next-step"><div><span>Próxima etapa</span><h3>Estudo Financeiro</h3><p>' + nextStepMessage + '</p></div><button class="btn btn-primary" type="button" data-follow-selected-groups ' + nextStepDisabled + '>Seguir para Estudo Financeiro</button></section>' : "";
   results.querySelectorAll("[data-selected-scenario]").forEach((input) => input.addEventListener("change", (event) => {
     const groupId = String(event.target.dataset.groupId || "");
     const scenarioId = String(event.target.dataset.scenarioId || "");
