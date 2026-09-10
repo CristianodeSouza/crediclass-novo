@@ -329,6 +329,26 @@ function IntroSection({ payload }) {
   );
 }
 
+function CompositionGroupSection({ group }) {
+  return React.createElement(
+    Section,
+    { title: `COMPARATIVO AUDITADO — GRUPO ${text(group.groupId)}` },
+    React.createElement(Text, { style: styles.miniNote }, `${text(group.administrator)} · ${text(group.quotas)} cota(s) · estratégia: ${text(group.strategy)}`),
+    React.createElement(Table, {
+      compact: true,
+      columns: [
+        { key: "label", label: "Cenário", width: "18%" },
+        { key: "liquidCredit", label: "Crédito líquido", width: "20%" },
+        { key: "contractedCredit", label: "Crédito contratado", width: "20%" },
+        { key: "embeddedBid", label: "Lance embutido", width: "15%" },
+        { key: "installment", label: "Parcela inicial", width: "14%" },
+        { key: "balance", label: "Saldo devedor", width: "13%" },
+      ],
+      rows: [group.withoutEmbedded || {}, group.withEmbedded || {}],
+    }),
+  );
+}
+
 function InvestmentSection({ payload }) {
   return React.createElement(
     Section,
@@ -702,51 +722,17 @@ function StrategyRowsSection({ payload }) {
 }
 
 function StudyDocument({ payload }) {
+  const compositionPages = (payload.sections.compositionGroups || []).map((group, index) => ({
+    title: null,
+    content: [React.createElement(CompositionGroupSection, { key: `composition-${index}`, group })],
+  }));
   const pages = [
-    {
-      title: null,
-      content: [
-        React.createElement(IntroSection, { key: "intro", payload }),
-        React.createElement(InvestmentSection, { key: "investment", payload }),
-      ],
-    },
-    {
-      title: null,
-      content: [
-        React.createElement(FinancialSummarySection, { key: "summary", payload }),
-        React.createElement(StrategyRowsSection, { key: "strategy-rows", payload }),
-      ],
-    },
-    {
-      title: null,
-      content: [
-        React.createElement(EditorialRowsSection, { key: "editorial", payload }),
-        React.createElement(SpecialistsSection, { key: "specialists", payload }),
-      ],
-    },
-    {
-      title: null,
-      content: [
-        React.createElement(BenefitsSection, { key: "benefits", payload }),
-        React.createElement(ContractSection, { key: "contract", payload }),
-        React.createElement(StrategySection, { key: "narrative" }),
-      ],
-    },
-    {
-      title: null,
-      content: [
-        React.createElement(HistorySection, { key: "history", payload }),
-        React.createElement(ProjectionSection, { key: "projection", payload }),
-      ].filter(Boolean),
-    },
-    {
-      title: null,
-      content: [
-        React.createElement(DeadlinesSection, { key: "deadlines", payload }),
-        React.createElement(OperatorNotesSection, { key: "notes", payload }),
-        React.createElement(ConsiderationsSection, { key: "considerations", payload }),
-      ].filter(Boolean),
-    },
+    { title: null, content: [React.createElement(IntroSection, { key: "intro", payload })] },
+    ...compositionPages,
+    { title: null, content: [React.createElement(EditorialRowsSection, { key: "editorial", payload }), React.createElement(SpecialistsSection, { key: "specialists", payload })] },
+    { title: null, content: [React.createElement(BenefitsSection, { key: "benefits", payload }), React.createElement(ContractSection, { key: "contract", payload }), React.createElement(StrategySection, { key: "narrative" })] },
+    { title: null, content: [React.createElement(HistorySection, { key: "history", payload }), React.createElement(ProjectionSection, { key: "projection", payload })].filter(Boolean) },
+    { title: null, content: [React.createElement(DeadlinesSection, { key: "deadlines", payload }), React.createElement(OperatorNotesSection, { key: "notes", payload }), React.createElement(ConsiderationsSection, { key: "considerations", payload })].filter(Boolean) },
   ];
   return React.createElement(
     Document,

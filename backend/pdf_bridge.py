@@ -251,6 +251,34 @@ def _operator_notes(template_campos: dict[str, Any]) -> list[str]:
     return [str(value).strip() for value in template_campos.values() if str(value or "").strip()]
 
 
+
+def _composition_groups(estudo: dict[str, Any]) -> list[dict[str, str]]:
+    groups = list(estudo.get("grupos_selecionados") or [])
+    result = []
+    for group in groups:
+        quota_count = max(1, int(_to_float(group.get("quota_count")) or 1))
+        scenarios = {str(item.get("id")): item for item in group.get("cenarios") or []}
+        def scenario_row(scenario_id: str) -> dict[str, str]:
+            scenario = scenarios.get(scenario_id) or {}
+            scale = lambda key: (_to_float(scenario.get(key)) or 0) * quota_count
+            return {"label": "Com embutido" if scenario_id == "with_embedded" else "Sem embutido", "liquidCredit": _format_money(scale("credito_liquido_projetado")), "contractedCredit": _format_money(scale("credito_contratado")), "embeddedBid": _format_money(scale("lance_embutido")), "installment": _format_money(scale("parcela_inicial")), "balance": _format_money(scale("saldo_devedor"))}
+        result.append({"groupId": str(group.get("grupo") or group.get("grupo_id") or "-"), "administrator": str(group.get("administradora") or "-"), "quotas": str(quota_count), "strategy": str(group.get("best_contemplation_strategy") or "-"), "withoutEmbedded": scenario_row("without_embedded"), "withEmbedded": scenario_row("with_embedded")})
+    return result
+
+
+def _composition_groups(estudo: dict[str, Any]) -> list[dict[str, str]]:
+    groups = list(estudo.get("grupos_selecionados") or [])
+    result = []
+    for group in groups:
+        quota_count = max(1, int(_to_float(group.get("quota_count")) or 1))
+        scenarios = {str(item.get("id")): item for item in group.get("cenarios") or []}
+        def scenario_row(scenario_id: str) -> dict[str, str]:
+            scenario = scenarios.get(scenario_id) or {}
+            scale = lambda key: (_to_float(scenario.get(key)) or 0) * quota_count
+            return {"label": "Com embutido" if scenario_id == "with_embedded" else "Sem embutido", "liquidCredit": _format_money(scale("credito_liquido_projetado")), "contractedCredit": _format_money(scale("credito_contratado")), "embeddedBid": _format_money(scale("lance_embutido")), "installment": _format_money(scale("parcela_inicial")), "balance": _format_money(scale("saldo_devedor"))}
+        result.append({"groupId": str(group.get("grupo") or group.get("grupo_id") or "-"), "administrator": str(group.get("administradora") or "-"), "quotas": str(quota_count), "strategy": str(group.get("best_contemplation_strategy") or "-"), "withoutEmbedded": scenario_row("without_embedded"), "withEmbedded": scenario_row("with_embedded")})
+    return result
+
 def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, Any]:
     cliente = estudo.get("cliente") or {}
     grupo = estudo.get("grupo") or {}
@@ -318,6 +346,7 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
             ],
             "operatorNotes": _operator_notes(template_campos),
             "strategyRows": strategy_rows,
+            "compositionGroups": _composition_groups(estudo),
             "historyMatrix": _history_matrix(financeiro, grupo, estudo),
             "contractRows": _contract_rows(estudo, grupo, financeiro),
             "projectionRows": _projection_rows(financeiro),

@@ -2544,7 +2544,7 @@ function financialStudyGroupCard(item, assemblyData, generatedAt, assemblyError 
     ["Taxa", rate == null ? "Não informada" : formatPercent(rate)],
     ["Venc.", dueDay ? String(dueDay) : "-"],
   ];
-  const scenarioColumn = (title, scenario) => `<section class="financial-study-group-scenario"><header><strong>${title}</strong></header><div class="financial-study-group-scenario-grid"><div class="is-primary"><span>Crédito</span><b>${scenario.credito_contratado == null ? "Não disponível" : formatMoney(scale(scenario.credito_contratado))}</b></div><div><span>Parcela inicial</span><b>${scenario.parcela_inicial == null ? "Não calculada" : formatMoney(scale(scenario.parcela_inicial))}</b></div><div><span>Pós-contemplação</span><b>${scenario.parcela_pos_contemplacao == null ? "Não calculada" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</b></div><div><span>Saldo devedor</span><b>${scenario.saldo_devedor == null ? "Não calculado" : formatMoney(scale(scenario.saldo_devedor))}</b></div></div></section>`;
+  const scenarioColumn = (title, scenario) => `<section class="financial-study-group-scenario"><header><strong>${title}</strong></header><div class="financial-study-group-scenario-grid"><div class="is-primary"><span>Crédito líquido</span><b>${scenario.credito_liquido_projetado == null ? "Não disponível" : formatMoney(scale(scenario.credito_liquido_projetado))}</b></div><div><span>Parcela inicial</span><b>${scenario.parcela_inicial == null ? "Não calculada" : formatMoney(scale(scenario.parcela_inicial))}</b></div><div><span>Pós-contemplação</span><b>${scenario.parcela_pos_contemplacao == null ? "Não calculada" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</b></div><div><span>Saldo devedor</span><b>${scenario.saldo_devedor == null ? "Não calculado" : formatMoney(scale(scenario.saldo_devedor))}</b></div></div></section>`;
   return `<article class="financial-study-group-card">
     <header class="financial-study-group-header"><div><strong>Grupo ${escapeHtml(groupId)}</strong><span>${escapeHtml(item.administradora || "-")} · ${quotas} ${quotas === 1 ? "cota" : "cotas"}</span></div><span class="financial-study-classification">${escapeHtml(financialStudyStrategyLabel(item.best_contemplation_strategy))}</span></header>
     <div class="financial-study-group-metrics">${summaryMetrics.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("")}</div>
@@ -2572,9 +2572,9 @@ function financialStudyPortfolioSummary(items) {
     const withEmbedded = financialStudyScenario(item, "with_embedded");
     totals.quotas += quotas;
     totals.maxCredit += Number(item.credito_maximo || 0) * quotas;
-    totals.withoutCredit += Number(without.credito_contratado || 0) * quotas;
+    totals.withoutCredit += Number(without.credito_liquido_projetado || 0) * quotas;
     totals.withoutInstallment += Number(without.parcela_inicial || 0) * quotas;
-    totals.withCredit += Number(withEmbedded.credito_contratado || 0) * quotas;
+    totals.withCredit += Number(withEmbedded.credito_liquido_projetado || 0) * quotas;
     totals.withInstallment += Number(withEmbedded.parcela_inicial || 0) * quotas;
   });
   return `<section class="financial-study-summary-strip"><div><span>Seleção</span><strong>${items.length} grupo(s) · ${totals.quotas} cota(s)</strong></div><div><span>Crédito máximo combinado</span><strong>${formatMoney(totals.maxCredit)}</strong></div><div><span>Sem embutido</span><strong>${formatMoney(totals.withoutCredit)}</strong><small>Parcela inicial ${formatMoney(totals.withoutInstallment)}</small></div><div><span>Com embutido</span><strong>${formatMoney(totals.withCredit)}</strong><small>Parcela inicial ${formatMoney(totals.withInstallment)}</small></div></section>`;

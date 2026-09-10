@@ -275,7 +275,10 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: s
 
 
 def build_estudo_preview(payload: EstudoPreviewRequest, grupo: dict | None = None, operador: str = "") -> dict:
-    grupo_data = grupo or payload.grupo or {}
+    # A prévia usa a fotografia aprovada no Motor 360; o cadastro bruto fica
+    # restrito ao fallback de estudos antigos sem composição selecionada.
+    selected_groups = list(payload.grupos_selecionados or [])
+    grupo_data = payload.grupo or (selected_groups[0] if selected_groups else None) or grupo or {}
     estudo_payload = EstudoRequest(
         cliente=payload.cliente,
         grupo_id=payload.grupo_id,
@@ -295,7 +298,7 @@ def build_estudo_preview(payload: EstudoPreviewRequest, grupo: dict | None = Non
         "estrategia": financeiro["estrategia_recomendada"],
         "status": "Previa",
         "operador": operador or "Não informado",
-        "criado_em": datetime.now().isoformat(timespec="seconds"),
+        "criado_em": datetime.now().isoformat(timespec="seconds"), "grupos_selecionados": selected_groups,
     }
 
 
