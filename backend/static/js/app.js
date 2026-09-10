@@ -1,4 +1,4 @@
-const APP_BUILD_VERSION = "4.0.76";
+const APP_BUILD_VERSION = "4.0.77";
 
 const screens = {
   mapa: {
@@ -2290,17 +2290,23 @@ function renderSelectedGroupsScreen() {
       const groupId = String(item.grupo || item.grupo_id || "");
       return { ...item, quota_count: Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1))) };
     });
-    const highlighted = selectedGroups[0];
+    const studySnapshot = {
+      schema: "motor360-selection/v1",
+      capturedAt: new Date().toISOString(),
+      groups: JSON.parse(JSON.stringify(selectedGroups)),
+    };
+    const highlighted = studySnapshot.groups[0];
     currentStudy = {
       groupId: String(highlighted?.grupo || highlighted?.grupo_id || ""),
       viabilityItem: highlighted,
       payload: collectClientProfile(),
-      group: null,
-      cenario: highlighted?.cartas ? highlighted : null,
+      group: studySnapshot.groups[0],
+      cenario: null,
       templateCampos: collectStudyOperatorFields(),
       savedStudyId: null,
       proposalId: null,
-      selectedGroups,
+      selectedGroups: studySnapshot.groups,
+      studySnapshot,
       motor360AuditId: investorState.result?.audit_id || null,
       previewAuditUrl: null,
     };
@@ -2731,12 +2737,10 @@ async function renderFinancialStudyScreen() {
   const renderToken = ++financialStudyRenderToken;
   const screen = document.getElementById("screen-estudo");
   if (!screen) return;
-  const items = currentStudy?.selectedGroups?.length ? currentStudy.selectedGroups : selectedMotor360Items();
+  const items = currentStudy?.studySnapshot?.groups?.length ? currentStudy.studySnapshot.groups : (currentStudy?.selectedGroups?.length ? currentStudy.selectedGroups : selectedMotor360Items());
   const profile = financialStudyProfile();
   const preferences = financialStudySectionPreferences();
   if (!items.length) {
-    currentStudy = null;
-    localStorage.removeItem(FINANCIAL_STUDY_DRAFT_KEY);
     screen.innerHTML = `<div class="content-card"><div class="placeholder-card compact-placeholder"><span class="state-badge">Aguardando grupos</span><h2>Estudo Financeiro</h2><p>Selecione ao menos um grupo no Motor 360 para gerar o estudo.</p><button class="btn btn-primary" type="button" data-study-back>Voltar ao Motor 360</button></div></div>`;
     screen.querySelector("[data-study-back]")?.addEventListener("click", () => activateScreen("motor360"));
     return;
@@ -4160,11 +4164,12 @@ function buildStudyPreviewPayload() {
       estado_bem: currentStudy.payload.estado_bem || "",
     },
     grupo_id: currentStudy.groupId,
-    grupo: currentStudy.group || undefined,
+    grupo: currentStudy.studySnapshot?.groups?.[0] || currentStudy.group || undefined,
     cenario: currentStudy.cenario,
     template_campos: collectStudyOperatorFields(),
     motor360_audit_id: currentStudy.motor360AuditId || investorState.result?.audit_id || null,
-    grupos_selecionados: currentStudy.selectedGroups || [],
+    grupos_selecionados: currentStudy.studySnapshot?.groups || currentStudy.selectedGroups || [],
+    study_snapshot: currentStudy.studySnapshot || null,
   };
 }
 

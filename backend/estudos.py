@@ -274,31 +274,81 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: s
     return {"estudo_id": estudo_id, "proposal_id": proposal_id, "success": True}
 
 
+def _validated_study_snapshot(payload: EstudoPreviewRequest) -> dict[str, Any]:
+    raw_snapshot = payload.study_snapshot or {"schema": "motor360-selection/v1", "groups": payload.grupos_selecionados}
+    groups = raw_snapshot.get("groups") if isinstance(raw_snapshot, dict) else None
+    if not isinstance(groups, list) or not groups:
+        raise ValueError("Snapshot da composição ausente. Retorne aos Grupos Selecionados e avance novamente.")
+    required_scenarios = {"without_embedded", "with_embedded"}
+    for group in groups:
+        group_id = str((group or {}).get("grupo") or (group or {}).get("grupo_id") or "").strip()
+        scenarios = {str(item.get("id")) for item in (group or {}).get("cenarios", []) if isinstance(item, dict)}
+        if not group_id or not required_scenarios.issubset(scenarios):
+            raise ValueError("Snapshot da composição incompleto. Cada grupo deve possuir os cenários sem e com lance embutido.")
+    return json.loads(json.dumps({
+        "schema": str(raw_snapshot.get("schema") or "motor360-selection/v1"),
+        "captured_at": str(raw_snapshot.get("capturedAt") or raw_snapshot.get("captured_at") or datetime.now().isoformat(timespec="seconds")),
+        "groups": groups,
+    }, ensure_ascii=False))
+
+
+def _snapshot_financeiro(snapshot: dict[str, Any]) -> dict[str, Any]:
+    summaries: dict[str, dict[str, float]] = {}
+    for scenario_id in ("without_embedded", "with_embedded"):
+        totals = {"credito_liquido": 0.0, "credito_contratado": 0.0, "lance_embutido": 0.0, "parcela_inicial": 0.0, "saldo_devedor": 0.0}
+        for group in snapshot["groups"]:
+            quota_count = max(1, int(group.get("quota_count") or 1))
+            scenario = next((item for item in group.get("cenarios", []) if item.get("id") == scenario_id), {})
+            for field in totals:
+                totals[field] += float(scenario.get(field) or 0) * quota_count
+        summaries[scenario_id] = totals
+    return {
+        "source": "motor360_selected_groups_snapshot",
+        "scenario_summaries": summaries,
+        "credito": summaries["without_embedded"]["credito_liquido"],
+        "credito_original": summaries["without_embedded"]["credito_contratado"],
+        "parcela_inicial": summaries["without_embedded"]["parcela_inicial"],
+        "lance_embutido": 0.0,
+        "estrategia_recomendada": "Comparativo por grupo e cenário",
+        "estrategias": [],
+        "historico_12_meses": {},
+    }
+
+
 def build_estudo_preview(payload: EstudoPreviewRequest, grupo: dict | None = None, operador: str = "") -> dict:
-    # A prévia usa a fotografia aprovada no Motor 360; o cadastro bruto fica
-    # restrito ao fallback de estudos antigos sem composição selecionada.
-    selected_groups = list(payload.grupos_selecionados or [])
-    grupo_data = payload.grupo or (selected_groups[0] if selected_groups else None) or grupo or {}
-    estudo_payload = EstudoRequest(
-        cliente=payload.cliente,
-        grupo_id=payload.grupo_id,
-        cenario=payload.cenario,
-        template_campos=payload.template_campos,
-    )
-    financeiro = build_financeiro(estudo_payload, grupo_data)
+    has_snapshot = bool(payload.study_snapshot or payload.grupos_selecionados)
+    if has_snapshot:
+        snapshot = _validated_study_snapshot(payload)
+        selected_groups = snapshot["groups"]
+        grupo_data = selected_groups[0]
+        financeiro = _snapshot_financeiro(snapshot)
+        cenario = None
+    else:
+        # Compatibilidade exclusiva para prévias legadas de um grupo que trazem
+        # grupo e cenário explicitamente; jamais é usada pela nova composição.
+        grupo_data = payload.grupo or grupo or {}
+        if not grupo_data or not payload.cenario:
+            raise ValueError("Snapshot da composição ausente. Retorne aos Grupos Selecionados e avance novamente.")
+        selected_groups = []
+        snapshot = None
+        estudo_payload = EstudoRequest(cliente=payload.cliente, grupo_id=payload.grupo_id, cenario=payload.cenario, template_campos=payload.template_campos)
+        financeiro = build_financeiro(estudo_payload, grupo_data)
+        cenario = payload.cenario
     return {
         "estudo_id": "PREVIEW",
         "proposal_id": "PREVIEW",
         "cliente": payload.cliente.model_dump(),
-        "grupo_id": payload.grupo_id,
+        "grupo_id": str(grupo_data.get("grupo") or grupo_data.get("grupo_id") or payload.grupo_id),
         "grupo": grupo_data,
-        "cenario": payload.cenario,
+        "cenario": cenario,
         "financeiro": financeiro,
         "template_campos": payload.template_campos,
         "estrategia": financeiro["estrategia_recomendada"],
         "status": "Previa",
         "operador": operador or "Não informado",
-        "criado_em": datetime.now().isoformat(timespec="seconds"), "grupos_selecionados": selected_groups,
+        "criado_em": datetime.now().isoformat(timespec="seconds"),
+        "study_snapshot": snapshot,
+        "grupos_selecionados": selected_groups,
     }
 
 

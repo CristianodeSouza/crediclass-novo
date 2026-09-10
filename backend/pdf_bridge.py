@@ -130,45 +130,47 @@ def _month_title(value: Any) -> str:
     return raw or "-"
 
 
+
+def _snapshot_groups(estudo: dict[str, Any]) -> list[dict[str, Any]]:
+    snapshot = estudo.get("study_snapshot") or {}
+    groups = snapshot.get("groups") if isinstance(snapshot, dict) else None
+    return list(groups or estudo.get("grupos_selecionados") or [])
+
+
+def _scenario(group: dict[str, Any], scenario_id: str) -> dict[str, Any]:
+    return next((item for item in group.get("cenarios", []) if item.get("id") == scenario_id), {})
+
+
+def _quota_count(group: dict[str, Any]) -> int:
+    return max(1, int(_to_float(group.get("quota_count")) or 1))
+
 def _history_matrix(financeiro: dict[str, Any], grupo: dict[str, Any], estudo: dict[str, Any]) -> dict[str, Any]:
+    selected_groups = _snapshot_groups(estudo)
+    if selected_groups:
+        histories = [list(group.get("historico_12_meses") or [])[-10:] for group in selected_groups]
+        labels = [str(entry.get("label") or entry.get("mes") or "-") for entry in (histories[0] if histories else [])]
+        if labels:
+            return {"months": labels, "rows": [{"group": f"Grupo {group.get('grupo') or group.get('grupo_id') or '-'}", "administrator": str(group.get("administradora") or "-"), "cells": [{"value": _format_percent(entry.get("menor_lance")), "detail": f"Qtd {entry.get('qtd_contemplacoes', '-')}"} for entry in history]} for group, history in zip(selected_groups, histories)]}
+        return {"months": ["Resumo"], "rows": [{"group": f"Grupo {group.get('grupo') or group.get('grupo_id') or '-'}", "administrator": str(group.get("administradora") or "-"), "cells": [{"value": "-", "detail": "Sem histórico"}]} for group in selected_groups]}
     historico = grupo.get("historico") or {}
     entries = sorted(historico.items())[-11:]
     if entries:
-        return {
-            "months": [_month_title(month) for month, _ in entries],
-            "rows": [
-                {
-                    "group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}",
-                    "administrator": str(grupo.get("administradora") or "-"),
-                    "cells": [
-                        {
-                            "value": _format_percent(item.get("menor_lance")),
-                            "detail": f"Qtd {item.get('qtd_contemplacoes', '-')}",
-                        }
-                        for _, item in entries
-                    ],
-                }
-            ],
-        }
+        return {"months": [_month_title(month) for month, _ in entries], "rows": [{"group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}", "administrator": str(grupo.get("administradora") or "-"), "cells": [{"value": _format_percent(item.get("menor_lance")), "detail": f"Qtd {item.get('qtd_contemplacoes', '-')}"} for _, item in entries]}]}
     summary = financeiro.get("historico_12_meses") or {}
-    return {
-        "months": ["Resumo"],
-        "rows": [
-            {
-                "group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}",
-                "administrator": str(grupo.get("administradora") or "-"),
-                "cells": [
-                    {
-                        "value": _format_percent(summary.get("media_menor_lance")),
-                        "detail": f"Qtd {summary.get('total_contemplacoes', '-')}",
-                    }
-                ],
-            }
-        ],
-    }
+    return {"months": ["Resumo"], "rows": [{"group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}", "administrator": str(grupo.get("administradora") or "-"), "cells": [{"value": _format_percent(summary.get("media_menor_lance")), "detail": f"Qtd {summary.get('total_contemplacoes', '-')}"}]}]}
+
 
 
 def _contract_rows(estudo: dict[str, Any], grupo: dict[str, Any], financeiro: dict[str, Any]) -> list[dict[str, Any]]:
+    selected_groups = _snapshot_groups(estudo)
+    if selected_groups:
+        rows = []
+        for group in selected_groups:
+            quota_count = _quota_count(group)
+            for scenario_id, label in (("without_embedded", "Sem embutido"), ("with_embedded", "Com embutido")):
+                scenario = _scenario(group, scenario_id)
+                rows.append({"group": f"Grupo {group.get('grupo') or group.get('grupo_id') or '-'} - {label}", "credit": _format_money((_to_float(scenario.get("credito_liquido_projetado")) or 0) * quota_count), "installment": _format_money((_to_float(scenario.get("parcela_inicial")) or 0) * quota_count), "term": str(group.get("prazo_restante") or group.get("prazo_total") or "-"), "rateTotal": _format_percent(group.get("taxa_total") or group.get("taxa_adm")), "rateYear": _format_percent(group.get("taxa_ano")), "administrator": str(group.get("administradora") or "-")})
+        return rows
     cartas = financeiro.get("cartas") or []
     rows: list[dict[str, Any]] = []
     taxa_total = grupo.get("taxa_adm")
@@ -177,74 +179,42 @@ def _contract_rows(estudo: dict[str, Any], grupo: dict[str, Any], financeiro: di
     administrator = str(grupo.get("administradora") or "-")
     if cartas:
         for card in cartas:
-            rows.append(
-                {
-                    "group": f"Grupo {card.get('grupo') or card.get('grupo_id') or grupo.get('grupo') or estudo.get('grupo_id') or '-'}",
-                    "credit": _format_money(card.get("credito_contratado") or card.get("credito_contratado_total")),
-                    "installment": _format_money(card.get("parcela_estimada") or financeiro.get("parcela_inicial")),
-                    "term": str(card.get("prazo_restante") or card.get("prazo_total") or prazo),
-                    "rateTotal": _format_percent(taxa_total),
-                    "rateYear": _format_percent(taxa_ano),
-                    "administrator": administrator,
-                }
-            )
-    if rows:
+            rows.append({"group": f"Grupo {card.get('grupo') or card.get('grupo_id') or grupo.get('grupo') or estudo.get('grupo_id') or '-'}", "credit": _format_money(card.get("credito_contratado") or card.get("credito_contratado_total")), "installment": _format_money(card.get("parcela_estimada") or financeiro.get("parcela_inicial")), "term": str(card.get("prazo_restante") or card.get("prazo_total") or prazo), "rateTotal": _format_percent(taxa_total), "rateYear": _format_percent(taxa_ano), "administrator": administrator})
+    return rows or [{"group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}", "credit": _format_money(financeiro.get("credito_original") or financeiro.get("credito")), "installment": _format_money(financeiro.get("parcela_inicial")), "term": str(prazo), "rateTotal": _format_percent(taxa_total), "rateYear": _format_percent(taxa_ano), "administrator": administrator}]
+
+
+
+def _projection_rows(financeiro: dict[str, Any], estudo: dict[str, Any]) -> list[dict[str, Any]]:
+    selected_groups = _snapshot_groups(estudo)
+    if selected_groups:
+        rows = []
+        for group in selected_groups:
+            quota_count = _quota_count(group)
+            for scenario_id, label in (("without_embedded", "Sem embutido"), ("with_embedded", "Com embutido")):
+                scenario = _scenario(group, scenario_id)
+                embedded = (_to_float(scenario.get("lance_embutido")) or 0) * quota_count
+                rows.append({"title": f"Grupo {group.get('grupo') or group.get('grupo_id') or '-'} - {label}", "percent": "-", "totalBid": _format_money(embedded), "cardPayment": _format_money(embedded), "ownPayment": "Não consolidado", "credit": _format_money((_to_float(scenario.get("credito_liquido_projetado")) or 0) * quota_count), "installment": _format_money((_to_float(scenario.get("parcela_inicial")) or 0) * quota_count), "term": str(group.get("prazo_restante") or "-")})
         return rows
-    return [
-        {
-            "group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}",
-            "credit": _format_money(financeiro.get("credito_original") or financeiro.get("credito")),
-            "installment": _format_money(financeiro.get("parcela_inicial")),
-            "term": str(prazo),
-            "rateTotal": _format_percent(taxa_total),
-            "rateYear": _format_percent(taxa_ano),
-            "administrator": administrator,
-        }
-    ]
-
-
-def _projection_rows(financeiro: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
     credito_base = _to_float(financeiro.get("credito_original") or financeiro.get("credito")) or 0.0
     parcela_base = financeiro.get("parcela_inicial")
     prazo_base = financeiro.get("prazo_apos_contemplacao") or financeiro.get("prazo_operacional") or "-"
-    labels = {
-        "Investidor": "1. Sorteio Geral",
-        "Conservador": "2. Lance Conservador",
-        "Moderado": "3. Lance Moderado",
-        "Agressivo": "4. Lance Rapido",
-        "Super Agressivo": "5. Lance Acelerado",
-    }
+    labels = {"Investidor": "1. Sorteio Geral", "Conservador": "2. Lance Conservador", "Moderado": "3. Lance Moderado", "Agressivo": "4. Lance Rapido", "Super Agressivo": "5. Lance Acelerado"}
     for strategy in financeiro.get("estrategias", [])[:5]:
         percentual = strategy.get("percentual_lance")
         percentual_base = _to_float(percentual)
         total_bid = credito_base * percentual_base if percentual_base is not None else None
-        rows.append(
-            {
-                "title": labels.get(strategy.get("estrategia"), strategy.get("estrategia") or "-"),
-                "percent": _format_percent(percentual),
-                "totalBid": _format_money(total_bid),
-                "cardPayment": _format_money(strategy.get("lance_embutido")),
-                "ownPayment": _format_money(strategy.get("lance_proprio")),
-                "credit": _format_money(strategy.get("credito_disponivel") or financeiro.get("credito")),
-                "installment": _format_money(strategy.get("parcela_apos_contemplacao") or parcela_base),
-                "term": str(strategy.get("prazo_apos_lance") or prazo_base or "-"),
-            }
-        )
+        rows.append({"title": labels.get(strategy.get("estrategia"), strategy.get("estrategia") or "-"), "percent": _format_percent(percentual), "totalBid": _format_money(total_bid), "cardPayment": _format_money(strategy.get("lance_embutido")), "ownPayment": _format_money(strategy.get("lance_proprio")), "credit": _format_money(strategy.get("credito_disponivel") or financeiro.get("credito")), "installment": _format_money(strategy.get("parcela_apos_contemplacao") or parcela_base), "term": str(strategy.get("prazo_apos_lance") or prazo_base or "-")})
     return rows
 
 
+
 def _deadline_rows(estudo: dict[str, Any], grupo: dict[str, Any]) -> list[dict[str, Any]]:
-    return [
-        {
-            "group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}",
-            "reservationLimit": _format_date(grupo.get("limite_adesao")),
-            "assemblyLimit": _format_date(grupo.get("limite_adesao")),
-            "firstInstallment": _format_date(grupo.get("vencimento_primeira_parcela") or grupo.get("vencimento_parcela")),
-            "nextAssembly": _format_date(grupo.get("proxima_assembleia") or grupo.get("primeira_assembleia")),
-            "bidPayment": _format_date(grupo.get("vencimento_lance") or grupo.get("vencimento_parcela")),
-        }
-    ]
+    selected_groups = _snapshot_groups(estudo)
+    if selected_groups:
+        return [{"group": f"Grupo {item.get('grupo') or item.get('grupo_id') or '-'}", "reservationLimit": _format_date(item.get("limite_adesao")), "assemblyLimit": _format_date(item.get("limite_adesao")), "firstInstallment": _format_date(item.get("vencimento_primeira_parcela") or item.get("vencimento_parcela")), "nextAssembly": _format_date(item.get("proxima_assembleia") or item.get("primeira_assembleia")), "bidPayment": _format_date(item.get("vencimento_lance") or item.get("vencimento_parcela"))} for item in selected_groups]
+    return [{"group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}", "reservationLimit": _format_date(grupo.get("limite_adesao")), "assemblyLimit": _format_date(grupo.get("limite_adesao")), "firstInstallment": _format_date(grupo.get("vencimento_primeira_parcela") or grupo.get("vencimento_parcela")), "nextAssembly": _format_date(grupo.get("proxima_assembleia") or grupo.get("primeira_assembleia")), "bidPayment": _format_date(grupo.get("vencimento_lance") or grupo.get("vencimento_parcela"))}]
+
 
 
 def _operator_notes(template_campos: dict[str, Any]) -> list[str]:
@@ -349,7 +319,7 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
             "compositionGroups": _composition_groups(estudo),
             "historyMatrix": _history_matrix(financeiro, grupo, estudo),
             "contractRows": _contract_rows(estudo, grupo, financeiro),
-            "projectionRows": _projection_rows(financeiro),
+            "projectionRows": _projection_rows(financeiro, estudo),
             "deadlineRows": _deadline_rows(estudo, grupo),
             "benefits": [
                 "Grupos em andamento com leitura historica dos ultimos 12 meses disponivel no sistema.",

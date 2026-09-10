@@ -698,6 +698,7 @@ def estudos_pdf_engine_status():
 def estudos_preview_pdf(payload: EstudoPreviewRequest, request: Request):
     logger.info("POST /api/estudos/preview-pdf grupo_id=%s", payload.grupo_id)
     try:
+        _react_pdf_status_or_error()
         grupo = payload.grupo or get_grupo(payload.grupo_id)
         if not grupo:
             return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
@@ -713,6 +714,9 @@ def estudos_preview_pdf(payload: EstudoPreviewRequest, request: Request):
             "audit_url": audit_record["audit_url"],
             "audit": audit_record["audit"],
         }
+    except ValueError as error:
+        logger.warning("Prévia bloqueada por snapshot inválido: %s", error)
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error), "engine": "react-pdf"})
     except Exception as error:
         logger.exception("Erro ao gerar prévia transitória do estudo")
         return JSONResponse(status_code=503, content={"success": False, "error": str(error), "engine": "react-pdf"})
