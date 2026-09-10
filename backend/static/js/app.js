@@ -2303,13 +2303,28 @@ function renderSelectedGroupsScreen() {
       previewAuditUrl: null,
     };
     persistMotor360Selection();
+    persistFinancialStudyDraft();
     activateScreen("estudo");
     showToast("Composição validada. Revise o estudo e abra a prévia do PDF quando estiver pronto.", "success");
   });
 }
 
 const FINANCIAL_STUDY_SECTIONS_KEY = "crediclass.financialStudy.sections";
+const FINANCIAL_STUDY_DRAFT_KEY = "crediclass.financialStudy.draft";
 let financialStudyRenderToken = 0;
+
+function persistFinancialStudyDraft() {
+  if (currentStudy) localStorage.setItem(FINANCIAL_STUDY_DRAFT_KEY, JSON.stringify(currentStudy));
+}
+
+function restoreFinancialStudyDraft() {
+  try {
+    const draft = JSON.parse(localStorage.getItem(FINANCIAL_STUDY_DRAFT_KEY) || "null");
+    return draft?.groupId && Array.isArray(draft.selectedGroups) ? draft : null;
+  } catch {
+    return null;
+  }
+}
 
 function financialStudyProfile() {
   try {
@@ -2710,6 +2725,7 @@ function financialStudyProfileMatrix(items) {
 }
 
 async function renderFinancialStudyScreen() {
+  if (!currentStudy) currentStudy = restoreFinancialStudyDraft();
   const renderToken = ++financialStudyRenderToken;
   const screen = document.getElementById("screen-estudo");
   if (!screen) return;
@@ -2718,6 +2734,7 @@ async function renderFinancialStudyScreen() {
   const preferences = financialStudySectionPreferences();
   if (!items.length) {
     currentStudy = null;
+    localStorage.removeItem(FINANCIAL_STUDY_DRAFT_KEY);
     screen.innerHTML = `<div class="content-card"><div class="placeholder-card compact-placeholder"><span class="state-badge">Aguardando grupos</span><h2>Estudo Financeiro</h2><p>Selecione ao menos um grupo no Motor 360 para gerar o estudo.</p><button class="btn btn-primary" type="button" data-study-back>Voltar ao Motor 360</button></div></div>`;
     screen.querySelector("[data-study-back]")?.addEventListener("click", () => activateScreen("motor360"));
     return;
