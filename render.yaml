@@ -2,7 +2,7 @@ services:
   - type: web
     name: crediclass-dashboard-v3
     runtime: python
-    buildCommand: pip install --no-cache-dir -r requirements.txt && python -m nodeenv --node=24.14.1 --prebuilt backend/pdf_service/.nodeenv && backend/pdf_service/.nodeenv/bin/npm ci --prefix backend/pdf_service --omit=dev
+    buildCommand: pip install --no-cache-dir -r requirements.txt && python -m nodeenv --force --node=24.14.1 --prebuilt backend/pdf_service/.nodeenv && backend/pdf_service/.nodeenv/bin/npm ci --prefix backend/pdf_service --omit=dev
     startCommand: python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT --no-access-log --timeout-keep-alive 5
     envVars:
       - key: PYTHON_VERSION
@@ -10,7 +10,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: APP_VERSION
-        value: 4.0.73
+        value: 4.0.74
       - key: DEBUG
         value: "false"
       - key: GOOGLE_SHEETS_ID
