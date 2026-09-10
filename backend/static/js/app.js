@@ -2284,8 +2284,25 @@ function renderSelectedGroupsScreen() {
   results.classList.toggle("d-none", items.length === 0);
   results.innerHTML = items.length ? renderSelectedGroupsCartSummary(items) + '<div class="selected-groups-comparison">' + items.map(renderSelectedGroupComparisonColumn).join("") + '</div><section class="selected-groups-next-step"><div><span>Próxima etapa</span><h3>Estudo Financeiro</h3><p>Revise a composição e avance. Nenhum estudo será salvo nesta etapa.</p></div><button class="btn btn-primary" type="button" data-follow-selected-groups>Seguir para Estudo Financeiro</button></section>' : "";
   results.querySelector("[data-follow-selected-groups]")?.addEventListener("click", () => {
+    const selectedGroups = items.map((item) => {
+      const groupId = String(item.grupo || item.grupo_id || "");
+      return { ...item, quota_count: Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1))) };
+    });
+    const highlighted = selectedGroups[0];
+    currentStudy = {
+      groupId: String(highlighted?.grupo || highlighted?.grupo_id || ""),
+      viabilityItem: highlighted,
+      payload: collectClientProfile(),
+      group: null,
+      cenario: highlighted?.cartas ? highlighted : null,
+      templateCampos: collectStudyOperatorFields(),
+      savedStudyId: null,
+      proposalId: null,
+      selectedGroups,
+      motor360AuditId: investorState.result?.audit_id || null,
+      previewAuditUrl: null,
+    };
     persistMotor360Selection();
-    currentStudy = null;
     activateScreen("estudo");
     showToast("Composição validada. Revise o estudo e abra a prévia do PDF quando estiver pronto.", "success");
   });
@@ -2696,7 +2713,7 @@ async function renderFinancialStudyScreen() {
   const renderToken = ++financialStudyRenderToken;
   const screen = document.getElementById("screen-estudo");
   if (!screen) return;
-  const items = selectedMotor360Items();
+  const items = currentStudy?.selectedGroups?.length ? currentStudy.selectedGroups : selectedMotor360Items();
   const profile = financialStudyProfile();
   const preferences = financialStudySectionPreferences();
   if (!items.length) {
@@ -2717,6 +2734,9 @@ async function renderFinancialStudyScreen() {
       templateCampos: collectStudyOperatorFields(),
       savedStudyId: null,
       proposalId: null,
+      selectedGroups: items.map((item) => ({ ...item, quota_count: Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1))) })),
+      motor360AuditId: investorState.result?.audit_id || null,
+      previewAuditUrl: null,
     };
   } else {
     currentStudy.payload = collectClientProfile();
@@ -2762,9 +2782,17 @@ async function renderFinancialStudyScreen() {
       <section class="financial-study-section${sectionClass("grupos")}" data-study-content="grupos"><div class="financial-study-section-heading"><span>03</span><div><h3>Comparativo dos grupos</h3><p>Dados financeiros e agenda de assembleia reunidos em cada grupo.</p></div></div>${financialStudyGroupCards(items, assemblyData, generatedAt, assemblyError)}<p class="financial-study-table-note">Taxas aparecem somente quando registradas na base. A ordem reproduz a seleção atual do Motor 360.</p></section>
       <footer class="financial-study-footer"><span>Crediclass · Estudo Financeiro</span><span>${escapeHtml(proposalId)} · versão ${escapeHtml(systemVersion)}</span></footer>
     </article>
+    <section class="financial-study-audit no-print"><div><span>Rastreabilidade</span><h3>Auditoria da geração do PDF</h3><p>Disponível após gerar a prévia. O JSON contém o snapshot do Motor 360, grupos selecionados e runtime usado.</p></div><button class="btn btn-outline-secondary" type="button" data-study-pdf-audit disabled>Ver auditoria JSON</button></section>
   </div>`;
   screen.querySelector("[data-study-preview]")?.addEventListener("click", () => previewStudyPdf().catch(() => showToast("Nao foi possivel gerar a previa do PDF.", "danger")));
   screen.querySelector("[data-study-customize]")?.addEventListener("click", () => screen.querySelector("[data-study-customizer-panel]")?.classList.toggle("d-none"));
+  const studyAuditButton = screen.querySelector("[data-study-pdf-audit]");
+  if (studyAuditButton) {
+    studyAuditButton.disabled = !currentStudy?.previewAuditUrl;
+    studyAuditButton.addEventListener("click", () => {
+      if (currentStudy?.previewAuditUrl) window.open(currentStudy.previewAuditUrl, "_blank", "noopener");
+    });
+  }
   screen.querySelector("[data-study-generate]")?.addEventListener("click", async () => {
     const button = screen.querySelector("[data-study-generate]");
     if (button) {
@@ -4116,11 +4144,18 @@ function buildStudyPreviewPayload() {
     grupo: currentStudy.group || undefined,
     cenario: currentStudy.cenario,
     template_campos: collectStudyOperatorFields(),
+    motor360_audit_id: currentStudy.motor360AuditId || investorState.result?.audit_id || null,
+    grupos_selecionados: currentStudy.selectedGroups || [],
   };
 }
 
 async function previewStudyPdf() {
   const result = await apiPost("/estudos/preview-pdf", buildStudyPreviewPayload());
+  if (currentStudy) {
+    currentStudy.previewAuditUrl = result.audit_url || null;
+    const auditButton = document.querySelector("[data-study-pdf-audit]");
+    if (auditButton) auditButton.disabled = !currentStudy.previewAuditUrl;
+  }
   const dialog = document.createElement("div");
   dialog.className = "modal fade";
   dialog.tabIndex = -1;

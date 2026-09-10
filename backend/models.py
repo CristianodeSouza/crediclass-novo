@@ -462,6 +462,7 @@ class EstudoPreviewRequest(BaseModel):
     cenario: dict[str, Any] | None = None
     template_campos: dict[str, str] = Field(default_factory=dict)
     motor360_audit_id: str | None = None
+    grupos_selecionados: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class EstudoCreateResponse(BaseModel):

@@ -1,0 +1,11 @@
+{
+  "name": "crediclass-react-pdf-service",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "description": "Internal React-pdf renderer for Crediclass financial studies.",
+  "dependencies": {
+    "@react-pdf/renderer": "^4.3.0",
+    "react": "^18.3.1"
+  }
+}

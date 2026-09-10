@@ -1,4 +1,6 @@
 from pathlib import Path
+import platform
+import sys
 import base64
 from functools import lru_cache
 import hashlib
@@ -23,7 +25,8 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
-from .estudos import build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, export_estudo_pdf_payload, get_estudo, list_estudos
+from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
+from .pdf_bridge import react_pdf_service_status, render_react_study_pdf
 from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
 
@@ -133,7 +136,7 @@ def _verify_session(token: str | None) -> str | None:
 
 
 def _public_auth_path(path: str) -> bool:
-    return path in {"/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/health"}
+    return path in {"/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/health", "/api/health/pdf-engine"}
 
 
 @app.middleware("http")
@@ -181,6 +184,50 @@ def health():
         "version": settings.version,
         "environment": settings.environment,
     }
+
+
+def _react_pdf_status_or_error() -> dict:
+    status = react_pdf_service_status()
+    if not status["available"]:
+        raise RuntimeError("React-pdf indisponivel neste ambiente. O motor PDF canonico nao esta operacional.")
+    return status
+
+
+def _render_study_pdf_file(estudo: dict, filename: str) -> dict:
+    status = _react_pdf_status_or_error()
+    path = FILES_DIR / filename
+    path.write_bytes(render_react_study_pdf(estudo, get_settings().version))
+    return {
+        "success": True,
+        "download_url": f"/files/{filename}",
+        "engine": "react-pdf",
+        "engine_status": status,
+        "filename": filename,
+    }
+
+
+def _write_preview_audit(payload: EstudoPreviewRequest, estudo: dict, rendered: dict, operador: str) -> dict:
+    filename = str(rendered["filename"])
+    pdf_path = FILES_DIR / filename
+    audit = build_estudo_audit_payload(
+        payload,
+        grupo=estudo["grupo"],
+        operador=operador,
+        motor360_audit=get_motor360_audit(payload.motor360_audit_id) if payload.motor360_audit_id else None,
+        group_audit=list_auditoria(payload.grupo_id),
+        pdf_engine_status=rendered["engine_status"],
+    )
+    audit["pdf_generation"] = {
+        "filename": filename,
+        "sha256": hashlib.sha256(pdf_path.read_bytes()).hexdigest(),
+        "engine": rendered["engine"],
+        "python": sys.version.split()[0],
+        "platform": platform.platform(),
+        "renderer_entrypoint": rendered["engine_status"].get("entrypoint"),
+    }
+    audit_filename = f"audit-{Path(filename).stem}.json"
+    (FILES_DIR / audit_filename).write_text(json.dumps(audit, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    return {"audit": audit, "audit_url": f"/files/{audit_filename}"}
 
 
 @app.post("/api/reload")
@@ -606,27 +653,60 @@ def estudos_excluir(estudo_id: str):
 @app.post("/api/estudos/{estudo_id}/exportar-pdf")
 def estudos_exportar_pdf(estudo_id: str):
     logger.info("POST /api/estudos/%s/exportar-pdf", estudo_id)
-    filename = export_estudo_pdf(estudo_id, FILES_DIR)
-    if not filename:
+    estudo = get_estudo(estudo_id)
+    if not estudo:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
-    return {"success": True, "download_url": f"/files/{filename}"}
+    try:
+        return _render_study_pdf_file(estudo, f"{estudo_id}.pdf")
+    except Exception as error:
+        logger.exception("Falha no pipeline canônico React-PDF para estudo %s", estudo_id)
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error), "engine": "react-pdf"})
+
+
+@app.post("/api/estudos/{estudo_id}/exportar-pdf-react")
+def estudos_exportar_pdf_react(estudo_id: str):
+    return estudos_exportar_pdf(estudo_id)
+
+
+@app.get("/api/health/pdf-engine")
+def pdf_engine_health():
+    status = react_pdf_service_status()
+    return JSONResponse(status_code=200 if status["available"] else 503, content={
+        "success": status["available"],
+        "engine": "react-pdf",
+        "status": status,
+        "canonical": True,
+    })
+
+
+@app.get("/api/estudos/pdf-engine-status")
+def estudos_pdf_engine_status():
+    status = react_pdf_service_status()
+    return {"success": status["available"], "engine": "react-pdf", "status": status, "canonical": True}
 
 
 @app.post("/api/estudos/preview-pdf")
 def estudos_preview_pdf(payload: EstudoPreviewRequest, request: Request):
-    grupo = payload.grupo or get_grupo(payload.grupo_id)
-    if not grupo:
-        return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
-    username = getattr(request.state, "auth_user", "")
-    operador = AUTH_USERS.get(username, {}).get("name", username)
-    estudo = build_estudo_preview(payload, grupo, operador)
-    filename = f"preview-{uuid4().hex}.pdf"
+    logger.info("POST /api/estudos/preview-pdf grupo_id=%s", payload.grupo_id)
     try:
-        export_estudo_pdf_payload(estudo, FILES_DIR, filename=filename)
+        grupo = payload.grupo or get_grupo(payload.grupo_id)
+        if not grupo:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Grupo nao encontrado"})
+        username = getattr(request.state, "auth_user", "")
+        operador = AUTH_USERS.get(username, {}).get("name", username)
+        estudo = build_estudo_preview(payload, grupo, operador)
+        rendered = _render_study_pdf_file(estudo, f"preview-{uuid4().hex}.pdf")
+        audit_record = _write_preview_audit(payload, estudo, rendered, operador)
+        return {
+            "success": True,
+            "download_url": rendered["download_url"],
+            "engine": rendered["engine"],
+            "audit_url": audit_record["audit_url"],
+            "audit": audit_record["audit"],
+        }
     except Exception as error:
-        logger.exception("Erro ao gerar previa transitoria")
-        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
-    return {"success": True, "download_url": f"/files/{filename}", "engine": "legacy"}
+        logger.exception("Erro ao gerar prévia transitória do estudo")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error), "engine": "react-pdf"})
 
 
 @app.get("/api/configuracoes")

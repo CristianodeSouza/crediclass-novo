@@ -333,6 +333,7 @@ def build_estudo_audit_payload(
         "group_audit_trail": list(group_audit or []),
         "motor360_audit_id": payload.motor360_audit_id,
         "motor360_audit_snapshot": motor360_audit,
+        "selected_groups_snapshot": payload.grupos_selecionados,
     }
 
 
