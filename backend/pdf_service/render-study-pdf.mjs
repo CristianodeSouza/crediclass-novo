@@ -236,19 +236,29 @@ function Footer({ payload }) {
 function Section({ title, children }) {
   return React.createElement(
     View,
-    { style: styles.section, wrap: false },
-    React.createElement(Text, { style: styles.sectionTitle }, title),
+    { style: styles.section },
+    React.createElement(Text, { style: styles.sectionTitle, wrap: false }, title),
     children,
   );
 }
 
-function Table({ columns, rows, compact = false }) {
+function tableChunks(rows, chunkSize) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  if (!safeRows.length) return [[]];
+  const chunks = [];
+  for (let start = 0; start < safeRows.length; start += chunkSize) {
+    chunks.push(safeRows.slice(start, start + chunkSize));
+  }
+  return chunks;
+}
+
+function TableBlock({ columns, rows, compact, continuation }) {
   return React.createElement(
     View,
-    { style: styles.table },
+    { style: [styles.table, continuation ? { marginTop: 4 } : null], wrap: false },
     React.createElement(
       View,
-      { style: styles.row },
+      { style: styles.row, wrap: false },
       ...columns.map((column, index) =>
         React.createElement(
           Text,
@@ -269,7 +279,7 @@ function Table({ columns, rows, compact = false }) {
     ...rows.map((row, rowIndex) =>
       React.createElement(
         View,
-        { key: `row-${rowIndex}`, style: styles.row },
+        { key: `row-${rowIndex}`, style: styles.row, wrap: false },
         ...columns.map((column, index) =>
           React.createElement(
             Text,
@@ -287,6 +297,23 @@ function Table({ columns, rows, compact = false }) {
           ),
         ),
       ),
+    ),
+  );
+}
+
+function Table({ columns, rows, compact = false }) {
+  const chunkSize = compact ? 5 : 4;
+  return React.createElement(
+    React.Fragment,
+    null,
+    ...tableChunks(rows, chunkSize).map((chunk, index) =>
+      React.createElement(TableBlock, {
+        key: `table-${index}`,
+        columns,
+        rows: chunk,
+        compact,
+        continuation: index > 0,
+      }),
     ),
   );
 }
@@ -722,18 +749,23 @@ function StrategyRowsSection({ payload }) {
 }
 
 function StudyDocument({ payload }) {
-  const compositionPages = (payload.sections.compositionGroups || []).map((group, index) => ({
-    title: null,
-    content: [React.createElement(CompositionGroupSection, { key: `composition-${index}`, group })],
-  }));
-  const pages = [
-    { title: null, content: [React.createElement(IntroSection, { key: "intro", payload })] },
-    ...compositionPages,
-    { title: null, content: [React.createElement(EditorialRowsSection, { key: "editorial", payload }), React.createElement(SpecialistsSection, { key: "specialists", payload })] },
-    { title: null, content: [React.createElement(BenefitsSection, { key: "benefits", payload }), React.createElement(ContractSection, { key: "contract", payload }), React.createElement(StrategySection, { key: "narrative" })] },
-    { title: null, content: [React.createElement(HistorySection, { key: "history", payload }), React.createElement(ProjectionSection, { key: "projection", payload })].filter(Boolean) },
-    { title: null, content: [React.createElement(DeadlinesSection, { key: "deadlines", payload }), React.createElement(OperatorNotesSection, { key: "notes", payload }), React.createElement(ConsiderationsSection, { key: "considerations", payload })].filter(Boolean) },
-  ];
+  const content = [
+    React.createElement(IntroSection, { key: "intro", payload }),
+    ...(payload.sections.compositionGroups || []).map((group, index) =>
+      React.createElement(CompositionGroupSection, { key: `composition-${index}`, group }),
+    ),
+    React.createElement(EditorialRowsSection, { key: "editorial", payload }),
+    React.createElement(SpecialistsSection, { key: "specialists", payload }),
+    React.createElement(BenefitsSection, { key: "benefits", payload }),
+    React.createElement(ContractSection, { key: "contract", payload }),
+    React.createElement(StrategySection, { key: "narrative" }),
+    React.createElement(HistorySection, { key: "history", payload }),
+    React.createElement(ProjectionSection, { key: "projection", payload }),
+    React.createElement(DeadlinesSection, { key: "deadlines", payload }),
+    React.createElement(OperatorNotesSection, { key: "notes", payload }),
+    React.createElement(ConsiderationsSection, { key: "considerations", payload }),
+  ].filter(Boolean);
+
   return React.createElement(
     Document,
     {
@@ -743,17 +775,12 @@ function StudyDocument({ payload }) {
       creator: "Crediclass React-pdf Service",
       producer: "Crediclass React-pdf Service",
     },
-    ...pages.map((page, index) =>
-      React.createElement(
-        Page,
-        { key: `page-${index}`, size: "A4", style: styles.page, wrap: true },
-        React.createElement(Header, { pageNumber: index + 1 }),
-        ...(page.title
-          ? [React.createElement(View, { key: `title-${index}`, style: styles.titleBar }, React.createElement(Text, null, page.title))]
-          : []),
-        ...page.content,
-        React.createElement(Footer, { payload }),
-      ),
+    React.createElement(
+      Page,
+      { size: "A4", style: styles.page, wrap: true },
+      React.createElement(Header, null),
+      ...content,
+      React.createElement(Footer, { payload }),
     ),
   );
 }
