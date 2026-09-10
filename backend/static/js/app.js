@@ -1,4 +1,6 @@
-﻿const screens = {
+const APP_BUILD_VERSION = "4.0.76";
+
+const screens = {
   mapa: {
     letter: "A) MAPA DE GRUPOS",
     title: "Mapa de Grupos",
@@ -4931,6 +4933,14 @@ async function restartSystemSync() {
 
 async function loadHealth() {
   const health = await apiGet("/health");
+  if (health.version && health.version !== APP_BUILD_VERSION) {
+    const reloadKey = `crediclass.asset-refresh.${health.version}`;
+    if (!sessionStorage.getItem(reloadKey)) {
+      sessionStorage.setItem(reloadKey, "1");
+      window.location.reload();
+      return;
+    }
+  }
   document.getElementById("environmentLabel").textContent = health.environment;
   document.getElementById("systemVersionLabel").textContent = health.version;
 }

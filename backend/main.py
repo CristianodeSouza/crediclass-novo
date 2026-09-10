@@ -40,6 +40,15 @@ logger = logging.getLogger("crediclass.api")
 app = FastAPI(title="Crediclass Dashboard V3")
 
 
+class ReleaseStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope: dict):
+        response = await super().get_response(path, scope)
+        if path.endswith((".js", ".css", ".html")):
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        return response
+
+
+
 @lru_cache(maxsize=1)
 def _assembly_calendar_payload() -> dict:
     """Carrega o calendario uma vez por processo para manter a tela responsiva."""
@@ -98,7 +107,7 @@ def _assembly_calendar_payload() -> dict:
     return enriched_payload
 
 
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/static", ReleaseStaticFiles(directory=STATIC_DIR), name="static")
 app.mount("/files", StaticFiles(directory=FILES_DIR), name="files")
 
 AUTH_COOKIE = "crediclass_session"
