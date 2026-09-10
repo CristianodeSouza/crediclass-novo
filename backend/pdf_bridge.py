@@ -161,13 +161,21 @@ def _history_matrix(financeiro: dict[str, Any], grupo: dict[str, Any], estudo: d
 
 
 
+def _selected_scenario_pairs(group: dict[str, Any]) -> list[tuple[str, str]]:
+    selected = str(group.get("selected_scenario_id") or "")
+    labels = {"without_embedded": "Sem embutido", "with_embedded": "Com embutido"}
+    if selected in labels:
+        return [(selected, labels[selected])]
+    return [("without_embedded", "Sem embutido"), ("with_embedded", "Com embutido")]
+
+
 def _contract_rows(estudo: dict[str, Any], grupo: dict[str, Any], financeiro: dict[str, Any]) -> list[dict[str, Any]]:
     selected_groups = _snapshot_groups(estudo)
     if selected_groups:
         rows = []
         for group in selected_groups:
             quota_count = _quota_count(group)
-            for scenario_id, label in (("without_embedded", "Sem embutido"), ("with_embedded", "Com embutido")):
+            for scenario_id, label in _selected_scenario_pairs(group):
                 scenario = _scenario(group, scenario_id)
                 rows.append({"group": f"Grupo {group.get('grupo') or group.get('grupo_id') or '-'} - {label}", "credit": _format_money((_to_float(scenario.get("credito_liquido_projetado")) or 0) * quota_count), "installment": _format_money((_to_float(scenario.get("parcela_inicial")) or 0) * quota_count), "term": str(group.get("prazo_restante") or group.get("prazo_total") or "-"), "rateTotal": _format_percent(group.get("taxa_total") or group.get("taxa_adm")), "rateYear": _format_percent(group.get("taxa_ano")), "administrator": str(group.get("administradora") or "-")})
         return rows
@@ -190,7 +198,7 @@ def _projection_rows(financeiro: dict[str, Any], estudo: dict[str, Any]) -> list
         rows = []
         for group in selected_groups:
             quota_count = _quota_count(group)
-            for scenario_id, label in (("without_embedded", "Sem embutido"), ("with_embedded", "Com embutido")):
+            for scenario_id, label in _selected_scenario_pairs(group):
                 scenario = _scenario(group, scenario_id)
                 embedded = (_to_float(scenario.get("lance_embutido")) or 0) * quota_count
                 rows.append({"title": f"Grupo {group.get('grupo') or group.get('grupo_id') or '-'} - {label}", "percent": "-", "totalBid": _format_money(embedded), "cardPayment": _format_money(embedded), "ownPayment": "Não consolidado", "credit": _format_money((_to_float(scenario.get("credito_liquido_projetado")) or 0) * quota_count), "installment": _format_money((_to_float(scenario.get("parcela_inicial")) or 0) * quota_count), "term": str(group.get("prazo_restante") or "-")})

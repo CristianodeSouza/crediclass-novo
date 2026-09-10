@@ -6674,3 +6674,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-audit h3 { margin:3px 0; color:var(--brand-navy); font-size:1rem; }
 .financial-study-audit p { margin:0; color:var(--muted); font-size:.8rem; }
 @media (max-width:640px) { .financial-study-audit { align-items:stretch; flex-direction:column; } }
+
+.selected-comparison-scenario.is-selected-for-study { background: #f0fbf5; border-radius: 6px; padding: 9px; margin-left: -9px; }
+.selected-scenario-choice { display: inline-flex; align-items: center; gap: 5px; color: var(--brand-navy); font-size: 0.67rem; font-weight: 700; cursor: pointer; }
+.selected-scenario-choice input { width: 15px; height: 15px; accent-color: var(--success); cursor: pointer; }
+.selected-comparison-scenario-title { flex-wrap: wrap; }

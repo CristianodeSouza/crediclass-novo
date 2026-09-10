@@ -279,14 +279,17 @@ def _validated_study_snapshot(payload: EstudoPreviewRequest) -> dict[str, Any]:
     groups = raw_snapshot.get("groups") if isinstance(raw_snapshot, dict) else None
     if not isinstance(groups, list) or not groups:
         raise ValueError("Snapshot da composição ausente. Retorne aos Grupos Selecionados e avance novamente.")
+    schema = str(raw_snapshot.get("schema") or "motor360-selection/v1")
     required_scenarios = {"without_embedded", "with_embedded"}
     for group in groups:
         group_id = str((group or {}).get("grupo") or (group or {}).get("grupo_id") or "").strip()
         scenarios = {str(item.get("id")) for item in (group or {}).get("cenarios", []) if isinstance(item, dict)}
         if not group_id or not required_scenarios.issubset(scenarios):
             raise ValueError("Snapshot da composição incompleto. Cada grupo deve possuir os cenários sem e com lance embutido.")
+        if schema == "motor360-selection/v2" and str((group or {}).get("selected_scenario_id") or "") not in required_scenarios:
+            raise ValueError("Escolha o cenário para contratação de cada grupo antes de gerar o estudo.")
     return json.loads(json.dumps({
-        "schema": str(raw_snapshot.get("schema") or "motor360-selection/v1"),
+        "schema": schema,
         "captured_at": str(raw_snapshot.get("capturedAt") or raw_snapshot.get("captured_at") or datetime.now().isoformat(timespec="seconds")),
         "groups": groups,
     }, ensure_ascii=False))

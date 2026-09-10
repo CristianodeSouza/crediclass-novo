@@ -1,4 +1,4 @@
-const APP_BUILD_VERSION = "4.0.79";
+const APP_BUILD_VERSION = "4.0.80";
 
 const screens = {
   mapa: {
@@ -102,6 +102,9 @@ const savedMotor360QuotaCounts = (() => {
 const savedMotor360SelectedData = (() => {
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedGroupData") || "{}"); } catch { return {}; }
 })();
+const savedMotor360SelectedScenarios = (() => {
+  try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedScenarios") || "{}"); } catch { return {}; }
+})();
 const savedMotor360Administrator = localStorage.getItem("crediclass.motor360.administrator") || "";
 const investorState = {
   result: null,
@@ -111,6 +114,7 @@ const investorState = {
   selectedGroupIds: new Set(savedMotor360SelectedGroups.map(String)),
   quotaCounts: new Map(Object.entries(savedMotor360QuotaCounts).map(([id, value]) => [String(id), Math.min(50, Math.max(1, Number(value) || 1))])),
   selectedGroupData: new Map(Object.entries(savedMotor360SelectedData)),
+  selectedScenarioIds: new Map(Object.entries(savedMotor360SelectedScenarios).filter(([, value]) => ["without_embedded", "with_embedded"].includes(value)).map(([id, value]) => [String(id), value])),
   floatingSummaryMinimized: false,
 };
 let investorAnalysisController = null;
@@ -2221,7 +2225,8 @@ function renderSelectedGroupComparisonColumn(item, index) {
     const scenario = byScenario[scenarioId];
     if (!scenario) return "";
     const embedded = scenarioId === "with_embedded";
-    return `<article class="selected-comparison-scenario"><div class="selected-comparison-scenario-title"><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><span>${scenario.credit_compatible ? "Crédito OK" : "Fora da faixa"}</span></div><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado))}</dd></div><div><dt>Lance total</dt><dd>${item.composition_candidate ? "Rateado no resumo" : formatMoney(scale(scenario.lance_total_cenario))}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>${item.composition_candidate || scenario.parcela_pos_contemplacao == null ? "Pendente da distribuição do lance" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</dd></div></dl><small>Prazo após lance: ${item.composition_candidate ? "validado na composição" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
+    const isSelectedForStudy = investorState.selectedScenarioIds.get(groupId) === scenarioId;
+    return `<article class="selected-comparison-scenario ${isSelectedForStudy ? "is-selected-for-study" : ""}"><div class="selected-comparison-scenario-title"><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><label class="selected-scenario-choice"><input type="checkbox" data-selected-scenario data-group-id="${escapeHtml(groupId)}" data-scenario-id="${scenarioId}" ${isSelectedForStudy ? "checked" : ""}><span>Escolher para contratação</span></label><span>${scenario.credit_compatible ? "Crédito OK" : "Fora da faixa"}</span></div><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado))}</dd></div><div><dt>Lance total</dt><dd>${item.composition_candidate ? "Rateado no resumo" : formatMoney(scale(scenario.lance_total_cenario))}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>${item.composition_candidate || scenario.parcela_pos_contemplacao == null ? "Pendente da distribuição do lance" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</dd></div></dl><small>Prazo após lance: ${item.composition_candidate ? "validado na composição" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
   }).join("");
   const profiles = byScenario.without_embedded?.perfis_contemplacao || byScenario.with_embedded?.perfis_contemplacao || [];
   const profileRows = profiles.map((profile) => {
@@ -2282,16 +2287,29 @@ function renderSelectedGroupsScreen() {
   const empty = document.getElementById("selectedGroupsEmpty");
   const results = document.getElementById("selectedGroupsResults");
   if (!empty || !results) return;
+  const missingScenarioGroups = items.filter((item) => !investorState.selectedScenarioIds.get(String(item.grupo || item.grupo_id || "")));
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
-  results.innerHTML = items.length ? renderSelectedGroupsCartSummary(items) + '<div class="selected-groups-comparison">' + items.map(renderSelectedGroupComparisonColumn).join("") + '</div><section class="selected-groups-next-step"><div><span>Próxima etapa</span><h3>Estudo Financeiro</h3><p>Revise a composição e avance. Nenhum estudo será salvo nesta etapa.</p></div><button class="btn btn-primary" type="button" data-follow-selected-groups>Seguir para Estudo Financeiro</button></section>' : "";
+  results.innerHTML = items.length ? renderSelectedGroupsCartSummary(items) + '<div class="selected-groups-comparison">' + items.map(renderSelectedGroupComparisonColumn).join("") + '</div><section class="selected-groups-next-step"><div><span>Próxima etapa</span><h3>Estudo Financeiro</h3><p>${missingScenarioGroups.length ? `Escolha um cenário para contratação em ${missingScenarioGroups.length} grupo(s) antes de avançar.` : "Composição pronta para o estudo. Nenhum estudo será salvo nesta etapa."}</p></div><button class="btn btn-primary" type="button" data-follow-selected-groups ${missingScenarioGroups.length ? "disabled" : ""}>Seguir para Estudo Financeiro</button></section>' : "";
+  results.querySelectorAll("[data-selected-scenario]").forEach((input) => input.addEventListener("change", (event) => {
+    const groupId = String(event.target.dataset.groupId || "");
+    const scenarioId = String(event.target.dataset.scenarioId || "");
+    if (event.target.checked) investorState.selectedScenarioIds.set(groupId, scenarioId);
+    else investorState.selectedScenarioIds.delete(groupId);
+    persistMotor360Selection();
+    renderSelectedGroupsScreen();
+  }));
   results.querySelector("[data-follow-selected-groups]")?.addEventListener("click", () => {
+    if (missingScenarioGroups.length) {
+      showToast("Escolha um cenário para contratação em cada grupo selecionado antes de avançar.", "warning");
+      return;
+    }
     const selectedGroups = items.map((item) => {
       const groupId = String(item.grupo || item.grupo_id || "");
-      return { ...item, quota_count: Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1))) };
+      return { ...item, quota_count: Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1))), selected_scenario_id: investorState.selectedScenarioIds.get(groupId) };
     });
     const studySnapshot = {
-      schema: "motor360-selection/v1",
+      schema: "motor360-selection/v2",
       capturedAt: new Date().toISOString(),
       groups: JSON.parse(JSON.stringify(selectedGroups)),
     };
@@ -2301,7 +2319,7 @@ function renderSelectedGroupsScreen() {
       viabilityItem: highlighted,
       payload: collectClientProfile(),
       group: studySnapshot.groups[0],
-      cenario: null,
+      cenario: (highlighted?.cenarios || []).find((scenario) => scenario.id === highlighted?.selected_scenario_id) || null,
       templateCampos: collectStudyOperatorFields(),
       savedStudyId: null,
       proposalId: null,
@@ -2854,6 +2872,7 @@ function persistMotor360Selection() {
   localStorage.setItem("crediclass.motor360.selectedGroups", JSON.stringify([...investorState.selectedGroupIds]));
   localStorage.setItem("crediclass.motor360.quotaCounts", JSON.stringify(Object.fromEntries(investorState.quotaCounts)));
   localStorage.setItem("crediclass.motor360.selectedGroupData", JSON.stringify(Object.fromEntries(investorState.selectedGroupData)));
+  localStorage.setItem("crediclass.motor360.selectedScenarios", JSON.stringify(Object.fromEntries(investorState.selectedScenarioIds)));
   localStorage.setItem("crediclass.motor360.administrator", investorState.administrator || "");
 }
 
@@ -3110,6 +3129,7 @@ function clearMotor360GroupSelection() {
   investorState.selectedGroupIds.clear();
   investorState.quotaCounts.clear();
   investorState.selectedGroupData.clear();
+  investorState.selectedScenarioIds.clear();
 }
 
 function syncMotor360AdministratorFilter(sourceItems) {
@@ -3142,6 +3162,7 @@ function syncMotor360AdministratorFilter(sourceItems) {
     investorState.selectedGroupIds.delete(id);
     investorState.quotaCounts.delete(id);
     investorState.selectedGroupData.delete(id);
+    investorState.selectedScenarioIds.delete(id);
   });
 
   if (select) {
@@ -3250,6 +3271,7 @@ function renderInvestorAnalysis(result) {
       investorState.selectedGroupIds.delete(groupId);
       investorState.quotaCounts.delete(groupId);
       investorState.selectedGroupData.delete(groupId);
+      investorState.selectedScenarioIds.delete(groupId);
     }
     persistMotor360Selection();
     renderInvestorAnalysis(investorState.result);
