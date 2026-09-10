@@ -1,4 +1,4 @@
-const APP_BUILD_VERSION = "4.0.78";
+const APP_BUILD_VERSION = "4.0.79";
 
 const screens = {
   mapa: {

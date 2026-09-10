@@ -14,7 +14,7 @@ Font.registerHyphenationCallback((word) => [word]);
 const styles = StyleSheet.create({
   page: {
     paddingTop: 26,
-    paddingBottom: 28,
+    paddingBottom: 54,
     paddingHorizontal: 24,
     fontSize: 8.8,
     color: "#24313a",
@@ -189,7 +189,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 24,
     right: 24,
-    bottom: 12,
+    bottom: 16,
+    minHeight: 16,
+    paddingTop: 3,
+    borderTopWidth: 1,
+    borderTopColor: "#d8dde3",
     flexDirection: "row",
     justifyContent: "space-between",
     fontSize: 7.6,
