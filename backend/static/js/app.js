@@ -107,6 +107,7 @@ const investorState = {
   administrator: savedMotor360Administrator,
   audit: null,
   selectedGroupIds: new Set(savedMotor360SelectedGroups.map(String)),
+  selectedScenarioIds: new Map(Object.entries(JSON.parse(localStorage.getItem("crediclass.motor360.selectedScenarios") || "{}"))),
   quotaCounts: new Map(Object.entries(savedMotor360QuotaCounts).map(([id, value]) => [String(id), Math.min(50, Math.max(1, Number(value) || 1))])),
   selectedGroupData: new Map(Object.entries(savedMotor360SelectedData)),
   floatingSummaryMinimized: false,
@@ -2154,7 +2155,10 @@ function selectedMotor360Items() {
     ...(investorState.result?.credit_items || []),
     ...(investorState.result?.composition_items || []),
   ].map((item) => [String(item.grupo || item.grupo_id || ""), item]));
-  return [...investorState.selectedGroupIds].map((id) => currentItems.get(id) || investorState.selectedGroupData.get(id)).filter(Boolean);
+  return [...investorState.selectedGroupIds].map((id) => {
+    const item = currentItems.get(id) || investorState.selectedGroupData.get(id);
+    return item ? { ...item, cenarios: selectedScenariosForItem(item) } : null;
+  }).filter((item) => item && item.cenarios.length);
 }
 
 function renderMotor360SelectedGroupsDock() {
@@ -2793,9 +2797,20 @@ async function renderFinancialStudyScreen() {
 
 function persistMotor360Selection() {
   localStorage.setItem("crediclass.motor360.selectedGroups", JSON.stringify([...investorState.selectedGroupIds]));
+  localStorage.setItem("crediclass.motor360.selectedScenarios", JSON.stringify(Object.fromEntries(investorState.selectedScenarioIds)));
   localStorage.setItem("crediclass.motor360.quotaCounts", JSON.stringify(Object.fromEntries(investorState.quotaCounts)));
   localStorage.setItem("crediclass.motor360.selectedGroupData", JSON.stringify(Object.fromEntries(investorState.selectedGroupData)));
   localStorage.setItem("crediclass.motor360.administrator", investorState.administrator || "");
+}
+
+function selectedScenarioIdsForGroup(groupId) {
+  const value = investorState.selectedScenarioIds.get(String(groupId));
+  return new Set(Array.isArray(value) ? value : []);
+}
+
+function selectedScenariosForItem(item) {
+  const ids = selectedScenarioIdsForGroup(item?.grupo || item?.grupo_id || "");
+  return (item?.cenarios || []).filter((scenario) => ids.has(scenario.id));
 }
 
 function updateMotor360SelectionSummary() {
@@ -3164,7 +3179,21 @@ function renderInvestorAnalysis(result) {
     ${renderMotor360Audit(investorState.audit)}
     <div class="motor360-selection-toolbar motor360-selection-toolbar-final"><strong>Próxima etapa</strong><span id="motor360SelectionSummary">${investorState.selectedGroupIds.size} grupo(s) selecionado(s) para a próxima etapa</span><button class="btn btn-primary btn-sm" type="button" data-screen-jump="grupos-selecionados">Ver grupos selecionados</button></div>
   `;
+  results.querySelectorAll(".motor360-scenario-card").forEach((card) => {
+    const groupId = card.closest(".motor360-group-card")?.querySelector(".motor360-group-select-input")?.dataset.groupId;
+    const title = card.querySelector(".motor360-scenario-title strong")?.textContent || "";
+    const scenarioId = title.includes("com lance") ? "with_embedded" : "without_embedded";
+    card.querySelector(".motor360-scenario-title")?.insertAdjacentHTML("beforeend", `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""}> Escolher para contratação</label>`);
+  });
   results.querySelectorAll("[data-screen-jump]").forEach((button) => button.addEventListener("click", () => activateScreen(button.dataset.screenJump)));
+  results.querySelectorAll(".motor360-scenario-select-input").forEach((input) => input.addEventListener("change", (event) => {
+    const groupId = String(event.target.dataset.groupId || "");
+    const ids = selectedScenarioIdsForGroup(groupId);
+    event.target.checked ? ids.add(event.target.dataset.scenarioId) : ids.delete(event.target.dataset.scenarioId);
+    investorState.selectedScenarioIds.set(groupId, [...ids]);
+    persistMotor360Selection();
+    renderSelectedGroupsScreen();
+  }));
   results.querySelectorAll("[data-group-anchor]").forEach((button) => button.addEventListener("click", () => focusMotor360Group(button.dataset.groupAnchor)));
   results.querySelectorAll("[data-floating-summary-toggle]").forEach((button) => button.addEventListener("click", () => {
     investorState.floatingSummaryMinimized = !investorState.floatingSummaryMinimized;
@@ -3189,6 +3218,7 @@ function renderInvestorAnalysis(result) {
       if (!investorState.quotaCounts.has(groupId)) investorState.quotaCounts.set(groupId, 1);
     } else {
       investorState.selectedGroupIds.delete(groupId);
+      investorState.selectedScenarioIds.delete(groupId);
       investorState.quotaCounts.delete(groupId);
       investorState.selectedGroupData.delete(groupId);
     }
