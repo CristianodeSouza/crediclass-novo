@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from datetime import datetime
@@ -38,9 +39,18 @@ def _local_node_candidates() -> list[Path]:
     ]
 
 
+def _local_npm_candidates() -> list[Path]:
+    return [
+        PDF_SERVICE_NODEENV_DIR / "bin" / "npm",
+        PDF_SERVICE_NODEENV_DIR / "bin" / "npm.cmd",
+        PDF_SERVICE_NODEENV_DIR / "Scripts" / "npm.cmd",
+        PDF_SERVICE_NODEENV_DIR / "Scripts" / "npm.exe",
+    ]
+
+
 def _node_binary() -> str | None:
     explicit = str(Path(shutil.which("node") or "")).strip()
-    env_path = str(Path(__import__("os").getenv("REACT_PDF_NODE_PATH", "")).expanduser()).strip() if __import__("os").getenv("REACT_PDF_NODE_PATH") else ""
+    env_path = str(Path(os.getenv("REACT_PDF_NODE_PATH", "")).expanduser()).strip() if os.getenv("REACT_PDF_NODE_PATH") else ""
     if env_path and Path(env_path).exists():
         return env_path
     for candidate in _local_node_candidates():
@@ -51,15 +61,58 @@ def _node_binary() -> str | None:
     return None
 
 
+def _npm_binary() -> str | None:
+    explicit = str(Path(shutil.which("npm") or "")).strip()
+    env_path = str(Path(os.getenv("REACT_PDF_NPM_PATH", "")).expanduser()).strip() if os.getenv("REACT_PDF_NPM_PATH") else ""
+    if env_path and Path(env_path).exists():
+        return env_path
+    for candidate in _local_npm_candidates():
+        if candidate.exists():
+            return str(candidate)
+    if explicit:
+        return explicit
+    return None
+
+
 def react_pdf_service_status() -> dict[str, Any]:
     node_path = _node_binary()
+    npm_path = _npm_binary()
     return {
-        "available": bool(node_path and PDF_SERVICE_ENTRYPOINT.exists() and PDF_SERVICE_NODE_MODULE.exists()),
+        "available": bool(node_path and npm_path and PDF_SERVICE_ENTRYPOINT.exists() and PDF_SERVICE_NODE_MODULE.exists()),
         "node": node_path,
+        "npm": npm_path,
         "entrypoint": str(PDF_SERVICE_ENTRYPOINT),
         "package_json": PDF_SERVICE_PACKAGE.exists(),
         "dependencies_installed": PDF_SERVICE_NODE_MODULE.exists(),
     }
+
+
+def ensure_react_pdf_runtime(install_if_missing: bool = True) -> dict[str, Any]:
+    status = react_pdf_service_status()
+    if status["available"]:
+        return status
+    if not install_if_missing:
+        return status
+    if not PDF_SERVICE_PACKAGE.exists():
+        raise RuntimeError(f"package.json do React-pdf nao encontrado em {PDF_SERVICE_PACKAGE}")
+    npm_path = _npm_binary()
+    node_path = _node_binary()
+    if not npm_path or not node_path:
+        raise RuntimeError("Node.js/NPM indisponiveis para inicializar o motor React-pdf.")
+    result = subprocess.run(
+        [npm_path, "ci", "--prefix", str(PDF_SERVICE_DIR), "--omit=dev"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
+        cwd=str(BASE_DIR),
+    )
+    if result.returncode != 0:
+        detail = result.stderr.decode("utf-8", errors="replace").strip() or result.stdout.decode("utf-8", errors="replace").strip()
+        raise RuntimeError(f"Falha ao instalar dependencias do React-pdf: {detail or 'erro desconhecido'}")
+    status = react_pdf_service_status()
+    if not status["available"]:
+        raise RuntimeError("React-pdf continuou indisponivel apos npm ci.")
+    return status
 
 
 def _format_money(value: Any) -> str:
@@ -130,55 +183,45 @@ def _month_title(value: Any) -> str:
     return raw or "-"
 
 
-
-def _snapshot_groups(estudo: dict[str, Any]) -> list[dict[str, Any]]:
-    snapshot = estudo.get("study_snapshot") or {}
-    groups = snapshot.get("groups") if isinstance(snapshot, dict) else None
-    return list(groups or estudo.get("grupos_selecionados") or [])
-
-
-def _scenario(group: dict[str, Any], scenario_id: str) -> dict[str, Any]:
-    return next((item for item in group.get("cenarios", []) if item.get("id") == scenario_id), {})
-
-
-def _quota_count(group: dict[str, Any]) -> int:
-    return max(1, int(_to_float(group.get("quota_count")) or 1))
-
 def _history_matrix(financeiro: dict[str, Any], grupo: dict[str, Any], estudo: dict[str, Any]) -> dict[str, Any]:
-    selected_groups = _snapshot_groups(estudo)
-    if selected_groups:
-        histories = [list(group.get("historico_12_meses") or [])[-10:] for group in selected_groups]
-        labels = [str(entry.get("label") or entry.get("mes") or "-") for entry in (histories[0] if histories else [])]
-        if labels:
-            return {"months": labels, "rows": [{"group": f"Grupo {group.get('grupo') or group.get('grupo_id') or '-'}", "administrator": str(group.get("administradora") or "-"), "cells": [{"value": _format_percent(entry.get("menor_lance")), "detail": f"Qtd {entry.get('qtd_contemplacoes', '-')}"} for entry in history]} for group, history in zip(selected_groups, histories)]}
-        return {"months": ["Resumo"], "rows": [{"group": f"Grupo {group.get('grupo') or group.get('grupo_id') or '-'}", "administrator": str(group.get("administradora") or "-"), "cells": [{"value": "-", "detail": "Sem histórico"}]} for group in selected_groups]}
     historico = grupo.get("historico") or {}
     entries = sorted(historico.items())[-11:]
     if entries:
-        return {"months": [_month_title(month) for month, _ in entries], "rows": [{"group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}", "administrator": str(grupo.get("administradora") or "-"), "cells": [{"value": _format_percent(item.get("menor_lance")), "detail": f"Qtd {item.get('qtd_contemplacoes', '-')}"} for _, item in entries]}]}
+        return {
+            "months": [_month_title(month) for month, _ in entries],
+            "rows": [
+                {
+                    "group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}",
+                    "administrator": str(grupo.get("administradora") or "-"),
+                    "cells": [
+                        {
+                            "value": _format_percent(item.get("menor_lance")),
+                            "detail": f"Qtd {item.get('qtd_contemplacoes', '-')}",
+                        }
+                        for _, item in entries
+                    ],
+                }
+            ],
+        }
     summary = financeiro.get("historico_12_meses") or {}
-    return {"months": ["Resumo"], "rows": [{"group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}", "administrator": str(grupo.get("administradora") or "-"), "cells": [{"value": _format_percent(summary.get("media_menor_lance")), "detail": f"Qtd {summary.get('total_contemplacoes', '-')}"}]}]}
-
-
-
-def _selected_scenario_pairs(group: dict[str, Any]) -> list[tuple[str, str]]:
-    selected = str(group.get("selected_scenario_id") or "")
-    labels = {"without_embedded": "Sem embutido", "with_embedded": "Com embutido"}
-    if selected in labels:
-        return [(selected, labels[selected])]
-    return [("without_embedded", "Sem embutido"), ("with_embedded", "Com embutido")]
+    return {
+        "months": ["Resumo"],
+        "rows": [
+            {
+                "group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}",
+                "administrator": str(grupo.get("administradora") or "-"),
+                "cells": [
+                    {
+                        "value": _format_percent(summary.get("media_menor_lance")),
+                        "detail": f"Qtd {summary.get('total_contemplacoes', '-')}",
+                    }
+                ],
+            }
+        ],
+    }
 
 
 def _contract_rows(estudo: dict[str, Any], grupo: dict[str, Any], financeiro: dict[str, Any]) -> list[dict[str, Any]]:
-    selected_groups = _snapshot_groups(estudo)
-    if selected_groups:
-        rows = []
-        for group in selected_groups:
-            quota_count = _quota_count(group)
-            for scenario_id, label in _selected_scenario_pairs(group):
-                scenario = _scenario(group, scenario_id)
-                rows.append({"group": f"Grupo {group.get('grupo') or group.get('grupo_id') or '-'} - {label}", "credit": _format_money((_to_float(scenario.get("credito_liquido_projetado")) or 0) * quota_count), "installment": _format_money((_to_float(scenario.get("parcela_inicial")) or 0) * quota_count), "term": str(group.get("prazo_restante") or group.get("prazo_total") or "-"), "rateTotal": _format_percent(group.get("taxa_total") or group.get("taxa_adm")), "rateYear": _format_percent(group.get("taxa_ano")), "administrator": str(group.get("administradora") or "-")})
-        return rows
     cartas = financeiro.get("cartas") or []
     rows: list[dict[str, Any]] = []
     taxa_total = grupo.get("taxa_adm")
@@ -187,75 +230,79 @@ def _contract_rows(estudo: dict[str, Any], grupo: dict[str, Any], financeiro: di
     administrator = str(grupo.get("administradora") or "-")
     if cartas:
         for card in cartas:
-            rows.append({"group": f"Grupo {card.get('grupo') or card.get('grupo_id') or grupo.get('grupo') or estudo.get('grupo_id') or '-'}", "credit": _format_money(card.get("credito_contratado") or card.get("credito_contratado_total")), "installment": _format_money(card.get("parcela_estimada") or financeiro.get("parcela_inicial")), "term": str(card.get("prazo_restante") or card.get("prazo_total") or prazo), "rateTotal": _format_percent(taxa_total), "rateYear": _format_percent(taxa_ano), "administrator": administrator})
-    return rows or [{"group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}", "credit": _format_money(financeiro.get("credito_original") or financeiro.get("credito")), "installment": _format_money(financeiro.get("parcela_inicial")), "term": str(prazo), "rateTotal": _format_percent(taxa_total), "rateYear": _format_percent(taxa_ano), "administrator": administrator}]
-
-
-
-def _projection_rows(financeiro: dict[str, Any], estudo: dict[str, Any]) -> list[dict[str, Any]]:
-    selected_groups = _snapshot_groups(estudo)
-    if selected_groups:
-        rows = []
-        for group in selected_groups:
-            quota_count = _quota_count(group)
-            for scenario_id, label in _selected_scenario_pairs(group):
-                scenario = _scenario(group, scenario_id)
-                embedded = (_to_float(scenario.get("lance_embutido")) or 0) * quota_count
-                rows.append({"title": f"Grupo {group.get('grupo') or group.get('grupo_id') or '-'} - {label}", "percent": "-", "totalBid": _format_money(embedded), "cardPayment": _format_money(embedded), "ownPayment": "Não consolidado", "credit": _format_money((_to_float(scenario.get("credito_liquido_projetado")) or 0) * quota_count), "installment": _format_money((_to_float(scenario.get("parcela_inicial")) or 0) * quota_count), "term": str(group.get("prazo_restante") or "-")})
+            rows.append(
+                {
+                    "group": f"Grupo {card.get('grupo') or card.get('grupo_id') or grupo.get('grupo') or estudo.get('grupo_id') or '-'}",
+                    "credit": _format_money(card.get("credito_contratado") or card.get("credito_contratado_total")),
+                    "installment": _format_money(card.get("parcela_estimada") or financeiro.get("parcela_inicial")),
+                    "term": str(card.get("prazo_restante") or card.get("prazo_total") or prazo),
+                    "rateTotal": _format_percent(taxa_total),
+                    "rateYear": _format_percent(taxa_ano),
+                    "administrator": administrator,
+                }
+            )
+    if rows:
         return rows
+    return [
+        {
+            "group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}",
+            "credit": _format_money(financeiro.get("credito_original") or financeiro.get("credito")),
+            "installment": _format_money(financeiro.get("parcela_inicial")),
+            "term": str(prazo),
+            "rateTotal": _format_percent(taxa_total),
+            "rateYear": _format_percent(taxa_ano),
+            "administrator": administrator,
+        }
+    ]
+
+
+def _projection_rows(financeiro: dict[str, Any]) -> list[dict[str, Any]]:
     rows = []
     credito_base = _to_float(financeiro.get("credito_original") or financeiro.get("credito")) or 0.0
     parcela_base = financeiro.get("parcela_inicial")
     prazo_base = financeiro.get("prazo_apos_contemplacao") or financeiro.get("prazo_operacional") or "-"
-    labels = {"Investidor": "1. Sorteio Geral", "Conservador": "2. Lance Conservador", "Moderado": "3. Lance Moderado", "Agressivo": "4. Lance Rapido", "Super Agressivo": "5. Lance Acelerado"}
+    labels = {
+        "Investidor": "1. Sorteio Geral",
+        "Conservador": "2. Lance Conservador",
+        "Moderado": "3. Lance Moderado",
+        "Agressivo": "4. Lance Rapido",
+        "Super Agressivo": "5. Lance Acelerado",
+    }
     for strategy in financeiro.get("estrategias", [])[:5]:
         percentual = strategy.get("percentual_lance")
         percentual_base = _to_float(percentual)
         total_bid = credito_base * percentual_base if percentual_base is not None else None
-        rows.append({"title": labels.get(strategy.get("estrategia"), strategy.get("estrategia") or "-"), "percent": _format_percent(percentual), "totalBid": _format_money(total_bid), "cardPayment": _format_money(strategy.get("lance_embutido")), "ownPayment": _format_money(strategy.get("lance_proprio")), "credit": _format_money(strategy.get("credito_disponivel") or financeiro.get("credito")), "installment": _format_money(strategy.get("parcela_apos_contemplacao") or parcela_base), "term": str(strategy.get("prazo_apos_lance") or prazo_base or "-")})
+        rows.append(
+            {
+                "title": labels.get(strategy.get("estrategia"), strategy.get("estrategia") or "-"),
+                "percent": _format_percent(percentual),
+                "totalBid": _format_money(total_bid),
+                "cardPayment": _format_money(strategy.get("lance_embutido")),
+                "ownPayment": _format_money(strategy.get("lance_proprio")),
+                "credit": _format_money(strategy.get("credito_disponivel") or financeiro.get("credito")),
+                "installment": _format_money(strategy.get("parcela_apos_contemplacao") or parcela_base),
+                "term": str(strategy.get("prazo_apos_lance") or prazo_base or "-"),
+            }
+        )
     return rows
 
 
-
 def _deadline_rows(estudo: dict[str, Any], grupo: dict[str, Any]) -> list[dict[str, Any]]:
-    selected_groups = _snapshot_groups(estudo)
-    if selected_groups:
-        return [{"group": f"Grupo {item.get('grupo') or item.get('grupo_id') or '-'}", "reservationLimit": _format_date(item.get("limite_adesao")), "assemblyLimit": _format_date(item.get("limite_adesao")), "firstInstallment": _format_date(item.get("vencimento_primeira_parcela") or item.get("vencimento_parcela")), "nextAssembly": _format_date(item.get("proxima_assembleia") or item.get("primeira_assembleia")), "bidPayment": _format_date(item.get("vencimento_lance") or item.get("vencimento_parcela"))} for item in selected_groups]
-    return [{"group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}", "reservationLimit": _format_date(grupo.get("limite_adesao")), "assemblyLimit": _format_date(grupo.get("limite_adesao")), "firstInstallment": _format_date(grupo.get("vencimento_primeira_parcela") or grupo.get("vencimento_parcela")), "nextAssembly": _format_date(grupo.get("proxima_assembleia") or grupo.get("primeira_assembleia")), "bidPayment": _format_date(grupo.get("vencimento_lance") or grupo.get("vencimento_parcela"))}]
-
+    return [
+        {
+            "group": f"Grupo {grupo.get('grupo') or estudo.get('grupo_id') or '-'}",
+            "reservationLimit": _format_date(grupo.get("limite_adesao")),
+            "assemblyLimit": _format_date(grupo.get("limite_adesao")),
+            "firstInstallment": _format_date(grupo.get("vencimento_primeira_parcela") or grupo.get("vencimento_parcela")),
+            "nextAssembly": _format_date(grupo.get("proxima_assembleia") or grupo.get("primeira_assembleia")),
+            "bidPayment": _format_date(grupo.get("vencimento_lance") or grupo.get("vencimento_parcela")),
+        }
+    ]
 
 
 def _operator_notes(template_campos: dict[str, Any]) -> list[str]:
     return [str(value).strip() for value in template_campos.values() if str(value or "").strip()]
 
-
-
-def _composition_groups(estudo: dict[str, Any]) -> list[dict[str, str]]:
-    groups = list(estudo.get("grupos_selecionados") or [])
-    result = []
-    for group in groups:
-        quota_count = max(1, int(_to_float(group.get("quota_count")) or 1))
-        scenarios = {str(item.get("id")): item for item in group.get("cenarios") or []}
-        def scenario_row(scenario_id: str) -> dict[str, str]:
-            scenario = scenarios.get(scenario_id) or {}
-            scale = lambda key: (_to_float(scenario.get(key)) or 0) * quota_count
-            return {"label": "Com embutido" if scenario_id == "with_embedded" else "Sem embutido", "liquidCredit": _format_money(scale("credito_liquido_projetado")), "contractedCredit": _format_money(scale("credito_contratado")), "embeddedBid": _format_money(scale("lance_embutido")), "installment": _format_money(scale("parcela_inicial")), "balance": _format_money(scale("saldo_devedor"))}
-        result.append({"groupId": str(group.get("grupo") or group.get("grupo_id") or "-"), "administrator": str(group.get("administradora") or "-"), "quotas": str(quota_count), "strategy": str(group.get("best_contemplation_strategy") or "-"), "withoutEmbedded": scenario_row("without_embedded"), "withEmbedded": scenario_row("with_embedded")})
-    return result
-
-
-def _composition_groups(estudo: dict[str, Any]) -> list[dict[str, str]]:
-    groups = list(estudo.get("grupos_selecionados") or [])
-    result = []
-    for group in groups:
-        quota_count = max(1, int(_to_float(group.get("quota_count")) or 1))
-        scenarios = {str(item.get("id")): item for item in group.get("cenarios") or []}
-        def scenario_row(scenario_id: str) -> dict[str, str]:
-            scenario = scenarios.get(scenario_id) or {}
-            scale = lambda key: (_to_float(scenario.get(key)) or 0) * quota_count
-            return {"label": "Com embutido" if scenario_id == "with_embedded" else "Sem embutido", "liquidCredit": _format_money(scale("credito_liquido_projetado")), "contractedCredit": _format_money(scale("credito_contratado")), "embeddedBid": _format_money(scale("lance_embutido")), "installment": _format_money(scale("parcela_inicial")), "balance": _format_money(scale("saldo_devedor"))}
-        result.append({"groupId": str(group.get("grupo") or group.get("grupo_id") or "-"), "administrator": str(group.get("administradora") or "-"), "quotas": str(quota_count), "strategy": str(group.get("best_contemplation_strategy") or "-"), "withoutEmbedded": scenario_row("without_embedded"), "withEmbedded": scenario_row("with_embedded")})
-    return result
 
 def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, Any]:
     cliente = estudo.get("cliente") or {}
@@ -324,10 +371,9 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
             ],
             "operatorNotes": _operator_notes(template_campos),
             "strategyRows": strategy_rows,
-            "compositionGroups": _composition_groups(estudo),
             "historyMatrix": _history_matrix(financeiro, grupo, estudo),
             "contractRows": _contract_rows(estudo, grupo, financeiro),
-            "projectionRows": _projection_rows(financeiro, estudo),
+            "projectionRows": _projection_rows(financeiro),
             "deadlineRows": _deadline_rows(estudo, grupo),
             "benefits": [
                 "Grupos em andamento com leitura historica dos ultimos 12 meses disponivel no sistema.",
@@ -378,7 +424,7 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
 
 
 def render_react_study_pdf(estudo: dict[str, Any], version: str) -> bytes:
-    status = react_pdf_service_status()
+    status = ensure_react_pdf_runtime()
     if not status["available"]:
         raise RuntimeError("React-pdf service unavailable")
     payload = build_react_pdf_payload(estudo, version)

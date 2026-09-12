@@ -1,6 +1,4 @@
-const APP_BUILD_VERSION = "4.0.81";
-
-const screens = {
+﻿const screens = {
   mapa: {
     letter: "A) MAPA DE GRUPOS",
     title: "Mapa de Grupos",
@@ -102,9 +100,6 @@ const savedMotor360QuotaCounts = (() => {
 const savedMotor360SelectedData = (() => {
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedGroupData") || "{}"); } catch { return {}; }
 })();
-const savedMotor360SelectedScenarios = (() => {
-  try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedScenarios") || "{}"); } catch { return {}; }
-})();
 const savedMotor360Administrator = localStorage.getItem("crediclass.motor360.administrator") || "";
 const investorState = {
   result: null,
@@ -112,9 +107,9 @@ const investorState = {
   administrator: savedMotor360Administrator,
   audit: null,
   selectedGroupIds: new Set(savedMotor360SelectedGroups.map(String)),
+  selectedScenarioIds: new Map(Object.entries(JSON.parse(localStorage.getItem("crediclass.motor360.selectedScenarios") || "{}"))),
   quotaCounts: new Map(Object.entries(savedMotor360QuotaCounts).map(([id, value]) => [String(id), Math.min(50, Math.max(1, Number(value) || 1))])),
   selectedGroupData: new Map(Object.entries(savedMotor360SelectedData)),
-  selectedScenarioIds: new Map(Object.entries(savedMotor360SelectedScenarios).filter(([, value]) => ["without_embedded", "with_embedded"].includes(value)).map(([id, value]) => [String(id), value])),
   floatingSummaryMinimized: false,
 };
 let investorAnalysisController = null;
@@ -2160,7 +2155,10 @@ function selectedMotor360Items() {
     ...(investorState.result?.credit_items || []),
     ...(investorState.result?.composition_items || []),
   ].map((item) => [String(item.grupo || item.grupo_id || ""), item]));
-  return [...investorState.selectedGroupIds].map((id) => currentItems.get(id) || investorState.selectedGroupData.get(id)).filter(Boolean);
+  return [...investorState.selectedGroupIds].map((id) => {
+    const item = currentItems.get(id) || investorState.selectedGroupData.get(id);
+    return item ? { ...item, cenarios: selectedScenariosForItem(item) } : null;
+  }).filter((item) => item && item.cenarios.length);
 }
 
 function renderMotor360SelectedGroupsDock() {
@@ -2225,8 +2223,7 @@ function renderSelectedGroupComparisonColumn(item, index) {
     const scenario = byScenario[scenarioId];
     if (!scenario) return "";
     const embedded = scenarioId === "with_embedded";
-    const isSelectedForStudy = investorState.selectedScenarioIds.get(groupId) === scenarioId;
-    return `<article class="selected-comparison-scenario ${isSelectedForStudy ? "is-selected-for-study" : ""}"><div class="selected-comparison-scenario-title"><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><label class="selected-scenario-choice"><input type="checkbox" data-selected-scenario data-group-id="${escapeHtml(groupId)}" data-scenario-id="${scenarioId}" ${isSelectedForStudy ? "checked" : ""}><span>Escolher para contratação</span></label><span>${scenario.credit_compatible ? "Crédito OK" : "Fora da faixa"}</span></div><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado))}</dd></div><div><dt>Lance total</dt><dd>${item.composition_candidate ? "Rateado no resumo" : formatMoney(scale(scenario.lance_total_cenario))}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>${item.composition_candidate || scenario.parcela_pos_contemplacao == null ? "Pendente da distribuição do lance" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</dd></div></dl><small>Prazo após lance: ${item.composition_candidate ? "validado na composição" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
+    return `<article class="selected-comparison-scenario"><div class="selected-comparison-scenario-title"><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><span>${scenario.credit_compatible ? "Crédito OK" : "Fora da faixa"}</span></div><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado))}</dd></div><div><dt>Lance total</dt><dd>${item.composition_candidate ? "Rateado no resumo" : formatMoney(scale(scenario.lance_total_cenario))}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>${item.composition_candidate || scenario.parcela_pos_contemplacao == null ? "Pendente da distribuição do lance" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</dd></div></dl><small>Prazo após lance: ${item.composition_candidate ? "validado na composição" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
   }).join("");
   const profiles = byScenario.without_embedded?.perfis_contemplacao || byScenario.with_embedded?.perfis_contemplacao || [];
   const profileRows = profiles.map((profile) => {
@@ -2287,74 +2284,13 @@ function renderSelectedGroupsScreen() {
   const empty = document.getElementById("selectedGroupsEmpty");
   const results = document.getElementById("selectedGroupsResults");
   if (!empty || !results) return;
-  const missingScenarioGroups = items.filter((item) => !investorState.selectedScenarioIds.get(String(item.grupo || item.grupo_id || "")));
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
-  const nextStepMessage = missingScenarioGroups.length
-    ? "Escolha um cenário para contratação em " + missingScenarioGroups.length + " grupo(s) antes de avançar."
-    : "Composição pronta para o estudo. Nenhum estudo será salvo nesta etapa.";
-  const nextStepDisabled = missingScenarioGroups.length ? "disabled" : "";
-  results.innerHTML = items.length ? renderSelectedGroupsCartSummary(items) + '<div class="selected-groups-comparison">' + items.map(renderSelectedGroupComparisonColumn).join("") + '</div><section class="selected-groups-next-step"><div><span>Próxima etapa</span><h3>Estudo Financeiro</h3><p>' + nextStepMessage + '</p></div><button class="btn btn-primary" type="button" data-follow-selected-groups ' + nextStepDisabled + '>Seguir para Estudo Financeiro</button></section>' : "";
-  results.querySelectorAll("[data-selected-scenario]").forEach((input) => input.addEventListener("change", (event) => {
-    const groupId = String(event.target.dataset.groupId || "");
-    const scenarioId = String(event.target.dataset.scenarioId || "");
-    if (event.target.checked) investorState.selectedScenarioIds.set(groupId, scenarioId);
-    else investorState.selectedScenarioIds.delete(groupId);
-    persistMotor360Selection();
-    renderSelectedGroupsScreen();
-  }));
-  results.querySelector("[data-follow-selected-groups]")?.addEventListener("click", () => {
-    if (missingScenarioGroups.length) {
-      showToast("Escolha um cenário para contratação em cada grupo selecionado antes de avançar.", "warning");
-      return;
-    }
-    const selectedGroups = items.map((item) => {
-      const groupId = String(item.grupo || item.grupo_id || "");
-      return { ...item, quota_count: Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1))), selected_scenario_id: investorState.selectedScenarioIds.get(groupId) };
-    });
-    const studySnapshot = {
-      schema: "motor360-selection/v2",
-      capturedAt: new Date().toISOString(),
-      groups: JSON.parse(JSON.stringify(selectedGroups)),
-    };
-    const highlighted = studySnapshot.groups[0];
-    currentStudy = {
-      groupId: String(highlighted?.grupo || highlighted?.grupo_id || ""),
-      viabilityItem: highlighted,
-      payload: collectClientProfile(),
-      group: studySnapshot.groups[0],
-      cenario: (highlighted?.cenarios || []).find((scenario) => scenario.id === highlighted?.selected_scenario_id) || null,
-      templateCampos: collectStudyOperatorFields(),
-      savedStudyId: null,
-      proposalId: null,
-      selectedGroups: studySnapshot.groups,
-      studySnapshot,
-      motor360AuditId: investorState.result?.audit_id || null,
-      previewAuditUrl: null,
-    };
-    persistMotor360Selection();
-    persistFinancialStudyDraft();
-    activateScreen("estudo");
-    showToast("Composição validada. Revise o estudo e abra a prévia do PDF quando estiver pronto.", "success");
-  });
+  results.innerHTML = items.length ? `${renderSelectedGroupsCartSummary(items)}<div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div>` : "";
 }
 
 const FINANCIAL_STUDY_SECTIONS_KEY = "crediclass.financialStudy.sections";
-const FINANCIAL_STUDY_DRAFT_KEY = "crediclass.financialStudy.draft";
 let financialStudyRenderToken = 0;
-
-function persistFinancialStudyDraft() {
-  if (currentStudy) localStorage.setItem(FINANCIAL_STUDY_DRAFT_KEY, JSON.stringify(currentStudy));
-}
-
-function restoreFinancialStudyDraft() {
-  try {
-    const draft = JSON.parse(localStorage.getItem(FINANCIAL_STUDY_DRAFT_KEY) || "null");
-    return draft?.groupId && Array.isArray(draft.selectedGroups) ? draft : null;
-  } catch {
-    return null;
-  }
-}
 
 function financialStudyProfile() {
   try {
@@ -2574,7 +2510,7 @@ function financialStudyGroupCard(item, assemblyData, generatedAt, assemblyError 
     ["Taxa", rate == null ? "Não informada" : formatPercent(rate)],
     ["Venc.", dueDay ? String(dueDay) : "-"],
   ];
-  const scenarioColumn = (title, scenario) => `<section class="financial-study-group-scenario"><header><strong>${title}</strong></header><div class="financial-study-group-scenario-grid"><div class="is-primary"><span>Crédito líquido</span><b>${scenario.credito_liquido_projetado == null ? "Não disponível" : formatMoney(scale(scenario.credito_liquido_projetado))}</b></div><div><span>Parcela inicial</span><b>${scenario.parcela_inicial == null ? "Não calculada" : formatMoney(scale(scenario.parcela_inicial))}</b></div><div><span>Pós-contemplação</span><b>${scenario.parcela_pos_contemplacao == null ? "Não calculada" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</b></div><div><span>Saldo devedor</span><b>${scenario.saldo_devedor == null ? "Não calculado" : formatMoney(scale(scenario.saldo_devedor))}</b></div></div></section>`;
+  const scenarioColumn = (title, scenario) => `<section class="financial-study-group-scenario"><header><strong>${title}</strong></header><div class="financial-study-group-scenario-grid"><div class="is-primary"><span>Crédito</span><b>${scenario.credito_contratado == null ? "Não disponível" : formatMoney(scale(scenario.credito_contratado))}</b></div><div><span>Parcela inicial</span><b>${scenario.parcela_inicial == null ? "Não calculada" : formatMoney(scale(scenario.parcela_inicial))}</b></div><div><span>Pós-contemplação</span><b>${scenario.parcela_pos_contemplacao == null ? "Não calculada" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</b></div><div><span>Saldo devedor</span><b>${scenario.saldo_devedor == null ? "Não calculado" : formatMoney(scale(scenario.saldo_devedor))}</b></div></div></section>`;
   return `<article class="financial-study-group-card">
     <header class="financial-study-group-header"><div><strong>Grupo ${escapeHtml(groupId)}</strong><span>${escapeHtml(item.administradora || "-")} · ${quotas} ${quotas === 1 ? "cota" : "cotas"}</span></div><span class="financial-study-classification">${escapeHtml(financialStudyStrategyLabel(item.best_contemplation_strategy))}</span></header>
     <div class="financial-study-group-metrics">${summaryMetrics.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("")}</div>
@@ -2602,9 +2538,9 @@ function financialStudyPortfolioSummary(items) {
     const withEmbedded = financialStudyScenario(item, "with_embedded");
     totals.quotas += quotas;
     totals.maxCredit += Number(item.credito_maximo || 0) * quotas;
-    totals.withoutCredit += Number(without.credito_liquido_projetado || 0) * quotas;
+    totals.withoutCredit += Number(without.credito_contratado || 0) * quotas;
     totals.withoutInstallment += Number(without.parcela_inicial || 0) * quotas;
-    totals.withCredit += Number(withEmbedded.credito_liquido_projetado || 0) * quotas;
+    totals.withCredit += Number(withEmbedded.credito_contratado || 0) * quotas;
     totals.withInstallment += Number(withEmbedded.parcela_inicial || 0) * quotas;
   });
   return `<section class="financial-study-summary-strip"><div><span>Seleção</span><strong>${items.length} grupo(s) · ${totals.quotas} cota(s)</strong></div><div><span>Crédito máximo combinado</span><strong>${formatMoney(totals.maxCredit)}</strong></div><div><span>Sem embutido</span><strong>${formatMoney(totals.withoutCredit)}</strong><small>Parcela inicial ${formatMoney(totals.withoutInstallment)}</small></div><div><span>Com embutido</span><strong>${formatMoney(totals.withCredit)}</strong><small>Parcela inicial ${formatMoney(totals.withInstallment)}</small></div></section>`;
@@ -2652,8 +2588,6 @@ async function financialStudyAssemblyData() {
   return data;
 }
 
-// Agenda de contratacao e assembleias
-// Agenda de contratação e assembleias
 function financialStudyAssemblyAgenda(data, administrators, generatedAt) {
   const wanted = new Set(administrators.map(financialStudyComparable));
   const start = new Date(generatedAt);
@@ -2755,14 +2689,14 @@ function financialStudyProfileMatrix(items) {
 }
 
 async function renderFinancialStudyScreen() {
-  if (!currentStudy) currentStudy = restoreFinancialStudyDraft();
   const renderToken = ++financialStudyRenderToken;
   const screen = document.getElementById("screen-estudo");
   if (!screen) return;
-  const items = currentStudy?.studySnapshot?.groups?.length ? currentStudy.studySnapshot.groups : (currentStudy?.selectedGroups?.length ? currentStudy.selectedGroups : selectedMotor360Items());
+  const items = selectedMotor360Items();
   const profile = financialStudyProfile();
   const preferences = financialStudySectionPreferences();
   if (!items.length) {
+    currentStudy = null;
     screen.innerHTML = `<div class="content-card"><div class="placeholder-card compact-placeholder"><span class="state-badge">Aguardando grupos</span><h2>Estudo Financeiro</h2><p>Selecione ao menos um grupo no Motor 360 para gerar o estudo.</p><button class="btn btn-primary" type="button" data-study-back>Voltar ao Motor 360</button></div></div>`;
     screen.querySelector("[data-study-back]")?.addEventListener("click", () => activateScreen("motor360"));
     return;
@@ -2779,9 +2713,6 @@ async function renderFinancialStudyScreen() {
       templateCampos: collectStudyOperatorFields(),
       savedStudyId: null,
       proposalId: null,
-      selectedGroups: items.map((item) => ({ ...item, quota_count: Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1))) })),
-      motor360AuditId: investorState.result?.audit_id || null,
-      previewAuditUrl: null,
     };
   } else {
     currentStudy.payload = collectClientProfile();
@@ -2816,7 +2747,7 @@ async function renderFinancialStudyScreen() {
   if (renderToken !== financialStudyRenderToken) return;
   screen.removeAttribute("aria-busy");
   screen.innerHTML = `<div class="financial-study-page">
-    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Documento dinamico criado com os dados disponiveis no perfil e nos grupos selecionados.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-primary" type="button" data-study-preview>Abrir previa do PDF</button></div></div>
+    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Documento dinâmico criado com os dados disponíveis no perfil e nos grupos selecionados.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-outline-primary" type="button" data-study-generate>Gerar Estudo</button><button class="btn btn-primary" type="button" data-study-print>Imprimir / Salvar PDF</button></div></div>
     <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
     <article class="financial-study-document">
       <header class="financial-study-cover"><div class="financial-study-cover-brand"><span class="financial-study-kicker">CREDICLASS</span><h2>Estudo Financeiro</h2><p>Comparativo dos grupos selecionados para apoiar uma decisão clara e auditável.</p></div><dl><div><dt>Nome do cliente</dt><dd id="financialStudyHeaderClient">${escapeHtml(clientName)}</dd></div><div><dt>Data do estudo</dt><dd id="financialStudyHeaderDate">${escapeHtml(issueDate)}</dd></div><div><dt>Número do estudo</dt><dd id="financialStudyHeaderNumber">${escapeHtml(proposalId)}</dd></div></dl></header>
@@ -2827,17 +2758,11 @@ async function renderFinancialStudyScreen() {
       <section class="financial-study-section${sectionClass("grupos")}" data-study-content="grupos"><div class="financial-study-section-heading"><span>03</span><div><h3>Comparativo dos grupos</h3><p>Dados financeiros e agenda de assembleia reunidos em cada grupo.</p></div></div>${financialStudyGroupCards(items, assemblyData, generatedAt, assemblyError)}<p class="financial-study-table-note">Taxas aparecem somente quando registradas na base. A ordem reproduz a seleção atual do Motor 360.</p></section>
       <footer class="financial-study-footer"><span>Crediclass · Estudo Financeiro</span><span>${escapeHtml(proposalId)} · versão ${escapeHtml(systemVersion)}</span></footer>
     </article>
-    <section class="financial-study-audit no-print"><div><span>Rastreabilidade</span><h3>Auditoria da geração do PDF</h3><p>Disponível após gerar a prévia. O JSON contém o snapshot do Motor 360, grupos selecionados e runtime usado.</p></div><button class="btn btn-outline-secondary" type="button" data-study-pdf-audit disabled>Ver auditoria JSON</button></section>
   </div>`;
-  screen.querySelector("[data-study-preview]")?.addEventListener("click", () => previewStudyPdf().catch(() => showToast("Nao foi possivel gerar a previa do PDF.", "danger")));
+  screen.querySelector("[data-study-print]")?.addEventListener("click", () => {
+    exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
+  });
   screen.querySelector("[data-study-customize]")?.addEventListener("click", () => screen.querySelector("[data-study-customizer-panel]")?.classList.toggle("d-none"));
-  const studyAuditButton = screen.querySelector("[data-study-pdf-audit]");
-  if (studyAuditButton) {
-    studyAuditButton.disabled = !currentStudy?.previewAuditUrl;
-    studyAuditButton.addEventListener("click", () => {
-      if (currentStudy?.previewAuditUrl) window.open(currentStudy.previewAuditUrl, "_blank", "noopener");
-    });
-  }
   screen.querySelector("[data-study-generate]")?.addEventListener("click", async () => {
     const button = screen.querySelector("[data-study-generate]");
     if (button) {
@@ -2874,10 +2799,20 @@ async function renderFinancialStudyScreen() {
 
 function persistMotor360Selection() {
   localStorage.setItem("crediclass.motor360.selectedGroups", JSON.stringify([...investorState.selectedGroupIds]));
+  localStorage.setItem("crediclass.motor360.selectedScenarios", JSON.stringify(Object.fromEntries(investorState.selectedScenarioIds)));
   localStorage.setItem("crediclass.motor360.quotaCounts", JSON.stringify(Object.fromEntries(investorState.quotaCounts)));
   localStorage.setItem("crediclass.motor360.selectedGroupData", JSON.stringify(Object.fromEntries(investorState.selectedGroupData)));
-  localStorage.setItem("crediclass.motor360.selectedScenarios", JSON.stringify(Object.fromEntries(investorState.selectedScenarioIds)));
   localStorage.setItem("crediclass.motor360.administrator", investorState.administrator || "");
+}
+
+function selectedScenarioIdsForGroup(groupId) {
+  const value = investorState.selectedScenarioIds.get(String(groupId));
+  return new Set(Array.isArray(value) ? value : []);
+}
+
+function selectedScenariosForItem(item) {
+  const ids = selectedScenarioIdsForGroup(item?.grupo || item?.grupo_id || "");
+  return (item?.cenarios || []).filter((scenario) => ids.has(scenario.id));
 }
 
 function updateMotor360SelectionSummary() {
@@ -3133,7 +3068,6 @@ function clearMotor360GroupSelection() {
   investorState.selectedGroupIds.clear();
   investorState.quotaCounts.clear();
   investorState.selectedGroupData.clear();
-  investorState.selectedScenarioIds.clear();
 }
 
 function syncMotor360AdministratorFilter(sourceItems) {
@@ -3166,7 +3100,6 @@ function syncMotor360AdministratorFilter(sourceItems) {
     investorState.selectedGroupIds.delete(id);
     investorState.quotaCounts.delete(id);
     investorState.selectedGroupData.delete(id);
-    investorState.selectedScenarioIds.delete(id);
   });
 
   if (select) {
@@ -3248,7 +3181,21 @@ function renderInvestorAnalysis(result) {
     ${renderMotor360Audit(investorState.audit)}
     <div class="motor360-selection-toolbar motor360-selection-toolbar-final"><strong>Próxima etapa</strong><span id="motor360SelectionSummary">${investorState.selectedGroupIds.size} grupo(s) selecionado(s) para a próxima etapa</span><button class="btn btn-primary btn-sm" type="button" data-screen-jump="grupos-selecionados">Ver grupos selecionados</button></div>
   `;
+  results.querySelectorAll(".motor360-scenario-card").forEach((card) => {
+    const groupId = card.closest(".motor360-group-card")?.querySelector(".motor360-group-select-input")?.dataset.groupId;
+    const title = card.querySelector(".motor360-scenario-title strong")?.textContent || "";
+    const scenarioId = title.includes("com lance") ? "with_embedded" : "without_embedded";
+    card.querySelector(".motor360-scenario-title")?.insertAdjacentHTML("beforeend", `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""}> Escolher para contratação</label>`);
+  });
   results.querySelectorAll("[data-screen-jump]").forEach((button) => button.addEventListener("click", () => activateScreen(button.dataset.screenJump)));
+  results.querySelectorAll(".motor360-scenario-select-input").forEach((input) => input.addEventListener("change", (event) => {
+    const groupId = String(event.target.dataset.groupId || "");
+    const ids = selectedScenarioIdsForGroup(groupId);
+    event.target.checked ? ids.add(event.target.dataset.scenarioId) : ids.delete(event.target.dataset.scenarioId);
+    investorState.selectedScenarioIds.set(groupId, [...ids]);
+    persistMotor360Selection();
+    renderSelectedGroupsScreen();
+  }));
   results.querySelectorAll("[data-group-anchor]").forEach((button) => button.addEventListener("click", () => focusMotor360Group(button.dataset.groupAnchor)));
   results.querySelectorAll("[data-floating-summary-toggle]").forEach((button) => button.addEventListener("click", () => {
     investorState.floatingSummaryMinimized = !investorState.floatingSummaryMinimized;
@@ -3273,9 +3220,9 @@ function renderInvestorAnalysis(result) {
       if (!investorState.quotaCounts.has(groupId)) investorState.quotaCounts.set(groupId, 1);
     } else {
       investorState.selectedGroupIds.delete(groupId);
+      investorState.selectedScenarioIds.delete(groupId);
       investorState.quotaCounts.delete(groupId);
       investorState.selectedGroupData.delete(groupId);
-      investorState.selectedScenarioIds.delete(groupId);
     }
     persistMotor360Selection();
     renderInvestorAnalysis(investorState.result);
@@ -4168,56 +4115,6 @@ async function saveCurrentStudy(options = {}) {
   return result;
 }
 
-function buildStudyPreviewPayload() {
-  if (!currentStudy || !currentStudy.groupId) {
-    throw new Error("Abra um estudo antes de gerar a previa.");
-  }
-  return {
-    cliente: {
-      nome: currentStudy.payload.nome || "Cliente em estudo",
-      nome_conjuge: currentStudy.payload.nome_conjuge || "",
-      tipo_contratacao: currentStudy.payload.tipo_contratacao,
-      titulares: currentStudy.payload.titulares,
-      credito_desejado: currentStudy.payload.credito_desejado,
-      objetivo: currentStudy.payload.objetivo,
-      prazo_desejado: currentStudy.payload.prazo_desejado,
-      lance_proprio: currentStudy.payload.lance_proprio,
-      fgts: currentStudy.payload.fgts,
-      renda_total: currentStudy.payload.renda_total,
-      parcela_desejada: currentStudy.payload.parcela_desejada,
-      data_nascimento: currentStudy.payload.data_nascimento,
-      data_nascimento_conjuge: currentStudy.payload.data_nascimento_conjuge,
-      estado_bem: currentStudy.payload.estado_bem || "",
-    },
-    grupo_id: currentStudy.groupId,
-    grupo: currentStudy.studySnapshot?.groups?.[0] || currentStudy.group || undefined,
-    cenario: currentStudy.cenario,
-    template_campos: collectStudyOperatorFields(),
-    motor360_audit_id: currentStudy.motor360AuditId || investorState.result?.audit_id || null,
-    grupos_selecionados: currentStudy.studySnapshot?.groups || currentStudy.selectedGroups || [],
-    study_snapshot: currentStudy.studySnapshot || null,
-  };
-}
-
-async function previewStudyPdf() {
-  const result = await apiPost("/estudos/preview-pdf", buildStudyPreviewPayload());
-  if (currentStudy) {
-    currentStudy.previewAuditUrl = result.audit_url || null;
-    const auditButton = document.querySelector("[data-study-pdf-audit]");
-    if (auditButton) auditButton.disabled = !currentStudy.previewAuditUrl;
-  }
-  const dialog = document.createElement("div");
-  dialog.className = "modal fade";
-  dialog.tabIndex = -1;
-  dialog.innerHTML = '<div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><div><h2 class="modal-title h5">Previa do PDF do Estudo Financeiro</h2><p class="modal-subtitle">Revise o documento antes de salvar ou imprimir.</p></div><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div><div class="modal-body p-0"><iframe title="Previa do PDF do estudo financeiro" style="width:100%;height:72vh;border:0" src="' + result.download_url + '#toolbar=1&navpanes=0&view=FitH"></iframe></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-preview-save>Salvar estudo</button><button type="button" class="btn btn-primary" data-preview-print>Imprimir</button></div></div></div>';
-  document.body.append(dialog);
-  const modal = bootstrap.Modal.getOrCreateInstance(dialog);
-  dialog.querySelector("[data-preview-save]").addEventListener("click", () => saveCurrentStudy().catch(() => showToast("Nao foi possivel salvar o estudo.", "danger")));
-  dialog.querySelector("[data-preview-print]").addEventListener("click", () => window.open(result.download_url, "_blank", "noopener"));
-  dialog.addEventListener("hidden.bs.modal", () => dialog.remove(), { once: true });
-  modal.show();
-}
-
 async function exportStudyPdf(studyId) {
   let targetStudyId = studyId;
   if (!targetStudyId && currentStudy) {
@@ -4964,14 +4861,6 @@ async function restartSystemSync() {
 
 async function loadHealth() {
   const health = await apiGet("/health");
-  if (health.version && health.version !== APP_BUILD_VERSION) {
-    const reloadKey = `crediclass.asset-refresh.${health.version}`;
-    if (!sessionStorage.getItem(reloadKey)) {
-      sessionStorage.setItem(reloadKey, "1");
-      window.location.reload();
-      return;
-    }
-  }
   document.getElementById("environmentLabel").textContent = health.environment;
   document.getElementById("systemVersionLabel").textContent = health.version;
 }
@@ -5441,7 +5330,7 @@ document.getElementById("studyStrategyTabs").addEventListener("click", (event) =
   renderStudyStrategyTable();
 });
 document.getElementById("studyPdfBtn").addEventListener("click", () => {
-  previewStudyPdf().catch(() => showToast("Nao foi possivel gerar a previa do PDF.", "danger"));
+  exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
 });
 document.getElementById("studyShareBtn").addEventListener("click", () => {
   shareCurrentStudy().catch(() => showToast("Nao foi possivel compartilhar o estudo.", "danger"));
