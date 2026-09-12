@@ -2759,7 +2759,9 @@ async function renderFinancialStudyScreen() {
       <footer class="financial-study-footer"><span>Crediclass · Estudo Financeiro</span><span>${escapeHtml(proposalId)} · versão ${escapeHtml(systemVersion)}</span></footer>
     </article>
   </div>`;
-  screen.querySelector("[data-study-print]")?.addEventListener("click", () => window.print());
+  screen.querySelector("[data-study-print]")?.addEventListener("click", () => {
+    exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
+  });
   screen.querySelector("[data-study-customize]")?.addEventListener("click", () => screen.querySelector("[data-study-customizer-panel]")?.classList.toggle("d-none"));
   screen.querySelector("[data-study-generate]")?.addEventListener("click", async () => {
     const button = screen.querySelector("[data-study-generate]");
