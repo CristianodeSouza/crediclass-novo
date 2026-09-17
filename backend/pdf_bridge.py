@@ -324,6 +324,20 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
         )
     alerts = [str(item) for item in financeiro.get("alertas", []) if str(item).strip()]
     recommended_admin = str(grupo.get("administradora") or "-")
+    titulares = cliente.get("titulares") or {}
+    people = titulares.get("pessoas_fisicas") or titulares.get("pessoas") or []
+    profile_people = [
+        {
+            "papel": person.get("papel") or ("Titular" if index == 0 else "Conjuge" if index == 1 else f"Participante {index + 1}"),
+            "nome": str(person.get("nome") or ""),
+            "nascimento": str(person.get("nascimento") or ""),
+            "renda": _format_money(person.get("renda")),
+            "lance_fgts": _format_money(person.get("lance_fgts")),
+            "lance_recursos_proprios": _format_money(person.get("lance_recursos_proprios")),
+        }
+        for index, person in enumerate(people)
+        if isinstance(person, dict)
+    ]
     return {
         "meta": {
             "studyId": str(estudo.get("estudo_id") or "-"),
@@ -343,6 +357,7 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
             "income": _format_money(cliente.get("renda_total")),
             "ownResources": _format_money(cliente.get("lance_proprio")),
             "fgts": _format_money(cliente.get("fgts")),
+            "people": profile_people,
         },
         "group": {
             "administrator": recommended_admin,

@@ -107,6 +107,11 @@ const styles = StyleSheet.create({
     fontWeight: 700,
     color: "#22313b",
   },
+  profilePeopleBlock: { marginTop: 8, borderWidth: 1, borderColor: "#d9e0e5", padding: 7 },
+  profilePeopleTitle: { fontSize: 7.2, fontWeight: 700, color: "#65747e", marginBottom: 4 },
+  profilePerson: { borderTopWidth: 1, borderTopColor: "#e5eaee", paddingTop: 4, marginTop: 4 },
+  profilePersonName: { fontSize: 8.3, fontWeight: 700, marginBottom: 2 },
+  profilePersonDetails: { fontSize: 7.4, color: "#52616b" },
   table: {
     display: "table",
     width: "100%",
@@ -321,6 +326,7 @@ function Table({ columns, rows, compact = false }) {
 }
 
 function IntroSection({ payload }) {
+  const people = payload.client.people || [];
   return React.createElement(
     Section,
     { title: "ESTUDO FINANCEIRO" },
@@ -353,6 +359,17 @@ function IntroSection({ payload }) {
         ),
       ),
     ),
+    people.length ? React.createElement(
+      View,
+      { style: styles.profilePeopleBlock },
+      React.createElement(Text, { style: styles.profilePeopleTitle }, "PARTICIPANTES"),
+      ...people.map((person, index) => React.createElement(
+        View,
+        { key: `person-${index}`, style: styles.profilePerson },
+        React.createElement(Text, { style: styles.profilePersonName }, `${text(person.papel || `Participante ${index + 1}`)} - ${text(person.nome || "Nao informado")}`),
+        React.createElement(Text, { style: styles.profilePersonDetails }, `Nascimento: ${text(person.nascimento || "Nao informado")} | Renda: ${text(person.renda || "R$ 0,00")} | FGTS: ${text(person.lance_fgts || "R$ 0,00")} | Recursos proprios: ${text(person.lance_recursos_proprios || "R$ 0,00")}`),
+      )),
+    ) : null,
   );
 }
 
