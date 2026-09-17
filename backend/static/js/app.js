@@ -2078,7 +2078,7 @@ function motor360HistoricalAverages(item) {
       ? new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(value)
       : "-";
   };
-  return `<div class="motor360-history-averages" aria-label="Média de contemplações"><strong>Média de contemplações:</strong><span>Urgente: ${formatAverage("urgent")}</span><span>Rápido: ${formatAverage("fast")}</span><span>Moderado: ${formatAverage("moderate")}</span></div>`;
+  return `<div class="motor360-history-averages" aria-label="Média de contemplações"><strong>Média de contemplações:</strong><span>Urgente (média 3m): ${formatAverage("urgent")}</span><span>Rápido (média 6m): ${formatAverage("fast")}</span><span>Moderado (média 12m): ${formatAverage("moderate")}</span></div>`;
 }
 
 function motor360HistoryTrigger(item) {
@@ -2226,6 +2226,7 @@ function renderSelectedGroupComparisonColumn(item, index) {
     return `<article class="selected-comparison-scenario"><div class="selected-comparison-scenario-title"><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><span>${scenario.credit_compatible ? "Crédito OK" : "Fora da faixa"}</span></div><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado))}</dd></div><div><dt>Lance total</dt><dd>${item.composition_candidate ? "Rateado no resumo" : formatMoney(scale(scenario.lance_total_cenario))}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>${item.composition_candidate || scenario.parcela_pos_contemplacao == null ? "Pendente da distribuição do lance" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</dd></div></dl><small>Prazo após lance: ${item.composition_candidate ? "validado na composição" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
   }).join("");
   const profiles = byScenario.without_embedded?.perfis_contemplacao || byScenario.with_embedded?.perfis_contemplacao || [];
+  const historicalAverages = motor360HistoricalAverages(item);
   const profileRows = profiles.map((profile) => {
     const values = ["without_embedded", "with_embedded"].map((scenarioId) => {
       const value = (byScenario[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profile.id);
@@ -2235,7 +2236,7 @@ function renderSelectedGroupComparisonColumn(item, index) {
     }).join("");
     return `<article class="selected-comparison-profile"><strong>${escapeHtml(profile.label)}</strong>${values}</article>`;
   }).join("");
-  return `<article class="selected-comparison-column"><header><div class="selected-group-number">${index + 1}</div><div><h3>Grupo ${escapeHtml(groupId)}</h3><p>${escapeHtml(item.administradora || "-")} · ${quotaCount} ${quotaCount === 1 ? "cota" : "cotas"}</p></div></header><div class="selected-comparison-key-metrics"><span><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></span><span><small>Crédito máximo</small><b>${formatMoney(scale(item.credito_maximo))}</b></span><span><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></span></div><section><h4>Cenários financeiros</h4><div class="selected-comparison-scenarios">${scenarioRows}</div></section><section><h4>Perfis de contemplação</h4><div class="selected-comparison-profiles">${profileRows || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section></article>`;
+  return `<article class="selected-comparison-column"><header><div class="selected-group-number">${index + 1}</div><div><h3>Grupo ${escapeHtml(groupId)}</h3><p>${escapeHtml(item.administradora || "-")} · ${quotaCount} ${quotaCount === 1 ? "cota" : "cotas"}</p></div></header><div class="selected-comparison-key-metrics"><span><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></span><span><small>Crédito máximo</small><b>${formatMoney(scale(item.credito_maximo))}</b></span><span><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></span></div>${historicalAverages}<section><h4>Cenários financeiros</h4><div class="selected-comparison-scenarios">${scenarioRows}</div></section><section><h4>Perfis de contemplação</h4><div class="selected-comparison-profiles">${profileRows || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section></article>`;
 }
 
 function renderSelectedGroupsCartSummary(items) {
