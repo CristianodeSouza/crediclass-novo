@@ -64,16 +64,24 @@ def _parse_form(text: str) -> dict:
 
 
 async def fetch_opportunity_notes(opportunity_id: str) -> dict:
+    opportunity_id = str(opportunity_id).strip()
+    if not opportunity_id.isdigit():
+        raise ValueError("O ID da oportunidade deve ser numérico.")
     token = os.getenv("PIPERUN_API_KEY", "").strip()
     if not token:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
     async with httpx.AsyncClient(timeout=20) as client:
         response = await client.get(
             f"{PIPERUN_BASE_URL}/notes",
-            params={"cursor": '""', "deal_id": opportunity_id},
+            params={"cursor": "", "deal_id": int(opportunity_id)},
             headers={"token": token, "accept": "application/json"},
         )
-        response.raise_for_status()
+        if response.status_code in (401, 403):
+            raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar notas.")
+        if response.status_code == 404:
+            raise LookupError("Oportunidade não encontrada na PipeRun.")
+        if response.status_code >= 400:
+            raise RuntimeError(f"PipeRun recusou a consulta (HTTP {response.status_code}).")
     notes = response.json().get("data", [])
     form_note = next((note for note in notes if "DADOS DO FORMULÁRIO" in (note.get("text") or "")), None)
     return {

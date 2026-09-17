@@ -45,6 +45,12 @@ app = FastAPI(title="Crediclass Dashboard V3")
 async def buscar_oportunidade_piperun(opportunity_id: str):
     try:
         return await fetch_opportunity_notes(opportunity_id)
+    except ValueError as error:
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
+    except LookupError as error:
+        return JSONResponse(status_code=404, content={"success": False, "error": str(error)})
+    except RuntimeError as error:
+        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
     except Exception as error:
         logger.exception("Falha ao importar oportunidade PipeRun %s", opportunity_id)
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
