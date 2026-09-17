@@ -3629,7 +3629,11 @@ function updateClientProfileTotals() {
   const lanceManual = toNumber(document.getElementById("clientProfileLanceProprio").value);
   // O lance próprio vem do campo global da operação quando não foi
   // informado individualmente nos cartões dos participantes.
-  const lance = Number(holderSummary.lance_recursos_proprios || 0) || lanceManual;
+  const lanceParticipantes = Number(holderSummary.lance_recursos_proprios || 0);
+  const lance = lanceParticipantes > 0 ? lanceParticipantes : lanceManual;
+  if (lanceParticipantes > 0) {
+    setMoneyInputValue("clientProfileLanceProprio", lanceParticipantes);
+  }
   const renda = holderSummary.renda_total;
   const objectiveRule = clientObjectiveRule(document.getElementById("clientProfileObjetivo").value);
   const conceito = objectiveRule.conceito || clientProfileConcept(objectiveRule.prazo);
