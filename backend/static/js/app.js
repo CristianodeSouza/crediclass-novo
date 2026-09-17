@@ -4161,6 +4161,7 @@ async function saveCurrentStudy(options = {}) {
       fgts: currentStudy.payload.fgts,
       renda_total: currentStudy.payload.renda_total,
       parcela_desejada: currentStudy.payload.parcela_desejada,
+      crm_oportunidade_id: currentStudy.payload.crm_oportunidade_id || "",
       data_nascimento: currentStudy.payload.data_nascimento,
       data_nascimento_conjuge: currentStudy.payload.data_nascimento_conjuge,
       estado_bem: currentStudy.payload.estado_bem || "",
