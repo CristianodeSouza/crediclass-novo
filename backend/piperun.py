@@ -71,22 +71,40 @@ async def fetch_opportunity_notes(opportunity_id: str) -> dict:
     if not token:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
     async with httpx.AsyncClient(timeout=20) as client:
-        response = await client.get(
+        detail_response = await client.get(
+            f"{PIPERUN_BASE_URL}/deals/{int(opportunity_id)}",
+            params={"with": "persons,companies,customForms,users"},
+            headers={"token": token, "accept": "application/json"},
+        )
+        if detail_response.status_code in (401, 403):
+            raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar oportunidades.")
+        if detail_response.status_code == 404:
+            raise LookupError("Oportunidade não encontrada na PipeRun.")
+        if detail_response.status_code >= 400:
+            raise RuntimeError(f"PipeRun recusou a oportunidade (HTTP {detail_response.status_code}).")
+        notes_response = await client.get(
             f"{PIPERUN_BASE_URL}/notes",
             params={"cursor": "", "deal_id": int(opportunity_id)},
             headers={"token": token, "accept": "application/json"},
         )
-        if response.status_code in (401, 403):
+        if notes_response.status_code in (401, 403):
             raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar notas.")
-        if response.status_code == 404:
-            raise LookupError("Oportunidade não encontrada na PipeRun.")
-        if response.status_code >= 400:
-            raise RuntimeError(f"PipeRun recusou a consulta (HTTP {response.status_code}).")
-    notes = response.json().get("data", [])
+        if notes_response.status_code >= 400 and notes_response.status_code != 404:
+            raise RuntimeError(f"PipeRun recusou as notas (HTTP {notes_response.status_code}).")
+    detail = detail_response.json().get("data", detail_response.json())
+    notes = notes_response.json().get("data", []) if notes_response.status_code != 404 else []
     form_note = next((note for note in notes if "DADOS DO FORMULÁRIO" in (note.get("text") or "")), None)
+    dados = _parse_form(form_note.get("text", "")) if form_note else {}
+    person = detail.get("person") or detail.get("persons") or {}
+    if isinstance(person, list):
+        person = person[0] if person else {}
+    dados.setdefault("nome", person.get("name", ""))
+    dados.setdefault("email", person.get("email", ""))
+    dados.setdefault("celular", person.get("phone", "") or person.get("mobile", ""))
     return {
         "crm_oportunidade_id": str(opportunity_id),
-        "dados": _parse_form(form_note.get("text", "")) if form_note else {},
+        "dados": {key: value for key, value in dados.items() if value not in (None, "")},
         "nota_id": form_note.get("id") if form_note else None,
         "encontrado": bool(form_note),
+        "oportunidade": detail,
     }
