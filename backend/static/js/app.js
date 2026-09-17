@@ -4139,7 +4139,22 @@ async function exportStudyPdf(studyId) {
     showToast("Salve ou selecione um estudo antes de gerar o PDF.", "warning");
     return;
   }
-  const result = await apiPost(`/estudos/${encodeURIComponent(targetStudyId)}/exportar-pdf`, {});
+  let result;
+  let firstError = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      result = await apiPost(
+        `/estudos/${encodeURIComponent(targetStudyId)}/exportar-pdf`,
+        {},
+        { suppressErrorToast: attempt === 0 },
+      );
+      break;
+    } catch (error) {
+      firstError ||= error;
+      if (attempt === 0) await new Promise((resolve) => window.setTimeout(resolve, 800));
+    }
+  }
+  if (!result) throw firstError || new Error("Nao foi possivel gerar o PDF.");
   showToast("PDF gerado.", "success");
   window.open(result.download_url, "_blank", "noopener");
 }

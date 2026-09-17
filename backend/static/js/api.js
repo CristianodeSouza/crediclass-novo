@@ -1,7 +1,7 @@
 const API_BASE = "/api";
 
 async function apiRequest(path, options = {}) {
-  const { timeoutMs = 0, ...fetchOptions } = options;
+  const { timeoutMs = 0, suppressErrorToast = false, ...fetchOptions } = options;
   const controller = timeoutMs > 0 && !fetchOptions.signal ? new AbortController() : null;
   const timeoutId = controller ? window.setTimeout(() => controller.abort(), timeoutMs) : null;
   const response = await fetch(`${API_BASE}${path}`, {
@@ -29,7 +29,7 @@ async function apiRequest(path, options = {}) {
     if (response.status === 401 && typeof showLogin === "function") {
       showLogin(message);
     }
-    showToast(message, "danger");
+    if (!suppressErrorToast) showToast(message, "danger");
     throw new Error(message);
   }
 
@@ -40,10 +40,11 @@ function apiGet(path, options = {}) {
   return apiRequest(path, options);
 }
 
-function apiPost(path, payload) {
+function apiPost(path, payload, options = {}) {
   return apiRequest(path, {
     method: "POST",
     body: JSON.stringify(payload || {}),
+    ...options,
   });
 }
 
