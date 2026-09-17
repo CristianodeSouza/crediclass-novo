@@ -2219,12 +2219,13 @@ function renderSelectedGroupComparisonColumn(item, index) {
   const scale = (value) => value === null || value === undefined ? value : Number(value) * quotaCount;
   const scenarios = Array.isArray(item.cenarios) ? item.cenarios : [];
   const byScenario = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
-  const scenarioRows = ["without_embedded", "with_embedded"].map((scenarioId) => {
+  let scenarioRows = ["without_embedded", "with_embedded"].map((scenarioId) => {
     const scenario = byScenario[scenarioId];
     if (!scenario) return "";
     const embedded = scenarioId === "with_embedded";
     return `<article class="selected-comparison-scenario"><div class="selected-comparison-scenario-title"><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><span>${scenario.credit_compatible ? "Crédito OK" : "Fora da faixa"}</span></div><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado))}</dd></div><div><dt>Lance total</dt><dd>${item.composition_candidate ? "Rateado no resumo" : formatMoney(scale(scenario.lance_total_cenario))}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>${item.composition_candidate || scenario.parcela_pos_contemplacao == null ? "Pendente da distribuição do lance" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</dd></div></dl><small>Prazo após lance: ${item.composition_candidate ? "validado na composição" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
   }).join("");
+  scenarioRows = scenarioRows.replaceAll("</dl>", `${motor360ScenarioSourceMetrics(item)}</dl>`);
   const profiles = byScenario.without_embedded?.perfis_contemplacao || byScenario.with_embedded?.perfis_contemplacao || [];
   const historicalAverages = motor360HistoricalAverages(item);
   const profileRows = profiles.map((profile) => {
@@ -3189,8 +3190,6 @@ function renderInvestorAnalysis(result) {
   `;
   results.querySelectorAll(".motor360-scenario-card").forEach((card) => {
     const groupId = card.closest(".motor360-group-card")?.querySelector(".motor360-group-select-input")?.dataset.groupId;
-    const groupItem = [...(result.items || []), ...(result.credit_items || []), ...(result.composition_items || [])].find((item) => String(item.grupo || item.grupo_id || "") === String(groupId || ""));
-    card.querySelector(".motor360-scenario-grid")?.insertAdjacentHTML("beforeend", motor360ScenarioSourceMetrics(groupItem));
     const title = card.querySelector(".motor360-scenario-title strong")?.textContent || "";
     const scenarioId = title.includes("com lance") ? "with_embedded" : "without_embedded";
     card.querySelector(".motor360-scenario-title")?.insertAdjacentHTML("beforeend", `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""}> Escolher para contratação</label>`);
