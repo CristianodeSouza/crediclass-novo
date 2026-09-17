@@ -27,6 +27,7 @@ from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
 from .pdf_bridge import react_pdf_service_status, render_react_study_pdf
+from .piperun import fetch_opportunity_notes
 from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
 
@@ -38,6 +39,15 @@ FILES_DIR.mkdir(exist_ok=True)
 logger = logging.getLogger("crediclass.api")
 
 app = FastAPI(title="Crediclass Dashboard V3")
+
+
+@app.get("/api/piperun/{opportunity_id}")
+async def buscar_oportunidade_piperun(opportunity_id: str):
+    try:
+        return await fetch_opportunity_notes(opportunity_id)
+    except Exception as error:
+        logger.exception("Falha ao importar oportunidade PipeRun %s", opportunity_id)
+        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
 
 
 class ReleaseStaticFiles(StaticFiles):

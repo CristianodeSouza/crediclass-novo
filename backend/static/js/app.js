@@ -3684,7 +3684,63 @@ function collectClientProfile() {
     tipo_bem: document.getElementById("clientProfileTipoBem").value,
     tipo_bem_explicit: Boolean(document.getElementById("clientProfileTipoBem").value),
     estado_bem: document.getElementById("clientProfileEstadoBem").value,
+    crm_oportunidade_id: document.getElementById("clientProfileCrmOpportunityId")?.value.trim() || "",
   };
+}
+
+function applyImportedCrmData(data, opportunityId) {
+  const current = collectClientProfile();
+  const imported = data || {};
+  const firstHolder = current.titulares?.pessoas_fisicas?.[0] || {};
+  const holder = {
+    ...firstHolder,
+    nome: imported.nome ?? "",
+    nascimento: imported.data_nascimento ?? "",
+    renda: imported.renda_total ?? "",
+    lance_recursos_proprios: imported.lance_proprio ?? "",
+  };
+  const titulares = { ...current.titulares, pessoas_fisicas: [holder, ...(current.titulares?.pessoas_fisicas || []).slice(1)] };
+  const profile = {
+    ...current,
+    nome: imported.nome ?? "",
+    nome_conjuge: "",
+    data_nascimento: imported.data_nascimento ?? "",
+    credito_desejado: imported.credito_desejado ?? "",
+    lance_proprio: imported.lance_proprio ?? "",
+    renda_total: imported.renda_total ?? "",
+    parcela_desejada: imported.parcela_desejada ?? "",
+    tipo_bem: imported.tipo_bem ?? "",
+    titulares,
+    crm_oportunidade_id: String(opportunityId),
+  };
+  renderClientProfileTitulares(profile);
+  setMoneyInputValue("clientProfileCredito", imported.credito_desejado ?? "");
+  setMoneyInputValue("clientProfileParcelaIdeal", imported.parcela_desejada ?? "");
+  setMoneyInputValue("clientProfileLanceProprio", imported.lance_proprio ?? "");
+  setInputValue("clientProfileCrmOpportunityId", opportunityId);
+  updateClientProfileTotals();
+  saveClientProfile({ silent: true });
+}
+
+async function importClientProfileFromCrm() {
+  const input = document.getElementById("clientProfileCrmOpportunityId");
+  const status = document.getElementById("clientProfileCrmStatus");
+  const button = document.getElementById("importClientProfileCrmBtn");
+  const opportunityId = input?.value.trim();
+  if (!opportunityId) {
+    showToast("Informe o ID da oportunidade.", "warning");
+    return;
+  }
+  button.disabled = true;
+  status.textContent = "Consultando PipeRun...";
+  try {
+    const result = await apiGet(`/piperun/${encodeURIComponent(opportunityId)}`);
+    applyImportedCrmData(result.dados, opportunityId);
+    status.textContent = result.encontrado ? "Dados importados. Revise e ajuste se necessário." : "Nenhuma nota de formulário encontrada.";
+    showToast(result.encontrado ? "Dados do CRM importados." : "Oportunidade encontrada, mas sem dados de formulário.", result.encontrado ? "success" : "warning");
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function applyClientProfileToFlow(profile) {
@@ -5252,6 +5308,12 @@ document.getElementById("clientProfileForm").addEventListener("blur", (event) =>
 
 document.getElementById("saveClientProfileBtn").addEventListener("click", () => saveClientProfile());
 document.getElementById("clearClientProfileBtn").addEventListener("click", resetClientProfile);
+document.getElementById("importClientProfileCrmBtn").addEventListener("click", () => {
+  importClientProfileFromCrm().catch(() => {
+    document.getElementById("clientProfileCrmStatus").textContent = "Falha ao consultar o CRM.";
+    showToast("Nao foi possivel importar os dados do CRM.", "danger");
+  });
+});
 document.getElementById("advanceClientProfileBtn").addEventListener("click", advanceClientProfile);
 renderInvestorPreferenceOptions();
 updateInvestorPreferenceSummary();

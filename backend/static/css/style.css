@@ -787,6 +787,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.82rem;
   font-weight: 800;
 }
+.crm-import-toolbar { display: grid; grid-template-columns: auto minmax(180px, 280px) auto minmax(0, 1fr); align-items: center; gap: 8px 12px; margin: 0 0 16px; padding: 12px 14px; border: 1px solid #cbdcf4; border-radius: 8px; background: #f5f9ff; }
+.crm-import-toolbar label { margin: 0; color: var(--brand-navy); font-size: .78rem; font-weight: 800; }
+.crm-import-toolbar .form-control { min-height: 36px; }
+.crm-import-toolbar small { min-width: 0; color: var(--muted); font-size: .72rem; }
+@media (max-width: 700px) { .crm-import-toolbar { grid-template-columns: 1fr; } }
 
 .client-profile-form {
   display: grid;

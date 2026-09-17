@@ -432,6 +432,7 @@ class ViabilidadeResponse(BaseModel):
 
 
 class EstudoCliente(BaseModel):
+    crm_oportunidade_id: str = ""
     nome: str = ""
     nome_conjuge: str = ""
     tipo_contratacao: str = ""
