@@ -42,11 +42,6 @@ def _number(value: str) -> float | None:
     raw = re.sub(r"[^\d,.]", "", str(value or ""))
     if not raw:
         return None
-
-
-def _date_input(value: str) -> str:
-    parts = str(value or "").strip().split("/")
-    return f"{parts[2]}-{parts[1]}-{parts[0]}" if len(parts) == 3 and len(parts[2]) == 4 else str(value or "")
     if "," in raw and "." in raw:
         raw = raw.replace(".", "").replace(",", ".")
     elif "," in raw:
@@ -57,6 +52,11 @@ def _date_input(value: str) -> str:
         return float(raw)
     except ValueError:
         return None
+
+
+def _date_input(value: str) -> str:
+    parts = str(value or "").strip().split("/")
+    return f"{parts[2]}-{parts[1]}-{parts[0]}" if len(parts) == 3 and len(parts[2]) == 4 else str(value or "")
 
 
 def _parse_form(text: str) -> dict:
@@ -94,9 +94,13 @@ def _parse_form(text: str) -> dict:
         result["renda_total"] = sum(float(item.get("renda") or 0) for item in people)
         result["lance_proprio"] = result.get("lance_proprio") or 0
         result["fgts"] = sum(float(item.get("lance_fgts") or 0) for item in people)
+        result["renda_titular"] = people[0].get("renda", 0)
+        result["fgts_titular"] = people[0].get("lance_fgts", 0)
         if len(people) > 1:
             result["nome_conjuge"] = people[1].get("nome", "")
             result["data_nascimento_conjuge"] = people[1].get("nascimento", "")
+            result["renda_conjuge"] = people[1].get("renda", 0)
+            result["fgts_conjuge"] = people[1].get("lance_fgts", 0)
         prazo = str(result.get("prazo_contemplacao", "")).lower()
         perfil = str(result.get("perfil_informado", "")).lower()
         if "13 a 24" in prazo or "conserv" in perfil:
