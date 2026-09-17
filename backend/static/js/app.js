@@ -5340,6 +5340,15 @@ document.querySelector(".user-card")?.addEventListener("click", (event) => {
   sidebar?.classList.toggle("user-menu-open");
 });
 
+document.querySelector(".preliminary-toggle")?.addEventListener("click", (event) => {
+  const button = event.currentTarget;
+  const section = button.closest(".client-preliminary-section");
+  const expanded = section.classList.toggle("is-collapsed") === false;
+  button.setAttribute("aria-expanded", String(expanded));
+  const hint = button.querySelector("small");
+  if (hint) hint.textContent = expanded ? "Ocultar análise" : "Exibir análise";
+});
+
 document.getElementById("saveClientProfileBtn").addEventListener("click", () => saveClientProfile());
 document.getElementById("clearClientProfileBtn").addEventListener("click", resetClientProfile);
 document.getElementById("importClientProfileCrmBtn").addEventListener("click", () => {

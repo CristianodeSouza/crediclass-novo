@@ -6720,6 +6720,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .selected-scenario-choice input { width: 15px; height: 15px; accent-color: var(--success); cursor: pointer; }
 .selected-comparison-scenario-title { flex-wrap: wrap; }
 
+.client-preliminary-section.is-collapsed #clientPreliminaryAnalysis { display: none; }
+.preliminary-toggle { display: inline-flex; align-items: center; gap: 10px; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: 800; cursor: pointer; }
+.preliminary-toggle::after { content: "⌄"; color: var(--primary); font-size: 1.1rem; }
+.preliminary-toggle small { color: var(--muted); font-size: .68rem; font-weight: 600; }
+.client-preliminary-section:not(.is-collapsed) .preliminary-toggle::after { content: "⌃"; }
+
 /* Layout executivo: fluxo no topo e administrativo dentro do menu do usuario. */
 @media (min-width: 901px) {
   .app-shell { display: block; min-height: 100vh; }
