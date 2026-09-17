@@ -3191,6 +3191,8 @@ function renderInvestorAnalysis(result) {
   `;
   results.querySelectorAll(".motor360-scenario-card").forEach((card) => {
     const groupId = card.closest(".motor360-group-card")?.querySelector(".motor360-group-select-input")?.dataset.groupId;
+    const groupItem = [...(result.items || []), ...(result.credit_items || []), ...(result.composition_items || [])].find((item) => String(item.grupo || item.grupo_id || "") === String(groupId || ""));
+    card.querySelector(".motor360-scenario-grid")?.insertAdjacentHTML("beforeend", motor360ScenarioSourceMetrics(groupItem));
     const title = card.querySelector(".motor360-scenario-title strong")?.textContent || "";
     const scenarioId = title.includes("com lance") ? "with_embedded" : "without_embedded";
     card.querySelector(".motor360-scenario-title")?.insertAdjacentHTML("beforeend", `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""}> Escolher para contratação</label>`);
