@@ -2219,7 +2219,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .selected-comparison-guide small { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; }
 .selected-comparison-swatch { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #1d9b59; }
 .selected-comparison-swatch.is-alert { margin-left: 8px; background: var(--brand-orange); }
-.selected-groups-comparison { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(310px, 360px); grid-template-columns: unset; gap: 0; align-items: start; margin-top: 8px; overflow-x: auto; padding: 0 0 10px; border-top: 1px solid #d9e0e2; }
+.selected-groups-comparison { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px; align-items: start; margin-top: 8px; padding: 0 0 10px; border-top: 1px solid #d9e0e2; }
 .selected-comparison-column { min-width: 0; overflow: hidden; border: 0; border-right: 1px solid #d9e0e2; border-radius: 0; background: #fff; box-shadow: none; }
 .selected-comparison-column > header { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 9px; min-height: 54px; padding: 9px 11px; border-bottom: 1px solid #d5dde0; background: #f5f8f8; }
 .selected-comparison-column h3 { margin: 0; color: var(--brand-navy); font-size: 1rem; }
