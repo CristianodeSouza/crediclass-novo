@@ -309,6 +309,9 @@ async function logout() {
 async function initializeDashboardData() {
   if (appBootstrapped) return;
   appBootstrapped = true;
+  // O conteúdo inicial é o Perfil do Cliente; o cabeçalho deve refletir a
+  // mesma tela, em vez de manter os textos estáticos do Mapa de Grupos.
+  activateScreen("perfil");
   loadHealth().catch(() => {
     document.getElementById("environmentLabel").textContent = "indisponivel";
     document.getElementById("systemVersionLabel").textContent = "indisponivel";
