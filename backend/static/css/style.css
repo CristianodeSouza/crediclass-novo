@@ -986,11 +986,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .profile-financial-section {
-  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .profile-capacity-section {
-  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  grid-template-columns: 1fr;
   background: #fbfaf8;
 }
 
