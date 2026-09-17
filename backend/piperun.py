@@ -22,6 +22,8 @@ FIELD_MAP = {
     "Parcela máxima disponível": "parcela_desejada",
     "Qual é a parcela limite que deseja investir?": "parcela_desejada",
     "Qual é o valor máximo para mensalidade?": "parcela_desejada",
+    "Perfil informado": "perfil_informado",
+    "Qual é o prazo desejado de contemplação?": "prazo_contemplacao",
     "Renda Mensal": "renda_total",
     "Data de Nascimento": "data_nascimento",
     "Qual é o tipo do imóvel desejado?": "tipo_bem",
@@ -40,6 +42,11 @@ def _number(value: str) -> float | None:
     raw = re.sub(r"[^\d,.]", "", str(value or ""))
     if not raw:
         return None
+
+
+def _date_input(value: str) -> str:
+    parts = str(value or "").strip().split("/")
+    return f"{parts[2]}-{parts[1]}-{parts[0]}" if len(parts) == 3 and len(parts[2]) == 4 else str(value or "")
     if "," in raw and "." in raw:
         raw = raw.replace(".", "").replace(",", ".")
     elif "," in raw:
@@ -64,7 +71,7 @@ def _parse_form(text: str) -> dict:
             continue
         if person is not None:
             if line.startswith("Data de Nascimento:"):
-                person["nascimento"] = line.split(":", 1)[1].strip()
+                person["nascimento"] = _date_input(line.split(":", 1)[1].strip())
             elif line.startswith("Renda Mensal"):
                 person["renda"] += _number(line.split(":", 1)[1]) or 0
             elif line.startswith("Valor do FGTS"):
@@ -87,6 +94,17 @@ def _parse_form(text: str) -> dict:
         result["renda_total"] = sum(float(item.get("renda") or 0) for item in people)
         result["lance_proprio"] = result.get("lance_proprio") or 0
         result["fgts"] = sum(float(item.get("lance_fgts") or 0) for item in people)
+        if len(people) > 1:
+            result["nome_conjuge"] = people[1].get("nome", "")
+            result["data_nascimento_conjuge"] = people[1].get("nascimento", "")
+        prazo = str(result.get("prazo_contemplacao", "")).lower()
+        perfil = str(result.get("perfil_informado", "")).lower()
+        if "13 a 24" in prazo or "conserv" in perfil:
+            result["objetivo"] = "Contemplar - conservador - 24 meses"
+        elif "7 a 12" in prazo or "moder" in perfil:
+            result["objetivo"] = "Contemplar - moderado - 12 meses"
+        elif "até 6" in prazo or "rápido" in perfil:
+            result["objetivo"] = "Contemplar - rapido - 6 meses"
     return result
 
 
