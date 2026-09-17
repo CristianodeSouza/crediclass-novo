@@ -13,10 +13,15 @@ FIELD_MAP = {
     "Nome Completo": "nome",
     "Qual é o valor do imóvel?": "credito_desejado",
     "Qual valor do imóvel desejado?": "credito_desejado",
+    "Qual é o valor de carta de crédito desejada?": "credito_desejado",
     "Informe o valor máximo para Entrada / Lance?": "lance_proprio",
     "Recurso próprio máximo disponível": "lance_proprio",
+    "Qual é o valor de lance máximo disponível?": "lance_proprio",
+    "Qual é o valor máximo para entrada ou lance?": "lance_proprio",
     "Informe o valor máximo para Mensalidade?": "parcela_desejada",
     "Parcela máxima disponível": "parcela_desejada",
+    "Qual é a parcela limite que deseja investir?": "parcela_desejada",
+    "Qual é o valor máximo para mensalidade?": "parcela_desejada",
     "Renda Mensal": "renda_total",
     "Data de Nascimento": "data_nascimento",
     "Qual é o tipo do imóvel desejado?": "tipo_bem",
@@ -52,8 +57,9 @@ def _parse_form(text: str) -> dict:
     for line in _strip_html(text).splitlines():
         line = line.strip()
         for label, key in FIELD_MAP.items():
-            if line.startswith(label):
-                value = line[len(label):].lstrip(":? ")
+            normalized = line.replace("::", ":")
+            if normalized.startswith(label):
+                value = normalized[len(label):].lstrip(":? ")
                 if value:
                     result[key] = value
                 break
@@ -71,17 +77,6 @@ async def fetch_opportunity_notes(opportunity_id: str) -> dict:
     if not token:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
     async with httpx.AsyncClient(timeout=20) as client:
-        detail_response = await client.get(
-            f"{PIPERUN_BASE_URL}/deals/{int(opportunity_id)}",
-            params={"with": "persons,companies,customForms,users"},
-            headers={"token": token, "accept": "application/json"},
-        )
-        if detail_response.status_code in (401, 403):
-            raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar oportunidades.")
-        if detail_response.status_code == 404:
-            raise LookupError("Oportunidade não encontrada na PipeRun.")
-        if detail_response.status_code >= 400:
-            raise RuntimeError(f"PipeRun recusou a oportunidade (HTTP {detail_response.status_code}).")
         notes_response = await client.get(
             f"{PIPERUN_BASE_URL}/notes",
             params={"cursor": "", "deal_id": int(opportunity_id)},
@@ -91,20 +86,15 @@ async def fetch_opportunity_notes(opportunity_id: str) -> dict:
             raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar notas.")
         if notes_response.status_code >= 400 and notes_response.status_code != 404:
             raise RuntimeError(f"PipeRun recusou as notas (HTTP {notes_response.status_code}).")
-    detail = detail_response.json().get("data", detail_response.json())
-    notes = notes_response.json().get("data", []) if notes_response.status_code != 404 else []
+    response_data = notes_response.json()
+    notes = response_data.get("data", []) if notes_response.status_code != 404 else []
+    if isinstance(notes, dict):
+        notes = notes.get("data", [])
     form_note = next((note for note in notes if "DADOS DO FORMULÁRIO" in (note.get("text") or "")), None)
     dados = _parse_form(form_note.get("text", "")) if form_note else {}
-    person = detail.get("person") or detail.get("persons") or {}
-    if isinstance(person, list):
-        person = person[0] if person else {}
-    dados.setdefault("nome", person.get("name", ""))
-    dados.setdefault("email", person.get("email", ""))
-    dados.setdefault("celular", person.get("phone", "") or person.get("mobile", ""))
     return {
         "crm_oportunidade_id": str(opportunity_id),
         "dados": {key: value for key, value in dados.items() if value not in (None, "")},
         "nota_id": form_note.get("id") if form_note else None,
         "encontrado": bool(form_note),
-        "oportunidade": detail,
     }
