@@ -5330,6 +5330,12 @@ document.getElementById("clientProfileForm").addEventListener("blur", (event) =>
   }
 }, true);
 
+document.querySelector(".user-card")?.addEventListener("click", (event) => {
+  if (event.target.closest("#logoutBtn")) return;
+  const sidebar = document.querySelector(".sidebar");
+  sidebar?.classList.toggle("user-menu-open");
+});
+
 document.getElementById("saveClientProfileBtn").addEventListener("click", () => saveClientProfile());
 document.getElementById("clearClientProfileBtn").addEventListener("click", resetClientProfile);
 document.getElementById("importClientProfileCrmBtn").addEventListener("click", () => {
