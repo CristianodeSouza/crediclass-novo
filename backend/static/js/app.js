@@ -3691,6 +3691,7 @@ function collectClientProfile() {
 function applyImportedCrmData(data, opportunityId) {
   const current = collectClientProfile();
   const imported = data || {};
+  const importedPeople = Array.isArray(imported.titulares) ? imported.titulares : [];
   const firstHolder = current.titulares?.pessoas_fisicas?.[0] || {};
   const holder = {
     ...firstHolder,
@@ -3699,7 +3700,15 @@ function applyImportedCrmData(data, opportunityId) {
     renda: imported.renda_total ?? "",
     lance_recursos_proprios: imported.lance_proprio ?? "",
   };
-  const titulares = { ...current.titulares, pessoas_fisicas: [holder, ...(current.titulares?.pessoas_fisicas || []).slice(1)] };
+  const pessoas = importedPeople.length ? importedPeople.map((item) => ({
+    ...emptyPessoaFisica(0),
+    nome: item.nome || "",
+    nascimento: item.nascimento || "",
+    renda: item.renda || 0,
+    lance_fgts: item.lance_fgts || 0,
+    lance_recursos_proprios: item.lance_recursos_proprios || 0,
+  })) : [holder];
+  const titulares = { ...current.titulares, pessoas_fisicas: pessoas };
   const profile = {
     ...current,
     nome: imported.nome ?? "",
@@ -3710,10 +3719,12 @@ function applyImportedCrmData(data, opportunityId) {
     renda_total: imported.renda_total ?? "",
     parcela_desejada: imported.parcela_desejada ?? "",
     tipo_bem: imported.tipo_bem ?? "",
+    tipo_contratacao: imported.tipo_contratacao || (pessoas.length > 1 ? "pf_conjuge" : "pf_individual"),
     titulares,
     crm_oportunidade_id: String(opportunityId),
   };
   renderClientProfileTitulares(profile);
+  setInputValue("clientProfileTipoContratacao", profile.tipo_contratacao);
   setMoneyInputValue("clientProfileCredito", imported.credito_desejado ?? "");
   setMoneyInputValue("clientProfileParcelaIdeal", imported.parcela_desejada ?? "");
   setMoneyInputValue("clientProfileLanceProprio", imported.lance_proprio ?? "");

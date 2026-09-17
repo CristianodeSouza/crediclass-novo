@@ -53,19 +53,40 @@ def _number(value: str) -> float | None:
 
 
 def _parse_form(text: str) -> dict:
+    lines = [line.strip().replace("::", ":") for line in _strip_html(text).splitlines() if line.strip()]
     result: dict = {}
-    for line in _strip_html(text).splitlines():
-        line = line.strip()
+    people: list[dict] = []
+    person: dict | None = None
+    for line in lines:
+        if line.startswith("Nome Completo:"):
+            person = {"nome": line.split(":", 1)[1].strip(), "renda": 0, "lance_fgts": 0, "lance_recursos_proprios": 0}
+            people.append(person)
+            continue
+        if person is not None:
+            if line.startswith("Data de Nascimento:"):
+                person["nascimento"] = line.split(":", 1)[1].strip()
+            elif line.startswith("Renda Mensal"):
+                person["renda"] += _number(line.split(":", 1)[1]) or 0
+            elif line.startswith("Valor do FGTS"):
+                person["lance_fgts"] = _number(line.split(":", 1)[1]) or 0
+            continue
         for label, key in FIELD_MAP.items():
-            normalized = line.replace("::", ":")
-            if normalized.startswith(label):
-                value = normalized[len(label):].lstrip(":? ")
+            if line.startswith(label):
+                value = line[len(label):].lstrip(":? ")
                 if value:
                     result[key] = value
                 break
     for key in ("credito_desejado", "lance_proprio", "parcela_desejada", "renda_total"):
         if key in result:
             result[key] = _number(result[key])
+    if people:
+        result["titulares"] = people
+        result["tipo_contratacao"] = "pf_conjuge" if len(people) > 1 else "pf_individual"
+        result["nome"] = people[0].get("nome", "")
+        result["data_nascimento"] = people[0].get("nascimento", "")
+        result["renda_total"] = sum(float(item.get("renda") or 0) for item in people)
+        result["lance_proprio"] = result.get("lance_proprio") or 0
+        result["fgts"] = sum(float(item.get("lance_fgts") or 0) for item in people)
     return result
 
 
