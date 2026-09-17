@@ -14,7 +14,7 @@ Font.registerHyphenationCallback((word) => [word]);
 const styles = StyleSheet.create({
   page: {
     paddingTop: 26,
-    paddingBottom: 28,
+    paddingBottom: 54,
     paddingHorizontal: 24,
     fontSize: 8.8,
     color: "#24313a",
@@ -189,7 +189,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 24,
     right: 24,
-    bottom: 12,
+    bottom: 16,
+    minHeight: 16,
+    paddingTop: 3,
+    borderTopWidth: 1,
+    borderTopColor: "#d8dde3",
     flexDirection: "row",
     justifyContent: "space-between",
     fontSize: 7.6,
@@ -236,19 +240,27 @@ function Footer({ payload }) {
 function Section({ title, children }) {
   return React.createElement(
     View,
-    { style: styles.section, wrap: false },
-    React.createElement(Text, { style: styles.sectionTitle }, title),
+    { style: styles.section },
+    React.createElement(Text, { style: styles.sectionTitle, wrap: false }, title),
     children,
   );
 }
 
-function Table({ columns, rows, compact = false }) {
+function tableChunks(rows, chunkSize) {
+  const chunks = [];
+  for (let index = 0; index < rows.length; index += chunkSize) {
+    chunks.push(rows.slice(index, index + chunkSize));
+  }
+  return chunks.length ? chunks : [[]];
+}
+
+function TableBlock({ columns, rows, compact = false, continuation = false }) {
   return React.createElement(
     View,
-    { style: styles.table },
+    { style: [styles.table, continuation ? { marginTop: 4 } : null], wrap: false },
     React.createElement(
       View,
-      { style: styles.row },
+      { style: styles.row, wrap: false },
       ...columns.map((column, index) =>
         React.createElement(
           Text,
@@ -269,7 +281,7 @@ function Table({ columns, rows, compact = false }) {
     ...rows.map((row, rowIndex) =>
       React.createElement(
         View,
-        { key: `row-${rowIndex}`, style: styles.row },
+        { key: `row-${rowIndex}`, style: styles.row, wrap: false },
         ...columns.map((column, index) =>
           React.createElement(
             Text,
@@ -287,6 +299,23 @@ function Table({ columns, rows, compact = false }) {
           ),
         ),
       ),
+    ),
+  );
+}
+
+function Table({ columns, rows, compact = false }) {
+  const chunks = tableChunks(rows, compact ? 5 : 4);
+  return React.createElement(
+    React.Fragment,
+    null,
+    ...chunks.map((chunk, index) =>
+      React.createElement(TableBlock, {
+        key: `table-${index}`,
+        columns,
+        rows: chunk,
+        compact,
+        continuation: index > 0,
+      }),
     ),
   );
 }
