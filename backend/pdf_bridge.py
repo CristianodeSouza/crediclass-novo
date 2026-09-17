@@ -341,6 +341,8 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
             "desiredTerm": str(cliente.get("prazo_desejado") or "-"),
             "desiredInstallment": _format_money(cliente.get("parcela_desejada")),
             "income": _format_money(cliente.get("renda_total")),
+            "ownResources": _format_money(cliente.get("lance_proprio")),
+            "fgts": _format_money(cliente.get("fgts")),
         },
         "group": {
             "administrator": recommended_admin,

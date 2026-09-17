@@ -237,10 +237,10 @@ function Footer({ payload }) {
   );
 }
 
-function Section({ title, children }) {
+function Section({ title, children, breakBefore = false }) {
   return React.createElement(
     View,
-    { style: styles.section },
+    { style: styles.section, break: breakBefore },
     React.createElement(Text, { style: styles.sectionTitle, wrap: false }, title),
     children,
   );
@@ -338,14 +338,12 @@ function IntroSection({ payload }) {
       ...[
         ["Cliente", payload.client.name],
         ["Objetivo", payload.client.objective],
-        ["Proposta", payload.meta.proposalId],
-        ["Administradora", payload.group.administrator],
-        ["Grupo", payload.group.groupId],
         ["Credito desejado", payload.client.desiredCredit],
         ["Prazo desejado", `${text(payload.client.desiredTerm)} meses`],
         ["Parcela desejada", payload.client.desiredInstallment],
         ["Renda total", payload.client.income],
-        ["Estrategia recomendada", payload.financial.recommendedStrategy],
+        ["Recursos proprios", payload.client.ownResources],
+        ["FGTS", payload.client.fgts],
       ].map(([label, value], index) =>
         React.createElement(
           View,
@@ -361,7 +359,7 @@ function IntroSection({ payload }) {
 function InvestmentSection({ payload }) {
   return React.createElement(
     Section,
-    { title: "SIMULACAO DE INVESTIMENTO" },
+    { title: "SIMULACAO DE INVESTIMENTO", breakBefore: true },
     React.createElement(
       Text,
       { style: styles.miniNote },
