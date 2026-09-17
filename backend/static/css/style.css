@@ -2215,6 +2215,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .selected-comparison-column > .motor360-history-averages { margin: 9px 11px; padding: 8px 10px; color: #52656d; font-size: 0.72rem; line-height: 1.45; }
 .selected-comparison-column > .motor360-history-averages strong { font-size: 0.78rem; }
 .selected-comparison-column > .motor360-history-averages span { white-space: normal; }
+.selected-comparison-inputs { padding-top: 4px !important; padding-bottom: 8px !important; background: #fbfcfc; }
+.selected-comparison-inputs h4 { margin-bottom: 6px; }
+.selected-comparison-inputs .motor360-scenario-source-metrics { margin: 0; padding: 0; border-top: 0; }
 .selected-comparison-column > section { padding: 10px 11px; border-bottom: 1px solid var(--line); }
 .selected-comparison-column > section:nth-of-type(1) { background: #fff; }
 .selected-comparison-column > section:nth-of-type(2) { background: #fcfdfd; }
