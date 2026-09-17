@@ -365,7 +365,7 @@ function activateScreen(screenName) {
   document.getElementById("screenLetter").textContent = meta.letter;
   document.getElementById("screenTitle").textContent = meta.title;
   document.getElementById("screenSubtitle").textContent = meta.subtitle;
-  document.querySelector(".page-header")?.classList.toggle("d-none", screenName === "perfil");
+  document.querySelector(".page-header")?.classList.toggle("d-none", ["perfil", "motor360"].includes(screenName));
   const primaryAction = document.getElementById("primaryAction");
   primaryAction.textContent = meta.action;
   primaryAction.classList.toggle("d-none", ["motor360", "estudo", "mapa-assembleia"].includes(screenName));
