@@ -3115,6 +3115,11 @@ function syncMotor360AdministratorFilter(sourceItems) {
   return investorState.administrator;
 }
 
+function motor360ScenarioSourceMetrics(item) {
+  const clientCredit = investorState.result?.cliente?.credito_liquido_desejado;
+  return `<div class="motor360-scenario-source-metrics"><div><small>Taxa Adm</small><b>${formatPercent(item?.taxa_adm)}</b></div><div><small>Fundo de Reserva</small><b>${formatPercent(item?.fundo_reserva)}</b></div><div><small>Crédito desejado líquido</small><b>${formatMoney(clientCredit)}</b></div></div>`;
+}
+
 function renderInvestorAnalysis(result) {
   const status = document.getElementById("investorAnalysisStatus");
   const summary = document.getElementById("investorAnalysisSummary");
@@ -3184,6 +3189,8 @@ function renderInvestorAnalysis(result) {
   `;
   results.querySelectorAll(".motor360-scenario-card").forEach((card) => {
     const groupId = card.closest(".motor360-group-card")?.querySelector(".motor360-group-select-input")?.dataset.groupId;
+    const groupItem = [...(result.items || []), ...(result.credit_items || []), ...(result.composition_items || [])].find((item) => String(item.grupo || item.grupo_id || "") === String(groupId || ""));
+    card.querySelector(".motor360-scenario-grid")?.insertAdjacentHTML("beforeend", motor360ScenarioSourceMetrics(groupItem));
     const title = card.querySelector(".motor360-scenario-title strong")?.textContent || "";
     const scenarioId = title.includes("com lance") ? "with_embedded" : "without_embedded";
     card.querySelector(".motor360-scenario-title")?.insertAdjacentHTML("beforeend", `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""}> Escolher para contratação</label>`);
