@@ -731,52 +731,22 @@ function StrategyRowsSection({ payload }) {
 }
 
 function StudyDocument({ payload }) {
-  const pages = [
-    {
-      title: null,
-      content: [
-        React.createElement(IntroSection, { key: "intro", payload }),
-        React.createElement(InvestmentSection, { key: "investment", payload }),
-      ],
-    },
-    {
-      title: null,
-      content: [
-        React.createElement(FinancialSummarySection, { key: "summary", payload }),
-        React.createElement(StrategyRowsSection, { key: "strategy-rows", payload }),
-      ],
-    },
-    {
-      title: null,
-      content: [
-        React.createElement(EditorialRowsSection, { key: "editorial", payload }),
-        React.createElement(SpecialistsSection, { key: "specialists", payload }),
-      ],
-    },
-    {
-      title: null,
-      content: [
-        React.createElement(BenefitsSection, { key: "benefits", payload }),
-        React.createElement(ContractSection, { key: "contract", payload }),
-        React.createElement(StrategySection, { key: "narrative" }),
-      ],
-    },
-    {
-      title: null,
-      content: [
-        React.createElement(HistorySection, { key: "history", payload }),
-        React.createElement(ProjectionSection, { key: "projection", payload }),
-      ].filter(Boolean),
-    },
-    {
-      title: null,
-      content: [
-        React.createElement(DeadlinesSection, { key: "deadlines", payload }),
-        React.createElement(OperatorNotesSection, { key: "notes", payload }),
-        React.createElement(ConsiderationsSection, { key: "considerations", payload }),
-      ].filter(Boolean),
-    },
-  ];
+  const content = [
+    React.createElement(IntroSection, { key: "intro", payload }),
+    React.createElement(InvestmentSection, { key: "investment", payload }),
+    React.createElement(FinancialSummarySection, { key: "summary", payload }),
+    React.createElement(StrategyRowsSection, { key: "strategy-rows", payload }),
+    React.createElement(EditorialRowsSection, { key: "editorial", payload }),
+    React.createElement(SpecialistsSection, { key: "specialists", payload }),
+    React.createElement(BenefitsSection, { key: "benefits", payload }),
+    React.createElement(ContractSection, { key: "contract", payload }),
+    React.createElement(StrategySection, { key: "narrative" }),
+    React.createElement(HistorySection, { key: "history", payload }),
+    React.createElement(ProjectionSection, { key: "projection", payload }),
+    React.createElement(DeadlinesSection, { key: "deadlines", payload }),
+    React.createElement(OperatorNotesSection, { key: "notes", payload }),
+    React.createElement(ConsiderationsSection, { key: "considerations", payload }),
+  ].filter(Boolean);
   return React.createElement(
     Document,
     {
@@ -786,17 +756,12 @@ function StudyDocument({ payload }) {
       creator: "Crediclass React-pdf Service",
       producer: "Crediclass React-pdf Service",
     },
-    ...pages.map((page, index) =>
-      React.createElement(
-        Page,
-        { key: `page-${index}`, size: "A4", style: styles.page, wrap: true },
-        React.createElement(Header, { pageNumber: index + 1 }),
-        ...(page.title
-          ? [React.createElement(View, { key: `title-${index}`, style: styles.titleBar }, React.createElement(Text, null, page.title))]
-          : []),
-        ...page.content,
-        React.createElement(Footer, { payload }),
-      ),
+    React.createElement(
+      Page,
+      { size: "A4", style: styles.page, wrap: true },
+      React.createElement(Header, null),
+      ...content,
+      React.createElement(Footer, { payload }),
     ),
   );
 }
