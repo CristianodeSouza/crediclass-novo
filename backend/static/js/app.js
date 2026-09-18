@@ -408,6 +408,17 @@ function formatMoneyInputById(id) {
   input.value = formatMoneyInputValue(input.value);
 }
 
+function formatMoneyInputElement(input) {
+  if (!input) return;
+  const value = String(input.value || "").trim();
+  input.value = value ? formatMoneyInputValue(value) : "";
+  if (document.activeElement === input && input.value) {
+    const decimalSeparator = input.value.indexOf(",");
+    const caretPosition = decimalSeparator >= 0 ? decimalSeparator : input.value.length;
+    input.setSelectionRange(caretPosition, caretPosition);
+  }
+}
+
 function setMoneyInputValue(id, value) {
   const input = document.getElementById(id);
   if (!input) return;
@@ -5175,10 +5186,20 @@ const moneyInputIds = [
   "clientProfileParcelaLimite",
   "groupFormCreditoMinimo",
   "groupFormCreditoMaximo",
+  "historyCreditoMinimo",
+  "historyCreditoMaximo",
+  "adminRuleLimiteRenda",
 ];
 
 moneyInputIds.forEach((id) => {
-  document.getElementById(id)?.addEventListener("blur", () => formatMoneyInputById(id));
+  const input = document.getElementById(id);
+  input?.addEventListener("input", () => formatMoneyInputElement(input));
+  input?.addEventListener("blur", () => formatMoneyInputById(id));
+});
+
+document.addEventListener("input", (event) => {
+  const input = event.target.closest("[data-money], [data-sheet-field-mask=\"money\"]");
+  if (input) formatMoneyInputElement(input);
 });
 
 document.getElementById("groupFormModal").addEventListener("blur", (event) => {
