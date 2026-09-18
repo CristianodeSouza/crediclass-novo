@@ -6832,6 +6832,54 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .motor360-group-identity > div { display: block; }
   .motor360-group-title,
   .motor360-group-identity p { grid-column: auto; }
-  .motor360-history-averages { width: auto; }
+.motor360-history-averages { width: auto; }
   .motor360-group-summary { width: 100%; justify-content: flex-start; }
+}
+
+/* Comparativo analítico: os gráficos são renderizados por Apache ECharts. */
+.sg-dashboard { gap: 18px; }
+.sg-toolbar { display: flex; align-items: end; justify-content: space-between; gap: 24px; padding-bottom: 16px; border-bottom: 1px solid #dce5e8; }
+.sg-toolbar > div:first-child > span, .sg-panel header span { color: var(--brand-orange); font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.sg-toolbar h2 { margin: 4px 0; color: var(--brand-navy); font-size: 1.35rem; }
+.sg-toolbar p { margin: 0; color: var(--muted); font-size: .78rem; }
+.sg-controls { flex-wrap: wrap; justify-content: flex-end; }
+.sg-controls label { min-width: 142px; }
+.sg-controls select { width: 100%; min-height: 36px; }
+.sg-fact-strip { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 22px; padding: 11px 14px; border-left: 3px solid var(--brand-orange); background: #fff8f2; color: #586b72; font-size: .74rem; }
+.sg-fact-strip b { color: var(--brand-navy); }
+.sg-chart-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(360px, .85fr); gap: 16px; }
+.sg-chart-grid-secondary { grid-template-columns: minmax(360px, .8fr) minmax(0, 1.2fr); }
+.sg-panel { padding: 18px; border-color: #d9e3e6; border-radius: 10px; box-shadow: 0 5px 16px rgba(31,45,51,.04); }
+.sg-panel header { align-items: flex-start; }
+.sg-panel h3 { font-size: 1.05rem; }
+.sg-chart { width: 100%; height: 310px; }
+.sg-panel-financial .sg-chart { height: 310px; }
+.sg-metric-switch { display: flex; flex-wrap: wrap; gap: 5px; }
+.sg-metric-switch button { padding: 6px 8px; border: 1px solid #d4dfe2; border-radius: 5px; background: #fff; color: #52656d; font-size: .69rem; font-weight: 700; }
+.sg-metric-switch button[aria-pressed="true"] { border-color: var(--brand-navy); background: var(--brand-navy); color: #fff; }
+.sg-table-panel { display: flex; flex-direction: column; }
+.sg-table-panel .sg-table-wrap { flex: 1; }
+.sg-matrix { font-size: .72rem; }
+.sg-matrix thead th { padding: 10px 9px; }
+.sg-matrix tbody th, .sg-matrix td { padding: 11px 9px; }
+.sg-matrix td { color: var(--brand-navy); font-weight: 700; }
+.sg-matrix th small, .sg-matrix td small { display: block; margin-top: 3px; color: var(--muted); font-size: .64rem; font-weight: 500; }
+.sg-profile-matrix td strong { color: #1b7147; }
+.sg-profile-matrix tr.is-focus { background: #fff8f2; }
+.sg-profile-matrix tr.is-focus th { color: var(--brand-bronze-dark); }
+.sg-comparison-table header { margin-bottom: 10px; }
+.sg-details { margin-top: 2px; }
+
+@media (max-width: 980px) {
+  .sg-toolbar { align-items: flex-start; flex-direction: column; }
+  .sg-controls { justify-content: flex-start; }
+  .sg-chart-grid, .sg-chart-grid-secondary { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .sg-controls { display: grid; width: 100%; grid-template-columns: 1fr; }
+  .sg-controls label { min-width: 0; }
+  .sg-panel { padding: 14px; }
+  .sg-panel header { flex-direction: column; }
+  .sg-chart, .sg-panel-financial .sg-chart { height: 280px; }
 }
