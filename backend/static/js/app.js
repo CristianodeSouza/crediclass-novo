@@ -2278,6 +2278,35 @@ function formatAverageForOverview(item, strategy) {
   return value === null || value === undefined ? "-" : String(value).replace(".", ",");
 }
 
+function selectedGroupAnalytics(item) {
+  const groupId = String(item.grupo || item.grupo_id || "-");
+  const scenario = (item.cenarios || []).find((entry) => entry.id === "without_embedded") || (item.cenarios || [])[0] || {};
+  const profiles = scenario.perfis_contemplacao || [];
+  const profile = (id) => profiles.find((entry) => entry.id === id) || {};
+  const historical = item.capacidade_contemplacoes || {};
+  const history = (key) => Number(historical[key]?.media_contemplacoes ?? historical[key]?.media ?? 0);
+  const quotaCount = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+  return { item, groupId, scenario, profile, history, quotaCount, credit: Number(item.credito_maximo || 0), installment: Number(scenario.parcela_inicial || 0), bid: Number(scenario.lance_total_cenario || 0) };
+}
+
+function renderSelectedGroupsAnalyticalPanel(items) {
+  const analytics = items.map(selectedGroupAnalytics);
+  const client = investorState.result?.cliente || {};
+  const desiredCredit = Number(client.credito_liquido_desejado || 0);
+  const desiredInstallment = Number(client.parcela_desejada || 0);
+  const score = (entry) => Math.round((entry.credit >= desiredCredit ? 35 : Math.max(0, entry.credit / Math.max(desiredCredit, 1) * 35)) + Math.max(0, 25 - entry.installment / Math.max(desiredInstallment || entry.installment || 1, 1) * 8) + Math.min(20, entry.history("moderate") * 3) + (entry.profile("moderate").atinge_perfil ? 20 : 8));
+  analytics.forEach((entry) => { entry.score = score(entry); });
+  const ranked = [...analytics].sort((a, b) => b.score - a.score);
+  const best = ranked[0];
+  const metric = (label, value, note = "") => `<article class="sg-kpi"><span>${label}</span><strong>${value}</strong>${note ? `<small>${note}</small>` : ""}</article>`;
+  const bars = analytics.map((entry) => `<div class="sg-bar-row"><span>Grupo ${escapeHtml(entry.groupId)}</span><div><i style="width:${Math.min(100, entry.credit / Math.max(...analytics.map((item) => item.credit), 1) * 100)}%"></i></div><b>${formatMoney(entry.credit)}</b></div>`).join("");
+  const linePoints = (key) => analytics.map((entry, index) => `${index * (100 / Math.max(analytics.length - 1, 1))},${Math.max(8, 82 - entry.history(key) * 10)}`).join(" ");
+  const matrix = analytics.map((entry) => `<tr><th><b>${escapeHtml(entry.groupId)}</b><small>${escapeHtml(entry.item.administradora || "-")}</small></th><td>${formatPercent(entry.profile("conservative").percentual_referencia)}</td><td>${formatPercent(entry.profile("moderate").percentual_referencia)}</td><td>${formatPercent(entry.profile("aggressive").percentual_referencia)}</td><td>${formatPercent(entry.profile("super_aggressive").percentual_referencia)}</td></tr>`).join("");
+  const ranking = ranked.map((entry, index) => `<div class="sg-ranking-row"><b>${index + 1}</b><span><strong>Grupo ${escapeHtml(entry.groupId)}</strong><small>${escapeHtml(entry.item.administradora || "-")}</small></span><em>${entry.score}/100</em><mark class="${index === 0 ? "is-best" : ""}">${index === 0 ? "Recomendado" : index === 1 ? "Alternativa" : "Comparar"}</mark></div>`).join("");
+  const controls = `<div class="sg-controls"><label>Perfil<select data-sg-filter="profile"><option value="all">Todos</option><option value="conservative">Conservador</option><option value="moderate">Moderado</option><option value="aggressive">Agressivo</option><option value="super_aggressive">Super agressivo</option></select></label><label>Criterio<select data-sg-sort><option value="score">Recomendação</option><option value="credit">Maior crédito</option><option value="installment">Menor parcela</option><option value="history">Melhor histórico</option></select></label></div>`;
+  return `<section class="sg-dashboard" data-sg-dashboard>${controls}<div class="sg-hero"><div><span>Resumo executivo</span><h2>Comparação para decisão</h2><p>${best ? `Grupo ${escapeHtml(best.groupId)} é a recomendação preliminar com nota ${best.score}/100.` : "Selecione grupos para iniciar a comparação."}</p></div><div class="sg-recommendation"><small>Grupo recomendado</small><strong>${best ? `Grupo ${escapeHtml(best.groupId)}` : "-"}</strong><span>${best ? "Maior aderência combinada" : "Sem dados"}</span></div></div><div class="sg-kpis">${metric("Grupos comparados", items.length)}${metric("Melhor crédito", formatMoney(Math.max(...analytics.map((entry) => entry.credit), 0)))}${metric("Menor parcela", formatMoney(Math.min(...analytics.map((entry) => entry.installment || Infinity), Infinity)))}${metric("Melhor histórico", best ? `${best.history("moderate").toLocaleString("pt-BR")} contemplações` : "-")}</div><div class="sg-analytics-grid"><article class="sg-panel sg-panel-wide"><header><div><span>Comparação de crédito</span><h3>Capacidade por grupo</h3></div><small>Quanto maior, melhor</small></header><div class="sg-bars">${bars}</div></article><article class="sg-panel"><header><div><span>Histórico</span><h3>Curva de contemplações</h3></div><small>Urgente · Moderado</small></header><svg class="sg-line-chart" viewBox="0 0 100 100" role="img" aria-label="Curva histórica comparativa"><polyline points="${linePoints("urgent")}" class="sg-line sg-line-a"/><polyline points="${linePoints("moderate")}" class="sg-line sg-line-b"/>${analytics.map((entry, index) => `<circle cx="${index * (100 / Math.max(analytics.length - 1, 1))}" cy="${Math.max(8, 82 - entry.history("moderate") * 10)}" r="2"/>`).join("")}</svg><div class="sg-legend"><span><i class="sg-dot sg-dot-a"></i>Urgente</span><span><i class="sg-dot sg-dot-b"></i>Moderado</span></div></article></div><div class="sg-analysis-grid"><article class="sg-panel"><header><div><span>Ranking</span><h3>Melhor combinação</h3></div></header><div class="sg-ranking">${ranking}</div></article><article class="sg-panel"><header><div><span>Matriz de aderência</span><h3>Perfis de contemplação</h3></div></header><div class="sg-table-wrap"><table class="sg-matrix"><thead><tr><th>Grupo</th><th>Conservador</th><th>Moderado</th><th>Agressivo</th><th>Super agressivo</th></tr></thead><tbody>${matrix}</tbody></table></div></article></div><details class="sg-scenario-details"><summary>Comparar cenários financeiros</summary><div class="sg-scenario-tabs"><span>Sem lance embutido</span><span>Com lance embutido</span></div><div class="sg-scenario-compare">${analytics.map((entry) => `<article><strong>Grupo ${escapeHtml(entry.groupId)}</strong><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(entry.scenario.credito_liquido_projetado ?? entry.scenario.credito_contratado)}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(entry.installment)}</dd></div><div><dt>Lance total</dt><dd>${formatMoney(entry.bid)}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(entry.scenario.saldo_devedor)}</dd></div></dl></article>`).join("")}</div></details></section>`;
+}
+
 function renderSelectedGroupsCartSummary(items) {
   const client = investorState.result?.cliente || {};
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
@@ -2320,13 +2349,18 @@ function renderSelectedGroupsCartSummary(items) {
 }
 
 function renderSelectedGroupsScreen() {
-  const items = selectedMotor360Items();
+  let items = selectedMotor360Items();
+  const sort = investorState.selectedGroupSort || "score";
+  if (sort === "credit") items = [...items].sort((a, b) => Number(b.credito_maximo || 0) - Number(a.credito_maximo || 0));
+  if (sort === "installment") items = [...items].sort((a, b) => Number((a.cenarios || [])[0]?.parcela_inicial || 0) - Number((b.cenarios || [])[0]?.parcela_inicial || 0));
+  if (sort === "history") items = [...items].sort((a, b) => Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0));
   const empty = document.getElementById("selectedGroupsEmpty");
   const results = document.getElementById("selectedGroupsResults");
   if (!empty || !results) return;
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
-  results.innerHTML = items.length ? `${renderSelectedGroupsOverview(items)}<div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div>` : "";
+  results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}<details class="sg-details" open><summary>Detalhes completos por grupo</summary><div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div></details>` : "";
+  results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
 }
 
 const FINANCIAL_STUDY_SECTIONS_KEY = "crediclass.financialStudy.sections";
