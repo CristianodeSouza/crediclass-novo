@@ -2256,6 +2256,28 @@ function renderSelectedGroupComparisonColumn(item, index) {
   return `<article class="selected-comparison-column"><header><div class="selected-group-number">${index + 1}</div><div><h3>Grupo ${escapeHtml(groupId)}</h3><p>${escapeHtml(item.administradora || "-")} · ${quotaCount} ${quotaCount === 1 ? "cota" : "cotas"}</p></div></header><div class="selected-comparison-key-metrics"><span><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></span><span><small>Crédito máximo</small><b>${formatMoney(scale(item.credito_maximo))}</b></span><span><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></span></div>${historicalAverages}<section class="selected-comparison-inputs"><h4>Premissas do grupo</h4>${groupFinancialInputs}</section><section><h4>Cenários financeiros</h4><div class="selected-comparison-scenarios">${scenarioRows}</div></section><section><h4>Perfis de contemplação</h4><div class="selected-comparison-profiles">${profileRows || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section></article>`;
 }
 
+function renderSelectedGroupsOverview(items) {
+  const metric = (label, value, note = "") => `<div class="selected-overview-kpi"><span>${label}</span><strong>${value}</strong>${note ? `<small>${note}</small>` : ""}</div>`;
+  const rows = items.map((item, index) => {
+    const groupId = String(item.grupo || item.grupo_id || "-");
+    const scenario = (item.cenarios || []).find((entry) => entry.id === "without_embedded") || (item.cenarios || [])[0] || {};
+    const profiles = scenario.perfis_contemplacao || [];
+    const profileValue = (id) => {
+      const value = profiles.find((profile) => profile.id === id);
+      return value ? `<b class="${value.atinge_perfil ? "is-hit" : "is-gap"}">${formatPercent(value.percentual_referencia)}</b>` : "-";
+    };
+    return `<tr><th><span>${index + 1}</span> Grupo ${escapeHtml(groupId)}<small>${escapeHtml(item.administradora || "-")}</small></th><td>${formatMoney(item.credito_maximo)}</td><td>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</td><td>${formatAverageForOverview(item, "urgent")}</td><td>${formatAverageForOverview(item, "moderate")}</td><td>${profileValue("conservative")}</td><td>${profileValue("moderate")}</td></tr>`;
+  }).join("");
+  const maxCredit = Math.max(...items.map((item) => Number(item.credito_maximo || 0)), 0);
+  const avgCredit = items.reduce((sum, item) => sum + Number(item.credito_maximo || 0), 0) / Math.max(items.length, 1);
+  return `<section class="selected-groups-overview"><div class="selected-overview-heading"><div><span>Visão comparativa</span><h2>Leitura rápida dos grupos selecionados</h2></div><small>Compare capacidade, prazo, histórico e aderência ao perfil sem abrir cada detalhe.</small></div><div class="selected-overview-kpis">${metric("Grupos selecionados", items.length)}${metric("Maior crédito", formatMoney(maxCredit))}${metric("Crédito médio", formatMoney(avgCredit))}${metric("Menor prazo", `${Math.min(...items.map((item) => Number(item.prazo_restante || 9999)), 9999)} meses`)}</div><div class="selected-overview-table-wrap"><table class="selected-overview-table"><thead><tr><th>Grupo</th><th>Crédito máximo</th><th>Prazo restante</th><th>Histórico urgente</th><th>Histórico moderado</th><th>Conservador</th><th>Moderado</th></tr></thead><tbody>${rows}</tbody></table></div></section>`;
+}
+
+function formatAverageForOverview(item, strategy) {
+  const value = item?.capacidade_contemplacoes?.[strategy]?.media_contemplacoes;
+  return value === null || value === undefined ? "-" : String(value).replace(".", ",");
+}
+
 function renderSelectedGroupsCartSummary(items) {
   const client = investorState.result?.cliente || {};
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
@@ -2304,7 +2326,7 @@ function renderSelectedGroupsScreen() {
   if (!empty || !results) return;
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
-  results.innerHTML = items.length ? `<div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div>` : "";
+  results.innerHTML = items.length ? `${renderSelectedGroupsOverview(items)}<div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div>` : "";
 }
 
 const FINANCIAL_STUDY_SECTIONS_KEY = "crediclass.financialStudy.sections";
@@ -3184,9 +3206,6 @@ function renderInvestorAnalysis(result) {
     return;
   }
   results.innerHTML = `
-    <div class="investor-engine-note">
-      <strong>${showingCreditStage ? "Compatíveis por crédito:" : "Pré-seleção de grupos:"}</strong> ${showingCreditStage ? "estes grupos atendem à faixa O/U para pelo menos um cenário." : "cada cenário preserva o crédito líquido, atende à faixa O/U e ao prazo/renda no mesmo cenário financeiro."} A classificação BL:BP é informativa e não elimina nesta etapa. AJ, AK e AL são apenas referências até a seleção da carta exata.
-    </div>
     ${renderMotor360SelectedGroupsDock()}
     <div class="motor360-single-quota-note" role="note">
       <strong>Crédito atendido com 1 cota</strong>
