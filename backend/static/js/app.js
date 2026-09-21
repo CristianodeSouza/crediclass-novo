@@ -2294,8 +2294,9 @@ function selectedGroupAnalytics(item) {
   const availableBid = Number(client.lance_cliente_total || 0);
   const credit = scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? item.credito_maximo);
   const installment = scale(scenario.parcela_inicial);
-  const moderate = profile("moderate");
-  const idealBid = scale(moderate.lance_ideal);
+  const focusProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : "moderate";
+  const focusedProfile = profile(focusProfile);
+  const idealBid = scale(focusedProfile.lance_ideal);
   const creditFit = desiredCredit > 0 ? Math.min(1, credit / desiredCredit) : 1;
   const installmentFit = maxInstallment > 0 ? Math.min(1, maxInstallment / Math.max(installment, 1)) : 1;
   const bidFit = idealBid > 0 ? Math.min(1, availableBid / idealBid) : 1;
@@ -2312,7 +2313,7 @@ function selectedGroupAnalytics(item) {
     installmentAfter: scale(scenario.parcela_pos_contemplacao),
     bid: scale(scenario.lance_total_cenario),
     balance: scale(scenario.saldo_devedor),
-    idealBid, availableBid, score,
+    idealBid, availableBid, score, focusProfile,
     incomeCommitment: Number(client.renda_total || client.renda || 0) > 0 ? installment / Number(client.renda_total || client.renda) : null,
   };
 }
