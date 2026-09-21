@@ -2549,6 +2549,22 @@ function renderSelectedGroupsCoverageCharts(items) {
   init("sgEmbeddedImpactChart", { grid: { left: 90, right: 25, top: 20, bottom: 30 }, tooltip: { trigger: "axis", valueFormatter: (v) => formatMoney(v) }, xAxis: { type: "category", data: labels }, yAxis: { type: "value", axisLabel: { formatter: (v) => formatMoney(v) } }, series: [{ name: "Crédito líquido", type: "bar", stack: "credit", data: analytics.map((entry) => entry.credit), itemStyle: { color: "#1d7188" } }, { name: "Redução pelo embutido", type: "bar", stack: "credit", data: analytics.map((entry) => entry.embedded), itemStyle: { color: "#ef7a24" } }] });
 }
 
+function renderSelectedGroupsFinalMatrix(items) {
+  const dashboard = document.querySelector("[data-sg-dashboard]");
+  if (!dashboard || !window.echarts || dashboard.querySelector("[data-sg-final-matrix]")) return;
+  const analytics = items.map(selectedGroupAnalytics);
+  const panel = document.createElement("div");
+  panel.dataset.sgFinalMatrix = "true";
+  panel.className = "sg-chart-grid sg-final-matrix";
+  panel.innerHTML = `<article class="sg-panel"><header><div><span>Síntese</span><h3>Heatmap de critérios</h3></div><small>Verde indica melhor adequação relativa entre os grupos.</small></header><div class="sg-chart" id="sgCriteriaHeatmap" role="img" aria-label="Heatmap de critérios"></div></article><article class="sg-panel"><header><div><span>Perfis</span><h3>Cenários de contemplação</h3></div><small>Lance ideal e cobertura por perfil.</small></header><div class="sg-chart" id="sgProfileScenarioChart" role="img" aria-label="Cenários por perfil"></div></article>`;
+  dashboard.appendChild(panel);
+  const init = (id, option) => { const element = document.getElementById(id); if (!element) return; const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); };
+  const criteria = [["Crédito", "creditFit"], ["Parcela", "installmentFit"], ["Lance", "bidFit"], ["Histórico", "historyFit"], ["Custo", "costFit"], ["Prazo", "termFit"]];
+  init("sgCriteriaHeatmap", { grid: { left: 82, right: 20, top: 20, bottom: 48 }, tooltip: { position: "top", formatter: (p) => `${p.name}<br/>${criteria[p.value[0]][0]}: ${Number(p.value[2]).toFixed(0)}%` }, xAxis: { type: "category", data: criteria.map((c) => c[0]), splitArea: { show: true } }, yAxis: { type: "category", data: analytics.map((e) => `Grupo ${e.groupId}`), splitArea: { show: true } }, visualMap: { min: 0, max: 1, calculable: false, orient: "horizontal", left: "center", bottom: 0, inRange: { color: ["#f7d9c1", "#fff1e5", "#b9e3c8"] } }, series: [{ type: "heatmap", data: analytics.flatMap((entry, row) => criteria.map(([, key], col) => [col, row, Number(entry[key] || 0)])), label: { show: true, formatter: (p) => `${Math.round(p.value[2] * 100)}%` } }] });
+  const profiles = [["Conservador", "conservative"], ["Moderado", "moderate"], ["Agressivo", "aggressive"], ["Superagressivo", "super_aggressive"]];
+  init("sgProfileScenarioChart", { grid: { left: 90, right: 20, top: 20, bottom: 48 }, legend: { bottom: 0 }, tooltip: { trigger: "axis", valueFormatter: (v) => formatMoney(v) }, xAxis: { type: "category", data: analytics.map((e) => `Grupo ${e.groupId}`) }, yAxis: { type: "value", axisLabel: { formatter: (v) => formatMoney(v) } }, series: profiles.map(([name, id]) => ({ name, type: "bar", data: analytics.map((entry) => Number(entry.profile(id).lance_ideal || 0) * entry.quotaCount), barMaxWidth: 22 })) });
+}
+
 function renderSelectedGroupsScreen() {
   let items = selectedMotor360Items();
   const filters = selectedGroupsFilterValues();
@@ -2579,6 +2595,7 @@ function renderSelectedGroupsScreen() {
   if (items.length) renderSelectedGroupsBidScenarios(items);
   if (items.length) renderSelectedGroupsRiskProbability(items);
   if (items.length) renderSelectedGroupsCoverageCharts(items);
+  if (items.length) renderSelectedGroupsFinalMatrix(items);
   results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-scenario]")?.addEventListener("change", (event) => { investorState.selectedGroupScenario = event.target.value; renderSelectedGroupsScreen(); });
