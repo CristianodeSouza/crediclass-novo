@@ -2370,6 +2370,22 @@ function renderSelectedGroupsECharts(items) {
   window.addEventListener("resize", () => selectedGroupsCharts.forEach((chart) => chart?.resize?.()), { once: true });
 }
 
+function renderSelectedGroupsExtraVisuals(items) {
+  const dashboard = document.querySelector("[data-sg-dashboard]");
+  if (!dashboard || !window.echarts || !items.length) return;
+  dashboard.querySelector("[data-sg-extra-visuals]")?.remove();
+  const analytics = items.map(selectedGroupAnalytics);
+  const wrapper = document.createElement("div");
+  wrapper.dataset.sgExtraVisuals = "true";
+  wrapper.className = "sg-chart-grid sg-extra-visuals";
+  wrapper.innerHTML = `<article class="sg-panel"><header><div><span>Eficiência</span><h3>Custo-benefício</h3></div><small>Crédito líquido por custo estimado</small></header><div class="sg-chart" id="sgCostBenefitChart" role="img" aria-label="Gráfico de custo benefício"></div></article><article class="sg-panel"><header><div><span>Decisão</span><h3>Risco x velocidade</h3></div><small>Quanto mais à direita e abaixo, melhor</small></header><div class="sg-chart" id="sgRiskSpeedChart" role="img" aria-label="Gráfico de risco e velocidade"></div></article>`;
+  dashboard.appendChild(wrapper);
+  const init = (id, option) => { const element = document.getElementById(id); if (!element) return; const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); };
+  const names = analytics.map((entry) => `Grupo ${entry.groupId}`);
+  init("sgCostBenefitChart", { animationDuration: 420, tooltip: { trigger: "item", formatter: ({ data }) => `${data.name}<br/>Crédito: ${formatMoney(data.value[1])}<br/>Parcela: ${formatMoney(data.value[0])}` }, xAxis: { type: "value", name: "Parcela", axisLabel: { formatter: (v) => formatMoney(v) } }, yAxis: { type: "value", name: "Crédito", axisLabel: { formatter: (v) => formatMoney(v) } }, series: [{ type: "scatter", symbolSize: 18, data: analytics.map((entry, index) => ({ name: names[index], value: [entry.installment, entry.credit], itemStyle: { color: ["#ef7a24", "#1d7188", "#5a8d5b", "#8b5e9d"][index % 4] } })) }] });
+  init("sgRiskSpeedChart", { animationDuration: 420, tooltip: { trigger: "item", formatter: ({ data }) => `${data.name}<br/>Prazo: ${data.value[0]} meses<br/>Risco: ${data.value[1]}%<br/>Nota: ${data.score}/100` }, xAxis: { type: "value", name: "Prazo restante (meses)" }, yAxis: { type: "value", name: "Comprometimento (%)", max: 100 }, series: [{ type: "scatter", symbolSize: 20, data: analytics.map((entry, index) => ({ name: names[index], score: entry.score, value: [Number(entry.item.prazo_restante || 0), Number((entry.incomeCommitment || 0) * 100).toFixed(1)], itemStyle: { color: entry.score >= 70 ? "#1d9b59" : entry.score >= 50 ? "#ef7a24" : "#a44a52" } })) }] });
+}
+
 function renderSelectedGroupsCartSummary(items) {
   const client = investorState.result?.cliente || {};
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
@@ -2437,6 +2453,7 @@ function renderSelectedGroupsScreen() {
   results.classList.toggle("d-none", items.length === 0);
   results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}${renderSelectedGroupsDecisionVisuals(items)}${renderSelectedGroupsCartSummary(items)}<details class="sg-details"><summary>Detalhes completos por grupo</summary><div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div></details>` : "";
   renderSelectedGroupsECharts(items);
+  renderSelectedGroupsExtraVisuals(items);
   results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-scenario]")?.addEventListener("change", (event) => { investorState.selectedGroupScenario = event.target.value; renderSelectedGroupsScreen(); });
