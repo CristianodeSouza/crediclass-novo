@@ -2324,12 +2324,19 @@ function selectedGroupAnalytics(item) {
     installmentAfter: scale(scenario.parcela_pos_contemplacao),
     bid: scale(scenario.lance_total_cenario),
     balance: scale(scenario.saldo_devedor),
-    idealBid, availableBid, score, scoreLabel, focusProfile, adminRate, reserveRate, totalPaid, embedded, creditLossRate,
+    idealBid, availableBid, score, scoreLabel, focusProfile, adminRate, reserveRate, totalPaid, embedded, creditLossRate, creditFit, installmentFit, bidFit, historyFit, costFit, termFit,
     incomeCommitment: commitment, probability, probabilityLabel, riskLabel,
   };
 }
 
 let selectedGroupsCharts = [];
+
+function selectedGroupsPercentValue(value) {
+  if (value === null || value === undefined || value === "") return 0;
+  const normalized = Number(String(value).replace("%", "").replace(",", "."));
+  if (!Number.isFinite(normalized)) return 0;
+  return normalized <= 1 ? normalized * 100 : normalized;
+}
 
 function renderSelectedGroupsAnalyticalPanel(items) {
   const analytics = items.map(selectedGroupAnalytics);
