@@ -2305,6 +2305,11 @@ function selectedGroupAnalytics(item) {
   const costFit = costRate > 0 ? Math.max(0, 1 - Math.min(1, costRate / 0.30)) : .7;
   const term = Number(item.prazo_restante || 0);
   const termFit = term > 0 ? Math.min(1, term / 240) : .5;
+  const adminRate = Number(item.taxa_adm ?? item.taxa_total ?? 0);
+  const reserveRate = Number(item.fundo_reserva || 0);
+  const totalPaid = scale(scenario.saldo_devedor ?? scenario.credito_contratado) * (1 + adminRate + reserveRate);
+  const embedded = scale(scenario.lance_embutido);
+  const creditLossRate = credit > 0 ? Math.min(1, embedded / Math.max(credit + embedded, 1)) : 0;
   const score = Math.round((creditFit * .30 + installmentFit * .20 + bidFit * .20 + historyFit * .15 + costFit * .10 + termFit * .05) * 100);
   return {
     item, groupId, scenario, profile, history, quotaCount,
@@ -2313,7 +2318,7 @@ function selectedGroupAnalytics(item) {
     installmentAfter: scale(scenario.parcela_pos_contemplacao),
     bid: scale(scenario.lance_total_cenario),
     balance: scale(scenario.saldo_devedor),
-    idealBid, availableBid, score, focusProfile,
+    idealBid, availableBid, score, focusProfile, adminRate, reserveRate, totalPaid, embedded, creditLossRate,
     incomeCommitment: Number(client.renda_total || client.renda || 0) > 0 ? installment / Number(client.renda_total || client.renda) : null,
   };
 }
@@ -2335,6 +2340,10 @@ function renderSelectedGroupsAnalyticalPanel(items) {
     ["Prazo restante", (entry) => `${entry.item.prazo_restante ?? "-"} meses`],
     ["Nota de aderência", (entry) => `${entry.score}/100`],
     ["Comprometimento da renda", (entry) => entry.incomeCommitment == null ? "-" : formatPercent(entry.incomeCommitment)],
+    ["Taxa de administração", (entry) => formatPercent(entry.adminRate)],
+    ["Fundo de reserva", (entry) => formatPercent(entry.reserveRate)],
+    ["Custo total estimado", (entry) => formatMoney(entry.totalPaid)],
+    ["Crédito reduzido pelo embutido", (entry) => entry.embedded ? `${formatMoney(entry.embedded)} (${formatPercent(entry.creditLossRate)})` : "-"],
   ];
   const profileRows = Object.entries(profileNames).map(([id, label]) => `<tr class="${profileFilter === id ? "is-focus" : ""}"><th>${label}</th>${analytics.map((entry) => { const value = entry.profile(id); const gap = Number(value.falta_para_ideal || 0) * entry.quotaCount; return `<td><strong>${formatPercent(value.percentual_referencia)}</strong><small>${value.atinge_perfil ? "Perfil atingido" : gap ? `Faltam ${formatMoney(gap)}` : "Sem referência"}</small></td>`; }).join("")}</tr>`).join("");
   const comparativeRows = metricRows.map(([label, formatter]) => `<tr><th>${label}</th>${analytics.map((entry) => `<td>${formatter(entry)}</td>`).join("")}</tr>`).join("");
@@ -2440,7 +2449,7 @@ function renderSelectedGroupsDecisionVisuals(items) {
 }
 
 function selectedGroupsFilterValues() {
-  return investorState.selectedGroupFilters || (investorState.selectedGroupFilters = { minCredit: "", maxInstallment: "", maxBid: "", minHistory: "", maxCommitment: "", compatibleOnly: false });
+  return investorState.selectedGroupFilters || (investorState.selectedGroupFilters = { minCredit: "", maxInstallment: "", maxBid: "", minHistory: "", maxCommitment: "", maxAdmin: "", maxReserve: "", maxTerm: "", administrator: "", compatibleOnly: false });
 }
 
 function renderSelectedGroupsAdvancedFilters() {
@@ -2450,14 +2459,14 @@ function renderSelectedGroupsAdvancedFilters() {
   const panel = document.createElement("section");
   panel.dataset.sgAdvancedFilters = "true";
   panel.className = "sg-advanced-filters";
-  panel.innerHTML = `<div><span>Filtros de elegibilidade</span><strong>Restringir grupos comparados</strong></div><label>Crédito mínimo<input type="number" min="0" step="1000" data-sg-advanced="minCredit" value="${filters.minCredit}" placeholder="R$ 0"></label><label>Parcela máxima<input type="number" min="0" step="100" data-sg-advanced="maxInstallment" value="${filters.maxInstallment}" placeholder="Sem limite"></label><label>Lance ideal máximo<input type="number" min="0" step="1000" data-sg-advanced="maxBid" value="${filters.maxBid}" placeholder="Sem limite"></label><label>Histórico moderado mínimo<input type="number" min="0" step="0.1" data-sg-advanced="minHistory" value="${filters.minHistory}" placeholder="0"></label><label>Comprometimento máximo (%)<input type="number" min="0" max="100" step="1" data-sg-advanced="maxCommitment" value="${filters.maxCommitment}" placeholder="100"></label><label class="sg-filter-check"><input type="checkbox" data-sg-advanced="compatibleOnly" ${filters.compatibleOnly ? "checked" : ""}> Apenas crédito compatível</label><button type="button" class="btn btn-outline-secondary btn-sm" data-sg-clear-filters>Limpar filtros</button>`;
+  panel.innerHTML = `<div><span>Filtros de elegibilidade</span><strong>Restringir grupos comparados</strong></div><label>Administradora<input type="search" data-sg-advanced="administrator" value="${filters.administrator}" placeholder="Todas"></label><label>Crédito mínimo<input type="number" min="0" step="1000" data-sg-advanced="minCredit" value="${filters.minCredit}" placeholder="R$ 0"></label><label>Parcela máxima<input type="number" min="0" step="100" data-sg-advanced="maxInstallment" value="${filters.maxInstallment}" placeholder="Sem limite"></label><label>Lance ideal máximo<input type="number" min="0" step="1000" data-sg-advanced="maxBid" value="${filters.maxBid}" placeholder="Sem limite"></label><label>Histórico moderado mínimo<input type="number" min="0" step="0.1" data-sg-advanced="minHistory" value="${filters.minHistory}" placeholder="0"></label><label>Comprometimento máximo (%)<input type="number" min="0" max="100" step="1" data-sg-advanced="maxCommitment" value="${filters.maxCommitment}" placeholder="100"></label><label>Taxa adm. máxima (%)<input type="number" min="0" max="100" step="1" data-sg-advanced="maxAdmin" value="${filters.maxAdmin}" placeholder="Sem limite"></label><label>Fundo reserva máx. (%)<input type="number" min="0" max="100" step="1" data-sg-advanced="maxReserve" value="${filters.maxReserve}" placeholder="Sem limite"></label><label>Prazo máximo (meses)<input type="number" min="0" step="1" data-sg-advanced="maxTerm" value="${filters.maxTerm}" placeholder="Sem limite"></label><label class="sg-filter-check"><input type="checkbox" data-sg-advanced="compatibleOnly" ${filters.compatibleOnly ? "checked" : ""}> Apenas crédito compatível</label><button type="button" class="btn btn-outline-secondary btn-sm" data-sg-clear-filters>Limpar filtros</button>`;
   dashboard.insertBefore(panel, dashboard.children[1] || null);
   panel.querySelectorAll("[data-sg-advanced]").forEach((input) => input.addEventListener("change", () => {
     const key = input.dataset.sgAdvanced;
     filters[key] = input.type === "checkbox" ? input.checked : input.value;
     renderSelectedGroupsScreen();
   }));
-  panel.querySelector("[data-sg-clear-filters]")?.addEventListener("click", () => { investorState.selectedGroupFilters = { minCredit: "", maxInstallment: "", maxBid: "", minHistory: "", maxCommitment: "", compatibleOnly: false }; renderSelectedGroupsScreen(); });
+  panel.querySelector("[data-sg-clear-filters]")?.addEventListener("click", () => { investorState.selectedGroupFilters = { minCredit: "", maxInstallment: "", maxBid: "", minHistory: "", maxCommitment: "", maxAdmin: "", maxReserve: "", maxTerm: "", administrator: "", compatibleOnly: false }; renderSelectedGroupsScreen(); });
 }
 
 function renderSelectedGroupsScoreBreakdown(items) {
@@ -2500,7 +2509,7 @@ function renderSelectedGroupsScreen() {
     const history = entry.history("moderate");
     const compatible = entry.scenario.credit_compatible !== false;
     const commitment = (entry.incomeCommitment || 0) * 100;
-    return (!filters.minCredit || entry.credit >= Number(filters.minCredit)) && (!filters.maxInstallment || entry.installment <= Number(filters.maxInstallment)) && (!filters.maxBid || entry.idealBid <= Number(filters.maxBid)) && (!filters.minHistory || history >= Number(filters.minHistory)) && (!filters.maxCommitment || commitment <= Number(filters.maxCommitment)) && (!filters.compatibleOnly || compatible);
+    return (!filters.administrator || String(item.administradora || "").toLowerCase().includes(String(filters.administrator).toLowerCase())) && (!filters.minCredit || entry.credit >= Number(filters.minCredit)) && (!filters.maxInstallment || entry.installment <= Number(filters.maxInstallment)) && (!filters.maxBid || entry.idealBid <= Number(filters.maxBid)) && (!filters.minHistory || history >= Number(filters.minHistory)) && (!filters.maxCommitment || commitment <= Number(filters.maxCommitment)) && (!filters.maxAdmin || entry.adminRate * 100 <= Number(filters.maxAdmin)) && (!filters.maxReserve || entry.reserveRate * 100 <= Number(filters.maxReserve)) && (!filters.maxTerm || Number(item.prazo_restante || 0) <= Number(filters.maxTerm)) && (!filters.compatibleOnly || compatible);
   });
   const sort = investorState.selectedGroupSort || "original";
   if (sort === "score") items = [...items].sort((a, b) => selectedGroupAnalytics(b).score - selectedGroupAnalytics(a).score);
