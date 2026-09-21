@@ -2582,6 +2582,28 @@ function renderSelectedGroupsFinalMatrix(items) {
   init("sgProfileScenarioChart", { grid: { left: 90, right: 20, top: 20, bottom: 48 }, legend: { bottom: 0 }, tooltip: { trigger: "axis", valueFormatter: (v) => formatMoney(v) }, xAxis: { type: "category", data: analytics.map((e) => `Grupo ${e.groupId}`) }, yAxis: { type: "value", axisLabel: { formatter: (v) => formatMoney(v) } }, series: profiles.map(([name, id]) => ({ name, type: "bar", data: analytics.map((entry) => Number(entry.profile(id).lance_ideal || 0) * entry.quotaCount), barMaxWidth: 22 })) });
 }
 
+function renderSelectedGroupsExecutiveAudit(items) {
+  const dashboard = document.querySelector("[data-sg-dashboard]");
+  if (!dashboard || dashboard.querySelector("[data-sg-executive-audit]")) return;
+  const analytics = items.map(selectedGroupAnalytics);
+  const best = [...analytics].sort((a, b) => b.score - a.score)[0];
+  const client = investorState.result?.cliente || {};
+  const warnings = [];
+  analytics.forEach((entry) => {
+    if (!entry.scenario.credit_compatible) warnings.push(`Grupo ${entry.groupId}: crédito fora da faixa no cenário selecionado.`);
+    if (!entry.item.capacidade_contemplacoes) warnings.push(`Grupo ${entry.groupId}: histórico de contemplações não informado.`);
+    if (!entry.item.taxa_adm && !entry.item.taxa_total) warnings.push(`Grupo ${entry.groupId}: taxa de administração não informada.`);
+    if (entry.scenario.id === "with_embedded" && !entry.scenario.lance_embutido) warnings.push(`Grupo ${entry.groupId}: lance embutido não calculado.`);
+  });
+  const dataQuality = Math.max(0, 100 - warnings.length * 15);
+  const confidence = dataQuality >= 85 && best?.score >= 70 ? "Alta" : dataQuality >= 60 ? "Média" : "Baixa";
+  const panel = document.createElement("article");
+  panel.dataset.sgExecutiveAudit = "true";
+  panel.className = "sg-panel sg-executive-audit";
+  panel.innerHTML = `<header><div><span>Painel executivo</span><h3>Decisão orientada por dados</h3></div><small>Confiança da análise: ${confidence}</small></header><div class="sg-executive-grid"><div><span>Grupo recomendado</span><strong>${best ? `Grupo ${escapeHtml(best.groupId)}` : "Não determinado"}</strong><small>${best ? `${best.score}/100 · ${best.scoreLabel}` : "Sem dados suficientes"}</small></div><div><span>Principal justificativa</span><strong>${best ? `Aderência de ${best.score}/100` : "Não disponível"}</strong><small>${best ? `Crédito ${Math.round(best.creditFit * 100)}% · lance ${Math.round(best.bidFit * 100)}%` : ""}</small></div><div><span>Qualidade dos dados</span><strong>${dataQuality}%</strong><small>${warnings.length ? `${warnings.length} alerta(s)` : "Sem alertas críticos"}</small></div><div><span>Decisão</span><strong>${best && best.score >= 65 && !warnings.length ? "Elegível para recomendação" : "Exige validação manual"}</strong><small>O dashboard não substitui a conferência dos dados de origem.</small></div></div>${warnings.length ? `<div class="sg-data-alerts"><strong>Alertas de qualidade</strong>${warnings.map((warning) => `<span>${escapeHtml(warning)}</span>`).join("")}</div>` : `<div class="sg-data-ok">Dados essenciais disponíveis para comparação relativa.</div>`}</article>`;
+  dashboard.insertBefore(panel, dashboard.children[1] || null);
+}
+
 function renderSelectedGroupsScreen() {
   let items = selectedMotor360Items();
   const filters = selectedGroupsFilterValues();
@@ -2613,6 +2635,7 @@ function renderSelectedGroupsScreen() {
   if (items.length) renderSelectedGroupsRiskProbability(items);
   if (items.length) renderSelectedGroupsCoverageCharts(items);
   if (items.length) renderSelectedGroupsFinalMatrix(items);
+  if (items.length) renderSelectedGroupsExecutiveAudit(items);
   results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-scenario]")?.addEventListener("change", (event) => { investorState.selectedGroupScenario = event.target.value; renderSelectedGroupsScreen(); });
