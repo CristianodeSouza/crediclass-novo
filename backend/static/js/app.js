@@ -2501,6 +2501,22 @@ function renderSelectedGroupsRecommendationBoard(items) {
   dashboard.appendChild(panel);
 }
 
+function renderSelectedGroupsBidScenarios(items) {
+  const dashboard = document.querySelector("[data-sg-dashboard]");
+  if (!dashboard || dashboard.querySelector("[data-sg-bid-scenarios]")) return;
+  const client = investorState.result?.cliente || {};
+  const own = Number(client.lance_proprio ?? client.lance_recursos_proprios ?? client.lance_maximo_recursos_proprios ?? 0);
+  const fgts = Number(client.fgts_total ?? client.fgts ?? 0);
+  const total = own + fgts;
+  const analytics = items.map(selectedGroupAnalytics);
+  const scenarios = [["Somente recursos próprios", own], ["Somente FGTS", fgts], ["Recursos próprios + FGTS", total]];
+  const panel = document.createElement("article");
+  panel.dataset.sgBidScenarios = "true";
+  panel.className = "sg-panel sg-bid-scenarios";
+  panel.innerHTML = `<header><div><span>Cenários de lance</span><h3>Recursos disponíveis x lance ideal</h3></div><small>O embutido é demonstrado separadamente em cada grupo.</small></header><div class="sg-bid-scenario-grid">${scenarios.map(([label, available]) => `<div class="sg-bid-scenario"><strong>${label}</strong><b>${formatMoney(available)}</b><div>${analytics.map((entry) => { const coverage = entry.idealBid > 0 ? Math.min(100, available / entry.idealBid * 100) : 0; const status = coverage >= 100 ? "Suficiente" : coverage >= 80 ? "Próximo" : coverage >= 50 ? "Baixo" : "Insuficiente"; return `<span><em>Grupo ${escapeHtml(entry.groupId)}</em><i><b style="width:${coverage}%"></b></i><small>${coverage.toFixed(0)}% · ${status}</small></span>`; }).join("")}</div></div>`).join("")}</div><div class="sg-bid-embedded-note">Lance embutido considerado nos cenários: consulte o comparativo “Com lance embutido” para verificar a redução do crédito líquido.</div>`;
+  dashboard.appendChild(panel);
+}
+
 function renderSelectedGroupsScreen() {
   let items = selectedMotor360Items();
   const filters = selectedGroupsFilterValues();
@@ -2528,6 +2544,7 @@ function renderSelectedGroupsScreen() {
   if (items.length) renderSelectedGroupsAdvancedFilters();
   if (items.length) renderSelectedGroupsScoreBreakdown(items);
   if (items.length) renderSelectedGroupsRecommendationBoard(items);
+  if (items.length) renderSelectedGroupsBidScenarios(items);
   results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-scenario]")?.addEventListener("change", (event) => { investorState.selectedGroupScenario = event.target.value; renderSelectedGroupsScreen(); });
