@@ -2310,6 +2310,10 @@ function selectedGroupAnalytics(item) {
   const totalPaid = scale(scenario.saldo_devedor ?? scenario.credito_contratado) * (1 + adminRate + reserveRate);
   const embedded = scale(scenario.lance_embutido);
   const creditLossRate = credit > 0 ? Math.min(1, embedded / Math.max(credit + embedded, 1)) : 0;
+  const probability = Math.round(Math.min(100, Math.max(0, bidFit * 65 + historyFit * 35)));
+  const probabilityLabel = probability >= 80 ? "Alta" : probability >= 60 ? "Moderada" : probability >= 40 ? "Baixa" : "Muito baixa";
+  const commitment = Number(client.renda_total || client.renda || 0) > 0 ? installment / Number(client.renda_total || client.renda) : null;
+  const riskLabel = commitment == null ? "Não informado" : commitment <= .15 ? "Baixo" : commitment <= .25 ? "Moderado" : commitment <= .30 ? "Elevado" : "Crítico";
   const score = Math.round((creditFit * .30 + installmentFit * .20 + bidFit * .20 + historyFit * .15 + costFit * .10 + termFit * .05) * 100);
   return {
     item, groupId, scenario, profile, history, quotaCount,
@@ -2319,7 +2323,7 @@ function selectedGroupAnalytics(item) {
     bid: scale(scenario.lance_total_cenario),
     balance: scale(scenario.saldo_devedor),
     idealBid, availableBid, score, focusProfile, adminRate, reserveRate, totalPaid, embedded, creditLossRate,
-    incomeCommitment: Number(client.renda_total || client.renda || 0) > 0 ? installment / Number(client.renda_total || client.renda) : null,
+    incomeCommitment: commitment, probability, probabilityLabel, riskLabel,
   };
 }
 
@@ -2344,6 +2348,8 @@ function renderSelectedGroupsAnalyticalPanel(items) {
     ["Fundo de reserva", (entry) => formatPercent(entry.reserveRate)],
     ["Custo total estimado", (entry) => formatMoney(entry.totalPaid)],
     ["Crédito reduzido pelo embutido", (entry) => entry.embedded ? `${formatMoney(entry.embedded)} (${formatPercent(entry.creditLossRate)})` : "-"],
+    ["Chance relativa de contemplação", (entry) => `${entry.probability}% · ${entry.probabilityLabel}`],
+    ["Risco financeiro", (entry) => entry.riskLabel],
   ];
   const profileRows = Object.entries(profileNames).map(([id, label]) => `<tr class="${profileFilter === id ? "is-focus" : ""}"><th>${label}</th>${analytics.map((entry) => { const value = entry.profile(id); const gap = Number(value.falta_para_ideal || 0) * entry.quotaCount; return `<td><strong>${formatPercent(value.percentual_referencia)}</strong><small>${value.atinge_perfil ? "Perfil atingido" : gap ? `Faltam ${formatMoney(gap)}` : "Sem referência"}</small></td>`; }).join("")}</tr>`).join("");
   const comparativeRows = metricRows.map(([label, formatter]) => `<tr><th>${label}</th>${analytics.map((entry) => `<td>${formatter(entry)}</td>`).join("")}</tr>`).join("");
@@ -2517,6 +2523,17 @@ function renderSelectedGroupsBidScenarios(items) {
   dashboard.appendChild(panel);
 }
 
+function renderSelectedGroupsRiskProbability(items) {
+  const dashboard = document.querySelector("[data-sg-dashboard]");
+  if (!dashboard || dashboard.querySelector("[data-sg-risk-probability]")) return;
+  const panel = document.createElement("article");
+  panel.dataset.sgRiskProbability = "true";
+  panel.className = "sg-panel sg-risk-probability";
+  const analytics = items.map(selectedGroupAnalytics);
+  panel.innerHTML = `<header><div><span>Risco e contemplação</span><h3>Estimativa comparativa por grupo</h3></div><small>Baseada na cobertura do lance e nas médias históricas; não representa garantia.</small></header><div class="sg-risk-probability-grid">${analytics.map((entry) => `<div><strong>Grupo ${escapeHtml(entry.groupId)}</strong><span class="sg-probability-value">${entry.probability}%</span><small>Chance relativa · ${entry.probabilityLabel}</small><i><b style="width:${entry.probability}%"></b></i><em>Risco financeiro: ${entry.riskLabel}</em></div>`).join("")}</div>`;
+  dashboard.appendChild(panel);
+}
+
 function renderSelectedGroupsScreen() {
   let items = selectedMotor360Items();
   const filters = selectedGroupsFilterValues();
@@ -2545,6 +2562,7 @@ function renderSelectedGroupsScreen() {
   if (items.length) renderSelectedGroupsScoreBreakdown(items);
   if (items.length) renderSelectedGroupsRecommendationBoard(items);
   if (items.length) renderSelectedGroupsBidScenarios(items);
+  if (items.length) renderSelectedGroupsRiskProbability(items);
   results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-scenario]")?.addEventListener("change", (event) => { investorState.selectedGroupScenario = event.target.value; renderSelectedGroupsScreen(); });
