@@ -2288,13 +2288,32 @@ function selectedGroupAnalytics(item) {
   const history = (key) => Number(historical[key]?.media_contemplacoes ?? historical[key]?.media ?? 0);
   const quotaCount = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
   const scale = (value) => Number(value || 0) * quotaCount;
+  const client = investorState.result?.cliente || {};
+  const desiredCredit = Number(client.credito_liquido_desejado || 0);
+  const maxInstallment = Number(client.parcela_maxima || client.parcela_desejada || 0);
+  const availableBid = Number(client.lance_cliente_total || 0);
+  const credit = scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? item.credito_maximo);
+  const installment = scale(scenario.parcela_inicial);
+  const moderate = profile("moderate");
+  const idealBid = scale(moderate.lance_ideal);
+  const creditFit = desiredCredit > 0 ? Math.min(1, credit / desiredCredit) : 1;
+  const installmentFit = maxInstallment > 0 ? Math.min(1, maxInstallment / Math.max(installment, 1)) : 1;
+  const bidFit = idealBid > 0 ? Math.min(1, availableBid / idealBid) : 1;
+  const historyFit = Math.min(1, history("moderate") / 6);
+  const costRate = Number(item.taxa_total ?? item.taxa_administracao ?? 0);
+  const costFit = costRate > 0 ? Math.max(0, 1 - Math.min(1, costRate / 0.30)) : .7;
+  const term = Number(item.prazo_restante || 0);
+  const termFit = term > 0 ? Math.min(1, term / 240) : .5;
+  const score = Math.round((creditFit * .30 + installmentFit * .20 + bidFit * .20 + historyFit * .15 + costFit * .10 + termFit * .05) * 100);
   return {
     item, groupId, scenario, profile, history, quotaCount,
-    credit: scale(item.credito_maximo),
-    installment: scale(scenario.parcela_inicial),
+    credit,
+    installment,
     installmentAfter: scale(scenario.parcela_pos_contemplacao),
     bid: scale(scenario.lance_total_cenario),
     balance: scale(scenario.saldo_devedor),
+    idealBid, availableBid, score,
+    incomeCommitment: Number(client.renda_total || client.renda || 0) > 0 ? installment / Number(client.renda_total || client.renda) : null,
   };
 }
 
@@ -2313,10 +2332,12 @@ function renderSelectedGroupsAnalyticalPanel(items) {
     ["Lance total", (entry) => formatMoney(entry.bid)],
     ["Saldo devedor", (entry) => formatMoney(entry.balance)],
     ["Prazo restante", (entry) => `${entry.item.prazo_restante ?? "-"} meses`],
+    ["Nota de aderência", (entry) => `${entry.score}/100`],
+    ["Comprometimento da renda", (entry) => entry.incomeCommitment == null ? "-" : formatPercent(entry.incomeCommitment)],
   ];
   const profileRows = Object.entries(profileNames).map(([id, label]) => `<tr class="${profileFilter === id ? "is-focus" : ""}"><th>${label}</th>${analytics.map((entry) => { const value = entry.profile(id); const gap = Number(value.falta_para_ideal || 0) * entry.quotaCount; return `<td><strong>${formatPercent(value.percentual_referencia)}</strong><small>${value.atinge_perfil ? "Perfil atingido" : gap ? `Faltam ${formatMoney(gap)}` : "Sem referência"}</small></td>`; }).join("")}</tr>`).join("");
   const comparativeRows = metricRows.map(([label, formatter]) => `<tr><th>${label}</th>${analytics.map((entry) => `<td>${formatter(entry)}</td>`).join("")}</tr>`).join("");
-  const controls = `<div class="sg-toolbar"><div><span>Visão analítica</span><h2>Comparação de grupos</h2><p>Leitura factual das condições, histórico e perfis de contemplação.</p></div><div class="sg-controls"><label>Cenário<select data-sg-scenario><option value="without_embedded" ${currentScenario === "without_embedded" ? "selected" : ""}>Sem lance embutido</option><option value="with_embedded" ${currentScenario === "with_embedded" ? "selected" : ""}>Com lance embutido</option></select></label><label>Perfil em foco<select data-sg-filter="profile"><option value="all" ${profileFilter === "all" ? "selected" : ""}>Todos os perfis</option>${Object.entries(profileNames).map(([id, label]) => `<option value="${id}" ${profileFilter === id ? "selected" : ""}>${label}</option>`).join("")}</select></label><label>Ordenar grupos<select data-sg-sort><option value="original" ${currentSort === "original" ? "selected" : ""}>Ordem original</option><option value="credit" ${currentSort === "credit" ? "selected" : ""}>Crédito máximo</option><option value="installment" ${currentSort === "installment" ? "selected" : ""}>Parcela inicial</option><option value="history" ${currentSort === "history" ? "selected" : ""}>Histórico moderado</option></select></label></div></div>`;
+  const controls = `<div class="sg-toolbar"><div><span>Visão analítica</span><h2>Comparação de grupos</h2><p>Leitura factual das condições, histórico e perfis de contemplação.</p></div><div class="sg-controls"><label>Cenário<select data-sg-scenario><option value="without_embedded" ${currentScenario === "without_embedded" ? "selected" : ""}>Sem lance embutido</option><option value="with_embedded" ${currentScenario === "with_embedded" ? "selected" : ""}>Com lance embutido</option></select></label><label>Perfil em foco<select data-sg-filter="profile"><option value="all" ${profileFilter === "all" ? "selected" : ""}>Todos os perfis</option>${Object.entries(profileNames).map(([id, label]) => `<option value="${id}" ${profileFilter === id ? "selected" : ""}>${label}</option>`).join("")}</select></label><label>Ordenar grupos<select data-sg-sort><option value="original" ${currentSort === "original" ? "selected" : ""}>Ordem original</option><option value="score" ${currentSort === "score" ? "selected" : ""}>Melhor aderência</option><option value="credit" ${currentSort === "credit" ? "selected" : ""}>Maior crédito</option><option value="installment" ${currentSort === "installment" ? "selected" : ""}>Menor parcela</option><option value="bid" ${currentSort === "bid" ? "selected" : ""}>Menor lance ideal</option><option value="history" ${currentSort === "history" ? "selected" : ""}>Maior histórico</option></select></label></div></div>`;
   return `<section class="sg-dashboard" data-sg-dashboard>${controls}<div class="sg-fact-strip"><span><b>${analytics.length}</b> grupos comparados</span><span><b>${currentScenario === "with_embedded" ? "Com" : "Sem"}</b> lance embutido</span><span>Os gráficos exibem valores por grupo e cota selecionada.</span></div><div class="sg-chart-grid"><article class="sg-panel sg-panel-financial"><header><div><span>Financeiro</span><h3>Valores por grupo</h3></div><div class="sg-metric-switch" role="group" aria-label="Métrica financeira"><button type="button" data-sg-metric="credit" aria-pressed="true">Crédito</button><button type="button" data-sg-metric="installment">Parcela</button><button type="button" data-sg-metric="bid">Lance</button><button type="button" data-sg-metric="balance">Saldo</button></div></header><div class="sg-chart" id="sgFinancialChart" role="img" aria-label="Gráfico financeiro comparativo"></div></article><article class="sg-panel"><header><div><span>Histórico</span><h3>Contemplações por janela</h3></div><small>Médias informadas do grupo</small></header><div class="sg-chart" id="sgHistoryChart" role="img" aria-label="Gráfico de histórico de contemplações"></div></article></div><div class="sg-chart-grid sg-chart-grid-secondary"><article class="sg-panel"><header><div><span>Perfis</span><h3>Distribuição percentual</h3></div><small>Percentual de referência por perfil</small></header><div class="sg-chart" id="sgProfilesChart" role="img" aria-label="Gráfico radar de perfis de contemplação"></div></article><article class="sg-panel sg-table-panel"><header><div><span>Perfis</span><h3>Percentual e diferença de lance</h3></div><small>Valores não são recomendação</small></header><div class="sg-table-wrap"><table class="sg-matrix sg-profile-matrix"><thead><tr><th>Perfil</th>${analytics.map((entry) => `<th>Grupo ${escapeHtml(entry.groupId)}</th>`).join("")}</tr></thead><tbody>${profileRows}</tbody></table></div></article></div><article class="sg-panel sg-comparison-table"><header><div><span>Detalhamento comparativo</span><h3>Condições financeiras e operacionais</h3></div></header><div class="sg-table-wrap"><table class="sg-matrix"><thead><tr><th>Métrica</th>${analytics.map((entry) => `<th>Grupo ${escapeHtml(entry.groupId)}<small>${escapeHtml(entry.item.administradora || "-")}</small></th>`).join("")}</tr></thead><tbody>${comparativeRows}</tbody></table></div></article></section>`;
 }
 
@@ -2404,15 +2425,17 @@ function renderSelectedGroupsDecisionVisuals(items) {
 function renderSelectedGroupsScreen() {
   let items = selectedMotor360Items();
   const sort = investorState.selectedGroupSort || "original";
-  if (sort === "credit") items = [...items].sort((a, b) => Number(b.credito_maximo || 0) - Number(a.credito_maximo || 0));
+  if (sort === "score") items = [...items].sort((a, b) => selectedGroupAnalytics(b).score - selectedGroupAnalytics(a).score);
+  if (sort === "credit") items = [...items].sort((a, b) => selectedGroupAnalytics(b).credit - selectedGroupAnalytics(a).credit);
   if (sort === "installment") items = [...items].sort((a, b) => Number((a.cenarios || [])[0]?.parcela_inicial || 0) - Number((b.cenarios || [])[0]?.parcela_inicial || 0));
+  if (sort === "bid") items = [...items].sort((a, b) => selectedGroupAnalytics(a).idealBid - selectedGroupAnalytics(b).idealBid);
   if (sort === "history") items = [...items].sort((a, b) => Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0));
   const empty = document.getElementById("selectedGroupsEmpty");
   const results = document.getElementById("selectedGroupsResults");
   if (!empty || !results) return;
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
-  results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}<details class="sg-details"><summary>Detalhes completos por grupo</summary><div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div></details>` : "";
+  results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}${renderSelectedGroupsDecisionVisuals(items)}${renderSelectedGroupsCartSummary(items)}<details class="sg-details"><summary>Detalhes completos por grupo</summary><div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div></details>` : "";
   renderSelectedGroupsECharts(items);
   results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
