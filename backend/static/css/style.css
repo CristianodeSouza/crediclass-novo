@@ -6880,6 +6880,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .sg-chart-grid, .sg-chart-grid-secondary { grid-template-columns: 1fr; }
 }
 
+.sg-recommendation-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:9px; }.sg-recommendation-cards > div { padding:11px; border:1px solid #e2e9eb; border-radius:7px; background:#fbfcfc; }.sg-recommendation-cards span,.sg-recommendation-cards strong,.sg-recommendation-cards small { display:block; }.sg-recommendation-cards span { color:var(--brand-orange); font-size:.62rem; font-weight:800; text-transform:uppercase; }.sg-recommendation-cards strong { margin:4px 0; color:var(--brand-navy); font-size:.88rem; }.sg-recommendation-cards small { color:var(--muted); font-size:.63rem; line-height:1.35; }
 @media (max-width: 560px) {
   .sg-controls { display: grid; width: 100%; grid-template-columns: 1fr; }
   .sg-controls label { min-width: 0; }

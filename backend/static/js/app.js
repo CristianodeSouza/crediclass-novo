@@ -2472,6 +2472,26 @@ function renderSelectedGroupsScoreBreakdown(items) {
   dashboard.appendChild(panel);
 }
 
+function renderSelectedGroupsRecommendationBoard(items) {
+  const dashboard = document.querySelector("[data-sg-dashboard]");
+  if (!dashboard || dashboard.querySelector("[data-sg-recommendations]")) return;
+  const analytics = items.map(selectedGroupAnalytics);
+  const recommendations = [
+    ["Melhor grupo geral", [...analytics].sort((a, b) => b.score - a.score)[0]],
+    ["Menor parcela", [...analytics].sort((a, b) => a.installment - b.installment)[0]],
+    ["Contemplação mais rápida", [...analytics].sort((a, b) => b.history("urgent") - a.history("urgent"))[0]],
+    ["Menor lance ideal", [...analytics].sort((a, b) => a.idealBid - b.idealBid)[0]],
+    ["Maior crédito", [...analytics].sort((a, b) => b.credit - a.credit)[0]],
+    ["Menor comprometimento", [...analytics].sort((a, b) => (a.incomeCommitment || 1) - (b.incomeCommitment || 1))[0]],
+    ["Melhor custo-benefício", [...analytics].sort((a, b) => (b.credit / Math.max(b.installment, 1)) - (a.credit / Math.max(a.installment, 1)))[0]],
+  ];
+  const panel = document.createElement("article");
+  panel.dataset.sgRecommendations = "true";
+  panel.className = "sg-panel sg-recommendation-board";
+  panel.innerHTML = `<header><div><span>Recomendação</span><h3>Melhor grupo por objetivo</h3></div><small>A escolha muda conforme a prioridade do cliente.</small></header><div class="sg-recommendation-cards">${recommendations.map(([label, entry]) => entry ? `<div><span>${label}</span><strong>Grupo ${escapeHtml(entry.groupId)}</strong><small>Nota ${entry.score}/100 · Crédito ${formatMoney(entry.credit)} · Parcela ${formatMoney(entry.installment)}</small></div>` : "").join("")}</div>`;
+  dashboard.appendChild(panel);
+}
+
 function renderSelectedGroupsScreen() {
   let items = selectedMotor360Items();
   const filters = selectedGroupsFilterValues();
@@ -2493,11 +2513,12 @@ function renderSelectedGroupsScreen() {
   if (!empty || !results) return;
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
-  results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}${renderSelectedGroupsDecisionVisuals(items)}${renderSelectedGroupsCartSummary(items)}<details class="sg-details"><summary>Detalhes completos por grupo</summary><div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div></details>` : "";
+  results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}${renderSelectedGroupsDecisionVisuals(items)}${renderSelectedGroupsCartSummary(items)}` : "";
   renderSelectedGroupsECharts(items);
   renderSelectedGroupsExtraVisuals(items);
   if (items.length) renderSelectedGroupsAdvancedFilters();
   if (items.length) renderSelectedGroupsScoreBreakdown(items);
+  if (items.length) renderSelectedGroupsRecommendationBoard(items);
   results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-scenario]")?.addEventListener("change", (event) => { investorState.selectedGroupScenario = event.target.value; renderSelectedGroupsScreen(); });
