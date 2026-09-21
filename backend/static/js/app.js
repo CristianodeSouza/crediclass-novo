@@ -2563,8 +2563,10 @@ function renderSelectedGroupsCoverageCharts(items) {
   const analytics = items.map(selectedGroupAnalytics);
   const embeddedImpact = analytics.map((entry) => {
     const scenario = (entry.item.cenarios || []).find((value) => value.id === "with_embedded");
-    const embeddedCredit = Number(scenario?.credito_liquido_projetado ?? scenario?.credito_contratado ?? 0) * entry.quotaCount;
-    return { after: embeddedCredit, reduction: Math.max(0, entry.credit - embeddedCredit) };
+    const rawCredit = scenario?.credito_liquido_projetado ?? scenario?.credito_contratado ?? scenario?.credito_maximo ?? 0;
+    const embeddedCredit = Number.isFinite(Number(rawCredit)) ? Number(rawCredit) * entry.quotaCount : 0;
+    const before = Number.isFinite(Number(entry.credit)) ? Number(entry.credit) : 0;
+    return { after: embeddedCredit, reduction: Math.max(0, before - embeddedCredit) };
   });
   const panel = document.createElement("div");
   panel.dataset.sgCoverageCharts = "true";
@@ -2574,7 +2576,7 @@ function renderSelectedGroupsCoverageCharts(items) {
   const init = (id, option) => { const element = document.getElementById(id); if (!element) return; const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); };
   const labels = analytics.map((entry) => `Grupo ${entry.groupId}`);
   init("sgCreditCoverageChart", { grid: { left: 90, right: 25, top: 20, bottom: 30 }, tooltip: { trigger: "axis", valueFormatter: (v) => `${Number(v).toFixed(1)}%` }, xAxis: { type: "value", max: 120, axisLabel: { formatter: "{value}%" } }, yAxis: { type: "category", data: labels }, series: [{ type: "bar", data: analytics.map((entry) => ({ value: entry.creditFit * 100, itemStyle: { color: entry.creditFit >= 1 ? "#1d9b59" : "#ef7a24" } })), label: { show: true, position: "right", formatter: ({ value }) => `${Number(value).toFixed(0)}%` } }] });
-  init("sgEmbeddedImpactChart", { grid: { left: 90, right: 25, top: 20, bottom: 30 }, tooltip: { trigger: "axis", valueFormatter: (v) => formatMoney(v) }, xAxis: { type: "category", data: labels }, yAxis: { type: "value", axisLabel: { formatter: (v) => formatMoney(v) } }, series: [{ name: "Crédito após embutido", type: "bar", stack: "credit", data: embeddedImpact.map((value) => value.after), itemStyle: { color: "#1d7188" } }, { name: "Redução pelo embutido", type: "bar", stack: "credit", data: embeddedImpact.map((value) => value.reduction), itemStyle: { color: "#ef7a24" } }] });
+  init("sgEmbeddedImpactChart", { animationDuration: 420, grid: { left: 90, right: 25, top: 20, bottom: 42 }, legend: { bottom: 0 }, tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v) => formatMoney(v) }, xAxis: { type: "category", data: labels }, yAxis: { type: "value", name: "Valor (R$)", axisLabel: { formatter: (v) => formatMoney(v) } }, series: [{ name: "Crédito após embutido", type: "bar", stack: "credit", data: embeddedImpact.map((value) => value.after), itemStyle: { color: "#1d7188" }, label: { show: true, position: "inside", formatter: ({ value }) => value ? formatMoney(value) : "" } }, { name: "Redução pelo embutido", type: "bar", stack: "credit", data: embeddedImpact.map((value) => value.reduction), itemStyle: { color: "#ef7a24" }, label: { show: true, position: "inside", formatter: ({ value }) => value ? formatMoney(value) : "" } }] });
 }
 
 function renderSelectedGroupsFinalMatrix(items) {
