@@ -2534,6 +2534,21 @@ function renderSelectedGroupsRiskProbability(items) {
   dashboard.appendChild(panel);
 }
 
+function renderSelectedGroupsCoverageCharts(items) {
+  const dashboard = document.querySelector("[data-sg-dashboard]");
+  if (!dashboard || !window.echarts || dashboard.querySelector("[data-sg-coverage-charts]")) return;
+  const analytics = items.map(selectedGroupAnalytics);
+  const panel = document.createElement("div");
+  panel.dataset.sgCoverageCharts = "true";
+  panel.className = "sg-chart-grid sg-coverage-charts";
+  panel.innerHTML = `<article class="sg-panel"><header><div><span>Adequação</span><h3>Crédito desejado x disponível</h3></div><small>Percentual de atendimento por grupo</small></header><div class="sg-chart" id="sgCreditCoverageChart" role="img" aria-label="Cobertura do crédito"></div></article><article class="sg-panel"><header><div><span>Lance embutido</span><h3>Crédito antes x depois do embutido</h3></div><small>Impacto sobre o crédito líquido</small></header><div class="sg-chart" id="sgEmbeddedImpactChart" role="img" aria-label="Impacto do lance embutido"></div></article>`;
+  dashboard.appendChild(panel);
+  const init = (id, option) => { const element = document.getElementById(id); if (!element) return; const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); };
+  const labels = analytics.map((entry) => `Grupo ${entry.groupId}`);
+  init("sgCreditCoverageChart", { grid: { left: 90, right: 25, top: 20, bottom: 30 }, tooltip: { trigger: "axis", valueFormatter: (v) => `${Number(v).toFixed(1)}%` }, xAxis: { type: "value", max: 120, axisLabel: { formatter: "{value}%" } }, yAxis: { type: "category", data: labels }, series: [{ type: "bar", data: analytics.map((entry) => ({ value: entry.creditFit * 100, itemStyle: { color: entry.creditFit >= 1 ? "#1d9b59" : "#ef7a24" } })), label: { show: true, position: "right", formatter: ({ value }) => `${Number(value).toFixed(0)}%` } }] });
+  init("sgEmbeddedImpactChart", { grid: { left: 90, right: 25, top: 20, bottom: 30 }, tooltip: { trigger: "axis", valueFormatter: (v) => formatMoney(v) }, xAxis: { type: "category", data: labels }, yAxis: { type: "value", axisLabel: { formatter: (v) => formatMoney(v) } }, series: [{ name: "Crédito líquido", type: "bar", stack: "credit", data: analytics.map((entry) => entry.credit), itemStyle: { color: "#1d7188" } }, { name: "Redução pelo embutido", type: "bar", stack: "credit", data: analytics.map((entry) => entry.embedded), itemStyle: { color: "#ef7a24" } }] });
+}
+
 function renderSelectedGroupsScreen() {
   let items = selectedMotor360Items();
   const filters = selectedGroupsFilterValues();
@@ -2563,6 +2578,7 @@ function renderSelectedGroupsScreen() {
   if (items.length) renderSelectedGroupsRecommendationBoard(items);
   if (items.length) renderSelectedGroupsBidScenarios(items);
   if (items.length) renderSelectedGroupsRiskProbability(items);
+  if (items.length) renderSelectedGroupsCoverageCharts(items);
   results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-scenario]")?.addEventListener("change", (event) => { investorState.selectedGroupScenario = event.target.value; renderSelectedGroupsScreen(); });
