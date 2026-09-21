@@ -2459,6 +2459,18 @@ function renderSelectedGroupsAdvancedFilters() {
   panel.querySelector("[data-sg-clear-filters]")?.addEventListener("click", () => { investorState.selectedGroupFilters = { minCredit: "", maxInstallment: "", maxBid: "", minHistory: "", maxCommitment: "", compatibleOnly: false }; renderSelectedGroupsScreen(); });
 }
 
+function renderSelectedGroupsScoreBreakdown(items) {
+  const dashboard = document.querySelector("[data-sg-dashboard]");
+  if (!dashboard || dashboard.querySelector("[data-sg-score-breakdown]")) return;
+  const analytics = items.map(selectedGroupAnalytics);
+  const factors = [["Crédito", "creditFit"], ["Parcela", "installmentFit"], ["Lance", "bidFit"], ["Histórico", "historyFit"], ["Custo", "costFit"], ["Prazo", "termFit"]];
+  const panel = document.createElement("article");
+  panel.dataset.sgScoreBreakdown = "true";
+  panel.className = "sg-panel sg-score-breakdown";
+  panel.innerHTML = `<header><div><span>Transparência</span><h3>Composição da nota de aderência</h3></div><small>Pesos: crédito 30%, parcela 20%, lance 20%, histórico 15%, custo 10%, prazo 5%</small></header><div class="sg-score-grid">${analytics.map((entry) => `<div class="sg-score-column"><strong>Grupo ${escapeHtml(entry.groupId)} · ${entry.score}/100</strong>${factors.map(([label, key]) => `<div class="sg-score-factor"><span>${label}</span><i><b style="width:${Math.round((entry[key] || 0) * 100)}%"></b></i><em>${Math.round((entry[key] || 0) * 100)}%</em></div>`).join("")}</div>`).join("")}</div>`;
+  dashboard.appendChild(panel);
+}
+
 function renderSelectedGroupsScreen() {
   let items = selectedMotor360Items();
   const filters = selectedGroupsFilterValues();
@@ -2484,6 +2496,7 @@ function renderSelectedGroupsScreen() {
   renderSelectedGroupsECharts(items);
   renderSelectedGroupsExtraVisuals(items);
   if (items.length) renderSelectedGroupsAdvancedFilters();
+  if (items.length) renderSelectedGroupsScoreBreakdown(items);
   results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-scenario]")?.addEventListener("change", (event) => { investorState.selectedGroupScenario = event.target.value; renderSelectedGroupsScreen(); });
