@@ -2370,15 +2370,18 @@ function renderSelectedGroupsAnalyticalPanel(items) {
 function renderSelectedGroupsECharts(items) {
   selectedGroupsCharts.forEach((chart) => chart?.dispose?.());
   selectedGroupsCharts = [];
-  if (!window.echarts || !items.length) return;
+  if (!items.length) return;
+  if (!window.echarts) {
+    document.querySelectorAll("[data-sg-dashboard] .sg-chart").forEach((element) => { element.innerHTML = '<div class="sg-chart-error">Não foi possível carregar o componente de gráficos. Atualize a página ou verifique a conexão.</div>'; });
+    console.error("[selected-groups-chart] ECharts não carregado; os dados do Motor 360 permanecem disponíveis no JSON de auditoria.");
+    return;
+  }
   const analytics = items.map(selectedGroupAnalytics);
   const colors = ["#1d7188", "#ef7a24", "#5a8d5b", "#8b5e9d", "#a44a52"];
   const init = (id, option) => {
     const element = document.getElementById(id);
     if (!element) return;
-    const chart = window.echarts.init(element, null, { renderer: "svg" });
-    chart.setOption(option);
-    selectedGroupsCharts.push(chart);
+    try { const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); } catch (error) { console.error("[selected-groups-chart]", id, error); element.innerHTML = '<div class="sg-chart-error">Dados indisponíveis para este gráfico.</div>'; }
   };
   const moneyAxis = (value) => value >= 1000000 ? `R$ ${(value / 1000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi` : `R$ ${(value / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} mil`;
   const metricMap = { credit: ["Crédito máximo", "credit"], installment: ["Parcela inicial", "installment"], bid: ["Lance total", "bid"], balance: ["Saldo devedor", "balance"] };
