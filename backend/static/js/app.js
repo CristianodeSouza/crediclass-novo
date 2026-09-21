@@ -2407,7 +2407,7 @@ function renderSelectedGroupsExtraVisuals(items) {
   wrapper.className = "sg-chart-grid sg-extra-visuals";
   wrapper.innerHTML = `<article class="sg-panel"><header><div><span>Eficiência</span><h3>Custo-benefício</h3></div><small>Crédito líquido por custo estimado</small></header><div class="sg-chart" id="sgCostBenefitChart" role="img" aria-label="Gráfico de custo benefício"></div></article><article class="sg-panel"><header><div><span>Decisão</span><h3>Risco x velocidade</h3></div><small>Quanto mais à direita e abaixo, melhor</small></header><div class="sg-chart" id="sgRiskSpeedChart" role="img" aria-label="Gráfico de risco e velocidade"></div></article>`;
   dashboard.appendChild(wrapper);
-  const init = (id, option) => { const element = document.getElementById(id); if (!element) return; const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); };
+  const init = (id, option) => { const element = document.getElementById(id); if (!element) return; try { const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); } catch (error) { console.error("[selected-groups-chart]", id, error); element.innerHTML = '<div class="sg-chart-error">Dados indisponíveis para este gráfico.</div>'; } };
   const names = analytics.map((entry) => `Grupo ${entry.groupId}`);
   const embeddedImpact = analytics.map((entry) => {
     const scenario = (entry.item.cenarios || []).find((value) => value.id === "with_embedded");
@@ -2534,8 +2534,9 @@ function renderSelectedGroupsBidScenarios(items) {
   const dashboard = document.querySelector("[data-sg-dashboard]");
   if (!dashboard || dashboard.querySelector("[data-sg-bid-scenarios]")) return;
   const client = investorState.result?.cliente || {};
-  const own = Number(client.lance_proprio ?? client.lance_recursos_proprios ?? client.lance_maximo_recursos_proprios ?? 0);
   const fgts = Number(client.fgts_total ?? client.fgts ?? 0);
+  const totalClientBid = Number(client.lance_cliente_total ?? client.lance_total ?? 0);
+  const own = Number(client.lance_proprio ?? client.lance_recursos_proprios ?? client.lance_maximo_recursos_proprios ?? Math.max(0, totalClientBid - fgts));
   const total = own + fgts;
   const analytics = items.map(selectedGroupAnalytics);
   const scenarios = [["Somente recursos próprios", own], ["Somente FGTS", fgts], ["Recursos próprios + FGTS", total]];
@@ -2573,7 +2574,7 @@ function renderSelectedGroupsCoverageCharts(items) {
   panel.className = "sg-chart-grid sg-coverage-charts";
   panel.innerHTML = `<article class="sg-panel"><header><div><span>Adequação</span><h3>Crédito desejado x disponível</h3></div><small>Percentual de atendimento por grupo</small></header><div class="sg-chart" id="sgCreditCoverageChart" role="img" aria-label="Cobertura do crédito"></div></article><article class="sg-panel"><header><div><span>Lance embutido</span><h3>Crédito antes x depois do embutido</h3></div><small>Impacto sobre o crédito líquido</small></header><div class="sg-chart" id="sgEmbeddedImpactChart" role="img" aria-label="Impacto do lance embutido"></div></article>`;
   dashboard.appendChild(panel);
-  const init = (id, option) => { const element = document.getElementById(id); if (!element) return; const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); };
+  const init = (id, option) => { const element = document.getElementById(id); if (!element) return; try { const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); } catch (error) { console.error("[selected-groups-chart]", id, error); element.innerHTML = '<div class="sg-chart-error">Dados indisponíveis para este gráfico.</div>'; } };
   const labels = analytics.map((entry) => `Grupo ${entry.groupId}`);
   init("sgCreditCoverageChart", { grid: { left: 90, right: 25, top: 20, bottom: 30 }, tooltip: { trigger: "axis", valueFormatter: (v) => `${Number(v).toFixed(1)}%` }, xAxis: { type: "value", max: 120, axisLabel: { formatter: "{value}%" } }, yAxis: { type: "category", data: labels }, series: [{ type: "bar", data: analytics.map((entry) => ({ value: entry.creditFit * 100, itemStyle: { color: entry.creditFit >= 1 ? "#1d9b59" : "#ef7a24" } })), label: { show: true, position: "right", formatter: ({ value }) => `${Number(value).toFixed(0)}%` } }] });
   init("sgEmbeddedImpactChart", { animationDuration: 420, grid: { left: 90, right: 25, top: 20, bottom: 42 }, legend: { bottom: 0 }, tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (v) => formatMoney(v) }, xAxis: { type: "category", data: labels }, yAxis: { type: "value", name: "Valor (R$)", axisLabel: { formatter: (v) => formatMoney(v) } }, series: [{ name: "Crédito após embutido", type: "bar", stack: "credit", data: embeddedImpact.map((value) => value.after), itemStyle: { color: "#1d7188" }, label: { show: true, position: "inside", formatter: ({ value }) => value ? formatMoney(value) : "" } }, { name: "Redução pelo embutido", type: "bar", stack: "credit", data: embeddedImpact.map((value) => value.reduction), itemStyle: { color: "#ef7a24" }, label: { show: true, position: "inside", formatter: ({ value }) => value ? formatMoney(value) : "" } }] });
@@ -2588,7 +2589,7 @@ function renderSelectedGroupsFinalMatrix(items) {
   panel.className = "sg-chart-grid sg-final-matrix";
   panel.innerHTML = `<article class="sg-panel"><header><div><span>Síntese</span><h3>Heatmap de critérios</h3></div><small>Verde indica melhor adequação relativa entre os grupos.</small></header><div class="sg-chart" id="sgCriteriaHeatmap" role="img" aria-label="Heatmap de critérios"></div></article><article class="sg-panel"><header><div><span>Perfis</span><h3>Cenários de contemplação</h3></div><small>Lance ideal e cobertura por perfil.</small></header><div class="sg-chart" id="sgProfileScenarioChart" role="img" aria-label="Cenários por perfil"></div></article>`;
   dashboard.appendChild(panel);
-  const init = (id, option) => { const element = document.getElementById(id); if (!element) return; const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); };
+  const init = (id, option) => { const element = document.getElementById(id); if (!element) return; try { const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); } catch (error) { console.error("[selected-groups-chart]", id, error); element.innerHTML = '<div class="sg-chart-error">Dados indisponíveis para este gráfico.</div>'; } };
   const criteria = [["Crédito", "creditFit"], ["Parcela", "installmentFit"], ["Lance", "bidFit"], ["Histórico", "historyFit"], ["Custo", "costFit"], ["Prazo", "termFit"]];
   init("sgCriteriaHeatmap", { grid: { left: 82, right: 20, top: 20, bottom: 48 }, tooltip: { position: "top", formatter: (p) => `${p.name}<br/>${criteria[p.value[0]][0]}: ${Number(p.value[2]).toFixed(0)}%` }, xAxis: { type: "category", data: criteria.map((c) => c[0]), splitArea: { show: true } }, yAxis: { type: "category", data: analytics.map((e) => `Grupo ${e.groupId}`), splitArea: { show: true } }, visualMap: { min: 0, max: 1, calculable: false, orient: "horizontal", left: "center", bottom: 0, inRange: { color: ["#f7d9c1", "#fff1e5", "#b9e3c8"] } }, series: [{ type: "heatmap", data: analytics.flatMap((entry, row) => criteria.map(([, key], col) => [col, row, Number(entry[key] || 0)])), label: { show: true, formatter: (p) => `${Math.round(p.value[2] * 100)}%` } }] });
   const profiles = [["Conservador", "conservative"], ["Moderado", "moderate"], ["Agressivo", "aggressive"], ["Superagressivo", "super_aggressive"]];
@@ -2617,6 +2618,32 @@ function renderSelectedGroupsExecutiveAudit(items) {
   dashboard.insertBefore(panel, dashboard.children[1] || null);
 }
 
+function renderSelectedGroupsAuditButton(items) {
+  const results = document.getElementById("selectedGroupsResults");
+  if (!results || !items.length || results.querySelector("[data-sg-audit-export]")) return;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "sg-audit-export";
+  button.dataset.sgAuditExport = "true";
+  button.textContent = "Baixar log de auditoria";
+  button.title = "Exporta o perfil, grupos, cenários, filtros e métricas usados nos gráficos";
+  button.addEventListener("click", () => {
+    const audit = { generated_at: new Date().toISOString(), scenario: investorState.selectedGroupScenario || "without_embedded", profile: investorState.selectedGroupProfile || "all", sort: investorState.selectedGroupSort || "original", filters: investorState.selectedGroupFilters || {}, client: investorState.result?.cliente || {}, groups: items.map((item) => ({ group_id: item.grupo || item.grupo_id, administrator: item.administradora, quotas: investorState.quotaCounts.get(String(item.grupo || item.grupo_id)) || 1, raw_group: item, analytics: selectedGroupAnalytics(item) })) };
+    const blob = new Blob([JSON.stringify(audit, null, 2)], { type: "application/json;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `crediclass-auditoria-grupos-${new Date().toISOString().replace(/[:.]/g, "-")}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+  results.appendChild(button);
+}
+
+function renderSelectedGroupsSafely(label, renderer, items) {
+  try { renderer(items); } catch (error) { console.error(`[selected-groups-render] ${label}`, error); }
+}
+
 function renderSelectedGroupsScreen() {
   let items = selectedMotor360Items();
   const filters = selectedGroupsFilterValues();
@@ -2640,15 +2667,16 @@ function renderSelectedGroupsScreen() {
   results.classList.toggle("d-none", items.length === 0);
   results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}${renderSelectedGroupsDecisionVisuals(items)}${renderSelectedGroupsCartSummary(items)}` : "";
   renderSelectedGroupsECharts(items);
-  renderSelectedGroupsExtraVisuals(items);
+  renderSelectedGroupsSafely("extra-visuals", renderSelectedGroupsExtraVisuals, items);
   if (items.length) renderSelectedGroupsAdvancedFilters();
   if (items.length) renderSelectedGroupsScoreBreakdown(items);
   if (items.length) renderSelectedGroupsRecommendationBoard(items);
   if (items.length) renderSelectedGroupsBidScenarios(items);
   if (items.length) renderSelectedGroupsRiskProbability(items);
-  if (items.length) renderSelectedGroupsCoverageCharts(items);
-  if (items.length) renderSelectedGroupsFinalMatrix(items);
+  if (items.length) renderSelectedGroupsSafely("coverage-charts", renderSelectedGroupsCoverageCharts, items);
+  if (items.length) renderSelectedGroupsSafely("final-matrix", renderSelectedGroupsFinalMatrix, items);
   if (items.length) renderSelectedGroupsExecutiveAudit(items);
+  if (items.length) renderSelectedGroupsAuditButton(items);
   results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-scenario]")?.addEventListener("change", (event) => { investorState.selectedGroupScenario = event.target.value; renderSelectedGroupsScreen(); });
