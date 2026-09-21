@@ -2438,8 +2438,37 @@ function renderSelectedGroupsDecisionVisuals(items) {
   return `<div class="sg-decision-visuals"><div class="sg-alert-banner ${best?.profile("moderate")?.atinge_perfil ? "is-ok" : "is-alert"}"><strong>${best?.profile("moderate")?.atinge_perfil ? "Perfil compatível" : "Nenhum grupo atinge integralmente o perfil"}</strong><span>${best ? `A recomendação do Grupo ${escapeHtml(best.groupId)} é relativa entre os grupos selecionados.` : "Sem dados para recomendar."}</span></div><div class="sg-decision-grid"><article class="sg-panel"><header><div><span>Lance comparativo</span><h3>Disponível x ideal</h3></div></header><div class="sg-gap-cards">${cards}</div></article><article class="sg-panel"><header><div><span>Transparência</span><h3>Nota e confiança</h3></div><small>${confidence}</small></header><div class="sg-score-detail"><strong>${score}/100</strong><span>Confiança ${confidence}</span><div><i style="width:${score}%"></i></div><p>Crédito, histórico e aderência combinados. A nota não representa aprovação financeira.</p></div></article></div></div>`;
 }
 
+function selectedGroupsFilterValues() {
+  return investorState.selectedGroupFilters || (investorState.selectedGroupFilters = { minCredit: "", maxInstallment: "", maxBid: "", minHistory: "", maxCommitment: "", compatibleOnly: false });
+}
+
+function renderSelectedGroupsAdvancedFilters() {
+  const dashboard = document.querySelector("[data-sg-dashboard]");
+  if (!dashboard || dashboard.querySelector("[data-sg-advanced-filters]")) return;
+  const filters = selectedGroupsFilterValues();
+  const panel = document.createElement("section");
+  panel.dataset.sgAdvancedFilters = "true";
+  panel.className = "sg-advanced-filters";
+  panel.innerHTML = `<div><span>Filtros de elegibilidade</span><strong>Restringir grupos comparados</strong></div><label>Crédito mínimo<input type="number" min="0" step="1000" data-sg-advanced="minCredit" value="${filters.minCredit}" placeholder="R$ 0"></label><label>Parcela máxima<input type="number" min="0" step="100" data-sg-advanced="maxInstallment" value="${filters.maxInstallment}" placeholder="Sem limite"></label><label>Lance ideal máximo<input type="number" min="0" step="1000" data-sg-advanced="maxBid" value="${filters.maxBid}" placeholder="Sem limite"></label><label>Histórico moderado mínimo<input type="number" min="0" step="0.1" data-sg-advanced="minHistory" value="${filters.minHistory}" placeholder="0"></label><label>Comprometimento máximo (%)<input type="number" min="0" max="100" step="1" data-sg-advanced="maxCommitment" value="${filters.maxCommitment}" placeholder="100"></label><label class="sg-filter-check"><input type="checkbox" data-sg-advanced="compatibleOnly" ${filters.compatibleOnly ? "checked" : ""}> Apenas crédito compatível</label><button type="button" class="btn btn-outline-secondary btn-sm" data-sg-clear-filters>Limpar filtros</button>`;
+  dashboard.insertBefore(panel, dashboard.children[1] || null);
+  panel.querySelectorAll("[data-sg-advanced]").forEach((input) => input.addEventListener("change", () => {
+    const key = input.dataset.sgAdvanced;
+    filters[key] = input.type === "checkbox" ? input.checked : input.value;
+    renderSelectedGroupsScreen();
+  }));
+  panel.querySelector("[data-sg-clear-filters]")?.addEventListener("click", () => { investorState.selectedGroupFilters = { minCredit: "", maxInstallment: "", maxBid: "", minHistory: "", maxCommitment: "", compatibleOnly: false }; renderSelectedGroupsScreen(); });
+}
+
 function renderSelectedGroupsScreen() {
   let items = selectedMotor360Items();
+  const filters = selectedGroupsFilterValues();
+  items = items.filter((item) => {
+    const entry = selectedGroupAnalytics(item);
+    const history = entry.history("moderate");
+    const compatible = entry.scenario.credit_compatible !== false;
+    const commitment = (entry.incomeCommitment || 0) * 100;
+    return (!filters.minCredit || entry.credit >= Number(filters.minCredit)) && (!filters.maxInstallment || entry.installment <= Number(filters.maxInstallment)) && (!filters.maxBid || entry.idealBid <= Number(filters.maxBid)) && (!filters.minHistory || history >= Number(filters.minHistory)) && (!filters.maxCommitment || commitment <= Number(filters.maxCommitment)) && (!filters.compatibleOnly || compatible);
+  });
   const sort = investorState.selectedGroupSort || "original";
   if (sort === "score") items = [...items].sort((a, b) => selectedGroupAnalytics(b).score - selectedGroupAnalytics(a).score);
   if (sort === "credit") items = [...items].sort((a, b) => selectedGroupAnalytics(b).credit - selectedGroupAnalytics(a).credit);
@@ -2454,6 +2483,7 @@ function renderSelectedGroupsScreen() {
   results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}${renderSelectedGroupsDecisionVisuals(items)}${renderSelectedGroupsCartSummary(items)}<details class="sg-details"><summary>Detalhes completos por grupo</summary><div class="selected-groups-comparison">${items.map(renderSelectedGroupComparisonColumn).join("")}</div></details>` : "";
   renderSelectedGroupsECharts(items);
   renderSelectedGroupsExtraVisuals(items);
+  if (items.length) renderSelectedGroupsAdvancedFilters();
   results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-scenario]")?.addEventListener("change", (event) => { investorState.selectedGroupScenario = event.target.value; renderSelectedGroupsScreen(); });
