@@ -2561,6 +2561,11 @@ function renderSelectedGroupsCoverageCharts(items) {
   const dashboard = document.querySelector("[data-sg-dashboard]");
   if (!dashboard || !window.echarts || dashboard.querySelector("[data-sg-coverage-charts]")) return;
   const analytics = items.map(selectedGroupAnalytics);
+  const embeddedImpact = analytics.map((entry) => {
+    const scenario = (entry.item.cenarios || []).find((value) => value.id === "with_embedded");
+    const embeddedCredit = Number(scenario?.credito_liquido_projetado ?? scenario?.credito_contratado ?? 0) * entry.quotaCount;
+    return { after: embeddedCredit, reduction: Math.max(0, entry.credit - embeddedCredit) };
+  });
   const panel = document.createElement("div");
   panel.dataset.sgCoverageCharts = "true";
   panel.className = "sg-chart-grid sg-coverage-charts";
