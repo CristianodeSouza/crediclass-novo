@@ -2314,7 +2314,9 @@ function selectedGroupAnalytics(item) {
   const probabilityLabel = probability >= 80 ? "Alta" : probability >= 60 ? "Moderada" : probability >= 40 ? "Baixa" : "Muito baixa";
   const commitment = Number(client.renda_total || client.renda || 0) > 0 ? installment / Number(client.renda_total || client.renda) : null;
   const riskLabel = commitment == null ? "Não informado" : commitment <= .15 ? "Baixo" : commitment <= .25 ? "Moderado" : commitment <= .30 ? "Elevado" : "Crítico";
-  const score = Math.round((creditFit * .30 + installmentFit * .20 + bidFit * .20 + historyFit * .15 + costFit * .10 + termFit * .05) * 100);
+  const riskFit = commitment == null ? .5 : Math.max(0, 1 - Math.min(1, commitment / .30));
+  const score = Math.round((creditFit * .30 + installmentFit * .20 + bidFit * .20 + historyFit * .15 + costFit * .05 + termFit * .05 + riskFit * .05) * 100);
+  const scoreLabel = score >= 80 ? "Excelente" : score >= 65 ? "Adequada" : score >= 50 ? "Atenção" : "Inadequada";
   return {
     item, groupId, scenario, profile, history, quotaCount,
     credit,
@@ -2322,7 +2324,7 @@ function selectedGroupAnalytics(item) {
     installmentAfter: scale(scenario.parcela_pos_contemplacao),
     bid: scale(scenario.lance_total_cenario),
     balance: scale(scenario.saldo_devedor),
-    idealBid, availableBid, score, focusProfile, adminRate, reserveRate, totalPaid, embedded, creditLossRate,
+    idealBid, availableBid, score, scoreLabel, focusProfile, adminRate, reserveRate, totalPaid, embedded, creditLossRate,
     incomeCommitment: commitment, probability, probabilityLabel, riskLabel,
   };
 }
@@ -2343,6 +2345,7 @@ function renderSelectedGroupsAnalyticalPanel(items) {
     ["Saldo devedor", (entry) => formatMoney(entry.balance)],
     ["Prazo restante", (entry) => `${entry.item.prazo_restante ?? "-"} meses`],
     ["Nota de aderência", (entry) => `${entry.score}/100`],
+    ["Classificação", (entry) => entry.scoreLabel],
     ["Comprometimento da renda", (entry) => entry.incomeCommitment == null ? "-" : formatPercent(entry.incomeCommitment)],
     ["Taxa de administração", (entry) => formatPercent(entry.adminRate)],
     ["Fundo de reserva", (entry) => formatPercent(entry.reserveRate)],
