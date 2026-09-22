@@ -2535,6 +2535,19 @@ function renderSelectedGroupsScoreBreakdown(items) {
   const dashboard = document.querySelector("[data-sg-dashboard]");
   if (!dashboard || dashboard.querySelector("[data-sg-score-breakdown]")) return;
   const analytics = items.map(selectedGroupAnalytics);
+  const { client } = selectedGroupsClientFinancials();
+  const desiredInstallment = Number(client.parcela_desejada || 0);
+  const checklist = (entry) => {
+    const profileNames = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super agressivo" };
+    const profileLabel = profileNames[entry.focusProfile] || "perfil selecionado";
+    const checks = [
+      ["Lance para contemplação", entry.availableBid >= entry.idealBid, `Disponível ${formatMoney(entry.availableBid)} · ideal ${formatMoney(entry.idealBid)} (${profileLabel})`],
+      ["Parcela desejada x parcela inicial", desiredInstallment > 0 && entry.installment <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · inicial ${formatMoney(entry.installment)}`],
+      ["Parcela desejada x pós-contemplação", desiredInstallment > 0 && entry.installmentAfter > 0 && entry.installmentAfter <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · pós-contemplação ${formatMoney(entry.installmentAfter)}`],
+      ["Crédito contratado x crédito desejado", entry.contractedCredit >= entry.desiredCredit, `Contratado ${formatMoney(entry.contractedCredit)} · desejado líquido ${formatMoney(entry.desiredCredit)}`],
+    ];
+    return checks.map(([label, passes, detail]) => `<div class="sg-check-item ${passes ? "is-ok" : "is-fail"}"><span><b aria-hidden="true">${passes ? "✓" : "×"}</b>${label}</span><strong>${passes ? "Atende" : "Não atende"}</strong><small>${detail}</small></div>`).join("");
+  };
   const factors = [
     ["Crédito", "creditFit", "Compara o crédito líquido calculado com o crédito desejado pelo cliente. Fórmula: crédito disponível dividido pelo crédito desejado, limitado a 100%. Peso: 30%."],
     ["Parcela", "installmentFit", "Compara a parcela inicial do grupo com a parcela máxima aceita pelo cliente. Fórmula: parcela máxima dividida pela parcela inicial, limitado a 100%. Peso: 20%."],
@@ -2546,7 +2559,7 @@ function renderSelectedGroupsScoreBreakdown(items) {
   const panel = document.createElement("article");
   panel.dataset.sgScoreBreakdown = "true";
   panel.className = "sg-panel sg-score-breakdown";
-  panel.innerHTML = `<header><div><span>Transparência</span><h3>Composição da nota de aderência</h3></div><small>Pesos: crédito 30%, parcela 20%, lance 20%, histórico 15%, custo 5%, prazo 5%</small></header><div class="sg-score-grid">${analytics.map((entry) => `<div class="sg-score-column"><strong>Grupo ${escapeHtml(entry.groupId)} · ${entry.score}/100</strong>${factors.map(([label, key, explanation]) => `<div class="sg-score-factor"><span>${label}<button type="button" class="sg-info" aria-label="Explicar ${label}" data-tooltip="${escapeHtml(explanation)}">i</button></span><i><b style="width:${Math.round((entry[key] || 0) * 100)}%"></b></i><em>${Math.round((entry[key] || 0) * 100)}%</em></div>`).join("")}</div>`).join("")}</div>`;
+  panel.innerHTML = `<header><div><span>Transparência</span><h3>Checklist de conformidade e assertividade</h3></div><small>Verificação objetiva dos requisitos do cliente por grupo</small></header><div class="sg-check-grid">${analytics.map((entry) => `<div class="sg-check-column"><strong>Grupo ${escapeHtml(entry.groupId)}</strong>${checklist(entry)}</div>`).join("")}</div>`;
   dashboard.appendChild(panel);
 }
 
