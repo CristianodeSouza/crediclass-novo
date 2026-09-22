@@ -2288,10 +2288,9 @@ function selectedGroupAnalytics(item) {
   const history = (key) => Number(historical[key]?.media_contemplacoes ?? historical[key]?.media ?? 0);
   const quotaCount = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
   const scale = (value) => Number(value || 0) * quotaCount;
-  const client = investorState.result?.cliente || {};
+  const { client, availableBid, income } = selectedGroupsClientFinancials();
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
   const maxInstallment = Number(client.parcela_maxima || client.parcela_desejada || 0);
-  const availableBid = Number(client.lance_cliente_total || 0);
   const credit = scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? item.credito_maximo);
   const installment = scale(scenario.parcela_inicial);
   const focusProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : "moderate";
@@ -2312,7 +2311,7 @@ function selectedGroupAnalytics(item) {
   const creditLossRate = credit > 0 ? Math.min(1, embedded / Math.max(credit + embedded, 1)) : 0;
   const probability = Math.round(Math.min(100, Math.max(0, bidFit * 65 + historyFit * 35)));
   const probabilityLabel = probability >= 80 ? "Alta" : probability >= 60 ? "Moderada" : probability >= 40 ? "Baixa" : "Muito baixa";
-  const commitment = Number(client.renda_total || client.renda || 0) > 0 ? installment / Number(client.renda_total || client.renda) : null;
+  const commitment = income > 0 ? installment / income : null;
   const riskLabel = commitment == null ? "Não informado" : commitment <= .15 ? "Baixo" : commitment <= .25 ? "Moderado" : commitment <= .30 ? "Elevado" : "Crítico";
   const riskFit = commitment == null ? .5 : Math.max(0, 1 - Math.min(1, commitment / .30));
   const score = Math.round((creditFit * .30 + installmentFit * .20 + bidFit * .20 + historyFit * .15 + costFit * .05 + termFit * .05 + riskFit * .05) * 100);
@@ -2330,6 +2329,16 @@ function selectedGroupAnalytics(item) {
 }
 
 let selectedGroupsCharts = [];
+
+function selectedGroupsClientFinancials() {
+  const client = investorState.result?.cliente || {};
+  const own = Number(client.lance_proprio ?? client.lance_recursos_proprios ?? client.lance_maximo_recursos_proprios ?? client.own_resources_total ?? 0);
+  const fgts = Number(client.fgts_total ?? client.fgts ?? 0);
+  const declaredTotal = Number(client.lance_cliente_total ?? client.lance_total ?? 0);
+  const availableBid = declaredTotal > 0 ? declaredTotal : Math.max(0, own + fgts);
+  const income = Number(client.renda_total ?? client.renda ?? 0);
+  return { client, own: Number.isFinite(own) ? own : 0, fgts: Number.isFinite(fgts) ? fgts : 0, availableBid: Number.isFinite(availableBid) ? availableBid : 0, income: Number.isFinite(income) ? income : 0 };
+}
 
 function selectedGroupsPercentValue(value) {
   if (value === null || value === undefined || value === "") return 0;
@@ -2426,7 +2435,7 @@ function renderSelectedGroupsCartSummary(items) {
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
   const desiredInstallment = Number(client.parcela_desejada || 0);
   const incomeInstallment = Number(client.parcela_maxima || 0);
-  const availableBid = Number(client.lance_cliente_total || 0);
+  const { availableBid } = selectedGroupsClientFinancials();
   const profileIds = ["conservative", "moderate", "aggressive", "super_aggressive"];
   const profileLabels = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super Agressivo" };
   const scenarioSummary = (scenarioId, label) => {
@@ -2465,7 +2474,7 @@ function renderSelectedGroupsCartSummary(items) {
 function renderSelectedGroupsDecisionVisuals(items) {
   const analytics = items.map(selectedGroupAnalytics);
   const best = [...analytics].sort((a, b) => b.score - a.score)[0];
-  const available = Number(investorState.result?.cliente?.lance_cliente_total || 0);
+  const { availableBid: available } = selectedGroupsClientFinancials();
   const profileNames = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super agressivo" };
   const cards = Object.entries(profileNames).map(([id, label]) => { const ideal = Number(best?.profile(id)?.lance_ideal || 0); const gap = Math.max(0, ideal - available); const covered = ideal ? Math.min(100, available / ideal * 100) : 0; return `<article class="sg-gap-card ${gap ? "is-alert" : "is-ok"}"><span>${label}</span><strong>${gap ? `Faltam ${formatMoney(gap)}` : "Perfil atingido"}</strong><small>Disponível ${formatMoney(available)} · Ideal ${formatMoney(ideal)}</small><div><i style="width:${covered}%"></i></div><em>${covered.toFixed(1).replace(".", ",")}% coberto</em></article>`; }).join("");
   const score = best?.score || 0;
@@ -2536,10 +2545,7 @@ function renderSelectedGroupsRecommendationBoard(items) {
 function renderSelectedGroupsBidScenarios(items) {
   const dashboard = document.querySelector("[data-sg-dashboard]");
   if (!dashboard || dashboard.querySelector("[data-sg-bid-scenarios]")) return;
-  const client = investorState.result?.cliente || {};
-  const fgts = Number(client.fgts_total ?? client.fgts ?? 0);
-  const totalClientBid = Number(client.lance_cliente_total ?? client.lance_total ?? 0);
-  const own = Number(client.lance_proprio ?? client.lance_recursos_proprios ?? client.lance_maximo_recursos_proprios ?? Math.max(0, totalClientBid - fgts));
+  const { own, fgts } = selectedGroupsClientFinancials();
   const total = own + fgts;
   const analytics = items.map(selectedGroupAnalytics);
   const scenarios = [["Somente recursos próprios", own], ["Somente FGTS", fgts], ["Recursos próprios + FGTS", total]];
