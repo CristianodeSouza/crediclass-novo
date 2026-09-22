@@ -6794,17 +6794,17 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .sg-comparison-table .sg-table-wrap { overflow: visible; }
 .sg-comparison-table .sg-matrix { width: 100%; table-layout: fixed; font-size: .62rem; }
 .sg-comparison-table .sg-matrix th,
-.sg-comparison-table .sg-matrix td { width: auto; padding: 6px 4px; white-space: normal; overflow-wrap: anywhere; word-break: normal; line-height: 1.18; text-align: center; vertical-align: middle; }
-.sg-comparison-table .sg-matrix thead th { font-size: .54rem; line-height: 1.12; height: 44px; overflow-wrap: anywhere; }
+.sg-comparison-table .sg-matrix td { width: auto; padding: 5px 2px; white-space: normal; overflow-wrap: anywhere; word-break: normal; line-height: 1.18; text-align: center; vertical-align: middle; }
+.sg-comparison-table .sg-matrix thead th { font-size: .49rem; line-height: 1.1; height: 44px; overflow-wrap: anywhere; }
 .sg-comparison-table .sg-matrix thead th:first-child,
 .sg-comparison-table .sg-matrix tbody th { width: 9%; text-align: left; }
-.sg-comparison-table .sg-matrix tbody th { font-size: .62rem; }
+.sg-comparison-table .sg-matrix tbody th { font-size: .68rem; }
 .sg-comparison-table .sg-matrix tbody th small { font-size: .52rem; }
-.sg-comparison-table .sg-matrix td { font-size: .6rem; }
+.sg-comparison-table .sg-matrix td { font-size: .66rem; }
 @media (max-width: 1100px) {
   .sg-comparison-table .sg-matrix { font-size: .55rem; }
-  .sg-comparison-table .sg-matrix th, .sg-comparison-table .sg-matrix td { padding: 5px 3px; }
-  .sg-comparison-table .sg-matrix thead th { font-size: .49rem; }
+  .sg-comparison-table .sg-matrix th, .sg-comparison-table .sg-matrix td { padding: 4px 2px; }
+  .sg-comparison-table .sg-matrix thead th { font-size: .45rem; }
 }
 @media (max-width: 900px) {
   .nav-menu { overflow-x: auto; }
