@@ -2203,7 +2203,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-profile-card-value.is-hit { border-left: 3px solid #1d9b59; background: #effaf3; }
 .motor360-profile-card-value.is-hit b { color: #147a48; }
 .motor360-profile-card-value.is-gap { border-left: 3px solid var(--brand-bronze); background: #fff8f2; }
-.motor360-profile-card-value.is-gap b { color: var(--brand-bronze-dark); }
+.motor360-profile-card-value.is-gap b,
+.motor360-profile-card-value.is-gap span,
+.motor360-profile-card-value.is-gap em { color:#b42318; font-weight:800; }
 .motor360-profile-card-value.is-empty { color: var(--muted); }
 .motor360-group-classification { margin: 12px 16px 14px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.72rem; }
 .motor360-group-classification strong { color: var(--brand-navy); }
