@@ -2377,19 +2377,19 @@ function renderSelectedGroupsAnalyticalPanel(items) {
   const { client } = selectedGroupsClientFinancials();
   const parcelaDesejada = Number(client.parcela_desejada ?? client.parcela_ideal ?? 0);
   const metricRows = [
-    ["Crédito máximo do grupo", (entry) => formatMoney(entry.groupMaxCredit)],
-    ["Crédito desejado líquido", (entry) => formatMoney(entry.desiredCredit)],
-    ["Crédito contratado", (entry) => formatMoney(entry.contractedCredit)],
-    ["Parcela desejada pelo cliente", () => formatMoney(parcelaDesejada)],
+    ["Crédito máx. grupo", (entry) => formatMoney(entry.groupMaxCredit)],
+    ["Crédito des. líq.", (entry) => formatMoney(entry.desiredCredit)],
+    ["Crédito contr.", (entry) => formatMoney(entry.contractedCredit)],
+    ["Parcela des. cliente", () => formatMoney(parcelaDesejada)],
     ["Parcela inicial", (entry) => formatMoney(entry.installment)],
-    ["Parcela pós-contemplação", (entry) => entry.installmentAfter ? formatMoney(entry.installmentAfter) : "-"],
+    ["Parcela pós-cont.", (entry) => entry.installmentAfter ? formatMoney(entry.installmentAfter) : "-"],
     ["Lance total", (entry) => formatMoney(entry.bid)],
     ["Saldo devedor", (entry) => formatMoney(entry.balance)],
     ["Prazo restante", (entry) => `${entry.item.prazo_restante ?? "-"} meses`],
-    ["Comprometimento da renda", (entry) => entry.incomeCommitment == null ? "-" : formatPercent(entry.incomeCommitment)],
-    ["Taxa de administração", (entry) => formatPercent(entry.adminRate)],
-    ["Fundo de reserva", (entry) => formatPercent(entry.reserveRate)],
-    ["Chance relativa de contemplação", (entry) => `${entry.probability}% · ${entry.probabilityLabel}`],
+    ["Comprom. renda", (entry) => entry.incomeCommitment == null ? "-" : formatPercent(entry.incomeCommitment)],
+    ["Taxa adm.", (entry) => formatPercent(entry.adminRate)],
+    ["Fundo reserva", (entry) => formatPercent(entry.reserveRate)],
+    ["Chance relativa", (entry) => `${entry.probability}% · ${entry.probabilityLabel}`],
   ];
   const profileRows = Object.entries(profileNames).map(([id, label]) => `<tr class="${profileFilter === id ? "is-focus" : ""}"><th>${label}</th>${analytics.map((entry) => { const value = entry.profile(id); const gap = Number(value.falta_para_ideal || 0) * entry.quotaCount; const state = value.atinge_perfil ? "is-positive" : gap ? "is-negative" : "is-warning"; return `<td class="${state}"><strong>${formatPercent(value.percentual_referencia)}</strong><small>${value.atinge_perfil ? "Perfil atingido" : gap ? `Faltam ${formatMoney(gap)}` : "Sem referência"}</small></td>`; }).join("")}</tr>`).join("");
   const comparativeRows = analytics.map((entry) => `<tr><th>Grupo ${escapeHtml(entry.groupId)}<small>${escapeHtml(entry.item.administradora || "-")}</small></th>${metricRows.map(([, formatter]) => `<td>${formatter(entry)}</td>`).join("")}</tr>`).join("");
