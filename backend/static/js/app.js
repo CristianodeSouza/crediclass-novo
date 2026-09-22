@@ -2535,11 +2535,18 @@ function renderSelectedGroupsScoreBreakdown(items) {
   const dashboard = document.querySelector("[data-sg-dashboard]");
   if (!dashboard || dashboard.querySelector("[data-sg-score-breakdown]")) return;
   const analytics = items.map(selectedGroupAnalytics);
-  const factors = [["Crédito", "creditFit"], ["Parcela", "installmentFit"], ["Lance", "bidFit"], ["Histórico", "historyFit"], ["Custo", "costFit"], ["Prazo", "termFit"]];
+  const factors = [
+    ["Crédito", "creditFit", "Compara o crédito líquido calculado com o crédito desejado pelo cliente. Fórmula: crédito disponível dividido pelo crédito desejado, limitado a 100%. Peso: 30%."],
+    ["Parcela", "installmentFit", "Compara a parcela inicial do grupo com a parcela máxima aceita pelo cliente. Fórmula: parcela máxima dividida pela parcela inicial, limitado a 100%. Peso: 20%."],
+    ["Lance", "bidFit", "Compara o lance disponível do cliente com o lance ideal do perfil selecionado. Fórmula: lance disponível dividido pelo lance ideal, limitado a 100%. Peso: 20%."],
+    ["Histórico", "historyFit", "Mede a média de contemplações do grupo na janela moderada de 12 meses. Fórmula: média informada dividida por 6, limitada a 100%. Peso: 15%."],
+    ["Custo", "costFit", "Mede o impacto da taxa de administração. Fórmula: 1 menos a taxa administrativa dividida por 30%, limitada entre 0% e 100%. Peso: 5%."],
+    ["Prazo", "termFit", "Compara o prazo restante do grupo com a referência de 240 meses. Fórmula: prazo restante dividido por 240, limitado a 100%. Peso: 5%."]
+  ];
   const panel = document.createElement("article");
   panel.dataset.sgScoreBreakdown = "true";
   panel.className = "sg-panel sg-score-breakdown";
-  panel.innerHTML = `<header><div><span>Transparência</span><h3>Composição da nota de aderência</h3></div><small>Pesos: crédito 30%, parcela 20%, lance 20%, histórico 15%, custo 10%, prazo 5%</small></header><div class="sg-score-grid">${analytics.map((entry) => `<div class="sg-score-column"><strong>Grupo ${escapeHtml(entry.groupId)} · ${entry.score}/100</strong>${factors.map(([label, key]) => `<div class="sg-score-factor"><span>${label}</span><i><b style="width:${Math.round((entry[key] || 0) * 100)}%"></b></i><em>${Math.round((entry[key] || 0) * 100)}%</em></div>`).join("")}</div>`).join("")}</div>`;
+  panel.innerHTML = `<header><div><span>Transparência</span><h3>Composição da nota de aderência</h3></div><small>Pesos: crédito 30%, parcela 20%, lance 20%, histórico 15%, custo 5%, prazo 5%</small></header><div class="sg-score-grid">${analytics.map((entry) => `<div class="sg-score-column"><strong>Grupo ${escapeHtml(entry.groupId)} · ${entry.score}/100</strong>${factors.map(([label, key, explanation]) => `<div class="sg-score-factor"><span>${label}<button type="button" class="sg-info" aria-label="Explicar ${label}" data-tooltip="${escapeHtml(explanation)}">i</button></span><i><b style="width:${Math.round((entry[key] || 0) * 100)}%"></b></i><em>${Math.round((entry[key] || 0) * 100)}%</em></div>`).join("")}</div>`).join("")}</div>`;
   dashboard.appendChild(panel);
 }
 
