@@ -2292,6 +2292,8 @@ function selectedGroupAnalytics(item) {
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
   const maxInstallment = Number(client.parcela_maxima || client.parcela_desejada || 0);
   const credit = scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? item.credito_maximo);
+  const contractedCredit = scale(scenario.credito_contratado ?? 0);
+  const groupMaxCredit = scale(item.credito_maximo ?? 0);
   const installment = scale(scenario.parcela_inicial);
   const focusProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : "moderate";
   const focusedProfile = profile(focusProfile);
@@ -2318,7 +2320,7 @@ function selectedGroupAnalytics(item) {
   const scoreLabel = score >= 80 ? "Excelente" : score >= 65 ? "Adequada" : score >= 50 ? "Atenção" : "Inadequada";
   return {
     item, groupId, scenario, profile, history, quotaCount,
-    credit,
+    credit, desiredCredit, contractedCredit, groupMaxCredit,
     installment,
     installmentAfter: scale(scenario.parcela_pos_contemplacao),
     bid: scale(scenario.lance_total_cenario),
@@ -2354,7 +2356,9 @@ function renderSelectedGroupsAnalyticalPanel(items) {
   const currentScenario = investorState.selectedGroupScenario || "without_embedded";
   const profileNames = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super agressivo" };
   const metricRows = [
-    ["Crédito máximo", (entry) => formatMoney(entry.credit)],
+    ["Crédito máximo do grupo", (entry) => formatMoney(entry.groupMaxCredit)],
+    ["Crédito desejado líquido", (entry) => formatMoney(entry.desiredCredit)],
+    ["Crédito contratado", (entry) => formatMoney(entry.contractedCredit)],
     ["Parcela inicial", (entry) => formatMoney(entry.installment)],
     ["Parcela pós-contemplação", (entry) => entry.installmentAfter ? formatMoney(entry.installmentAfter) : "-"],
     ["Lance total", (entry) => formatMoney(entry.bid)],
@@ -2393,7 +2397,7 @@ function renderSelectedGroupsECharts(items) {
     try { const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); } catch (error) { console.error("[selected-groups-chart]", id, error); element.innerHTML = '<div class="sg-chart-error">Dados indisponíveis para este gráfico.</div>'; }
   };
   const moneyAxis = (value) => value >= 1000000 ? `R$ ${(value / 1000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi` : `R$ ${(value / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} mil`;
-  const metricMap = { credit: ["Crédito máximo", "credit"], installment: ["Parcela inicial", "installment"], bid: ["Lance total", "bid"], balance: ["Saldo devedor", "balance"] };
+  const metricMap = { credit: ["Crédito máximo do grupo", "groupMaxCredit"], installment: ["Parcela inicial", "installment"], bid: ["Lance total", "bid"], balance: ["Saldo devedor", "balance"] };
   const metricKey = investorState.selectedGroupMetric || "credit";
   const [metricLabel, field] = metricMap[metricKey] || metricMap.credit;
   init("sgFinancialChart", {
