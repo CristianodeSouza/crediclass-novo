@@ -6790,6 +6790,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .sg-dashboard > .sg-extra-visuals,
 .sg-dashboard > .sg-coverage-charts,
 .sg-dashboard > .sg-final-matrix { display: none !important; }
+.sg-dashboard > .sg-final-matrix { display: grid !important; }
+.sg-dashboard > .sg-final-matrix > article:nth-child(-n+2) { display: none !important; }
 .sg-dashboard > .sg-executive-audit,
 .sg-dashboard > .sg-advanced-filters,
 .sg-dashboard > .sg-fact-strip { display: none !important; }
