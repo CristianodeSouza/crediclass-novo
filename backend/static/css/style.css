@@ -6792,6 +6792,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .sg-dashboard > .sg-final-matrix { display: none !important; }
 .sg-dashboard > .sg-final-matrix { display: grid !important; }
 .sg-dashboard > .sg-final-matrix > article:nth-child(-n+2) { display: none !important; }
+.sg-dashboard > .sg-decision-visuals { display: none !important; }
 .sg-static-chart { height:auto; min-height:280px; padding:4px 8px; overflow:auto; }
 .sg-static-legend { display:flex; flex-wrap:wrap; gap:8px 14px; margin-bottom:10px; color:var(--muted); font-size:.66rem; }
 .sg-static-legend i { display:inline-block; width:9px; height:9px; margin-right:4px; border-radius:2px; }
