@@ -6935,8 +6935,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .sg-check-column { padding:14px; }
 .sg-check-column > strong { font-size:.9rem; }
 .sg-profile-check { margin-top:10px; padding-top:9px; border-top:1px solid #dfe8ea; }
-.sg-profile-check h4 { margin:0 0 6px; color:var(--brand-navy); font-size:.8rem; }
-.sg-profile-scenarios { display:grid; gap:3px; margin-bottom:4px; color:var(--muted); font-size:.68rem; line-height:1.3; }
+.sg-profile-check h4 { margin:0 0 7px; color:#111; font-size:.9rem; font-weight:800; }
+.sg-profile-scenarios { display:grid; gap:3px; margin-bottom:5px; color:#111; font-size:.75rem; font-weight:800; line-height:1.35; }
 .sg-check-item { padding:9px 0; }
 .sg-check-item > span { font-size:.72rem; }
 .sg-check-item > span b { width:19px; height:19px; font-size:.75rem; }
