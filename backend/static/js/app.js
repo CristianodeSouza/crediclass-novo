@@ -4795,15 +4795,29 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
     modal.querySelector("[data-editor-open]").addEventListener("click", async () => {
       const activeStudyId = modal.dataset.studyId;
       const current = await apiGet(`/estudos/${encodeURIComponent(activeStudyId)}/editor`);
-      const intro = window.prompt("Observações iniciais (texto editorial):", current.editor_content?.intro || "");
-      if (intro === null) return;
-      const observations = window.prompt("Observações do operador:", current.editor_content?.observacoes || "");
-      if (observations === null) return;
-      const considerations = window.prompt("Considerações finais:", current.editor_content?.consideracoes || "");
-      if (considerations === null) return;
-      await apiPut(`/estudos/${encodeURIComponent(activeStudyId)}/editor`, { editor_content: { intro, observacoes: observations, consideracoes: considerations, custom_sections: [] } });
-      showToast("Textos salvos. Gerando nova prévia...", "success");
-      await exportStudyPdf(activeStudyId);
+      let editor = document.getElementById("financialStudyEditorModal");
+      if (!editor) {
+        editor = document.createElement("div");
+        editor.id = "financialStudyEditorModal";
+        editor.className = "modal fade";
+        editor.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar textos do estudo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div style="display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1fr);gap:16px"><section><div class="btn-group mb-2" role="toolbar"><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="bold"><b>B</b></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="italic"><i>I</i></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="insertUnorderedList">Lista</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="undo">Desfazer</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="redo">Refazer</button></div><label class="form-label">Introdução</label><div contenteditable="true" class="form-control mb-2" style="min-height:90px" data-editor-field="intro"></div><label class="form-label">Observações</label><div contenteditable="true" class="form-control mb-2" style="min-height:90px" data-editor-field="observacoes"></div><label class="form-label">Considerações finais</label><div contenteditable="true" class="form-control" style="min-height:90px" data-editor-field="consideracoes"></div></section><section><div class="small text-muted mb-2">A prévia oficial será atualizada após salvar. Dados financeiros e grupos não são editáveis.</div><iframe title="Prévia atual" style="width:100%;height:430px;border:1px solid #ddd" data-editor-preview></iframe></section></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-editor-restore>Restaurar original</button><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" data-editor-save>Atualizar prévia</button></div></div></div>`;
+        document.body.appendChild(editor);
+        editor.querySelectorAll("[data-cmd]").forEach((button) => button.addEventListener("click", () => { document.execCommand(button.dataset.cmd, false); }));
+        editor.querySelector("[data-editor-restore]").addEventListener("click", () => editor.querySelectorAll("[data-editor-field]").forEach((field) => { field.innerHTML = ""; }));
+        editor.querySelector("[data-editor-save]").addEventListener("click", async () => {
+          const content = Object.fromEntries([...editor.querySelectorAll("[data-editor-field]")].map((field) => [field.dataset.editorField, field.innerHTML]));
+          await apiPut(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor`, { editor_content: { ...content, custom_sections: [] } });
+          window.bootstrap?.Modal?.getOrCreateInstance(editor)?.hide();
+          showToast("Textos salvos. Gerando nova prévia...", "success");
+          await exportStudyPdf(editor.dataset.studyId);
+        });
+      }
+      editor.dataset.studyId = activeStudyId;
+      const content = current.editor_content || {};
+      editor.querySelector('[data-editor-field="intro"]').innerHTML = content.intro || "";
+      editor.querySelector('[data-editor-field="observacoes"]').innerHTML = content.observacoes || "";
+      editor.querySelector('[data-editor-field="consideracoes"]').innerHTML = content.consideracoes || "";
+      window.bootstrap?.Modal?.getOrCreateInstance(editor)?.show();
     });
   }
   const frame = modal.querySelector("iframe");
