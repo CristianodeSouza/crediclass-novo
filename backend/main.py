@@ -698,6 +698,14 @@ def estudos_editor_atualizar(estudo_id: str, payload: dict, request: Request = N
     return {"success": True, "editor_content": updated["editor_content"], "editor_version": updated["editor_version"]}
 
 
+@app.get("/api/estudos/{estudo_id}/editor/history")
+def estudos_editor_historico(estudo_id: str):
+    estudo = get_estudo(estudo_id)
+    if not estudo:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
+    return {"success": True, "versions": estudo.get("editor_history") or []}
+
+
 @app.post("/api/estudos/{estudo_id}/exportar-pdf")
 def estudos_exportar_pdf(estudo_id: str):
     logger.info("POST /api/estudos/%s/exportar-pdf", estudo_id)

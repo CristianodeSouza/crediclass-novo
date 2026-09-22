@@ -2,6 +2,7 @@ from datetime import datetime
 import json
 from pathlib import Path
 import unicodedata
+import re
 from typing import Any
 
 from .config import get_settings
@@ -438,7 +439,11 @@ def update_estudo_editor(estudo_id: str, editor_content: dict[str, Any], operado
     clean = {key: editor_content.get(key, "") for key in allowed}
     clean["custom_sections"] = clean["custom_sections"] if isinstance(clean["custom_sections"], list) else []
     for key in ("intro", "observacoes", "consideracoes"):
-        clean[key] = str(clean[key] or "")[:5000]
+        clean[key] = re.sub(r"<(?!/?(?:strong|b|em|i|ul|ol|li|p|br)\b)[^>]*>", "", str(clean[key] or ""), flags=re.I)[:5000]
+    clean["custom_sections"] = [
+        {"title": re.sub(r"<[^>]+>", "", str(section.get("title") or ""))[:120], "text": re.sub(r"<(?!/?(?:strong|b|em|i|ul|ol|li|p|br)\b)[^>]*>", "", str(section.get("text") or ""), flags=re.I)[:3000]}
+        for section in clean["custom_sections"] if isinstance(section, dict) and str(section.get("text") or "").strip()
+    ]
     if sheets_enabled():
         for row_number, item in read_studies_from_sheet():
             if item.get("estudo_id") != estudo_id:
