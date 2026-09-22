@@ -2256,6 +2256,24 @@ function renderSelectedGroupComparisonColumn(item, index) {
   return `<article class="selected-comparison-column"><header><div class="selected-group-number">${index + 1}</div><div><h3>Grupo ${escapeHtml(groupId)}</h3><p>${escapeHtml(item.administradora || "-")} · ${quotaCount} ${quotaCount === 1 ? "cota" : "cotas"}</p></div></header><div class="selected-comparison-key-metrics"><span><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></span><span><small>Crédito máximo</small><b>${formatMoney(scale(item.credito_maximo))}</b></span><span><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></span></div>${historicalAverages}<section class="selected-comparison-inputs"><h4>Premissas do grupo</h4>${groupFinancialInputs}</section><section><h4>Cenários financeiros</h4><div class="selected-comparison-scenarios">${scenarioRows}</div></section><section><h4>Perfis de contemplação</h4><div class="selected-comparison-profiles">${profileRows || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section></article>`;
 }
 
+function invalidateInvestorAnalysisForProfileChange() {
+  investorAnalysisRequestId += 1;
+  investorAnalysisController?.abort();
+  investorAnalysisController = null;
+  investorState.result = null;
+  investorState.audit = null;
+  investorState.selectedGroupIds.clear();
+  investorState.selectedScenarioIds.clear();
+  investorState.quotaCounts.clear();
+  investorState.selectedGroupData.clear();
+  persistMotor360Selection();
+  setInvestorAnalysisState("empty");
+  const selectedResults = document.getElementById("selectedGroupsResults");
+  const selectedEmpty = document.getElementById("selectedGroupsEmpty");
+  selectedResults?.classList.add("d-none");
+  selectedEmpty?.classList.remove("d-none");
+}
+
 function renderSelectedGroupsOverview(items) {
   const metric = (label, value, note = "") => `<div class="selected-overview-kpi"><span>${label}</span><strong>${value}</strong>${note ? `<small>${note}</small>` : ""}</div>`;
   const rows = items.map((item, index) => {
@@ -4226,6 +4244,7 @@ function loadClientProfile() {
 }
 
 function resetClientProfile() {
+  invalidateInvestorAnalysisForProfileChange();
   document.getElementById("clientProfileForm").reset();
   window.localStorage.removeItem(CLIENT_PROFILE_STORAGE_KEY);
   renderClientProfileTitulares({ tipo_contratacao: "pf_individual" });
@@ -5733,7 +5752,13 @@ document.getElementById("clientProfileTipoContratacao").addEventListener("change
 });
 
 document.getElementById("clientProfileForm").addEventListener("input", (event) => {
+  invalidateInvestorAnalysisForProfileChange();
   if (!event.target.matches("[data-holder-field]")) return;
+  updateClientProfileTotals();
+});
+
+document.getElementById("clientProfileForm").addEventListener("change", () => {
+  invalidateInvestorAnalysisForProfileChange();
   updateClientProfileTotals();
 });
 
