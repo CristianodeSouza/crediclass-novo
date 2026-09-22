@@ -3658,6 +3658,28 @@ function renderInvestorAnalysis(result) {
     renderInvestorAnalysis(investorState.result);
     renderSelectedGroupsScreen();
   }));
+  results.addEventListener("click", (event) => {
+    const input = event.target.closest(".motor360-group-select-input");
+    if (!input) return;
+    window.setTimeout(() => {
+      const groupId = String(input.dataset.groupId || "");
+      const selectedItem = [...(investorState.result?.items || []), ...(investorState.result?.credit_items || []), ...(investorState.result?.composition_items || [])]
+        .find((item) => String(item.grupo || item.grupo_id || "") === groupId);
+      if (input.checked) {
+        investorState.selectedGroupIds.add(groupId);
+        if (selectedItem) investorState.selectedGroupData.set(groupId, selectedItem);
+        if (!investorState.quotaCounts.has(groupId)) investorState.quotaCounts.set(groupId, 1);
+      } else {
+        investorState.selectedGroupIds.delete(groupId);
+        investorState.selectedScenarioIds.delete(groupId);
+        investorState.quotaCounts.delete(groupId);
+        investorState.selectedGroupData.delete(groupId);
+      }
+      persistMotor360Selection();
+      updateMotor360SelectionSummary();
+      if (investorState.result) renderInvestorAnalysis(investorState.result);
+    }, 0);
+  }, { once: true });
   results.querySelectorAll("[data-quota-action]").forEach((control) => control.addEventListener(control.dataset.quotaAction === "input" ? "change" : "click", (event) => {
     const groupId = String(control.dataset.groupId || "");
     const current = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
