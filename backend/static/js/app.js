@@ -2648,13 +2648,41 @@ function renderSelectedGroupsCoverageCharts(items) {
 
 function renderSelectedGroupsFinalMatrix(items) {
   const dashboard = document.querySelector("[data-sg-dashboard]");
-  if (!dashboard || !window.echarts || dashboard.querySelector("[data-sg-final-matrix]")) return;
+  if (!dashboard || dashboard.querySelector("[data-sg-final-matrix]")) return;
   const analytics = items.map(selectedGroupAnalytics);
   const panel = document.createElement("div");
   panel.dataset.sgFinalMatrix = "true";
   panel.className = "sg-chart-grid sg-final-matrix";
   panel.innerHTML = `<article class="sg-panel"><header><div><span>Síntese</span><h3>Heatmap de critérios</h3></div><small>Verde indica melhor adequação relativa entre os grupos.</small></header><div class="sg-chart" id="sgCriteriaHeatmap" role="img" aria-label="Heatmap de critérios"></div></article><article class="sg-panel"><header><div><span>Perfis</span><h3>Cenários de contemplação</h3></div><small>Lance ideal e cobertura por perfil.</small></header><div class="sg-chart" id="sgProfileScenarioChart" role="img" aria-label="Cenários por perfil"></div></article><article class="sg-panel"><header><div><span>Orçamento</span><h3>Compatibilidade financeira</h3></div><small>Parcelas comparadas à capacidade financeira do cliente.</small></header><div class="sg-chart" id="sgFinancialCompatibilityChart" role="img" aria-label="Compatibilidade financeira por grupo"></div></article><article class="sg-panel"><header><div><span>Contemplação</span><h3>Lance disponível x lance ideal</h3></div><small>Composição do lance e referência do perfil selecionado.</small></header><div class="sg-chart" id="sgBidComparisonChart" role="img" aria-label="Lance disponível versus lance ideal"></div></article>`;
   dashboard.appendChild(panel);
+  if (!window.echarts) {
+    const renderBars = (id, title, rows) => {
+      const element = document.getElementById(id);
+      if (!element) return;
+      element.classList.add("sg-static-chart");
+      element.innerHTML = `<div class="sg-static-legend">${rows.map((row) => `<span><i style="background:${row.color}"></i>${row.name}</span>`).join("")}</div>${analytics.map((entry, index) => `<div class="sg-static-group"><strong>Grupo ${escapeHtml(entry.groupId)}</strong>${rows.map((row) => { const value = Number(row.values[index] || 0); const max = Math.max(...rows.flatMap((item) => item.values), 1); return `<div class="sg-static-bar"><small>${row.name}</small><b><i style="width:${Math.min(100, value / max * 100)}%;background:${row.color}"></i></b><em>${formatMoney(value)}</em></div>`; }).join("")}</div>`).join("")}`;
+    };
+    const client = investorState.result?.cliente || {};
+    const desired = Number(client.parcela_desejada || 0);
+    const income = Number(client.renda_total || client.renda || 0);
+    const maxInstallment = Number(client.parcela_maxima || 0);
+    renderBars("sgFinancialCompatibilityChart", "Compatibilidade financeira", [
+      { name: "Parcela desejada", color: "#4f6fdc", values: analytics.map(() => desired) },
+      { name: "Parcela inicial", color: "#ef7a24", values: analytics.map((entry) => entry.installment) },
+      { name: "Pós-contemplação", color: "#1d9b59", values: analytics.map((entry) => entry.installmentAfter) },
+      { name: "Renda disponível", color: "#65717a", values: analytics.map(() => income || maxInstallment) },
+    ]);
+    const { own, fgts } = selectedGroupsClientFinancials();
+    const focusProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : "moderate";
+    renderBars("sgBidComparisonChart", "Lance disponível x lance ideal", [
+      { name: "Lance próprio", color: "#4f6fdc", values: analytics.map(() => own) },
+      { name: "Lance FGTS", color: "#a8cf32", values: analytics.map(() => fgts) },
+      { name: "Lance embutido", color: "#ef7a24", values: analytics.map((entry) => entry.embedded) },
+      { name: "Lance total", color: "#1d7188", values: analytics.map((entry) => entry.bid) },
+      { name: "Lance ideal", color: "#b42318", values: analytics.map((entry) => Number(entry.profile(focusProfile).lance_ideal || 0) * entry.quotaCount) },
+    ]);
+    return;
+  }
   const init = (id, option) => { const element = document.getElementById(id); if (!element) return; try { const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); } catch (error) { console.error("[selected-groups-chart]", id, error); element.innerHTML = '<div class="sg-chart-error">Dados indisponíveis para este gráfico.</div>'; } };
   const criteria = [["Crédito", "creditFit"], ["Parcela", "installmentFit"], ["Lance", "bidFit"], ["Histórico", "historyFit"], ["Custo", "costFit"], ["Prazo", "termFit"]];
   init("sgCriteriaHeatmap", { grid: { left: 82, right: 20, top: 20, bottom: 48 }, tooltip: { position: "top", formatter: (p) => `${p.name}<br/>${criteria[p.value[0]][0]}: ${Number(p.value[2]).toFixed(0)}%` }, xAxis: { type: "category", data: criteria.map((c) => c[0]), splitArea: { show: true } }, yAxis: { type: "category", data: analytics.map((e) => `Grupo ${e.groupId}`), splitArea: { show: true } }, visualMap: { min: 0, max: 1, calculable: false, orient: "horizontal", left: "center", bottom: 0, inRange: { color: ["#f7d9c1", "#fff1e5", "#b9e3c8"] } }, series: [{ type: "heatmap", data: analytics.flatMap((entry, row) => criteria.map(([, key], col) => [col, row, Number(entry[key] || 0)])), label: { show: true, formatter: (p) => `${Math.round(p.value[2] * 100)}%` } }] });
