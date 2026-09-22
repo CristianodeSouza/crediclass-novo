@@ -3313,7 +3313,8 @@ async function renderFinancialStudyScreen() {
     currentStudy.autoPreviewRequested = true;
     exportStudyPdf().catch(() => {
       currentStudy.autoPreviewRequested = false;
-      showToast("Nao foi possivel abrir a prévia automaticamente. Use Imprimir / Salvar PDF para tentar novamente.", "warning");
+      const detail = error?.message ? ` (${error.message})` : "";
+      showToast(`Nao foi possivel abrir a prévia automaticamente${detail}. Use Imprimir / Salvar PDF para tentar novamente.`, "warning");
     });
   }
 }
