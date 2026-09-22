@@ -6957,6 +6957,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .sg-compact-table td b { display:inline-grid; width:20px; height:20px; margin-right:5px; place-items:center; border-radius:50%; color:#fff; background:#b42318; }
 .sg-compact-table td.is-ok b { background:#1d9b59; }
 .sg-compact-table td.is-fail { color:#b42318; font-weight:800; }
+.sg-compact-info { margin-left:4px; vertical-align:middle; }
 .sg-compact-table td strong { font-size:.72rem; }
 .sg-compact-summary details { margin-top:12px; }
 .sg-compact-summary details summary { cursor:pointer; color:var(--brand-navy); font-size:.72rem; font-weight:800; }
