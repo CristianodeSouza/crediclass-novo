@@ -2683,7 +2683,6 @@ function renderSelectedGroupsScreen() {
   renderSelectedGroupsSafely("extra-visuals", renderSelectedGroupsExtraVisuals, items);
   if (items.length) renderSelectedGroupsAdvancedFilters();
   if (items.length) renderSelectedGroupsScoreBreakdown(items);
-  if (items.length) renderSelectedGroupsRecommendationBoard(items);
   if (items.length) renderSelectedGroupsBidScenarios(items);
   if (items.length) renderSelectedGroupsRiskProbability(items);
   if (items.length) renderSelectedGroupsSafely("coverage-charts", renderSelectedGroupsCoverageCharts, items);
