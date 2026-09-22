@@ -456,6 +456,7 @@ def update_estudo_editor(estudo_id: str, editor_content: dict[str, Any], operado
     item["editor_version"] = int(item.get("editor_version") or 1) + 1
     item["editor_updated_at"] = datetime.now().isoformat(timespec="seconds")
     item["editor_updated_by"] = operador or "Não informado"
+    item.setdefault("editor_history", []).append({"version": item["editor_version"], "content": clean, "edited_at": item["editor_updated_at"], "edited_by": item["editor_updated_by"]})
     save_studies_to_disk()
     return item
 

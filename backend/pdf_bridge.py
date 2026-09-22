@@ -311,6 +311,7 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
     cenario = estudo.get("cenario") or {}
     template_campos = estudo.get("template_campos") or {}
     editor = estudo.get("editor_content") or {}
+    custom_sections = editor.get("custom_sections") if isinstance(editor.get("custom_sections"), list) else []
     strategy_rows = []
     for strategy in financeiro.get("estrategias", [])[:5]:
         strategy_rows.append(
@@ -401,7 +402,7 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
                 "O objetivo deste material e apresentar cenarios comparativos para apoiar uma decisao clara e auditavel.",
                 "As informacoes apresentadas possuem carater informativo e ilustrativo e nao constituem garantia de resultado ou promessa de contemplacao.",
             ],
-            "operatorNotes": _operator_notes(template_campos) + ([str(editor.get("observacoes"))] if editor.get("observacoes") else []),
+            "operatorNotes": _operator_notes(template_campos) + ([str(editor.get("observacoes"))] if editor.get("observacoes") else []) + [f"{str(section.get('title') or 'Informação adicional')}: {str(section.get('text') or '')}" for section in custom_sections if isinstance(section, dict) and str(section.get('text') or '').strip()],
             "strategyRows": strategy_rows,
             "historyMatrix": _history_matrix(financeiro, grupo, estudo),
             "contractRows": _contract_rows(estudo, grupo, financeiro),

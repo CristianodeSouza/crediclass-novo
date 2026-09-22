@@ -711,6 +711,18 @@ def estudos_exportar_pdf(estudo_id: str):
         return JSONResponse(status_code=503, content={"success": False, "error": str(error), "engine": "react-pdf"})
 
 
+@app.post("/api/estudos/{estudo_id}/preview-pdf")
+def estudos_preview_pdf_salvo(estudo_id: str):
+    """Gera uma prévia sem alterar o estudo salvo."""
+    return estudos_exportar_pdf(estudo_id)
+
+
+@app.post("/api/estudos/{estudo_id}/finalizar-pdf")
+def estudos_finalizar_pdf(estudo_id: str):
+    """Gera o PDF final usando o snapshot financeiro persistido."""
+    return estudos_exportar_pdf(estudo_id)
+
+
 @app.post("/api/estudos/{estudo_id}/exportar-pdf-react")
 def estudos_exportar_pdf_react(estudo_id: str):
     return estudos_exportar_pdf(estudo_id)
