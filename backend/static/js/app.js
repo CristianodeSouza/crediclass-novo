@@ -4712,7 +4712,13 @@ async function saveCurrentStudy(options = {}) {
     grupo_id: currentStudy.groupId,
     cenario: currentStudy.cenario,
     template_campos: collectStudyOperatorFields(),
+    grupos_selecionados: selectedMotor360Items().map((item) => ({
+      ...item,
+      quota_count: Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1))),
+      selected_scenario_id: investorState.selectedGroupScenario || "without_embedded",
+    })),
   };
+  payload.study_snapshot = { schema: "motor360-selection/v1", capturedAt: new Date().toISOString(), groups: payload.grupos_selecionados };
   const result = await apiPost("/estudos", payload);
     currentStudy.savedStudyId = result.estudo_id;
     currentStudy.proposalId = result.proposal_id || null;
@@ -4756,7 +4762,30 @@ async function exportStudyPdf(studyId) {
   }
   if (!result) throw firstError || new Error("Nao foi possivel gerar o PDF.");
   showToast("PDF gerado.", "success");
-  window.open(result.download_url, "_blank", "noopener");
+  openStudyPdfPreview(result.download_url, targetStudyId);
+}
+
+function openStudyPdfPreview(pdfUrl, studyId) {
+  let modal = document.getElementById("financialStudyPdfPreviewModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "financialStudyPdfPreviewModal";
+    modal.className = "modal fade";
+    modal.tabIndex = -1;
+    modal.setAttribute("aria-hidden", "true");
+    modal.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Prévia do Estudo Financeiro</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div><div class="modal-body p-0" style="height:75vh"><iframe title="Prévia do PDF" style="width:100%;height:100%;border:0" loading="lazy"></iframe></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button><a class="btn btn-outline-primary" target="_blank" rel="noopener">Abrir PDF</a><button type="button" class="btn btn-primary" data-preview-print>Imprimir / Salvar PDF</button></div></div></div>`;
+    document.body.appendChild(modal);
+    modal.querySelector("[data-preview-print]").addEventListener("click", () => {
+      const frame = modal.querySelector("iframe");
+      try { frame.contentWindow?.print(); } catch { window.open(pdfUrl, "_blank", "noopener"); }
+    });
+  }
+  modal.querySelector("iframe").src = pdfUrl;
+  modal.querySelector("a").href = pdfUrl;
+  const bootstrapModal = window.bootstrap?.Modal?.getOrCreateInstance(modal);
+  if (bootstrapModal) bootstrapModal.show();
+  else window.open(pdfUrl, "_blank", "noopener");
+  return studyId;
 }
 
 async function ensureCurrentStudySaved(options = {}) {

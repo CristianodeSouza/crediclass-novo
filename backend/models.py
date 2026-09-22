@@ -454,6 +454,8 @@ class EstudoRequest(BaseModel):
     grupo_id: str
     cenario: dict[str, Any] | None = None
     template_campos: dict[str, str] = Field(default_factory=dict)
+    grupos_selecionados: list[dict[str, Any]] = Field(default_factory=list)
+    study_snapshot: dict[str, Any] | None = None
 
 
 class EstudoPreviewRequest(BaseModel):

@@ -243,7 +243,23 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: s
     global _counter, _proposal_counter
     criado_em = datetime.now().isoformat(timespec="seconds")
     grupo_data = grupo or {}
-    financeiro = build_financeiro(payload, grupo_data)
+    raw_snapshot = payload.study_snapshot or ({"schema": "motor360-selection/v1", "groups": payload.grupos_selecionados} if payload.grupos_selecionados else None)
+    selected_groups = []
+    if raw_snapshot:
+        selected_groups = raw_snapshot.get("groups") if isinstance(raw_snapshot, dict) else None
+        if not isinstance(selected_groups, list) or not selected_groups:
+            raise ValueError("Snapshot da composição ausente ou inválido.")
+        for selected_group in selected_groups:
+            group_id = str((selected_group or {}).get("grupo") or (selected_group or {}).get("grupo_id") or "").strip()
+            scenarios = {str(item.get("id")) for item in (selected_group or {}).get("cenarios", []) if isinstance(item, dict)}
+            if not group_id or not {"without_embedded", "with_embedded"}.issubset(scenarios):
+                raise ValueError("Cada grupo do snapshot deve possuir os cenários sem e com lance embutido.")
+        grupo_data = selected_groups[0]
+        financeiro = _snapshot_financeiro({"schema": str(raw_snapshot.get("schema") or "motor360-selection/v1"), "groups": selected_groups})
+        cenario = None
+    else:
+        cenario = payload.cenario
+        financeiro = build_financeiro(payload, grupo_data)
     if sheets_enabled():
         existing_items = [item for _, item in read_studies_from_sheet()]
         estudo_id, proposal_id = next_study_identifiers(existing_items)
@@ -258,7 +274,9 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: s
         "cliente": payload.cliente.model_dump(),
         "grupo_id": payload.grupo_id,
         "grupo": grupo_data,
-        "cenario": payload.cenario,
+        "cenario": cenario,
+        "study_snapshot": {"schema": str(raw_snapshot.get("schema") or "motor360-selection/v1"), "groups": selected_groups} if raw_snapshot else None,
+        "grupos_selecionados": selected_groups,
         "financeiro": financeiro,
         "template_campos": payload.template_campos,
         "estrategia": financeiro["estrategia_recomendada"],

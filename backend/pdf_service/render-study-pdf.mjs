@@ -559,6 +559,29 @@ function ContractSection({ payload }) {
   );
 }
 
+function SelectedGroupsSection({ payload }) {
+  const groups = payload.selectedGroups || [];
+  if (!groups.length) return null;
+  return React.createElement(
+    Section,
+    { title: "GRUPOS SELECIONADOS" },
+    React.createElement(
+      Text,
+      { style: styles.miniNote },
+      "A composicao abaixo representa todos os grupos confirmados no estudo.",
+    ),
+    React.createElement(Table, {
+      compact: true,
+      columns: [
+        { key: "groupId", label: "Grupo", width: "42%" },
+        { key: "administrator", label: "Administradora", width: "38%" },
+        { key: "quotaCount", label: "Cotas", width: "20%" },
+      ],
+      rows: groups,
+    }),
+  );
+}
+
 function StrategySection() {
   return React.createElement(
     Section,
@@ -748,6 +771,7 @@ function StrategyRowsSection({ payload }) {
 function StudyDocument({ payload }) {
   const content = [
     React.createElement(IntroSection, { key: "intro", payload }),
+    React.createElement(SelectedGroupsSection, { key: "selected-groups", payload }),
     React.createElement(InvestmentSection, { key: "investment", payload }),
     React.createElement(FinancialSummarySection, { key: "summary", payload }),
     React.createElement(StrategyRowsSection, { key: "strategy-rows", payload }),

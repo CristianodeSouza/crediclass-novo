@@ -338,6 +338,19 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
         for index, person in enumerate(people)
         if isinstance(person, dict)
     ]
+    snapshot = estudo.get("study_snapshot") or {}
+    selected_groups = snapshot.get("groups") if isinstance(snapshot, dict) else None
+    selected_group_rows = []
+    for selected in selected_groups or []:
+        if not isinstance(selected, dict):
+            continue
+        selected_group_rows.append(
+            {
+                "groupId": str(selected.get("grupo") or selected.get("grupo_id") or "-"),
+                "administrator": str(selected.get("administradora") or selected.get("administrador") or "-"),
+                "quotaCount": str(selected.get("quota_count") or selected.get("cotas") or "1"),
+            }
+        )
     return {
         "meta": {
             "studyId": str(estudo.get("estudo_id") or "-"),
@@ -366,6 +379,7 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
             "remainingTerm": str(grupo.get("prazo_restante") or grupo.get("prazo_total") or "-"),
             "rateYear": _format_percent(grupo.get("taxa_ano")),
         },
+        "selectedGroups": selected_group_rows,
         "financial": {
             "recommendedStrategy": str(financeiro.get("estrategia_recomendada") or cenario.get("estrategia") or "-"),
             "credit": _format_money(financeiro.get("credito")),
