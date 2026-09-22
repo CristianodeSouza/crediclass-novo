@@ -2537,16 +2537,28 @@ function renderSelectedGroupsScoreBreakdown(items) {
   const analytics = items.map(selectedGroupAnalytics);
   const { client } = selectedGroupsClientFinancials();
   const desiredInstallment = Number(client.parcela_desejada || 0);
+  const profileLabels = { investor: "Investidor (36 meses)", conservative: "Conservador (24 meses)", moderate: "Moderado (12 meses)", aggressive: "Agressivo / Rápido (6 meses)", super_aggressive: "Super agressivo / Urgente (3 meses)" };
+  const profileOrder = ["investor", "conservative", "moderate", "aggressive", "super_aggressive"];
   const checklist = (entry) => {
-    const profileNames = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super agressivo" };
-    const profileLabel = profileNames[entry.focusProfile] || "perfil selecionado";
-    const checks = [
-      ["Lance para contemplação", entry.availableBid >= entry.idealBid, `Disponível ${formatMoney(entry.availableBid)} · ideal ${formatMoney(entry.idealBid)} (${profileLabel})`],
-      ["Parcela desejada x parcela inicial", desiredInstallment > 0 && entry.installment <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · inicial ${formatMoney(entry.installment)}`],
-      ["Parcela desejada x pós-contemplação", desiredInstallment > 0 && entry.installmentAfter > 0 && entry.installmentAfter <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · pós-contemplação ${formatMoney(entry.installmentAfter)}`],
-      ["Crédito contratado x crédito desejado", entry.contractedCredit >= entry.desiredCredit, `Contratado ${formatMoney(entry.contractedCredit)} · desejado líquido ${formatMoney(entry.desiredCredit)}`],
-    ];
-    return checks.map(([label, passes, detail]) => `<div class="sg-check-item ${passes ? "is-ok" : "is-fail"}"><span><b aria-hidden="true">${passes ? "✓" : "×"}</b>${label}</span><strong>${passes ? "Atende" : "Não atende"}</strong><small>${detail}</small></div>`).join("");
+    const profileAliases = { investor: ["investor", "investidor"], conservative: ["conservative", "conservador"], moderate: ["moderate", "moderado"], aggressive: ["aggressive", "agressivo", "rapido", "rápido"], super_aggressive: ["super_aggressive", "super-agressivo", "super_agressivo", "urgente"] };
+    const findProfile = (scenarioId, profileId) => {
+      const values = ((entry.item.cenarios || []).find((scenario) => scenario.id === scenarioId)?.perfis_contemplacao || []);
+      return values.find((profile) => profileAliases[profileId].includes(String(profile.id).toLowerCase()) || profileAliases[profileId].includes(String(profile.label || "").toLowerCase())) || {};
+    };
+    const allProfiles = (entry.item.cenarios || []).flatMap((scenario) => scenario.perfis_contemplacao || []);
+    const profiles = profileOrder.filter((profileId) => profileId === "investor" || allProfiles.some((profile) => profileAliases[profileId].includes(String(profile.id).toLowerCase()) || profileAliases[profileId].includes(String(profile.label || "").toLowerCase())));
+    return profiles.map((profileId) => {
+      const withoutProfile = findProfile("without_embedded", profileId);
+      const withProfile = findProfile("with_embedded", profileId);
+      const profile = Object.keys(withoutProfile).length ? withoutProfile : withProfile;
+      const checks = [
+        ["Lance para contemplação", entry.availableBid >= Number(profile.lance_ideal || 0), `Disponível ${formatMoney(entry.availableBid)} · ideal ${formatMoney(profile.lance_ideal || 0)}`],
+        ["Parcela desejada x parcela inicial", desiredInstallment > 0 && entry.installment <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · inicial ${formatMoney(entry.installment)}`],
+        ["Parcela desejada x pós-contemplação", desiredInstallment > 0 && entry.installmentAfter > 0 && entry.installmentAfter <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · pós-contemplação ${formatMoney(entry.installmentAfter)}`],
+        ["Crédito contratado x crédito desejado", entry.contractedCredit >= entry.desiredCredit, `Contratado ${formatMoney(entry.contractedCredit)} · desejado líquido ${formatMoney(entry.desiredCredit)}`],
+      ];
+      return `<section class="sg-profile-check"><h4>${profileLabels[profileId]}</h4><div class="sg-profile-scenarios"><span>Sem embutido: ${withoutProfile.atinge_perfil ? "Atende" : "Não atende"} · ideal ${formatMoney(withoutProfile.lance_ideal || 0)}</span><span>Com embutido: ${withProfile.atinge_perfil ? "Atende" : "Não atende"} · ideal ${formatMoney(withProfile.lance_ideal || 0)}</span></div>${checks.map(([label, passes, detail]) => `<div class="sg-check-item ${passes ? "is-ok" : "is-fail"}"><span><b aria-hidden="true">${passes ? "✓" : "×"}</b>${label}</span><strong>${passes ? "Atende" : "Não atende"}</strong><small>${detail}</small></div>`).join("")}</section>`;
+    }).join("");
   };
   const factors = [
     ["Crédito", "creditFit", "Compara o crédito líquido calculado com o crédito desejado pelo cliente. Fórmula: crédito disponível dividido pelo crédito desejado, limitado a 100%. Peso: 30%."],
@@ -2559,7 +2571,7 @@ function renderSelectedGroupsScoreBreakdown(items) {
   const panel = document.createElement("article");
   panel.dataset.sgScoreBreakdown = "true";
   panel.className = "sg-panel sg-score-breakdown";
-  panel.innerHTML = `<header><div><span>Transparência</span><h3>Checklist de conformidade e assertividade</h3></div><small>Verificação objetiva dos requisitos do cliente por grupo</small></header><div class="sg-check-grid">${analytics.map((entry) => `<div class="sg-check-column"><strong>Grupo ${escapeHtml(entry.groupId)}</strong>${checklist(entry)}</div>`).join("")}</div>`;
+  panel.innerHTML = `<header><div><span>Transparência</span><h3>Checklist de conformidade e assertividade</h3></div><small>Comparativo dos cenários financeiros em todos os perfis</small></header><div class="sg-check-grid">${analytics.map((entry) => `<div class="sg-check-column"><strong>Grupo ${escapeHtml(entry.groupId)}</strong>${checklist(entry)}</div>`).join("")}</div>`;
   dashboard.appendChild(panel);
 }
 
