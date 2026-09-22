@@ -301,7 +301,7 @@ def _deadline_rows(estudo: dict[str, Any], grupo: dict[str, Any]) -> list[dict[s
 
 
 def _operator_notes(template_campos: dict[str, Any]) -> list[str]:
-    return [str(value).strip() for value in template_campos.values() if str(value or "").strip()]
+    return [str(value).strip() for key, value in template_campos.items() if not str(key).startswith("__") and str(value or "").strip()]
 
 
 def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, Any]:
@@ -310,6 +310,7 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
     financeiro = estudo.get("financeiro") or {}
     cenario = estudo.get("cenario") or {}
     template_campos = estudo.get("template_campos") or {}
+    editor = estudo.get("editor_content") or {}
     strategy_rows = []
     for strategy in financeiro.get("estrategias", [])[:5]:
         strategy_rows.append(
@@ -395,12 +396,12 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
             "alerts": alerts,
         },
         "sections": {
-            "introNotes": [
+            "introNotes": ([str(editor.get("intro"))] if editor.get("intro") else []) + [
                 "O presente Estudo Financeiro foi elaborado com base nas informacoes fornecidas e nas condicoes de mercado disponiveis na data de sua emissao.",
                 "O objetivo deste material e apresentar cenarios comparativos para apoiar uma decisao clara e auditavel.",
                 "As informacoes apresentadas possuem carater informativo e ilustrativo e nao constituem garantia de resultado ou promessa de contemplacao.",
             ],
-            "operatorNotes": _operator_notes(template_campos),
+            "operatorNotes": _operator_notes(template_campos) + ([str(editor.get("observacoes"))] if editor.get("observacoes") else []),
             "strategyRows": strategy_rows,
             "historyMatrix": _history_matrix(financeiro, grupo, estudo),
             "contractRows": _contract_rows(estudo, grupo, financeiro),
@@ -444,7 +445,7 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
                 "Quitacao de financiamento imobiliario.",
                 "Deixar aplicada obtendo rendimentos e retirar corrigida ao fim do grupo.",
             ],
-            "considerations": [
+            "considerations": ([str(editor.get("consideracoes"))] if editor.get("consideracoes") else []) + [
                 "Os cenarios, projecoes e simulacoes apresentados foram elaborados com base nas informacoes fornecidas pelo cliente e nas condicoes observadas na data de emissao.",
                 "Os resultados demonstrados possuem carater exclusivamente informativo e ilustrativo, podendo sofrer alteracoes por fatores economicos, financeiros, regulatórios, operacionais ou de mercado.",
                 "A Crediclass nao garante rentabilidade de investimentos, indices de correcao futuros, percentuais de contemplacao, prazos de contemplacao ou quaisquer resultados futuros.",

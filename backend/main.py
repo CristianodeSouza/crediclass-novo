@@ -25,7 +25,7 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
-from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos
+from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos, update_estudo_editor
 from .pdf_bridge import react_pdf_service_status, render_react_study_pdf
 from .piperun import fetch_opportunity_notes
 from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
@@ -673,6 +673,29 @@ def estudos_excluir(estudo_id: str):
     if not delete_estudo(estudo_id):
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
     return {"success": True}
+
+
+@app.get("/api/estudos/{estudo_id}/editor")
+def estudos_editor_obter(estudo_id: str):
+    estudo = get_estudo(estudo_id)
+    if not estudo:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
+    return {"success": True, "editor_content": estudo.get("editor_content") or {}, "editor_version": estudo.get("editor_version") or 1}
+
+
+@app.put("/api/estudos/{estudo_id}/editor")
+def estudos_editor_atualizar(estudo_id: str, payload: dict, request: Request = None):
+    estudo = get_estudo(estudo_id)
+    if not estudo:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
+    content = payload.get("editor_content") if isinstance(payload, dict) else None
+    if not isinstance(content, dict):
+        return JSONResponse(status_code=422, content={"success": False, "error": "Conteudo editorial inválido"})
+    username = getattr(getattr(request, "state", None), "auth_user", "")
+    updated = update_estudo_editor(estudo_id, content, AUTH_USERS.get(username, {}).get("name", username))
+    if not updated:
+        return JSONResponse(status_code=503, content={"success": False, "error": "Persistência editorial indisponível para estudos em planilha"})
+    return {"success": True, "editor_content": updated["editor_content"], "editor_version": updated["editor_version"]}
 
 
 @app.post("/api/estudos/{estudo_id}/exportar-pdf")

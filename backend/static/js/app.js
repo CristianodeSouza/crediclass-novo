@@ -4805,14 +4805,28 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
     modal.className = "modal fade";
     modal.tabIndex = -1;
     modal.setAttribute("aria-hidden", "true");
-    modal.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Prévia do Estudo Financeiro</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div><div class="modal-body p-0" style="height:75vh"><iframe title="Prévia do PDF" style="width:100%;height:100%;border:0" loading="lazy"></iframe></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button><a class="btn btn-outline-primary" target="_blank" rel="noopener">Abrir PDF</a><button type="button" class="btn btn-primary" data-preview-print>Imprimir / Salvar PDF</button></div></div></div>`;
+    modal.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Prévia do Estudo Financeiro</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div><div class="modal-body p-0" style="height:75vh"><iframe title="Prévia do PDF" style="width:100%;height:100%;border:0" loading="lazy"></iframe></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-editor-open>Editar textos</button><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button><a class="btn btn-outline-primary" target="_blank" rel="noopener">Abrir PDF</a><button type="button" class="btn btn-primary" data-preview-print>Imprimir / Salvar PDF</button></div></div></div>`;
     document.body.appendChild(modal);
     modal.querySelector("[data-preview-print]").addEventListener("click", () => {
       const frame = modal.querySelector("iframe");
       try { frame.contentWindow?.print(); } catch { window.open(pdfUrl, "_blank", "noopener"); }
     });
+    modal.querySelector("[data-editor-open]").addEventListener("click", async () => {
+      const activeStudyId = modal.dataset.studyId;
+      const current = await apiGet(`/estudos/${encodeURIComponent(activeStudyId)}/editor`);
+      const intro = window.prompt("Observações iniciais (texto editorial):", current.editor_content?.intro || "");
+      if (intro === null) return;
+      const observations = window.prompt("Observações do operador:", current.editor_content?.observacoes || "");
+      if (observations === null) return;
+      const considerations = window.prompt("Considerações finais:", current.editor_content?.consideracoes || "");
+      if (considerations === null) return;
+      await apiPut(`/estudos/${encodeURIComponent(activeStudyId)}/editor`, { editor_content: { intro, observacoes: observations, consideracoes: considerations, custom_sections: [] } });
+      showToast("Textos salvos. Gerando nova prévia...", "success");
+      await exportStudyPdf(activeStudyId);
+    });
   }
   const frame = modal.querySelector("iframe");
+  modal.dataset.studyId = studyId;
   frame.src = "about:blank";
   modal.querySelector("a").href = pdfUrl;
   const bootstrapModal = window.bootstrap?.Modal?.getOrCreateInstance(modal);

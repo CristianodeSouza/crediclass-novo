@@ -121,6 +121,7 @@ def ensure_studies_sheet() -> None:
 
 
 def normalize_study_item(item: dict[str, Any]) -> dict[str, Any]:
+    template_campos = item.get("template_campos") or {}
     normalized = {
         "estudo_id": str(item.get("estudo_id") or ""),
         "proposal_id": str(item.get("proposal_id") or ""),
@@ -132,7 +133,9 @@ def normalize_study_item(item: dict[str, Any]) -> dict[str, Any]:
         "cliente": item.get("cliente") or {},
         "cenario": item.get("cenario") or None,
         "financeiro": item.get("financeiro") or {},
-        "template_campos": item.get("template_campos") or {},
+        "template_campos": template_campos,
+        "editor_content": item.get("editor_content") or template_campos.get("__editor_content") or {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []},
+        "editor_version": int(item.get("editor_version") or 1),
         "estrategia": str(item.get("estrategia") or "Lance Total"),
     }
     if item.get("cancelado_em"):
@@ -278,7 +281,9 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: s
         "study_snapshot": {"schema": str(raw_snapshot.get("schema") or "motor360-selection/v1"), "groups": selected_groups} if raw_snapshot else None,
         "grupos_selecionados": selected_groups,
         "financeiro": financeiro,
-        "template_campos": payload.template_campos,
+        "template_campos": {**payload.template_campos, "__editor_content": {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []}},
+        "editor_content": {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []},
+        "editor_version": 1,
         "estrategia": financeiro["estrategia_recomendada"],
         "status": "Concluido",
         "operador": operador or "Não informado",
@@ -426,6 +431,33 @@ def get_estudo(estudo_id: str) -> dict | None:
                 return item
         return None
     return _studies.get(estudo_id)
+
+
+def update_estudo_editor(estudo_id: str, editor_content: dict[str, Any], operador: str = "") -> dict | None:
+    allowed = {"intro", "observacoes", "consideracoes", "custom_sections"}
+    clean = {key: editor_content.get(key, "") for key in allowed}
+    clean["custom_sections"] = clean["custom_sections"] if isinstance(clean["custom_sections"], list) else []
+    for key in ("intro", "observacoes", "consideracoes"):
+        clean[key] = str(clean[key] or "")[:5000]
+    if sheets_enabled():
+        for row_number, item in read_studies_from_sheet():
+            if item.get("estudo_id") != estudo_id:
+                continue
+            item["template_campos"] = {**(item.get("template_campos") or {}), "__editor_content": clean}
+            item["editor_content"] = clean
+            item["editor_version"] = int(item.get("editor_version") or 1) + 1
+            write_study_row_to_sheet(row_number, item)
+            return item
+        return None
+    item = _studies.get(estudo_id)
+    if not item:
+        return None
+    item["editor_content"] = clean
+    item["editor_version"] = int(item.get("editor_version") or 1) + 1
+    item["editor_updated_at"] = datetime.now().isoformat(timespec="seconds")
+    item["editor_updated_by"] = operador or "Não informado"
+    save_studies_to_disk()
+    return item
 
 
 def delete_estudo(estudo_id: str) -> bool:
