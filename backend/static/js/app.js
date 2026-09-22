@@ -3311,11 +3311,13 @@ async function renderFinancialStudyScreen() {
   }));
   if (items.length && !currentStudy.autoPreviewRequested) {
     currentStudy.autoPreviewRequested = true;
-    exportStudyPdf().catch(() => {
-      currentStudy.autoPreviewRequested = false;
-      const detail = error?.message ? ` (${error.message})` : "";
-      showToast(`Nao foi possivel abrir a prévia automaticamente${detail}. Use Imprimir / Salvar PDF para tentar novamente.`, "warning");
-    });
+    window.setTimeout(() => {
+      exportStudyPdf().catch((error) => {
+        currentStudy.autoPreviewRequested = false;
+        const detail = error?.message ? ` (${error.message})` : "";
+        showToast(`Nao foi possivel abrir a prévia automaticamente${detail}. Use Imprimir / Salvar PDF para tentar novamente.`, "warning");
+      });
+    }, 150);
   }
 }
 
