@@ -2257,6 +2257,19 @@ function renderSelectedGroupComparisonColumn(item, index) {
   return `<article class="selected-comparison-column"><header><div class="selected-group-number">${index + 1}</div><div><h3>Grupo ${escapeHtml(groupId)}</h3><p>${escapeHtml(item.administradora || "-")} · ${quotaCount} ${quotaCount === 1 ? "cota" : "cotas"}</p></div></header><div class="selected-comparison-key-metrics"><span><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></span><span><small>Crédito máximo</small><b>${formatMoney(scale(item.credito_maximo))}</b></span><span><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></span></div>${historicalAverages}<section class="selected-comparison-inputs"><h4>Premissas do grupo</h4>${groupFinancialInputs}</section><section><h4>Cenários financeiros</h4><div class="selected-comparison-scenarios">${scenarioRows}</div></section><section><h4>Perfis de contemplação</h4><div class="selected-comparison-profiles">${profileRows || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section></article>`;
 }
 
+function selectedMotor360SnapshotItems() {
+  const currentItems = new Map([
+    ...(investorState.result?.items || []),
+    ...(investorState.result?.credit_items || []),
+    ...(investorState.result?.composition_items || []),
+  ].map((item) => [String(item.grupo || item.grupo_id || ""), item]));
+  return [...investorState.selectedGroupIds].map((id) => {
+    const item = currentItems.get(id) || investorState.selectedGroupData.get(id);
+    if (!item) return null;
+    return { ...item, cenarios: Array.isArray(item.cenarios) ? item.cenarios : [] };
+  }).filter((item) => item && ["without_embedded", "with_embedded"].every((id) => item.cenarios.some((scenario) => scenario.id === id)));
+}
+
 function invalidateInvestorAnalysisForProfileChange() {
   investorAnalysisRequestId += 1;
   investorAnalysisController?.abort();
@@ -4712,7 +4725,7 @@ async function saveCurrentStudy(options = {}) {
     grupo_id: currentStudy.groupId,
     cenario: currentStudy.cenario,
     template_campos: collectStudyOperatorFields(),
-    grupos_selecionados: selectedMotor360Items().map((item) => ({
+    grupos_selecionados: selectedMotor360SnapshotItems().map((item) => ({
       ...item,
       quota_count: Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1))),
       selected_scenario_id: investorState.selectedGroupScenario || "without_embedded",
