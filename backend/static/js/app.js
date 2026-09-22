@@ -3309,25 +3309,6 @@ async function renderFinancialStudyScreen() {
     localStorage.setItem(FINANCIAL_STUDY_SECTIONS_KEY, JSON.stringify(preferences));
     screen.querySelector(`[data-study-content="${input.dataset.studySection}"]`)?.classList.toggle("d-none", !input.checked);
   }));
-  if (items.length && !currentStudy.autoPreviewRequested) {
-    currentStudy.autoPreviewRequested = true;
-    const previewButton = screen.querySelector("[data-study-print]");
-    if (previewButton) {
-      previewButton.disabled = true;
-      previewButton.textContent = "Gerando prévia...";
-    }
-    window.setTimeout(() => {
-      exportStudyPdf().catch((error) => {
-        currentStudy.autoPreviewRequested = false;
-        if (previewButton) {
-          previewButton.disabled = false;
-          previewButton.textContent = "Imprimir / Salvar PDF";
-        }
-        const detail = error?.message ? ` (${error.message})` : "";
-        showToast(`Nao foi possivel abrir a prévia automaticamente${detail}. Use Imprimir / Salvar PDF para tentar novamente.`, "warning");
-      });
-    }, 150);
-  }
 }
 
 function persistMotor360Selection() {
