@@ -3311,9 +3311,18 @@ async function renderFinancialStudyScreen() {
   }));
   if (items.length && !currentStudy.autoPreviewRequested) {
     currentStudy.autoPreviewRequested = true;
+    const previewButton = screen.querySelector("[data-study-print]");
+    if (previewButton) {
+      previewButton.disabled = true;
+      previewButton.textContent = "Gerando prévia...";
+    }
     window.setTimeout(() => {
       exportStudyPdf().catch((error) => {
         currentStudy.autoPreviewRequested = false;
+        if (previewButton) {
+          previewButton.disabled = false;
+          previewButton.textContent = "Imprimir / Salvar PDF";
+        }
         const detail = error?.message ? ` (${error.message})` : "";
         showToast(`Nao foi possivel abrir a prévia automaticamente${detail}. Use Imprimir / Salvar PDF para tentar novamente.`, "warning");
       });
@@ -4745,7 +4754,7 @@ async function saveCurrentStudy(options = {}) {
   const result = await apiPost("/estudos", payload);
     currentStudy.savedStudyId = result.estudo_id;
     currentStudy.proposalId = result.proposal_id || null;
-    document.getElementById("studyDisplayId").textContent = result.proposal_id || result.estudo_id;
+    document.getElementById("studyDisplayId")?.replaceChildren(document.createTextNode(result.proposal_id || result.estudo_id));
     document.getElementById("financialStudyHeaderNumber")?.replaceChildren(document.createTextNode(result.proposal_id || result.estudo_id));
     if (!options.silent) {
       showToast(`Estudo salvo: ${result.proposal_id || result.estudo_id}`, "success");
