@@ -3309,6 +3309,13 @@ async function renderFinancialStudyScreen() {
     localStorage.setItem(FINANCIAL_STUDY_SECTIONS_KEY, JSON.stringify(preferences));
     screen.querySelector(`[data-study-content="${input.dataset.studySection}"]`)?.classList.toggle("d-none", !input.checked);
   }));
+  if (items.length && !currentStudy.autoPreviewRequested) {
+    currentStudy.autoPreviewRequested = true;
+    exportStudyPdf().catch(() => {
+      currentStudy.autoPreviewRequested = false;
+      showToast("Nao foi possivel abrir a prévia automaticamente. Use Imprimir / Salvar PDF para tentar novamente.", "warning");
+    });
+  }
 }
 
 function persistMotor360Selection() {
