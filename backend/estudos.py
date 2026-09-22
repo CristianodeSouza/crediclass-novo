@@ -137,6 +137,7 @@ def normalize_study_item(item: dict[str, Any]) -> dict[str, Any]:
         "template_campos": template_campos,
         "editor_content": item.get("editor_content") or template_campos.get("__editor_content") or {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []},
         "editor_version": int(item.get("editor_version") or 1),
+        "editor_history": item.get("editor_history") or template_campos.get("__editor_history") or [],
         "estrategia": str(item.get("estrategia") or "Lance Total"),
     }
     if item.get("cancelado_em"):
@@ -448,9 +449,13 @@ def update_estudo_editor(estudo_id: str, editor_content: dict[str, Any], operado
         for row_number, item in read_studies_from_sheet():
             if item.get("estudo_id") != estudo_id:
                 continue
-            item["template_campos"] = {**(item.get("template_campos") or {}), "__editor_content": clean}
+            history = list(item.get("editor_history") or [])
+            version = int(item.get("editor_version") or 1) + 1
+            history.append({"version": version, "content": clean, "edited_at": datetime.now().isoformat(timespec="seconds"), "edited_by": operador or "Não informado"})
+            item["template_campos"] = {**(item.get("template_campos") or {}), "__editor_content": clean, "__editor_history": history}
             item["editor_content"] = clean
-            item["editor_version"] = int(item.get("editor_version") or 1) + 1
+            item["editor_version"] = version
+            item["editor_history"] = history
             write_study_row_to_sheet(row_number, item)
             return item
         return None
