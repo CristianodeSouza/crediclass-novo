@@ -4779,7 +4779,7 @@ async function exportStudyPdf(studyId) {
   }
   let result;
   let firstError = null;
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
     try {
       result = await apiPost(
         `/estudos/${encodeURIComponent(targetStudyId)}/exportar-pdf`,
@@ -4789,15 +4789,15 @@ async function exportStudyPdf(studyId) {
       break;
     } catch (error) {
       firstError ||= error;
-      if (attempt === 0) await new Promise((resolve) => window.setTimeout(resolve, 800));
+      if (attempt < 4) await new Promise((resolve) => window.setTimeout(resolve, 1500 * (attempt + 1)));
     }
   }
   if (!result) throw firstError || new Error("Nao foi possivel gerar o PDF.");
   showToast("PDF gerado.", "success");
-  openStudyPdfPreview(result.download_url, targetStudyId);
+  await openStudyPdfPreview(result.download_url, targetStudyId);
 }
 
-function openStudyPdfPreview(pdfUrl, studyId) {
+async function openStudyPdfPreview(pdfUrl, studyId) {
   let modal = document.getElementById("financialStudyPdfPreviewModal");
   if (!modal) {
     modal = document.createElement("div");
@@ -4812,12 +4812,27 @@ function openStudyPdfPreview(pdfUrl, studyId) {
       try { frame.contentWindow?.print(); } catch { window.open(pdfUrl, "_blank", "noopener"); }
     });
   }
-  modal.querySelector("iframe").src = pdfUrl;
+  const frame = modal.querySelector("iframe");
+  frame.src = "about:blank";
   modal.querySelector("a").href = pdfUrl;
   const bootstrapModal = window.bootstrap?.Modal?.getOrCreateInstance(modal);
   if (bootstrapModal) bootstrapModal.show();
   else window.open(pdfUrl, "_blank", "noopener");
-  return studyId;
+  let lastError = null;
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    try {
+      const response = await fetch(pdfUrl, { cache: "no-store", credentials: "same-origin" });
+      if (!response.ok) throw new Error(`PDF indisponível (${response.status})`);
+      const blobUrl = URL.createObjectURL(await response.blob());
+      frame.src = blobUrl;
+      frame.addEventListener("load", () => URL.revokeObjectURL(blobUrl), { once: true });
+      return studyId;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 4) await new Promise((resolve) => window.setTimeout(resolve, 1500 * (attempt + 1)));
+    }
+  }
+  throw lastError || new Error("PDF indisponível após várias tentativas");
 }
 
 async function ensureCurrentStudySaved(options = {}) {
