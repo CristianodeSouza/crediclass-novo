@@ -4784,7 +4784,7 @@ async function exportStudyPdf(studyId) {
       result = await apiPost(
         `/estudos/${encodeURIComponent(targetStudyId)}/exportar-pdf`,
         {},
-        { suppressErrorToast: attempt === 0 },
+        { suppressErrorToast: true },
       );
       break;
     } catch (error) {
