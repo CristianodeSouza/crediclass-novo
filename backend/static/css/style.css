@@ -6788,6 +6788,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .sg-dashboard > .sg-extra-visuals,
 .sg-dashboard > .sg-coverage-charts,
 .sg-dashboard > .sg-final-matrix { display: none !important; }
+.sg-dashboard > .sg-executive-audit,
+.sg-dashboard > .sg-advanced-filters,
+.sg-dashboard > .sg-fact-strip { display: none !important; }
 @media (max-width: 900px) {
   .nav-menu { overflow-x: auto; }
   .nav-section-admin { display: none; }
