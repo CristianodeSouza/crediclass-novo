@@ -2650,6 +2650,7 @@ function renderSelectedGroupsFinalMatrix(items) {
   const dashboard = document.querySelector("[data-sg-dashboard]");
   if (!dashboard || dashboard.querySelector("[data-sg-final-matrix]")) return;
   const analytics = items.map(selectedGroupAnalytics);
+  const labels = analytics.map((entry) => `Grupo ${entry.groupId}`);
   const panel = document.createElement("div");
   panel.dataset.sgFinalMatrix = "true";
   panel.className = "sg-chart-grid sg-final-matrix";
