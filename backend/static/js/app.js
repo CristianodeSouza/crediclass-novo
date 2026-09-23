@@ -4780,9 +4780,7 @@ async function exportStudyPdf(studyId) {
     showToast("Salve ou selecione um estudo antes de gerar o PDF.", "warning");
     return;
   }
-  const result = await apiPost(`/estudos/${encodeURIComponent(targetStudyId)}/finalizar-pdf`, {}, { suppressErrorToast: true });
-  showToast("PDF gerado.", "success");
-  await openStudyPdfPreview(result.download_url, targetStudyId);
+  await openStudyTextEditor(targetStudyId);
   })();
   try { return await window.__crediclassPdfRequest; } finally { window.__crediclassPdfRequest = null; }
 }
@@ -4792,9 +4790,10 @@ function addEditorSection(editor, section = {}) {
   const node = document.createElement("div");
   node.className = "border rounded p-2 mb-2";
   node.dataset.editorSection = "true";
-  node.innerHTML = `<div class="input-group input-group-sm mb-2"><input class="form-control" placeholder="Título da seção" data-section-title><button type="button" class="btn btn-outline-danger" data-section-remove>Remover</button></div><textarea class="form-control" rows="3" placeholder="Conteúdo da seção" data-section-text></textarea>`;
+  node.innerHTML = `<div class="input-group input-group-sm mb-2"><input class="form-control" placeholder="Título da seção" data-section-title><button type="button" class="btn btn-outline-danger" data-section-remove>Remover</button></div><div class="form-control" style="min-height:90px" contenteditable="true" data-section-editor data-section-text></div>`;
   node.querySelector("[data-section-title]").value = section.title || "";
-  node.querySelector("[data-section-text]").value = section.text || "";
+  node.querySelector("[data-section-text]").innerHTML = section.text || "";
+  node._tiptapEditor = window.CrediclassEditor?.create(node.querySelector("[data-section-editor]"));
   node.querySelector("[data-section-remove]").addEventListener("click", () => node.remove());
   host.appendChild(node);
 }
@@ -4841,10 +4840,10 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
         editor.querySelector("[data-editor-restore]").addEventListener("click", async () => { await apiPost(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor/restore`, {}); const restored = await apiGet(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor`); ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent(restored.editor_content?.[field] || "")); renderEditorSections(editor, restored.editor_content?.custom_sections || []); });
         editor.querySelector("[data-editor-save]").addEventListener("click", async () => {
           const content = Object.fromEntries(Object.entries(editor._tiptapEditors).map(([field, instance]) => [field, instance?.getHTML() || ""]));
-          content.custom_sections = [...editor.querySelectorAll("[data-editor-section]")].map((section) => ({ title: section.querySelector("[data-section-title]")?.value || "", text: section.querySelector("[data-section-text]")?.value || "" }));
+          content.custom_sections = [...editor.querySelectorAll("[data-editor-section]")].map((section) => ({ title: section.querySelector("[data-section-title]")?.value || "", text: section._tiptapEditor?.getHTML() || section.querySelector("[data-section-text]")?.innerHTML || "" }));
           await apiPut(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor`, { editor_content: content });
-          const preview = await apiPost(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/preview-pdf`, {});
-          editor.querySelector("[data-editor-preview]").src = preview.download_url;
+          const previewHtml = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:28px;color:#243842;line-height:1.5}h2{border-bottom:2px solid #304750;padding-bottom:8px}section{margin:20px 0}section h3{color:#ef7a24} .custom{border-top:1px solid #ddd;padding-top:12px}</style></head><body><h2>Prévia textual do Estudo Financeiro</h2><section><h3>Introdução</h3>${content.intro || ""}</section><section><h3>Observações</h3>${content.observacoes || ""}</section><section><h3>Considerações finais</h3>${content.consideracoes || ""}</section>${content.custom_sections.map((section) => `<section class="custom"><h3>${escapeHtml(section.title || "Informação adicional")}</h3>${section.text || ""}</section>`).join("")}</body></html>`;
+          editor.querySelector("[data-editor-preview]").srcdoc = previewHtml;
           showToast("Prévia atualizada.", "success");
         });
       }
@@ -4860,6 +4859,7 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
         const version = (history.versions || []).find((entry) => String(entry.version) === historySelect.value);
         if (!version) return;
         ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent(version.content?.[field] || ""));
+        renderEditorSections(editor, version.content?.custom_sections || []);
       };
       window.bootstrap?.Modal?.getOrCreateInstance(editor)?.show();
     });
@@ -4886,6 +4886,15 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
     }
   }
   throw lastError || new Error("PDF indisponível após várias tentativas");
+}
+
+async function openStudyTextEditor(studyId) {
+  // A etapa de estudo é textual. O PDF só deve ser criado pela ação final
+  // de impressão/salvamento, nunca para abrir o editor.
+  await openStudyPdfPreview("about:blank", studyId);
+  const pdfModal = document.getElementById("financialStudyPdfPreviewModal");
+  pdfModal?.querySelector("[data-editor-open]")?.click();
+  window.setTimeout(() => window.bootstrap?.Modal?.getOrCreateInstance(pdfModal)?.hide(), 0);
 }
 
 async function ensureCurrentStudySaved(options = {}) {
