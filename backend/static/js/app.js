@@ -3301,47 +3301,20 @@ async function renderFinancialStudyScreen() {
   if (renderToken !== financialStudyRenderToken) return;
   screen.removeAttribute("aria-busy");
   screen.innerHTML = `<div class="financial-study-page">
-    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Documento dinâmico criado com os dados disponíveis no perfil e nos grupos selecionados.</p></div><div><button class="btn btn-outline-secondary" type="button" data-study-customize>Personalizar</button><button class="btn btn-outline-secondary btn-sm" type="button" data-study-audit>Baixar log de auditoria</button><button class="btn btn-outline-primary" type="button" data-study-generate>Gerar Estudo</button><button class="btn btn-primary" type="button" data-study-print>Imprimir / Salvar PDF</button></div></div>
+    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Documento dinâmico criado com os dados disponíveis no perfil e nos grupos selecionados.</p></div><div><button class="btn btn-primary" type="button" data-study-print>Abrir Estudo</button></div></div>
     <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
     <article class="financial-study-document d-none" aria-hidden="true">
       <header class="financial-study-cover"><div class="financial-study-cover-brand"><span class="financial-study-kicker">CREDICLASS</span><h2>Estudo Financeiro</h2><p>Comparativo dos grupos selecionados para apoiar uma decisão clara e auditável.</p></div><dl><div><dt>Nome do cliente</dt><dd id="financialStudyHeaderClient">${escapeHtml(clientName)}</dd></div><div><dt>Data do estudo</dt><dd id="financialStudyHeaderDate">${escapeHtml(issueDate)}</dd></div><div><dt>Número do estudo</dt><dd id="financialStudyHeaderNumber">${escapeHtml(proposalId)}</dd></div></dl></header>
       <section class="financial-study-section${sectionClass("cliente")}" data-study-content="cliente"><div class="financial-study-section-heading"><span>01</span><div><h3>Cliente e necessidade</h3><p>Informações declaradas e registradas no Perfil do Cliente.</p></div></div><div class="financial-study-metrics">${financialStudyMetric("Cliente", clientName)}${financialStudyMetric("Tipo de contratação", financialStudyContractLabel(profile.tipo_contratacao))}${financialStudyMetric("Objetivo do consórcio", profile.objetivo || "Não informado")}${optionalAssetMetric}</div></section>
       <section class="financial-study-section${sectionClass("resumo")}" data-study-content="resumo"><div class="financial-study-section-heading"><span>02</span><div><h3>Resumo financeiro</h3><p>Capacidade e parâmetros declarados no Perfil do Cliente.</p></div></div><div class="financial-study-metrics financial-study-metrics-compact">${financialStudyMetric("Crédito líquido desejado", formatMoney(profile.credito_desejado))}${financialStudyMetric("Parcela desejada", formatMoney(profile.parcela_desejada ?? profile.parcela_ideal))}${financialStudyMetric("Parcela máxima", formatMoney(profile.parcela_limite))}${financialStudyMetric("Renda total", formatMoney(profile.renda_total))}${financialStudyMetric("Recursos próprios", formatMoney(profile.lance_proprio))}${financialStudyMetric("FGTS", formatMoney(profile.fgts))}</div></section>
       <section class="financial-study-section${sectionClass("grupos")}" data-study-content="grupos"><div class="financial-study-section-heading"><span>03</span><div><h3>Comparativo dos grupos</h3><p>Dados financeiros e agenda de assembleia reunidos em cada grupo.</p></div></div>${financialStudyGroupCards(items, assemblyData, generatedAt, assemblyError)}<p class="financial-study-table-note">Taxas aparecem somente quando registradas na base. A ordem reproduz a seleção atual do Motor 360.</p></section>
-      <footer class="financial-study-footer"><span>Crediclass · Estudo Financeiro</span><span>${escapeHtml(proposalId)} · versão ${escapeHtml(systemVersion)}</span></footer>
+      <footer class="financial-study-footer no-print"><span>Crediclass · Estudo Financeiro</span><span>${escapeHtml(proposalId)} · versão ${escapeHtml(systemVersion)}</span><button class="btn btn-outline-secondary btn-sm" type="button" data-study-audit>Baixar log de auditoria</button></footer>
     </article>
   </div>`;
   screen.querySelector("[data-study-print]")?.addEventListener("click", () => {
     exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
   });
-  screen.querySelector("[data-study-audit]")?.addEventListener("click", () => downloadStudyAuditLog());
-  screen.querySelector("[data-study-customize]")?.addEventListener("click", () => screen.querySelector("[data-study-customizer-panel]")?.classList.toggle("d-none"));
-  screen.querySelector("[data-study-generate]")?.addEventListener("click", async () => {
-    const button = screen.querySelector("[data-study-generate]");
-    if (button) {
-      button.disabled = true;
-      button.textContent = "Gerando...";
-    }
-    try {
-      const result = await saveCurrentStudy();
-      if (button) {
-        button.textContent = `Estudo ${result?.proposal_id || result?.estudo_id || "gerado"}`;
-      }
-    } catch (error) {
-      if (button) {
-        button.disabled = false;
-        button.textContent = "Gerar Estudo";
-      }
-      throw error;
-    }
-  });
-  if (currentStudy?.savedStudyId) {
-    const button = screen.querySelector("[data-study-generate]");
-    if (button) {
-      button.disabled = true;
-      button.textContent = `Estudo ${currentStudy.proposalId || currentStudy.savedStudyId}`;
-    }
-  }
+  screen.querySelectorAll("[data-study-audit]").forEach((button) => button.addEventListener("click", () => downloadStudyAuditLog()));
   renderFinancialStudyProjectionCharts(items);
   screen.querySelectorAll("[data-study-section]").forEach((input) => input.addEventListener("change", () => {
     preferences[input.dataset.studySection] = input.checked;
