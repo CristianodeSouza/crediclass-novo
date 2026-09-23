@@ -3313,7 +3313,11 @@ async function renderFinancialStudyScreen() {
     <div class="financial-study-audit-footer no-print"><button class="btn btn-outline-secondary btn-sm" type="button" data-study-audit>Baixar log de auditoria</button></div>
   </div>`;
   screen.querySelector("[data-study-print]")?.addEventListener("click", () => {
-    exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
+    const button = screen.querySelector("[data-study-print]");
+    if (button?.disabled) return;
+    if (button) { button.disabled = true; button.textContent = "Abrindo..."; }
+    exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"))
+      .finally(() => { if (button) { button.disabled = false; button.textContent = "Abrir Estudo"; } });
   });
   screen.querySelectorAll("[data-study-audit]").forEach((button) => button.addEventListener("click", () => downloadStudyAuditLog()));
   renderFinancialStudyProjectionCharts(items);
