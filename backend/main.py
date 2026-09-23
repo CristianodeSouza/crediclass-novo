@@ -54,6 +54,9 @@ async def buscar_oportunidade_piperun(opportunity_id: str):
         return JSONResponse(status_code=404, content={"success": False, "error": str(error)})
     except RuntimeError as error:
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
+    except Exception as error:
+        logger.exception("Falha ao importar oportunidade PipeRun %s", opportunity_id)
+        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
 
 
 @app.get("/api/piperun-preview")
@@ -96,9 +99,6 @@ async def executar_sincronizacao_piperun(opportunity_id: str, confirm: bool = Qu
         return JSONResponse(status_code=409, content={"success": False, "error": "Esta oportunidade já foi executada nesta sessão."})
     PIPERUN_EXECUTIONS.add(opportunity_id)
     return {"success": True, "controlled": True, "opportunity_id": opportunity_id, "message": "Executor controlado preparado. WhatsApp e Toggl permanecem desativados."}
-    except Exception as error:
-        logger.exception("Falha ao importar oportunidade PipeRun %s", opportunity_id)
-        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
 
 
 class ReleaseStaticFiles(StaticFiles):
