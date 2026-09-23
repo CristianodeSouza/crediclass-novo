@@ -11,6 +11,7 @@ import math
 import os
 import time
 import copy
+from threading import Lock
 from typing import Annotated
 from uuid import uuid4
 
@@ -37,6 +38,7 @@ FILES_DIR = BASE_DIR / "generated_files"
 DATA_DIR = BASE_DIR / "data"
 FILES_DIR.mkdir(exist_ok=True)
 logger = logging.getLogger("crediclass.api")
+PDF_RENDER_LOCK = Lock()
 
 app = FastAPI(title="Crediclass Dashboard V3")
 
@@ -219,9 +221,12 @@ def _react_pdf_status_or_error() -> dict:
 
 
 def _render_study_pdf_file(estudo: dict, filename: str) -> dict:
-    status = _react_pdf_status_or_error()
-    path = FILES_DIR / filename
-    path.write_bytes(render_react_study_pdf(estudo, get_settings().version))
+    # O renderer React-PDF inicia um processo Node. Serializar esse trecho
+    # evita que cliques, abas ou operadores diferentes derrubem a instância.
+    with PDF_RENDER_LOCK:
+        status = _react_pdf_status_or_error()
+        path = FILES_DIR / filename
+        path.write_bytes(render_react_study_pdf(estudo, get_settings().version))
     return {
         "success": True,
         "download_url": f"/files/{filename}",
