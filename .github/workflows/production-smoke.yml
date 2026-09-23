@@ -1,0 +1,22 @@
+name: Production smoke test
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check production
+        env:
+          PRODUCTION_URL: https://crediclass.csrtecnologia.com.br
+          EXPECTED_VERSION: 4.0.87
+        run: node scripts/production-smoke-test.mjs
