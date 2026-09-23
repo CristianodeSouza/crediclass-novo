@@ -1,5 +1,5 @@
 const baseUrl = (process.env.PRODUCTION_URL || "https://crediclass.csrtecnologia.com.br").replace(/\/$/, "");
-const expectedVersion = process.env.EXPECTED_VERSION || "4.0.89";
+const expectedVersion = process.env.EXPECTED_VERSION || "4.0.90";
 
 async function get(path) {
   const response = await fetch(`${baseUrl}${path}`, { redirect: "follow" });

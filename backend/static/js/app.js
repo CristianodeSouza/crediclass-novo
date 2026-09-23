@@ -5983,86 +5983,6 @@ document.getElementById("historyUpdateForm").addEventListener("submit", (event) 
 
 document.querySelector('[data-bs-target="#detailsHistory"]').addEventListener("shown.bs.tab", () => detailsChart?.resize());
 
-document.getElementById("studyChangeGroupBtn").addEventListener("click", () => activateScreen("motor360"));
-document.getElementById("studyViewStrategyBtn").addEventListener("click", () => {
-  document.querySelector(".study-v4-strategy")?.scrollIntoView({ behavior: "smooth", block: "start" });
-});
-document.getElementById("studyHistoryShortcutBtn").addEventListener("click", () => activateScreen("historico"));
-document.getElementById("studyCompareStrategiesBtn").addEventListener("click", () => {
-  document.querySelector(".study-v4-strategy-tabs")?.scrollIntoView({ behavior: "smooth", block: "center" });
-});
-document.querySelectorAll("[data-study-template-tab]").forEach((button) => {
-  button.addEventListener("click", () => activateStudyTemplateTab(button.dataset.studyTemplateTab));
-});
-studyOperatorFields.forEach(([, , id]) => {
-  document.getElementById(id).addEventListener("input", () => {
-    if (currentStudy) currentStudy.templateCampos = collectStudyOperatorFields();
-    updateStudyCompletion();
-    updateStudyTemplatePreview();
-  });
-});
-document.getElementById("studyNewSimulationBtn").addEventListener("click", () => {
-  activateScreen("motor360");
-});
-document.getElementById("studyStrategyTabs").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-study-strategy]");
-  if (!button) return;
-  currentStudyStrategyTab = button.dataset.studyStrategy;
-  renderStudyStrategyTabs();
-  renderStudyStrategyTable();
-});
-document.getElementById("studyPdfBtn").addEventListener("click", () => {
-  exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
-});
-document.getElementById("studyAuditDownloadBtn")?.addEventListener("click", () => {
-  downloadStudyAuditLog().catch(() => showToast("Nao foi possivel baixar o log de auditoria.", "danger"));
-});
-document.getElementById("studyShareBtn").addEventListener("click", () => {
-  shareCurrentStudy().catch(() => showToast("Nao foi possivel compartilhar o estudo.", "danger"));
-});
-document.getElementById("studyEmailBtn").addEventListener("click", () => {
-  emailCurrentStudy().catch(() => showToast("Nao foi possivel preparar o e-mail.", "danger"));
-});
-
-document.getElementById("historyFilters").addEventListener("submit", (event) => {
-  event.preventDefault();
-  loadHistoryStudies();
-});
-
-document.getElementById("clearHistoryBtn").addEventListener("click", () => {
-  document.getElementById("historyFilters").reset();
-  loadHistoryStudies();
-});
-
-document.getElementById("exportStudiesCsvBtn").addEventListener("click", exportStudiesCsv);
-
-document.getElementById("historyTableBody").addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-history-action]");
-  if (!button) return;
-  const studyId = button.dataset.studyId;
-  if (button.dataset.historyAction === "visualizar") {
-    openStudyDetails(studyId);
-    return;
-  }
-  if (button.dataset.historyAction === "duplicar") {
-    duplicateStudy(studyId).catch(() => showToast("Nao foi possivel duplicar o estudo.", "danger"));
-    return;
-  }
-  if (button.dataset.historyAction === "excluir") {
-    await apiDelete(`/estudos/${encodeURIComponent(studyId)}`);
-    showToast("Estudo excluido.", "success");
-    loadHistoryStudies();
-    return;
-  }
-  if (button.dataset.historyAction === "pdf") {
-    exportStudyPdf(studyId).catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
-    return;
-  }
-  if (button.dataset.historyAction === "email") {
-    emailHistoryStudy(studyId).catch(() => showToast("Nao foi possivel preparar o e-mail.", "danger"));
-  }
-});
-
 document.getElementById("downloadConfigBackupBtn").addEventListener("click", downloadConfigBackup);
 document.getElementById("saveBusinessRulesFeedbackBtn").addEventListener("click", () => {
   saveBusinessRuleFeedbacks().catch(() => setConfigState("error"));
@@ -6146,3 +6066,4 @@ document.getElementById("loginForm").addEventListener("submit", submitLogin);
 document.getElementById("logoutBtn").addEventListener("click", logout);
 
 bootApp().catch(() => showLogin("Nao foi possivel validar a sessao."));
+
