@@ -72,6 +72,8 @@ async def gerar_plano_sincronizacao_piperun(opportunity_id: str):
         preview = await fetch_opportunity_notes(opportunity_id)
         dados = preview.get("dados") or {}
         credito = float(dados.get("credito_desejado") or 0)
+        required = {"nome": "Nome do titular", "credito_desejado": "Crédito desejado"}
+        missing = [label for key, label in required.items() if not dados.get(key)]
         steps = [
             {"order": 1, "name": "Atualizar responsável", "method": "PUT", "endpoint": f"/v1/deals/{opportunity_id}", "payload": {"owner_id": 2609 if credito >= 1000000 else 2602}, "status": "simulação"},
             {"order": 2, "name": "Atualizar cliente principal", "method": "PUT", "endpoint": "/v1/persons/{person_id}", "payload": {"name": dados.get("nome"), "cpf": dados.get("cpf"), "contactEmails": [dados.get("email")], "contactPhones": [dados.get("celular")]}, "status": "simulação"},
@@ -80,7 +82,7 @@ async def gerar_plano_sincronizacao_piperun(opportunity_id: str):
             {"order": 5, "name": "Vincular contatos à oportunidade", "method": "PUT", "endpoint": f"/v1/deals/{opportunity_id}/persons/{{person_id}}", "payload": {}, "status": "simulação"},
             {"order": 6, "name": "Mover oportunidade para etapa destino", "method": "PUT", "endpoint": f"/v1/deals/{opportunity_id}", "payload": {"stage_id": 262860}, "status": "simulação"},
         ]
-        return {"success": True, "simulation": True, "opportunity_id": opportunity_id, "extraction": preview, "steps": steps}
+        return {"success": True, "simulation": True, "can_execute": not missing, "missing_fields": missing, "opportunity_id": opportunity_id, "extraction": preview, "steps": steps}
     except Exception as error:
         logger.exception("Falha ao gerar plano PipeRun %s", opportunity_id)
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})

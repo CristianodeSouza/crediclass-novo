@@ -424,7 +424,8 @@ async function preparePipeRunPlan() {
     const response = await fetch("/api/piperun/63416847/sync-plan", { method: "POST", credentials: "same-origin" });
     const payload = await response.json();
     if (!response.ok || !payload.success) throw new Error(payload.error || "Não foi possível montar o plano.");
-    plan.innerHTML = `<h3>Plano de sincronização — simulação</h3><p>Nenhuma alteração foi enviada ao PipeRun.</p><ol>${(payload.steps || []).map((step) => `<li><strong>${step.name}</strong><code>${step.method} ${step.endpoint}</code><small>${JSON.stringify(step.payload || {})}</small><span>${step.status}</span></li>`).join("")}</ol>`;
+    const validation = payload.can_execute ? "Dados mínimos validados. Execução ainda não iniciada." : `Campos ausentes: ${(payload.missing_fields || []).join(", ")}`;
+    plan.innerHTML = `<h3>Plano de sincronização — simulação</h3><p>${validation}</p><p>Nenhuma alteração foi enviada ao PipeRun.</p><ol>${(payload.steps || []).map((step) => `<li><strong>${step.name}</strong><code>${step.method} ${step.endpoint}</code><small>${JSON.stringify(step.payload || {})}</small><span>${step.status}</span></li>`).join("")}</ol>`;
   } catch (error) { plan.innerHTML = `<p class="table-state-error">${error.message}</p>`; }
 }
 
