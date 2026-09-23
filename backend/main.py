@@ -27,7 +27,7 @@ from .configuracoes import get_configuracoes, update_configuracoes
 from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos, normalize_editor_content, restore_estudo_editor, update_estudo_editor
-from .pdf_bridge import react_pdf_service_status, render_react_study_pdf
+from .pdf_bridge import build_react_pdf_payload, react_pdf_service_status, render_react_study_pdf
 from .piperun import fetch_opportunity_notes
 from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
@@ -703,6 +703,17 @@ def estudos_editor_obter(estudo_id: str):
     if not estudo:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
     return {"success": True, "editor_content": normalize_editor_content(estudo.get("editor_content"), True), "editor_original": normalize_editor_content(estudo.get("editor_original"), True), "editor_version": estudo.get("editor_version") or 1}
+
+
+@app.get("/api/estudos/{estudo_id}/editor/document")
+def estudos_editor_documento(estudo_id: str):
+    if not get_settings().financial_editor_enabled:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Editor financeiro desativado"})
+    estudo = get_estudo(estudo_id)
+    if not estudo:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
+    payload = build_react_pdf_payload(estudo, get_settings().version)
+    return {"success": True, "document": payload, "editor_content": normalize_editor_content(estudo.get("editor_content"), True)}
 
 
 @app.put("/api/estudos/{estudo_id}/editor")
