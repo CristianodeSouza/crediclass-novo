@@ -3301,9 +3301,9 @@ async function renderFinancialStudyScreen() {
   if (renderToken !== financialStudyRenderToken) return;
   screen.removeAttribute("aria-busy");
   screen.innerHTML = `<div class="financial-study-page">
-    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Documento dinâmico criado com os dados disponíveis no perfil e nos grupos selecionados.</p></div><div><button class="btn btn-primary" type="button" data-study-print>Abrir Estudo</button></div></div>
+    <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Prévia somente leitura dos grupos e cenários selecionados para conferência antes do envio ao cliente.</p></div></div>
     <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
-    <article class="financial-study-document d-none" aria-hidden="true">
+    <article class="financial-study-document" aria-hidden="false">
       <header class="financial-study-cover"><div class="financial-study-cover-brand"><span class="financial-study-kicker">CREDICLASS</span><h2>Estudo Financeiro</h2><p>Comparativo dos grupos selecionados para apoiar uma decisão clara e auditável.</p></div><dl><div><dt>Nome do cliente</dt><dd id="financialStudyHeaderClient">${escapeHtml(clientName)}</dd></div><div><dt>Data do estudo</dt><dd id="financialStudyHeaderDate">${escapeHtml(issueDate)}</dd></div><div><dt>Número do estudo</dt><dd id="financialStudyHeaderNumber">${escapeHtml(proposalId)}</dd></div></dl></header>
       <section class="financial-study-section${sectionClass("cliente")}" data-study-content="cliente"><div class="financial-study-section-heading"><span>01</span><div><h3>Cliente e necessidade</h3><p>Informações declaradas e registradas no Perfil do Cliente.</p></div></div><div class="financial-study-metrics">${financialStudyMetric("Cliente", clientName)}${financialStudyMetric("Tipo de contratação", financialStudyContractLabel(profile.tipo_contratacao))}${financialStudyMetric("Objetivo do consórcio", profile.objetivo || "Não informado")}${optionalAssetMetric}</div></section>
       <section class="financial-study-section${sectionClass("resumo")}" data-study-content="resumo"><div class="financial-study-section-heading"><span>02</span><div><h3>Resumo financeiro</h3><p>Capacidade e parâmetros declarados no Perfil do Cliente.</p></div></div><div class="financial-study-metrics financial-study-metrics-compact">${financialStudyMetric("Crédito líquido desejado", formatMoney(profile.credito_desejado))}${financialStudyMetric("Parcela desejada", formatMoney(profile.parcela_desejada ?? profile.parcela_ideal))}${financialStudyMetric("Parcela máxima", formatMoney(profile.parcela_limite))}${financialStudyMetric("Renda total", formatMoney(profile.renda_total))}${financialStudyMetric("Recursos próprios", formatMoney(profile.lance_proprio))}${financialStudyMetric("FGTS", formatMoney(profile.fgts))}</div></section>
@@ -3312,13 +3312,6 @@ async function renderFinancialStudyScreen() {
     </article>
     <div class="financial-study-audit-footer no-print"><button class="btn btn-outline-secondary btn-sm" type="button" data-study-audit>Baixar log de auditoria</button></div>
   </div>`;
-  screen.querySelector("[data-study-print]")?.addEventListener("click", () => {
-    const button = screen.querySelector("[data-study-print]");
-    if (button?.disabled) return;
-    if (button) { button.disabled = true; button.textContent = "Abrindo..."; }
-    exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"))
-      .finally(() => { if (button) { button.disabled = false; button.textContent = "Abrir Estudo"; } });
-  });
   screen.querySelectorAll("[data-study-audit]").forEach((button) => button.addEventListener("click", () => downloadStudyAuditLog()));
   renderFinancialStudyProjectionCharts(items);
   screen.querySelectorAll("[data-study-section]").forEach((input) => input.addEventListener("change", () => {
@@ -4780,7 +4773,9 @@ async function exportStudyPdf(studyId) {
     showToast("Salve ou selecione um estudo antes de gerar o PDF.", "warning");
     return;
   }
-  await openStudyTextEditor(targetStudyId);
+  const finalPdf = await apiPost(`/estudos/${encodeURIComponent(targetStudyId)}/finalizar-pdf`, {});
+  await openStudyPdfPreview(finalPdf.download_url, targetStudyId);
+  return finalPdf;
   })();
   try { return await window.__crediclassPdfRequest; } finally { window.__crediclassPdfRequest = null; }
 }
@@ -4897,6 +4892,7 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
 async function openStudyTextEditor(studyId) {
   const screen = document.getElementById("screen-estudo");
   if (!screen) return;
+  screen.innerHTML = `<div class="content-card study-loading" role="status" aria-live="polite"><div class="study-loading-spinner" aria-hidden="true"></div><h2>Preparando o estudo financeiro</h2><p>Aguarde enquanto carregamos grupos, cálculos e textos do documento.</p></div>`;
   let panel = screen.querySelector("[data-embedded-study-editor]");
   if (!panel) {
     panel = document.createElement("section");
