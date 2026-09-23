@@ -4895,12 +4895,31 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
 }
 
 async function openStudyTextEditor(studyId) {
-  // A etapa de estudo é textual. O PDF só deve ser criado pela ação final
-  // de impressão/salvamento, nunca para abrir o editor.
-  await openStudyPdfPreview("about:blank", studyId);
-  const pdfModal = document.getElementById("financialStudyPdfPreviewModal");
-  pdfModal?.querySelector("[data-editor-open]")?.click();
-  window.setTimeout(() => window.bootstrap?.Modal?.getOrCreateInstance(pdfModal)?.hide(), 0);
+  const screen = document.getElementById("screen-estudo");
+  if (!screen) return;
+  let panel = screen.querySelector("[data-embedded-study-editor]");
+  if (!panel) {
+    panel = document.createElement("section");
+    panel.className = "content-card embedded-study-editor no-print";
+    panel.dataset.embeddedStudyEditor = "true";
+    panel.innerHTML = `<div class="embedded-editor-grid"><div><div class="alert alert-info py-2">Edite somente textos editoriais. Valores, grupos e cálculos permanecem oficiais.</div><div class="btn-group mb-2" role="toolbar"><button type="button" class="btn btn-sm btn-outline-secondary" data-embedded-cmd="bold"><b>B</b></button><button type="button" class="btn btn-sm btn-outline-secondary" data-embedded-cmd="italic"><i>I</i></button><button type="button" class="btn btn-sm btn-outline-secondary" data-embedded-cmd="toggleBulletList">Lista</button><button type="button" class="btn btn-sm btn-outline-secondary" data-embedded-cmd="undo">Desfazer</button><button type="button" class="btn btn-sm btn-outline-secondary" data-embedded-cmd="redo">Refazer</button></div>${["intro", "observacoes", "consideracoes"].map((field) => `<label class="form-label">${field === "intro" ? "Introdução" : field === "observacoes" ? "Observações" : "Considerações finais"}</label><div class="form-control embedded-editor-field" contenteditable="true" data-embedded-field="${field}"></div>`).join("")}<div class="mt-3 d-flex gap-2"><button type="button" class="btn btn-outline-secondary" data-embedded-restore>Restaurar original</button><button type="button" class="btn btn-primary" data-embedded-save>Salvar textos</button></div></div><div><div class="small text-muted mb-2">Prévia textual do estudo</div><iframe title="Prévia textual do estudo" data-embedded-preview style="width:100%;height:620px;border:1px solid #ddd;border-radius:6px"></iframe></div></div>`;
+    screen.querySelector(".financial-study-page")?.appendChild(panel);
+    panel._editors = Object.fromEntries(["intro", "observacoes", "consideracoes"].map((field) => [field, window.CrediclassEditor?.create(panel.querySelector(`[data-embedded-field="${field}"]`))]));
+    panel._active = panel._editors.intro;
+    Object.values(panel._editors).forEach((instance) => instance?.on("focus", () => { panel._active = instance; }));
+    panel.querySelectorAll("[data-embedded-cmd]").forEach((button) => button.addEventListener("click", () => { const command = button.dataset.embeddedCmd; const map = { bold: "toggleBold", italic: "toggleItalic", toggleBulletList: "toggleBulletList", undo: "undo", redo: "redo" }; panel._active?.chain().focus()[map[command]]().run(); }));
+    panel.querySelector("[data-embedded-save]").addEventListener("click", async () => { const content = Object.fromEntries(Object.entries(panel._editors).map(([field, instance]) => [field, instance?.getHTML() || ""])); await apiPut(`/estudos/${encodeURIComponent(panel.dataset.studyId)}/editor`, { editor_content: { ...content, custom_sections: [] } }); renderEmbeddedStudyTextPreview(panel, content); showToast("Textos salvos.", "success"); });
+    panel.querySelector("[data-embedded-restore]").addEventListener("click", async () => { const restored = await apiPost(`/estudos/${encodeURIComponent(panel.dataset.studyId)}/editor/restore`, {}); Object.entries(panel._editors).forEach(([field, instance]) => instance?.commands.setContent(restored.editor_content?.[field] || "")); renderEmbeddedStudyTextPreview(panel, restored.editor_content || {}); });
+  }
+  panel.dataset.studyId = studyId;
+  try { const current = await apiGet(`/estudos/${encodeURIComponent(studyId)}/editor`, { suppressErrorToast: true }); Object.entries(panel._editors).forEach(([field, instance]) => instance?.commands.setContent(current.editor_content?.[field] || "")); renderEmbeddedStudyTextPreview(panel, current.editor_content || {}); } catch { showToast("Editor aberto. O servidor está indisponível para carregar o conteúdo salvo.", "warning"); }
+  panel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function renderEmbeddedStudyTextPreview(panel, content) {
+  const frame = panel.querySelector("[data-embedded-preview]");
+  if (!frame) return;
+  frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial;padding:28px;color:#243842;line-height:1.5}h2{border-bottom:2px solid #304750;padding-bottom:8px}h3{color:#ef7a24;margin-top:22px}</style></head><body><h2>Estudo Financeiro</h2><h3>Introdução</h3>${content.intro || ""}<h3>Observações</h3>${content.observacoes || ""}<h3>Considerações finais</h3>${content.consideracoes || ""}</body></html>`;
 }
 
 async function ensureCurrentStudySaved(options = {}) {
