@@ -41,6 +41,7 @@ logger = logging.getLogger("crediclass.api")
 PDF_RENDER_LOCK = Lock()
 
 app = FastAPI(title="Crediclass Dashboard V3")
+PIPERUN_EXECUTIONS: set[str] = set()
 
 
 @app.get("/api/piperun/{opportunity_id}")
@@ -86,6 +87,15 @@ async def gerar_plano_sincronizacao_piperun(opportunity_id: str):
     except Exception as error:
         logger.exception("Falha ao gerar plano PipeRun %s", opportunity_id)
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
+
+@app.post("/api/piperun/{opportunity_id}/sync")
+async def executar_sincronizacao_piperun(opportunity_id: str, confirm: bool = Query(default=False)):
+    if not confirm:
+        return JSONResponse(status_code=400, content={"success": False, "error": "Confirmação obrigatória."})
+    if opportunity_id in PIPERUN_EXECUTIONS:
+        return JSONResponse(status_code=409, content={"success": False, "error": "Esta oportunidade já foi executada nesta sessão."})
+    PIPERUN_EXECUTIONS.add(opportunity_id)
+    return {"success": True, "controlled": True, "opportunity_id": opportunity_id, "message": "Executor controlado preparado. WhatsApp e Toggl permanecem desativados."}
     except Exception as error:
         logger.exception("Falha ao importar oportunidade PipeRun %s", opportunity_id)
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
