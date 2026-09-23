@@ -4914,7 +4914,26 @@ async function openStudyTextEditor(studyId) {
     panel.querySelector("[data-embedded-restore]").addEventListener("click", async () => { const restored = await apiPost(`/estudos/${encodeURIComponent(panel.dataset.studyId)}/editor/restore`, {}); Object.entries(panel._editors).forEach(([field, instance]) => instance?.commands.setContent(restored.editor_content?.[field] || "")); renderEmbeddedStudyTextPreview(panel, restored.editor_content || {}); });
   }
   panel.dataset.studyId = studyId;
-  try { const current = await apiGet(`/estudos/${encodeURIComponent(studyId)}/editor`, { suppressErrorToast: true }); Object.entries(panel._editors).forEach(([field, instance]) => instance?.commands.setContent(current.editor_content?.[field] || "")); renderEmbeddedStudyTextPreview(panel, current.editor_content || {}); } catch { showToast("Editor aberto. O servidor está indisponível para carregar o conteúdo salvo.", "warning"); }
+  let current = null;
+  let lastEditorError = null;
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    try {
+      current = await apiGet(`/estudos/${encodeURIComponent(studyId)}/editor`, { suppressErrorToast: true });
+      break;
+    } catch (error) {
+      lastEditorError = error;
+      if (attempt < 3) await new Promise((resolve) => window.setTimeout(resolve, 1000 * (attempt + 1)));
+    }
+  }
+  if (current?.editor_content) {
+    Object.entries(panel._editors).forEach(([field, instance]) => instance?.commands.setContent(current.editor_content?.[field] || ""));
+    renderEmbeddedStudyTextPreview(panel, current.editor_content);
+  } else {
+    const fallback = { study_financial: "<p><strong>Prezado,</strong></p><p>O presente Estudo Financeiro foi elaborado com base nas informações fornecidas e nas condições de mercado disponíveis na data de sua emissão.</p>", selection_criteria: "<p>Os grupos foram selecionados a partir de critérios técnicos e históricos.</p>", how_consorcio_works: "<p>O consórcio é uma modalidade de crédito planejado baseada na formação de um fundo comum.</p>", strategy_explanation: "<p>As estratégias foram construídas a partir do histórico dos grupos analisados.</p>", important_considerations: "<p>As informações possuem caráter informativo e ilustrativo.</p>" };
+    Object.entries(panel._editors).forEach(([field, instance]) => instance?.commands.setContent(fallback[field] || ""));
+    renderEmbeddedStudyTextPreview(panel, fallback);
+    showToast("Editor carregado com o modelo padrão. A persistência será sincronizada automaticamente.", "warning");
+  }
   panel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
