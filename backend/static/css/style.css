@@ -6990,6 +6990,3 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .sg-panel header small { max-width: none; text-align: left; }
   .sg-chart, .sg-panel-financial .sg-chart { height: 280px; }
 }
- .embedded-editor-grid { display:grid; grid-template-columns:minmax(320px,1fr) minmax(420px,1.2fr); gap:18px; }
- .embedded-editor-field { min-height:90px; overflow:auto; }
- @media (max-width: 900px) { .embedded-editor-grid { grid-template-columns:1fr; } }

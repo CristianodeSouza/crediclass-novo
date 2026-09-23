@@ -1,4 +1,4 @@
-﻿const screens = {
+const screens = {
   mapa: {
     letter: "A) MAPA DE GRUPOS",
     title: "Mapa de Grupos",
@@ -2268,7 +2268,6 @@ function renderSelectedGroupComparisonColumn(item, index) {
 async function downloadStudyAuditLog() {
   const studyId = currentStudy?.savedStudyId || document.getElementById("studyDisplayId")?.textContent?.trim() || "";
   const fetchJson = async (path) => { try { const response = await fetch(path, { cache: "no-store", credentials: "same-origin" }); return { status: response.status, body: await response.json().catch(() => ({})) }; } catch (error) { return { error: String(error?.message || error) }; } };
-  const editor = document.getElementById("financialStudyEditorModal");
   const payload = {
     exported_at: new Date().toISOString(),
     location: window.location.href,
@@ -2276,7 +2275,6 @@ async function downloadStudyAuditLog() {
     viewport: { width: window.innerWidth, height: window.innerHeight, devicePixelRatio: window.devicePixelRatio },
     study_id: studyId,
     current_study: currentStudy || null,
-    editor: editor ? { open: editor.classList.contains("show"), html: editor.outerHTML, fields: Object.fromEntries([...editor.querySelectorAll("[data-editor-field]")].map((node) => [node.dataset.editorField, node.innerHTML])), sections: [...editor.querySelectorAll("[data-editor-section]")].map((node) => ({ title: node.querySelector("[data-section-title]")?.value || "", text: node.querySelector("[data-section-text]")?.value || "" })) } : null,
     page_html: document.documentElement.outerHTML,
     loaded_scripts: [...document.scripts].map((script) => script.src || "inline"),
     loaded_styles: [...document.querySelectorAll('link[rel="stylesheet"]')].map((link) => link.href),
@@ -4784,172 +4782,15 @@ async function exportStudyPdf(studyId) {
   try { return await window.__crediclassPdfRequest; } finally { window.__crediclassPdfRequest = null; }
 }
 
-function addEditorSection(editor, section = {}) {
-  const host = editor.querySelector("[data-editor-sections]");
-  const node = document.createElement("div");
-  node.className = "border rounded p-2 mb-2";
-  node.dataset.editorSection = "true";
-  node.innerHTML = `<div class="input-group input-group-sm mb-2"><input class="form-control" placeholder="Título da seção" data-section-title><button type="button" class="btn btn-outline-danger" data-section-remove>Remover</button></div><div class="form-control" style="min-height:90px" contenteditable="true" data-section-editor data-section-text></div>`;
-  node.querySelector("[data-section-title]").value = section.title || "";
-  node.querySelector("[data-section-text]").innerHTML = section.text || "";
-  node._tiptapEditor = window.CrediclassEditor?.create(node.querySelector("[data-section-editor]"));
-  node.querySelector("[data-section-remove]").addEventListener("click", () => node.remove());
-  host.appendChild(node);
-}
-
-function renderEditorSections(editor, sections) {
-  const host = editor.querySelector("[data-editor-sections]");
-  if (!host) return;
-  host.replaceChildren();
-  (sections || []).forEach((section) => addEditorSection(editor, section));
-}
-
 async function openStudyPdfPreview(pdfUrl, studyId) {
-  let modal = document.getElementById("financialStudyPdfPreviewModal");
-  if (!modal) {
-    modal = document.createElement("div");
-    modal.id = "financialStudyPdfPreviewModal";
-    modal.className = "modal fade";
-    modal.tabIndex = -1;
-    modal.setAttribute("aria-hidden", "true");
-    modal.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Prévia do Estudo Financeiro</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button></div><div class="modal-body p-0" style="height:75vh"><iframe title="Prévia do PDF" style="width:100%;height:100%;border:0" loading="lazy"></iframe></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-editor-open>Editar textos</button><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button><a class="btn btn-outline-primary" target="_blank" rel="noopener">Abrir PDF</a><button type="button" class="btn btn-primary" data-preview-print>Imprimir / Salvar PDF</button></div></div></div>`;
-    document.body.appendChild(modal);
-    modal.querySelector("[data-preview-print]").addEventListener("click", () => {
-      const frame = modal.querySelector("iframe");
-      apiPost(`/estudos/${encodeURIComponent(modal.dataset.studyId)}/finalizar-pdf`, {}).then((finalPdf) => { frame.src = finalPdf.download_url; frame.onload = () => frame.contentWindow?.print(); }).catch(() => showToast("Nao foi possível finalizar o PDF.", "danger"));
-    });
-    modal.querySelector("[data-editor-open]").addEventListener("click", async () => {
-      const activeStudyId = modal.dataset.studyId;
-      let current = { editor_content: {} };
-      try {
-        current = await apiGet(`/estudos/${encodeURIComponent(activeStudyId)}/editor`, { suppressErrorToast: true });
-      } catch (error) {
-        showToast("Servidor indisponível. O editor abriu em modo local; salve novamente quando a conexão voltar.", "warning");
-      }
-      let editor = document.getElementById("financialStudyEditorModal");
-      if (!editor) {
-        editor = document.createElement("div");
-        editor.id = "financialStudyEditorModal";
-        editor.className = "modal fade";
-        editor.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar textos do estudo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div style="display:grid;grid-template-columns:minmax(320px,1fr) minmax(420px,1.35fr);gap:16px;min-height:520px"><section><div class="alert alert-info py-2">Somente textos editoriais podem ser alterados. Valores, grupos e cálculos são oficiais.</div><div class="btn-group mb-2" role="toolbar"><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="bold"><b>B</b></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="italic"><i>I</i></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="insertUnorderedList">Lista</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="undo">Desfazer</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="redo">Refazer</button></div><label class="form-label">Introdução</label><div class="form-control mb-2" style="min-height:90px" data-editor-field="intro"></div><label class="form-label">Observações</label><div class="form-control mb-2" style="min-height:90px" data-editor-field="observacoes"></div><label class="form-label">Considerações finais</label><div class="form-control" style="min-height:90px" data-editor-field="consideracoes"></div><div class="d-flex justify-content-between align-items-center mt-3"><label class="form-label mb-0">Seções personalizadas</label><button type="button" class="btn btn-sm btn-outline-primary" data-editor-add-section>Adicionar seção</button></div><div data-editor-sections></div><label class="form-label mt-2">Versões anteriores</label><select class="form-select" data-editor-history><option value="">Nenhuma versão selecionada</option></select></section><section><div class="small text-muted mb-2">Prévia oficial do PDF. Ela será atualizada depois de clicar em “Atualizar prévia”.</div><iframe title="Prévia atual" style="width:100%;height:500px;border:1px solid #ddd;border-radius:6px" data-editor-preview></iframe></section></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-editor-restore>Restaurar original</button><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" data-editor-save>Atualizar prévia</button></div></div></div>`;
-        document.body.appendChild(editor);
-        editor._tiptapEditors = Object.fromEntries(["intro", "observacoes", "consideracoes"].map((field) => [field, window.CrediclassEditor?.create(editor.querySelector(`[data-editor-field="${field}"]`))]));
-        Object.values(editor._tiptapEditors).forEach((instance) => instance?.on("focus", () => { editor._activeEditor = instance; }));
-        editor.querySelectorAll("[data-cmd]").forEach((button) => button.addEventListener("click", () => {
-          const instance = editor._activeEditor || editor._tiptapEditors.intro;
-          const commands = { bold: "toggleBold", italic: "toggleItalic", insertUnorderedList: "toggleBulletList", undo: "undo", redo: "redo" };
-          instance?.chain().focus()[commands[button.dataset.cmd]]().run();
-        }));
-        editor.querySelector("[data-editor-add-section]").addEventListener("click", () => addEditorSection(editor, { title: "", text: "" }));
-        editor.querySelector("[data-editor-restore]").addEventListener("click", async () => { await apiPost(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor/restore`, {}); const restored = await apiGet(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor`); ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent(restored.editor_content?.[field] || "")); renderEditorSections(editor, restored.editor_content?.custom_sections || []); });
-        editor.querySelector("[data-editor-save]").addEventListener("click", async () => {
-          const content = Object.fromEntries(Object.entries(editor._tiptapEditors).map(([field, instance]) => [field, instance?.getHTML() || ""]));
-          content.custom_sections = [...editor.querySelectorAll("[data-editor-section]")].map((section) => ({ title: section.querySelector("[data-section-title]")?.value || "", text: section._tiptapEditor?.getHTML() || section.querySelector("[data-section-text]")?.innerHTML || "" }));
-          await apiPut(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor`, { editor_content: content });
-          const previewHtml = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:28px;color:#243842;line-height:1.5}h2{border-bottom:2px solid #304750;padding-bottom:8px}section{margin:20px 0}section h3{color:#ef7a24} .custom{border-top:1px solid #ddd;padding-top:12px}</style></head><body><h2>Prévia textual do Estudo Financeiro</h2><section><h3>Introdução</h3>${content.intro || ""}</section><section><h3>Observações</h3>${content.observacoes || ""}</section><section><h3>Considerações finais</h3>${content.consideracoes || ""}</section>${content.custom_sections.map((section) => `<section class="custom"><h3>${escapeHtml(section.title || "Informação adicional")}</h3>${section.text || ""}</section>`).join("")}</body></html>`;
-          editor.querySelector("[data-editor-preview]").srcdoc = previewHtml;
-          showToast("Prévia atualizada.", "success");
-        });
-      }
-      editor.dataset.studyId = activeStudyId;
-      editor.querySelector("[data-editor-preview]").src = pdfUrl;
-      const content = current.editor_content || {};
-      ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent(content[field] || ""));
-      renderEditorSections(editor, content.custom_sections || []);
-      const historySelect = editor.querySelector("[data-editor-history]");
-      let history = { versions: [] };
-      try { history = await apiGet(`/estudos/${encodeURIComponent(activeStudyId)}/editor/history`, { suppressErrorToast: true }); } catch { /* histórico indisponível não impede editar */ }
-      historySelect.innerHTML = `<option value="">Nenhuma versão selecionada</option>${(history.versions || []).map((version) => `<option value="${version.version}">Versão ${version.version} · ${version.edited_at || ""}</option>`).join("")}`;
-      historySelect.onchange = () => {
-        const version = (history.versions || []).find((entry) => String(entry.version) === historySelect.value);
-        if (!version) return;
-        ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent(version.content?.[field] || ""));
-        renderEditorSections(editor, version.content?.custom_sections || []);
-      };
-      window.bootstrap?.Modal?.getOrCreateInstance(editor)?.show();
-    });
-  }
-  const frame = modal.querySelector("iframe");
-  modal.dataset.studyId = studyId;
-  frame.src = "about:blank";
-  modal.querySelector("a").href = pdfUrl;
-  const bootstrapModal = window.bootstrap?.Modal?.getOrCreateInstance(modal);
-  if (bootstrapModal) bootstrapModal.show();
-  else window.open(pdfUrl, "_blank", "noopener");
-  let lastError = null;
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    try {
-      const response = await fetch(pdfUrl, { cache: "no-store", credentials: "same-origin" });
-      if (!response.ok) throw new Error(`PDF indisponível (${response.status})`);
-      const blobUrl = URL.createObjectURL(await response.blob());
-      frame.src = blobUrl;
-      frame.addEventListener("load", () => URL.revokeObjectURL(blobUrl), { once: true });
-      return studyId;
-    } catch (error) {
-      lastError = error;
-      if (attempt < 4) await new Promise((resolve) => window.setTimeout(resolve, 1500 * (attempt + 1)));
-    }
-  }
-  throw lastError || new Error("PDF indisponível após várias tentativas");
+  const frame = document.createElement("iframe");
+  frame.title = "Prévia do PDF";
+  frame.style.cssText = "position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff;z-index:2000";
+  frame.src = pdfUrl;
+  document.body.appendChild(frame);
+  frame.addEventListener("load", () => frame.focus(), { once: true });
+  return studyId;
 }
-
-async function openStudyTextEditor(studyId) {
-  const screen = document.getElementById("screen-estudo");
-  if (!screen) return;
-  screen.innerHTML = `<div class="content-card study-loading" role="status" aria-live="polite"><div class="study-loading-spinner" aria-hidden="true"></div><h2>Preparando o estudo financeiro</h2><p>Aguarde enquanto carregamos grupos, cálculos e textos do documento.</p></div>`;
-  let panel = screen.querySelector("[data-embedded-study-editor]");
-  if (!panel) {
-    panel = document.createElement("section");
-    panel.className = "content-card embedded-study-editor no-print";
-    panel.dataset.embeddedStudyEditor = "true";
-    const fields = [["study_financial", "ESTUDO FINANCEIRO"], ["selection_criteria", "SIMULAÇÃO MELHORES CONSÓRCIOS - critérios"], ["how_consorcio_works", "SIMULAÇÃO MELHORES CONSÓRCIOS - como funciona"], ["strategy_explanation", "ESTRATÉGIAS DE CONTEMPLAÇÃO"], ["important_considerations", "CONSIDERAÇÕES IMPORTANTES"]];
-    panel.innerHTML = `<div class="embedded-editor-grid"><div><div class="alert alert-info py-2">Edite somente textos editoriais. Valores, grupos e cálculos permanecem oficiais.</div><div class="btn-group mb-2" role="toolbar"><button type="button" class="btn btn-sm btn-outline-secondary" data-embedded-cmd="bold"><b>B</b></button><button type="button" class="btn btn-sm btn-outline-secondary" data-embedded-cmd="italic"><i>I</i></button><button type="button" class="btn btn-sm btn-outline-secondary" data-embedded-cmd="toggleBulletList">Lista</button><button type="button" class="btn btn-sm btn-outline-secondary" data-embedded-cmd="undo">Desfazer</button><button type="button" class="btn btn-sm btn-outline-secondary" data-embedded-cmd="redo">Refazer</button></div>${fields.map(([field, label]) => `<label class="form-label">${label}</label><div class="form-control embedded-editor-field" contenteditable="true" data-embedded-field="${field}"></div>`).join("")}<div class="mt-3 d-flex gap-2"><button type="button" class="btn btn-outline-secondary" data-embedded-restore>Restaurar original</button><button type="button" class="btn btn-primary" data-embedded-save>Salvar textos</button></div></div><div><div class="small text-muted mb-2">Prévia textual do estudo</div><iframe title="Prévia textual do estudo" data-embedded-preview style="width:100%;height:720px;border:1px solid #ddd;border-radius:6px"></iframe></div></div>`;
-    screen.querySelector(".financial-study-page")?.appendChild(panel);
-    panel._editorFields = ["study_financial", "selection_criteria", "how_consorcio_works", "strategy_explanation", "important_considerations"];
-    panel._editors = Object.fromEntries(panel._editorFields.map((field) => [field, window.CrediclassEditor?.create(panel.querySelector(`[data-embedded-field="${field}"]`))]));
-    panel._active = panel._editors.study_financial;
-    Object.values(panel._editors).forEach((instance) => instance?.on("focus", () => { panel._active = instance; }));
-    panel.querySelectorAll("[data-embedded-cmd]").forEach((button) => button.addEventListener("click", () => { const command = button.dataset.embeddedCmd; const map = { bold: "toggleBold", italic: "toggleItalic", toggleBulletList: "toggleBulletList", undo: "undo", redo: "redo" }; panel._active?.chain().focus()[map[command]]().run(); }));
-    panel.querySelector("[data-embedded-save]").addEventListener("click", async () => { const content = Object.fromEntries(Object.entries(panel._editors).map(([field, instance]) => [field, instance?.getHTML() || ""])); await apiPut(`/estudos/${encodeURIComponent(panel.dataset.studyId)}/editor`, { editor_content: { ...content, custom_sections: [] } }); renderEmbeddedStudyTextPreview(panel, content); showToast("Textos salvos.", "success"); });
-    panel.querySelector("[data-embedded-restore]").addEventListener("click", async () => { const restored = await apiPost(`/estudos/${encodeURIComponent(panel.dataset.studyId)}/editor/restore`, {}); Object.entries(panel._editors).forEach(([field, instance]) => instance?.commands.setContent(restored.editor_content?.[field] || "")); renderEmbeddedStudyTextPreview(panel, restored.editor_content || {}); });
-  }
-  panel.dataset.studyId = studyId;
-  let current = null;
-  let lastEditorError = null;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
-    try {
-      current = await apiGet(`/estudos/${encodeURIComponent(studyId)}/editor`, { suppressErrorToast: true });
-      break;
-    } catch (error) {
-      lastEditorError = error;
-      if (attempt < 3) await new Promise((resolve) => window.setTimeout(resolve, 1000 * (attempt + 1)));
-    }
-  }
-  if (current?.editor_content) {
-    Object.entries(panel._editors).forEach(([field, instance]) => instance?.commands.setContent(current.editor_content?.[field] || ""));
-    renderEmbeddedStudyTextPreview(panel, current.editor_content);
-    try {
-      const documentData = await apiGet(`/estudos/${encodeURIComponent(studyId)}/editor/document`, { suppressErrorToast: true });
-      renderEmbeddedStudyTextPreview(panel, current.editor_content, documentData.document);
-    } catch { /* a prévia editorial ainda pode ser exibida se a leitura oficial falhar */ }
-  } else {
-    const fallback = { study_financial: "<p><strong>Prezado,</strong></p><p>O presente Estudo Financeiro foi elaborado com base nas informações fornecidas e nas condições de mercado disponíveis na data de sua emissão.</p>", selection_criteria: "<p>Os grupos foram selecionados a partir de critérios técnicos e históricos.</p>", how_consorcio_works: "<p>O consórcio é uma modalidade de crédito planejado baseada na formação de um fundo comum.</p>", strategy_explanation: "<p>As estratégias foram construídas a partir do histórico dos grupos analisados.</p>", important_considerations: "<p>As informações possuem caráter informativo e ilustrativo.</p>" };
-    Object.entries(panel._editors).forEach(([field, instance]) => instance?.commands.setContent(fallback[field] || ""));
-    renderEmbeddedStudyTextPreview(panel, fallback);
-    showToast("Editor carregado com o modelo padrão. A persistência será sincronizada automaticamente.", "warning");
-  }
-  panel.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function renderEmbeddedStudyTextPreview(panel, content, documentData = null) {
-  const frame = panel.querySelector("[data-embedded-preview]");
-  if (!frame) return;
-  const client = documentData?.client || {}, group = documentData?.group || {}, financial = documentData?.financial || {};
-  const groups = (documentData?.selectedGroups || []).map((item) => `<tr><td>${escapeHtml(item.groupId)}</td><td>${escapeHtml(item.administrator)}</td><td>${escapeHtml(item.quotaCount)}</td><td>${(item.scenarios || []).map((s) => `${escapeHtml(s.label)}: ${escapeHtml(s.credit)} / ${escapeHtml(s.installment)} / lance ${escapeHtml(s.bid)}`).join("<br>")}</td></tr>`).join("");
-  const official = `<section class="official"><h3>DADOS OFICIAIS - SOMENTE LEITURA</h3><div class="grid"><div><b>Cliente</b><br>${escapeHtml(client.name)}<br>Objetivo: ${escapeHtml(client.objective)}</div><div><b>Crédito desejado</b><br>${escapeHtml(client.desiredCredit)}<br>Parcela: ${escapeHtml(client.desiredInstallment)}<br>Renda: ${escapeHtml(client.income)}</div><div><b>Grupo recomendado</b><br>${escapeHtml(group.groupId)}<br>${escapeHtml(group.administrator)}<br>Prazo: ${escapeHtml(group.remainingTerm)}</div><div><b>Resumo financeiro</b><br>Crédito: ${escapeHtml(financial.credit)}<br>Parcela inicial: ${escapeHtml(financial.initialInstallment)}<br>Lance total: ${escapeHtml(financial.totalBid)}<br>Chance: ${escapeHtml(financial.chance)}</div></div>${groups ? `<h4>Grupos e cenários</h4><table><thead><tr><th>Grupo</th><th>Administradora</th><th>Cotas</th><th>Cenários oficiais</th></tr></thead><tbody>${groups}</tbody></table>` : ""}</section>`;
-  frame.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{font-family:Arial;padding:28px;color:#243842;line-height:1.5}h2{border-bottom:2px solid #304750;padding-bottom:8px}h3{color:#ef7a24;margin-top:22px;border-bottom:1px solid #ddd;padding-bottom:5px}.official{background:#f5f7f8;padding:14px;border:1px solid #dce3e6;border-radius:6px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.grid>div{background:white;padding:10px;border:1px solid #dce3e6;border-radius:4px}table{width:100%;border-collapse:collapse;background:#fff}td,th{border:1px solid #ccd5d8;padding:7px;text-align:left;font-size:12px}th{background:#e9eef0}@media(max-width:700px){.grid{grid-template-columns:1fr}}</style></head><body><h2>Estudo Financeiro completo</h2>${official}<h3>ESTUDO FINANCEIRO</h3>${content.study_financial || content.intro || ""}<h3>SIMULAÇÃO MELHORES CONSÓRCIOS - critérios</h3>${content.selection_criteria || ""}<h3>SIMULAÇÃO MELHORES CONSÓRCIOS - como funciona</h3>${content.how_consorcio_works || ""}<h3>ESTRATÉGIAS DE CONTEMPLAÇÃO</h3>${content.strategy_explanation || content.observacoes || ""}<h3>CONSIDERAÇÕES IMPORTANTES</h3>${content.important_considerations || content.consideracoes || ""}</body></html>`;
-}
-
 async function ensureCurrentStudySaved(options = {}) {
   if (!currentStudy) {
     showToast("Selecione um cenario na Viabilidade antes de compartilhar.", "warning");
