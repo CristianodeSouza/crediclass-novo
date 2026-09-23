@@ -116,7 +116,17 @@ MAPA_GRUPOS_COLUMN_INDEXES = {
     "lance_super_agressivo_3m": 67,  # BP
 }
 
-MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES: dict[str, int] = {}
+# Older exports of the group map used these positions.  When headers are
+# generic ("Coluna N"), retain the legacy positions instead of returning an
+# empty financial field; named headers always remain authoritative.
+MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES: dict[str, int] = {
+    "credito_maximo": 17,
+    "taxa_adm": 18,
+    "lance_super_conservador": 59,
+    "lance_conservador": 60,
+    "lance_moderado": 61,
+    "lance_agressivo": 62,
+}
 
 
 def normalize_header(value: str) -> str:
@@ -350,6 +360,9 @@ def summary_field_index(headers: list[str], field: str, header_positions: dict[s
     header = find_header(headers, field)
     if header is not None:
         return header, header_positions[header]
+    fallback_index = MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES.get(field)
+    if fallback_index is not None and fallback_index < len(headers):
+        return canonical_field_header(field), fallback_index
     fixed_index = MAPA_GRUPOS_COLUMN_INDEXES.get(field)
     if fixed_index is not None:
         return canonical_field_header(field), fixed_index
@@ -386,6 +399,12 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
     selected: list[tuple[str, str, int]] = []
     header_positions = headers_index(headers)
     for field in SUMMARY_FIELDS:
+        # Legacy exports expose the four profile columns through the old
+        # fixed map. Do not extend the read range to the newer 3/6/12/24
+        # month aliases when those headers are absent; history columns remain
+        # authoritative in that layout.
+        if field in {"lance_investidor", "lance_conservador_24m", "lance_moderado_12m", "lance_agressivo_6m", "lance_super_agressivo_3m"} and find_header(headers, field) is None and any(history_key_from_header(h) for h in headers):
+            continue
         try:
             header, index = summary_field_index(headers, field, header_positions)
         except KeyError:
@@ -396,7 +415,10 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
         history_key = history_key_from_header(header)
         include_quantity = history_key and history_key[1] == "qtd_contemplacoes"
         if include_history or include_quantity:
-            if index in selected_indexes or not history_key:
+            # A fixed financial column can occupy the same index as a
+            # historical column in legacy exports. Preserve the real header
+            # so the history triplet is not silently discarded.
+            if (index in selected_indexes and not history_key) or not history_key:
                 continue
             selected.append(("historico", header, index))
             selected_indexes.add(index)
@@ -421,7 +443,11 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
             row: dict[str, Any] = {}
             for field, header, index in selected:
                 relative_index = index - min_index
-                row[header] = row_values[relative_index] if relative_index < len(row_values) else ""
+                value = row_values[relative_index] if relative_index < len(row_values) else ""
+                if value in (None, "") and field == "taxa_adm" and 16 >= min_index:
+                    fallback_relative = 16 - min_index
+                    value = row_values[fallback_relative] if fallback_relative < len(row_values) else ""
+                row[header] = value
             row["__source_row"] = offset + 2
             if not any(str(value).strip() for value in row.values()):
                 continue
@@ -958,11 +984,20 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
 
     historico = build_historico(row)
     lance_references = calculate_lance_references(historico)
-    lance_investidor = parse_percent(get_optional_field(row, "lance_investidor"))
-    lance_conservador_24m = parse_percent(get_optional_field(row, "lance_conservador_24m"))
-    lance_moderado_12m = parse_percent(get_optional_field(row, "lance_moderado_12m"))
-    lance_agressivo_6m = parse_percent(get_optional_field(row, "lance_agressivo_6m"))
-    lance_super_agressivo_3m = parse_percent(get_optional_field(row, "lance_super_agressivo_3m"))
+    # Direct profile values from the official sheet override calculated
+    # references when present, including legacy canonical __field keys.
+    def direct_percent(field: str) -> float | None:
+        value = get_optional_field(row, field)
+        if value in (None, ""):
+            value = row.get(canonical_field_header(field))
+        return parse_percent(value)
+
+    lance_investidor = direct_percent("lance_investidor")
+    lance_conservador_24m = direct_percent("lance_conservador_24m")
+    lance_moderado_12m = direct_percent("lance_moderado_12m")
+    lance_agressivo_6m = direct_percent("lance_agressivo_6m")
+    lance_super_agressivo_3m = direct_percent("lance_super_agressivo_3m")
+    direct_legacy = {field: direct_percent(field) for field in ("lance_super_conservador", "lance_conservador", "lance_moderado", "lance_agressivo")}
     missing = [
         field for field in ("credito_minimo", "credito_maximo", "taxa_adm", "fundo_reserva")
         if get_field(row, field) in (None, "")
@@ -1021,10 +1056,10 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "lance_super_agressivo_3m": lance_super_agressivo_3m,
         # Legacy aliases remain available to older consumers; the Itaú motor
         # uses the explicit 3/6/12/24 month fields above.
-        "lance_super_conservador": lance_references["lance_super_conservador"],
-        "lance_conservador": lance_references["lance_conservador"],
-        "lance_moderado": lance_references["lance_moderado"],
-        "lance_agressivo": lance_references["lance_agressivo"],
+        "lance_super_conservador": direct_legacy["lance_super_conservador"] if direct_legacy["lance_super_conservador"] is not None else lance_references["lance_super_conservador"],
+        "lance_conservador": direct_legacy["lance_conservador"] if direct_legacy["lance_conservador"] is not None else lance_references["lance_conservador"],
+        "lance_moderado": direct_legacy["lance_moderado"] if direct_legacy["lance_moderado"] is not None else lance_references["lance_moderado"],
+        "lance_agressivo": direct_legacy["lance_agressivo"] if direct_legacy["lance_agressivo"] is not None else lance_references["lance_agressivo"],
         "idade_maxima": parse_int(get_optional_field(row, "idade_maxima")) or parse_int(get_optional_field(row, "idade_maxima_seguro")),
         "dados_incompletos": missing,
         "origens": origins,

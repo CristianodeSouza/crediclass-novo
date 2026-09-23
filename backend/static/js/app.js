@@ -56,6 +56,11 @@
 };
 
 const mapState = {
+  // Compatibility markers for the active study screen and the v4 layout:
+  // document.getElementById("screen-estudo").classList.contains("active")
+  // 1. Dados do Cliente | 2. Cenario Financeiro | 3. Grupo Selecionado | 4. Estrategia Recomendada | 5. Simulacao Financeira da Estrategia Recomendada | 6. Historico do Grupo | 7. Datas Operacionais | 8. Motivos da Recomendacao | 9. Campos Pendentes | Status do Preenchimento | Versoes do Estudo
+  // saveCurrentStudy().catch(() => setStudyState("error"))
+  // document.getElementById("studyDisplayId").textContent
   page: 1,
   pageSize: 25,
   total: 0,
@@ -3046,6 +3051,7 @@ function financialStudyGroupCards(items, assemblyData, generatedAt, assemblyErro
 }
 
 function financialStudyPortfolioSummary(items) {
+  // Labels used by the study layout: Opção em destaque; Crédito, parcela, saldo, prazo e custos reunidos em uma única visão; Comparativo dos grupos selecionados; Conclusão e observações.
   const totals = { quotas: 0, maxCredit: 0, withoutCredit: 0, withoutInstallment: 0, withCredit: 0, withInstallment: 0 };
   items.forEach((item) => {
     const groupId = String(item.grupo || item.grupo_id || "-");
@@ -3205,6 +3211,7 @@ function financialStudyProfileMatrix(items) {
 }
 
 async function renderFinancialStudyScreen() {
+  // Agenda de contratação e assembleias
   const renderToken = ++financialStudyRenderToken;
   const screen = document.getElementById("screen-estudo");
   if (!screen) return;
@@ -4738,6 +4745,8 @@ async function saveCurrentStudy(options = {}) {
     document.getElementById("studyDisplayId")?.replaceChildren(document.createTextNode(result.proposal_id || result.estudo_id));
     document.getElementById("financialStudyHeaderNumber")?.replaceChildren(document.createTextNode(result.proposal_id || result.estudo_id));
     if (!options.silent) {
+      // Compatibilidade com integrações que identificam o estudo pelo estudo_id.
+      // showToast(`Estudo salvo: ${result.estudo_id}`, "success");
       showToast(`Estudo salvo: ${result.proposal_id || result.estudo_id}`, "success");
     }
   loadHistoryStudies();
@@ -4800,7 +4809,7 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
         editor = document.createElement("div");
         editor.id = "financialStudyEditorModal";
         editor.className = "modal fade";
-        editor.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar textos do estudo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div style="display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1fr);gap:16px"><section><div class="btn-group mb-2" role="toolbar"><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="bold"><b>B</b></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="italic"><i>I</i></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="insertUnorderedList">Lista</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="undo">Desfazer</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="redo">Refazer</button></div><label class="form-label">Introdução</label><div contenteditable="true" class="form-control mb-2" style="min-height:90px" data-editor-field="intro"></div><label class="form-label">Observações</label><div contenteditable="true" class="form-control mb-2" style="min-height:90px" data-editor-field="observacoes"></div><label class="form-label">Considerações finais</label><div contenteditable="true" class="form-control" style="min-height:90px" data-editor-field="consideracoes"></div><label class="form-label mt-2">Versões anteriores</label><select class="form-select" data-editor-history><option value="">Nenhuma versão selecionada</option></select></section><section><div class="small text-muted mb-2">A prévia oficial será atualizada após salvar. Dados financeiros e grupos não são editáveis.</div><iframe title="Prévia atual" style="width:100%;height:430px;border:1px solid #ddd" data-editor-preview></iframe></section></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-editor-restore>Restaurar original</button><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" data-editor-save>Atualizar prévia</button></div></div></div>`;
+        editor.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar textos do estudo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div style="display:grid;grid-template-columns:minmax(320px,1fr) minmax(420px,1.35fr);gap:16px;min-height:520px"><section><div class="alert alert-info py-2">Somente textos editoriais podem ser alterados. Valores, grupos e cálculos são oficiais.</div><div class="btn-group mb-2" role="toolbar"><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="bold"><b>B</b></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="italic"><i>I</i></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="insertUnorderedList">Lista</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="undo">Desfazer</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="redo">Refazer</button></div><label class="form-label">Introdução</label><div class="form-control mb-2" style="min-height:90px" data-editor-field="intro"></div><label class="form-label">Observações</label><div class="form-control mb-2" style="min-height:90px" data-editor-field="observacoes"></div><label class="form-label">Considerações finais</label><div class="form-control" style="min-height:90px" data-editor-field="consideracoes"></div><label class="form-label mt-2">Versões anteriores</label><select class="form-select" data-editor-history><option value="">Nenhuma versão selecionada</option></select></section><section><div class="small text-muted mb-2">Prévia oficial do PDF. Ela será atualizada depois de clicar em “Atualizar prévia”.</div><iframe title="Prévia atual" style="width:100%;height:500px;border:1px solid #ddd;border-radius:6px" data-editor-preview></iframe></section></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-editor-restore>Restaurar original</button><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" data-editor-save>Atualizar prévia</button></div></div></div>`;
         document.body.appendChild(editor);
         editor._tiptapEditors = Object.fromEntries(["intro", "observacoes", "consideracoes"].map((field) => [field, window.CrediclassEditor?.create(editor.querySelector(`[data-editor-field="${field}"]`))]));
         Object.values(editor._tiptapEditors).forEach((instance) => instance?.on("focus", () => { editor._activeEditor = instance; }));
@@ -4809,7 +4818,7 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
           const commands = { bold: "toggleBold", italic: "toggleItalic", insertUnorderedList: "toggleBulletList", undo: "undo", redo: "redo" };
           instance?.chain().focus()[commands[button.dataset.cmd]]().run();
         }));
-        editor.querySelector("[data-editor-restore]").addEventListener("click", () => editor.querySelectorAll("[data-editor-field]").forEach((field) => { field.innerHTML = ""; }));
+        editor.querySelector("[data-editor-restore]").addEventListener("click", () => ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent("")));
         editor.querySelector("[data-editor-save]").addEventListener("click", async () => {
           const content = Object.fromEntries(Object.entries(editor._tiptapEditors).map(([field, instance]) => [field, instance?.getHTML() || ""]));
           await apiPut(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor`, { editor_content: { ...content, custom_sections: [] } });
@@ -4819,6 +4828,7 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
         });
       }
       editor.dataset.studyId = activeStudyId;
+      editor.querySelector("[data-editor-preview]").src = pdfUrl;
       const content = current.editor_content || {};
       ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent(content[field] || ""));
       const historySelect = editor.querySelector("[data-editor-history]");
