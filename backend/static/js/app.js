@@ -4821,7 +4821,12 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
     });
     modal.querySelector("[data-editor-open]").addEventListener("click", async () => {
       const activeStudyId = modal.dataset.studyId;
-      const current = await apiGet(`/estudos/${encodeURIComponent(activeStudyId)}/editor`);
+      let current = { editor_content: {} };
+      try {
+        current = await apiGet(`/estudos/${encodeURIComponent(activeStudyId)}/editor`, { suppressErrorToast: true });
+      } catch (error) {
+        showToast("Servidor indisponível. O editor abriu em modo local; salve novamente quando a conexão voltar.", "warning");
+      }
       let editor = document.getElementById("financialStudyEditorModal");
       if (!editor) {
         editor = document.createElement("div");
@@ -4853,7 +4858,8 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
       ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent(content[field] || ""));
       renderEditorSections(editor, content.custom_sections || []);
       const historySelect = editor.querySelector("[data-editor-history]");
-      const history = await apiGet(`/estudos/${encodeURIComponent(activeStudyId)}/editor/history`);
+      let history = { versions: [] };
+      try { history = await apiGet(`/estudos/${encodeURIComponent(activeStudyId)}/editor/history`, { suppressErrorToast: true }); } catch { /* histórico indisponível não impede editar */ }
       historySelect.innerHTML = `<option value="">Nenhuma versão selecionada</option>${(history.versions || []).map((version) => `<option value="${version.version}">Versão ${version.version} · ${version.edited_at || ""}</option>`).join("")}`;
       historySelect.onchange = () => {
         const version = (history.versions || []).find((entry) => String(entry.version) === historySelect.value);
