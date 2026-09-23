@@ -2453,7 +2453,7 @@ function renderSelectedGroupsECharts(items) {
   if (!items.length) return;
   if (!window.echarts) {
     document.querySelectorAll("[data-sg-dashboard] .sg-chart").forEach((element) => { element.innerHTML = '<div class="sg-chart-error">Não foi possível carregar o componente de gráficos. Atualize a página ou verifique a conexão.</div>'; });
-    console.error("[selected-groups-chart] ECharts não carregado; os dados do Motor 360 permanecem disponíveis no JSON de auditoria.");
+    // O painel possui fallback HTML; não depende de ECharts/CDN para funcionar.
     return;
   }
   const analytics = items.map(selectedGroupAnalytics);
