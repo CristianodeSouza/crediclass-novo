@@ -88,6 +88,9 @@ const configState = {
 
 const operationalLogs = [];
 const motor360ExecutionLogs = [];
+const clientDiagnosticErrors = [];
+window.addEventListener("error", (event) => clientDiagnosticErrors.push({ type: "error", message: event.message, source: event.filename, line: event.lineno, time: new Date().toISOString() }));
+window.addEventListener("unhandledrejection", (event) => clientDiagnosticErrors.push({ type: "unhandledrejection", message: String(event.reason?.stack || event.reason || ""), time: new Date().toISOString() }));
 const investorPreferenceFlags = [
   { id: "menor_taxa_total", label: "Menor Taxa Total" },
   { id: "menor_taxa_ano", label: "Menor Taxa Ano" },
@@ -2260,6 +2263,34 @@ function renderSelectedGroupComparisonColumn(item, index) {
     return `<article class="selected-comparison-profile"><strong>${escapeHtml(profile.label)}</strong>${values}</article>`;
   }).join("");
   return `<article class="selected-comparison-column"><header><div class="selected-group-number">${index + 1}</div><div><h3>Grupo ${escapeHtml(groupId)}</h3><p>${escapeHtml(item.administradora || "-")} · ${quotaCount} ${quotaCount === 1 ? "cota" : "cotas"}</p></div></header><div class="selected-comparison-key-metrics"><span><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></span><span><small>Crédito máximo</small><b>${formatMoney(scale(item.credito_maximo))}</b></span><span><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></span></div>${historicalAverages}<section class="selected-comparison-inputs"><h4>Premissas do grupo</h4>${groupFinancialInputs}</section><section><h4>Cenários financeiros</h4><div class="selected-comparison-scenarios">${scenarioRows}</div></section><section><h4>Perfis de contemplação</h4><div class="selected-comparison-profiles">${profileRows || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section></article>`;
+}
+
+async function downloadStudyAuditLog() {
+  const studyId = currentStudy?.savedStudyId || document.getElementById("studyDisplayId")?.textContent?.trim() || "";
+  const fetchJson = async (path) => { try { const response = await fetch(path, { cache: "no-store", credentials: "same-origin" }); return { status: response.status, body: await response.json().catch(() => ({})) }; } catch (error) { return { error: String(error?.message || error) }; } };
+  const editor = document.getElementById("financialStudyEditorModal");
+  const payload = {
+    exported_at: new Date().toISOString(),
+    location: window.location.href,
+    user_agent: navigator.userAgent,
+    viewport: { width: window.innerWidth, height: window.innerHeight, devicePixelRatio: window.devicePixelRatio },
+    study_id: studyId,
+    current_study: currentStudy || null,
+    editor: editor ? { open: editor.classList.contains("show"), html: editor.outerHTML, fields: Object.fromEntries([...editor.querySelectorAll("[data-editor-field]")].map((node) => [node.dataset.editorField, node.innerHTML])), sections: [...editor.querySelectorAll("[data-editor-section]")].map((node) => ({ title: node.querySelector("[data-section-title]")?.value || "", text: node.querySelector("[data-section-text]")?.value || "" })) } : null,
+    page_html: document.documentElement.outerHTML,
+    loaded_scripts: [...document.scripts].map((script) => script.src || "inline"),
+    loaded_styles: [...document.querySelectorAll('link[rel="stylesheet"]')].map((link) => link.href),
+    performance_requests: performance.getEntriesByType("resource").map((entry) => ({ name: entry.name, duration: entry.duration, size: entry.transferSize || 0 })),
+    console_errors: clientDiagnosticErrors.slice(-100),
+    motor360_logs: motor360ExecutionLogs.slice(-100),
+    operational_logs: operationalLogs.slice(-100),
+    backend_health: await fetchJson("/api/health"),
+    pdf_engine_health: await fetchJson("/api/health/pdf-engine"),
+    editor_api: studyId && !studyId.toLowerCase().startsWith("novo") ? await fetchJson(`/api/estudos/${encodeURIComponent(studyId)}/editor`) : null,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
+  downloadBlob(`crediclass-auditoria-estudo-${new Date().toISOString().replace(/[:.]/g, "-")}.json`, blob);
+  showToast("Log de auditoria baixado.", "success");
 }
 
 function selectedMotor360SnapshotItems() {
@@ -4787,6 +4818,25 @@ async function exportStudyPdf(studyId) {
   await openStudyPdfPreview(result.download_url, targetStudyId);
 }
 
+function addEditorSection(editor, section = {}) {
+  const host = editor.querySelector("[data-editor-sections]");
+  const node = document.createElement("div");
+  node.className = "border rounded p-2 mb-2";
+  node.dataset.editorSection = "true";
+  node.innerHTML = `<div class="input-group input-group-sm mb-2"><input class="form-control" placeholder="Título da seção" data-section-title><button type="button" class="btn btn-outline-danger" data-section-remove>Remover</button></div><textarea class="form-control" rows="3" placeholder="Conteúdo da seção" data-section-text></textarea>`;
+  node.querySelector("[data-section-title]").value = section.title || "";
+  node.querySelector("[data-section-text]").value = section.text || "";
+  node.querySelector("[data-section-remove]").addEventListener("click", () => node.remove());
+  host.appendChild(node);
+}
+
+function renderEditorSections(editor, sections) {
+  const host = editor.querySelector("[data-editor-sections]");
+  if (!host) return;
+  host.replaceChildren();
+  (sections || []).forEach((section) => addEditorSection(editor, section));
+}
+
 async function openStudyPdfPreview(pdfUrl, studyId) {
   let modal = document.getElementById("financialStudyPdfPreviewModal");
   if (!modal) {
@@ -4799,7 +4849,7 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
     document.body.appendChild(modal);
     modal.querySelector("[data-preview-print]").addEventListener("click", () => {
       const frame = modal.querySelector("iframe");
-      try { frame.contentWindow?.print(); } catch { window.open(pdfUrl, "_blank", "noopener"); }
+      apiPost(`/estudos/${encodeURIComponent(modal.dataset.studyId)}/finalizar-pdf`, {}).then((finalPdf) => { frame.src = finalPdf.download_url; frame.onload = () => frame.contentWindow?.print(); }).catch(() => showToast("Nao foi possível finalizar o PDF.", "danger"));
     });
     modal.querySelector("[data-editor-open]").addEventListener("click", async () => {
       const activeStudyId = modal.dataset.studyId;
@@ -4809,7 +4859,7 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
         editor = document.createElement("div");
         editor.id = "financialStudyEditorModal";
         editor.className = "modal fade";
-        editor.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar textos do estudo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div style="display:grid;grid-template-columns:minmax(320px,1fr) minmax(420px,1.35fr);gap:16px;min-height:520px"><section><div class="alert alert-info py-2">Somente textos editoriais podem ser alterados. Valores, grupos e cálculos são oficiais.</div><div class="btn-group mb-2" role="toolbar"><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="bold"><b>B</b></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="italic"><i>I</i></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="insertUnorderedList">Lista</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="undo">Desfazer</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="redo">Refazer</button></div><label class="form-label">Introdução</label><div class="form-control mb-2" style="min-height:90px" data-editor-field="intro"></div><label class="form-label">Observações</label><div class="form-control mb-2" style="min-height:90px" data-editor-field="observacoes"></div><label class="form-label">Considerações finais</label><div class="form-control" style="min-height:90px" data-editor-field="consideracoes"></div><label class="form-label mt-2">Versões anteriores</label><select class="form-select" data-editor-history><option value="">Nenhuma versão selecionada</option></select></section><section><div class="small text-muted mb-2">Prévia oficial do PDF. Ela será atualizada depois de clicar em “Atualizar prévia”.</div><iframe title="Prévia atual" style="width:100%;height:500px;border:1px solid #ddd;border-radius:6px" data-editor-preview></iframe></section></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-editor-restore>Restaurar original</button><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" data-editor-save>Atualizar prévia</button></div></div></div>`;
+        editor.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar textos do estudo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div style="display:grid;grid-template-columns:minmax(320px,1fr) minmax(420px,1.35fr);gap:16px;min-height:520px"><section><div class="alert alert-info py-2">Somente textos editoriais podem ser alterados. Valores, grupos e cálculos são oficiais.</div><div class="btn-group mb-2" role="toolbar"><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="bold"><b>B</b></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="italic"><i>I</i></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="insertUnorderedList">Lista</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="undo">Desfazer</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="redo">Refazer</button></div><label class="form-label">Introdução</label><div class="form-control mb-2" style="min-height:90px" data-editor-field="intro"></div><label class="form-label">Observações</label><div class="form-control mb-2" style="min-height:90px" data-editor-field="observacoes"></div><label class="form-label">Considerações finais</label><div class="form-control" style="min-height:90px" data-editor-field="consideracoes"></div><div class="d-flex justify-content-between align-items-center mt-3"><label class="form-label mb-0">Seções personalizadas</label><button type="button" class="btn btn-sm btn-outline-primary" data-editor-add-section>Adicionar seção</button></div><div data-editor-sections></div><label class="form-label mt-2">Versões anteriores</label><select class="form-select" data-editor-history><option value="">Nenhuma versão selecionada</option></select></section><section><div class="small text-muted mb-2">Prévia oficial do PDF. Ela será atualizada depois de clicar em “Atualizar prévia”.</div><iframe title="Prévia atual" style="width:100%;height:500px;border:1px solid #ddd;border-radius:6px" data-editor-preview></iframe></section></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-editor-restore>Restaurar original</button><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" data-editor-save>Atualizar prévia</button></div></div></div>`;
         document.body.appendChild(editor);
         editor._tiptapEditors = Object.fromEntries(["intro", "observacoes", "consideracoes"].map((field) => [field, window.CrediclassEditor?.create(editor.querySelector(`[data-editor-field="${field}"]`))]));
         Object.values(editor._tiptapEditors).forEach((instance) => instance?.on("focus", () => { editor._activeEditor = instance; }));
@@ -4818,19 +4868,22 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
           const commands = { bold: "toggleBold", italic: "toggleItalic", insertUnorderedList: "toggleBulletList", undo: "undo", redo: "redo" };
           instance?.chain().focus()[commands[button.dataset.cmd]]().run();
         }));
-        editor.querySelector("[data-editor-restore]").addEventListener("click", () => ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent("")));
+        editor.querySelector("[data-editor-add-section]").addEventListener("click", () => addEditorSection(editor, { title: "", text: "" }));
+        editor.querySelector("[data-editor-restore]").addEventListener("click", async () => { await apiPost(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor/restore`, {}); const restored = await apiGet(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor`); ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent(restored.editor_content?.[field] || "")); renderEditorSections(editor, restored.editor_content?.custom_sections || []); });
         editor.querySelector("[data-editor-save]").addEventListener("click", async () => {
           const content = Object.fromEntries(Object.entries(editor._tiptapEditors).map(([field, instance]) => [field, instance?.getHTML() || ""]));
-          await apiPut(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor`, { editor_content: { ...content, custom_sections: [] } });
-          window.bootstrap?.Modal?.getOrCreateInstance(editor)?.hide();
-          showToast("Textos salvos. Gerando nova prévia...", "success");
-          await exportStudyPdf(editor.dataset.studyId);
+          content.custom_sections = [...editor.querySelectorAll("[data-editor-section]")].map((section) => ({ title: section.querySelector("[data-section-title]")?.value || "", text: section.querySelector("[data-section-text]")?.value || "" }));
+          await apiPut(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor`, { editor_content: content });
+          const preview = await apiPost(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/preview-pdf`, {});
+          editor.querySelector("[data-editor-preview]").src = preview.download_url;
+          showToast("Prévia atualizada.", "success");
         });
       }
       editor.dataset.studyId = activeStudyId;
       editor.querySelector("[data-editor-preview]").src = pdfUrl;
       const content = current.editor_content || {};
       ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent(content[field] || ""));
+      renderEditorSections(editor, content.custom_sections || []);
       const historySelect = editor.querySelector("[data-editor-history]");
       const history = await apiGet(`/estudos/${encodeURIComponent(activeStudyId)}/editor/history`);
       historySelect.innerHTML = `<option value="">Nenhuma versão selecionada</option>${(history.versions || []).map((version) => `<option value="${version.version}">Versão ${version.version} · ${version.edited_at || ""}</option>`).join("")}`;
@@ -6100,6 +6153,9 @@ document.getElementById("studyStrategyTabs").addEventListener("click", (event) =
 });
 document.getElementById("studyPdfBtn").addEventListener("click", () => {
   exportStudyPdf().catch(() => showToast("Nao foi possivel gerar o PDF.", "danger"));
+});
+document.getElementById("studyAuditDownloadBtn")?.addEventListener("click", () => {
+  downloadStudyAuditLog().catch(() => showToast("Nao foi possivel baixar o log de auditoria.", "danger"));
 });
 document.getElementById("studyShareBtn").addEventListener("click", () => {
   shareCurrentStudy().catch(() => showToast("Nao foi possivel compartilhar o estudo.", "danger"));

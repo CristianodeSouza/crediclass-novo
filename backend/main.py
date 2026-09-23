@@ -25,7 +25,7 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
-from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos, update_estudo_editor
+from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos, restore_estudo_editor, update_estudo_editor
 from .pdf_bridge import react_pdf_service_status, render_react_study_pdf
 from .piperun import fetch_opportunity_notes
 from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
@@ -677,6 +677,8 @@ def estudos_excluir(estudo_id: str):
 
 @app.get("/api/estudos/{estudo_id}/editor")
 def estudos_editor_obter(estudo_id: str):
+    if not get_settings().financial_editor_enabled:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Editor financeiro desativado"})
     estudo = get_estudo(estudo_id)
     if not estudo:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
@@ -685,6 +687,8 @@ def estudos_editor_obter(estudo_id: str):
 
 @app.put("/api/estudos/{estudo_id}/editor")
 def estudos_editor_atualizar(estudo_id: str, payload: dict, request: Request = None):
+    if not get_settings().financial_editor_enabled:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Editor financeiro desativado"})
     estudo = get_estudo(estudo_id)
     if not estudo:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
@@ -706,6 +710,14 @@ def estudos_editor_historico(estudo_id: str):
     return {"success": True, "versions": estudo.get("editor_history") or []}
 
 
+@app.post("/api/estudos/{estudo_id}/editor/restore")
+def estudos_editor_restaurar(estudo_id: str, payload: dict | None = None):
+    restored = restore_estudo_editor(estudo_id, (payload or {}).get("version"))
+    if not restored:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo ou versão não encontrado"})
+    return {"success": True, "editor_content": restored.get("editor_content") or {}, "editor_version": restored.get("editor_version") or 1}
+
+
 @app.post("/api/estudos/{estudo_id}/exportar-pdf")
 def estudos_exportar_pdf(estudo_id: str):
     logger.info("POST /api/estudos/%s/exportar-pdf", estudo_id)
@@ -722,13 +734,29 @@ def estudos_exportar_pdf(estudo_id: str):
 @app.post("/api/estudos/{estudo_id}/preview-pdf")
 def estudos_preview_pdf_salvo(estudo_id: str):
     """Gera uma prévia sem alterar o estudo salvo."""
-    return estudos_exportar_pdf(estudo_id)
+    estudo = get_estudo(estudo_id)
+    if not estudo:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
+    try:
+        rendered = _render_study_pdf_file(estudo, f"preview-{estudo_id}.pdf")
+        return {**rendered, "kind": "preview", "study_id": estudo_id, "editor_version": estudo.get("editor_version") or 1}
+    except Exception as error:
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error), "kind": "preview"})
 
 
 @app.post("/api/estudos/{estudo_id}/finalizar-pdf")
 def estudos_finalizar_pdf(estudo_id: str):
     """Gera o PDF final usando o snapshot financeiro persistido."""
-    return estudos_exportar_pdf(estudo_id)
+    estudo = get_estudo(estudo_id)
+    if not estudo:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
+    try:
+        rendered = _render_study_pdf_file(estudo, f"{estudo_id}-final-v{int(estudo.get('editor_version') or 1)}.pdf")
+        estudo["final_pdf_url"] = rendered.get("download_url") or ""
+        estudo["final_pdf_version"] = int(estudo.get("editor_version") or 1)
+        return {**rendered, "kind": "final", "study_id": estudo_id, "editor_version": estudo["final_pdf_version"]}
+    except Exception as error:
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error), "kind": "final"})
 
 
 @app.post("/api/estudos/{estudo_id}/exportar-pdf-react")

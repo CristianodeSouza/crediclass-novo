@@ -30,6 +30,14 @@ STUDIES_HEADERS = [
     "financeiro_json",
     "template_campos_json",
     "cancelado_em",
+    "editor_content_json",
+    "editor_original_json",
+    "editor_history_json",
+    "editor_version",
+    "editor_updated_by",
+    "editor_updated_at",
+    "final_pdf_url",
+    "final_pdf_version",
 ]
 
 
@@ -109,13 +117,13 @@ def ensure_studies_sheet() -> None:
         ).execute()
     result = service.spreadsheets().values().get(
         spreadsheetId=settings.google_sheets_id,
-        range=f"'{STUDIES_SHEET_NAME}'!A1:P2",
+        range=f"'{STUDIES_SHEET_NAME}'!A1:X2",
     ).execute()
     rows = result.get("values", [])
     if not rows or rows[0] != STUDIES_HEADERS:
         service.spreadsheets().values().update(
             spreadsheetId=settings.google_sheets_id,
-            range=f"'{STUDIES_SHEET_NAME}'!A1:P1",
+            range=f"'{STUDIES_SHEET_NAME}'!A1:X1",
             valueInputOption="RAW",
             body={"values": [STUDIES_HEADERS]},
         ).execute()
@@ -138,6 +146,11 @@ def normalize_study_item(item: dict[str, Any]) -> dict[str, Any]:
         "editor_content": item.get("editor_content") or template_campos.get("__editor_content") or {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []},
         "editor_version": int(item.get("editor_version") or 1),
         "editor_history": item.get("editor_history") or template_campos.get("__editor_history") or [],
+        "editor_original": item.get("editor_original") or template_campos.get("__editor_original") or {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []},
+        "editor_updated_by": str(item.get("editor_updated_by") or ""),
+        "editor_updated_at": str(item.get("editor_updated_at") or ""),
+        "final_pdf_url": str(item.get("final_pdf_url") or ""),
+        "final_pdf_version": int(item.get("final_pdf_version") or 0),
         "estrategia": str(item.get("estrategia") or "Lance Total"),
     }
     if item.get("cancelado_em"):
@@ -166,6 +179,14 @@ def study_item_to_row(item: dict[str, Any]) -> list[str]:
         dumps_cell(normalized["financeiro"]),
         dumps_cell(normalized["template_campos"]),
         str(normalized.get("cancelado_em") or ""),
+        dumps_cell(normalized["editor_content"]),
+        dumps_cell(normalized["editor_original"]),
+        dumps_cell(normalized["editor_history"]),
+        str(normalized["editor_version"]),
+        normalized["editor_updated_by"],
+        normalized["editor_updated_at"],
+        normalized["final_pdf_url"],
+        str(normalized["final_pdf_version"]),
     ]
 
 
@@ -187,6 +208,14 @@ def study_item_from_row(row: list[Any]) -> dict[str, Any]:
             "template_campos": loads_cell(payload["template_campos_json"], {}),
             "estrategia": payload["estrategia"],
             "cancelado_em": payload["cancelado_em"],
+            "editor_content": loads_cell(payload.get("editor_content_json"), {}),
+            "editor_original": loads_cell(payload.get("editor_original_json"), {}),
+            "editor_history": loads_cell(payload.get("editor_history_json"), []),
+            "editor_version": payload.get("editor_version"),
+            "editor_updated_by": payload.get("editor_updated_by"),
+            "editor_updated_at": payload.get("editor_updated_at"),
+            "final_pdf_url": payload.get("final_pdf_url"),
+            "final_pdf_version": payload.get("final_pdf_version"),
         }
     )
 
@@ -197,7 +226,7 @@ def read_studies_from_sheet() -> list[tuple[int, dict[str, Any]]]:
     service = get_service()
     result = service.spreadsheets().values().get(
         spreadsheetId=settings.google_sheets_id,
-        range=f"'{STUDIES_SHEET_NAME}'!A:P",
+        range=f"'{STUDIES_SHEET_NAME}'!A:X",
     ).execute()
     values = result.get("values", [])
     if not values:
@@ -218,7 +247,7 @@ def write_study_row_to_sheet(row_number: int, item: dict[str, Any]) -> None:
     service = get_service()
     service.spreadsheets().values().update(
         spreadsheetId=settings.google_sheets_id,
-        range=f"'{STUDIES_SHEET_NAME}'!A{row_number}:P{row_number}",
+        range=f"'{STUDIES_SHEET_NAME}'!A{row_number}:X{row_number}",
         valueInputOption="RAW",
         body={"values": [study_item_to_row(item)]},
     ).execute()
@@ -273,6 +302,7 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: s
         _proposal_counter += 1
         estudo_id = f"EST-{datetime.now().year}-{_counter:05d}"
         proposal_id = f"ID {_proposal_counter:04d}"
+    empty_editor = {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []}
     study_item = {
         "estudo_id": estudo_id,
         "proposal_id": proposal_id,
@@ -283,9 +313,14 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: s
         "study_snapshot": {"schema": str(raw_snapshot.get("schema") or "motor360-selection/v1"), "groups": selected_groups} if raw_snapshot else None,
         "grupos_selecionados": selected_groups,
         "financeiro": financeiro,
-        "template_campos": {**payload.template_campos, "__editor_content": {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []}},
-        "editor_content": {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []},
+        "template_campos": {**payload.template_campos, "__editor_content": empty_editor, "__editor_original": empty_editor, "__editor_history": []},
+        "editor_content": empty_editor,
+        "editor_original": empty_editor,
+        "editor_history": [],
         "editor_version": 1,
+        "editor_updated_by": operador or "Não informado",
+        "editor_updated_at": criado_em,
+        "final_pdf_version": 0,
         "estrategia": financeiro["estrategia_recomendada"],
         "status": "Concluido",
         "operador": operador or "Não informado",
@@ -451,24 +486,43 @@ def update_estudo_editor(estudo_id: str, editor_content: dict[str, Any], operado
                 continue
             history = list(item.get("editor_history") or [])
             version = int(item.get("editor_version") or 1) + 1
-            history.append({"version": version, "content": clean, "edited_at": datetime.now().isoformat(timespec="seconds"), "edited_by": operador or "Não informado"})
-            item["template_campos"] = {**(item.get("template_campos") or {}), "__editor_content": clean, "__editor_history": history}
+            edited_at = datetime.now().isoformat(timespec="seconds")
+            original = item.get("editor_original") or {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []}
+            history.append({"version": version, "content": clean, "original": original, "edited_at": edited_at, "edited_by": operador or "Não informado"})
+            item["template_campos"] = {**(item.get("template_campos") or {}), "__editor_content": clean, "__editor_original": original, "__editor_history": history}
             item["editor_content"] = clean
+            item["editor_original"] = original
             item["editor_version"] = version
             item["editor_history"] = history
+            item["editor_updated_at"] = edited_at
+            item["editor_updated_by"] = operador or "Não informado"
             write_study_row_to_sheet(row_number, item)
             return item
         return None
     item = _studies.get(estudo_id)
     if not item:
         return None
+    item["editor_original"] = item.get("editor_original") or {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []}
     item["editor_content"] = clean
     item["editor_version"] = int(item.get("editor_version") or 1) + 1
     item["editor_updated_at"] = datetime.now().isoformat(timespec="seconds")
     item["editor_updated_by"] = operador or "Não informado"
-    item.setdefault("editor_history", []).append({"version": item["editor_version"], "content": clean, "edited_at": item["editor_updated_at"], "edited_by": item["editor_updated_by"]})
+    item.setdefault("editor_history", []).append({"version": item["editor_version"], "content": clean, "original": item["editor_original"], "edited_at": item["editor_updated_at"], "edited_by": item["editor_updated_by"]})
     save_studies_to_disk()
     return item
+
+
+def restore_estudo_editor(estudo_id: str, version: int | None = None) -> dict | None:
+    item = get_estudo(estudo_id)
+    if not item:
+        return None
+    target = item.get("editor_original") or {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []}
+    if version is not None:
+        for entry in item.get("editor_history") or []:
+            if int(entry.get("version") or 0) == int(version):
+                target = entry.get("content") or target
+                break
+    return update_estudo_editor(estudo_id, target, item.get("operador") or "Não informado")
 
 
 def delete_estudo(estudo_id: str) -> bool:

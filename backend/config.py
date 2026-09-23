@@ -15,6 +15,7 @@ class Settings(BaseModel):
     google_sheets_id: str = ""
     google_service_account_json: str = ""
     google_sheet_name: str = "Tabela de Grupos 3.0"
+    financial_editor_enabled: bool = True
 
 
 @lru_cache
@@ -28,4 +29,5 @@ def get_settings() -> Settings:
         google_sheets_id=os.getenv("GOOGLE_SHEETS_ID", ""),
         google_service_account_json=os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", ""),
         google_sheet_name=os.getenv("GOOGLE_SHEET_NAME", "Tabela de Grupos 3.0"),
+        financial_editor_enabled=os.getenv("FINANCIAL_EDITOR_ENABLED", "true").lower() == "true",
     )

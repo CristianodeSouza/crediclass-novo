@@ -686,17 +686,14 @@ function DeadlinesSection({ payload }) {
 }
 
 function OperatorNotesSection({ payload }) {
-  if (!(payload.sections.operatorNotes || []).length) return null;
+  const notes = payload.sections.operatorNotes || [];
+  const custom = payload.sections.customSections || [];
+  if (!notes.length && !custom.length) return null;
   return React.createElement(
-    Section,
-    { title: "NOTAS DO OPERADOR" },
-    React.createElement(
-      View,
-      null,
-      ...(payload.sections.operatorNotes || []).map((item, index) =>
-        React.createElement(Text, { key: `note-${index}`, style: styles.bullet }, `- ${text(item)}`),
-      ),
-    ),
+    View,
+    null,
+    notes.length ? React.createElement(Section, { title: "NOTAS DO OPERADOR" }, React.createElement(View, null, notes.map((item, index) => React.createElement(Text, { key: `note-${index}`, style: styles.bullet }, `- ${text(item).replace(/<[^>]+>/g, "")}`)))) : null,
+    ...custom.map((section, index) => React.createElement(Section, { key: `custom-section-${index}`, title: text(section.title || "INFORMAÇÃO ADICIONAL").toUpperCase() }, React.createElement(Text, { style: styles.paragraph }, text(section.text).replace(/<[^>]+>/g, "")))),
   );
 }
 
