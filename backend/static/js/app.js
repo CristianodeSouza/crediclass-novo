@@ -35,18 +35,6 @@ const screens = {
     subtitle: "Parâmetros por administradora integrados à seleção de grupos",
     action: "Salvar Parâmetros",
   },
-  estudo: {
-    letter: "E) ESTUDO FINANCEIRO",
-    title: "Estudo Financeiro",
-    subtitle: "Geração do estudo financeiro detalhado",
-    action: "Salvar Estudo",
-  },
-  historico: {
-    letter: "F) HISTÓRICO DE ESTUDOS",
-    title: "Histórico de Estudos",
-    subtitle: "Consulta e gestão dos estudos financeiros gerados",
-    action: "Buscar Estudos",
-  },
   configuracoes: {
     letter: "G) CONFIGURAÇÕES",
     title: "Configurações",
@@ -379,13 +367,9 @@ function activateScreen(screenName) {
   primaryAction.classList.toggle("d-none", ["motor360", "estudo", "mapa-assembleia"].includes(screenName));
   document.getElementById("reloadMapDataBtn").classList.toggle("d-none", screenName !== "mapa");
 
-  if (screenName === "historico") {
-    loadHistoryStudies();
-  }
   if (screenName === "motor360") loadInvestorAnalysis();
   if (screenName === "mapa-assembleia") loadAssemblyMap();
   if (screenName === "grupos-selecionados") renderSelectedGroupsScreen();
-  if (screenName === "estudo") renderFinancialStudyScreen();
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
