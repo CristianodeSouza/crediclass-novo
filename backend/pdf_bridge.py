@@ -408,12 +408,12 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
             "alerts": alerts,
         },
         "sections": {
-            "introNotes": ([str(editor.get("intro"))] if editor.get("intro") else []) + [
+            "introNotes": ([str(editor.get("study_financial") or editor.get("intro"))] if (editor.get("study_financial") or editor.get("intro")) else []) + [
                 "O presente Estudo Financeiro foi elaborado com base nas informacoes fornecidas e nas condicoes de mercado disponiveis na data de sua emissao.",
                 "O objetivo deste material e apresentar cenarios comparativos para apoiar uma decisao clara e auditavel.",
                 "As informacoes apresentadas possuem carater informativo e ilustrativo e nao constituem garantia de resultado ou promessa de contemplacao.",
             ],
-            "operatorNotes": _operator_notes(template_campos) + ([str(editor.get("observacoes"))] if editor.get("observacoes") else []),
+            "operatorNotes": _operator_notes(template_campos) + ([str(editor.get("strategy_explanation") or editor.get("observacoes"))] if (editor.get("strategy_explanation") or editor.get("observacoes")) else []),
             "customSections": [
                 {"title": str(section.get("title") or "Informação adicional"), "text": str(section.get("text") or "")}
                 for section in custom_sections if isinstance(section, dict) and str(section.get("text") or "").strip()
@@ -461,7 +461,7 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
                 "Quitacao de financiamento imobiliario.",
                 "Deixar aplicada obtendo rendimentos e retirar corrigida ao fim do grupo.",
             ],
-            "considerations": ([str(editor.get("consideracoes"))] if editor.get("consideracoes") else []) + [
+            "considerations": ([str(editor.get("important_considerations") or editor.get("consideracoes"))] if (editor.get("important_considerations") or editor.get("consideracoes")) else []) + [
                 "Os cenarios, projecoes e simulacoes apresentados foram elaborados com base nas informacoes fornecidas pelo cliente e nas condicoes observadas na data de emissao.",
                 "Os resultados demonstrados possuem carater exclusivamente informativo e ilustrativo, podendo sofrer alteracoes por fatores economicos, financeiros, regulatórios, operacionais ou de mercado.",
                 "A Crediclass nao garante rentabilidade de investimentos, indices de correcao futuros, percentuais de contemplacao, prazos de contemplacao ou quaisquer resultados futuros.",

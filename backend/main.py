@@ -26,7 +26,7 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
-from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos, restore_estudo_editor, update_estudo_editor
+from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos, normalize_editor_content, restore_estudo_editor, update_estudo_editor
 from .pdf_bridge import react_pdf_service_status, render_react_study_pdf
 from .piperun import fetch_opportunity_notes
 from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
@@ -702,7 +702,7 @@ def estudos_editor_obter(estudo_id: str):
     estudo = get_estudo(estudo_id)
     if not estudo:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
-    return {"success": True, "editor_content": estudo.get("editor_content") or {}, "editor_version": estudo.get("editor_version") or 1}
+    return {"success": True, "editor_content": normalize_editor_content(estudo.get("editor_content"), True), "editor_original": normalize_editor_content(estudo.get("editor_original"), True), "editor_version": estudo.get("editor_version") or 1}
 
 
 @app.put("/api/estudos/{estudo_id}/editor")

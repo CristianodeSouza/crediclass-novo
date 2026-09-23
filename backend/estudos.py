@@ -10,6 +10,29 @@ from .financial_study_engine import build_financeiro
 from .models import EstudoPreviewRequest, EstudoRequest
 from .sheets_client import get_service
 
+EDITOR_DEFAULTS = {
+    "study_financial": "<p><strong>Prezado,</strong></p><p>O presente Estudo Financeiro foi elaborado com base nas informações fornecidas e nas condições de mercado disponíveis na data de sua emissão e parâmetros abaixo.</p><p>O seu objetivo é apresentar cenários comparativos, auxiliando o cliente em seu processo de tomada de decisão.</p><p><em>As informações apresentadas possuem caráter informativo e ilustrativo, não constituindo garantia de resultado ou promessa de contemplação.</em></p>",
+    "selection_criteria": "<p>Os grupos apresentados foram selecionados a partir de critérios técnicos definidos pela Crediclass, considerando indicadores históricos e condições disponíveis na data da análise.</p><ol><li><strong>Grupos antigos:</strong> mais participantes já contemplados, menor concorrência nos lances.</li><li><strong>Histórico de lance:</strong> concorrência de lances abaixo da média de mercado para grupos com prazo similar.</li><li><strong>Estabilidade nos lances:</strong> menor volatilidade nos últimos 11 meses.</li><li><strong>Saúde financeira:</strong> grupos saudáveis e com contemplações recorrentes.</li><li><strong>Lance embutido:</strong> permite utilizar parte da carta para o lance quando aplicável.</li></ol>",
+    "how_consorcio_works": "<p>O consórcio é uma modalidade de crédito planejado que permite a aquisição de imóveis e outros bens por meio da formação de um fundo comum entre participantes.</p><p>Mensalmente, são realizadas contemplações por sorteio e lance, possibilitando o acesso à carta de crédito e oferecendo flexibilidade para diferentes objetivos patrimoniais.</p>",
+    "strategy_explanation": "<p>As estratégias apresentadas foram construídas a partir do histórico dos grupos e servem como referência para a tomada de decisão do cliente.</p>",
+    "important_considerations": "<p><strong>Cenários, projeções e simulações:</strong> Os cenários, projeções e simulações apresentados neste estudo foram elaborados com base nas informações fornecidas pelo cliente e nas condições observadas na data de emissão.</p><p><strong>Resultados demonstrados:</strong> Os resultados possuem caráter exclusivamente informativo e ilustrativo.</p><p><strong>Garantias:</strong> A Crediclass não garante rentabilidade, índices futuros, percentuais ou prazos de contemplação.</p><p><strong>Responsabilidade:</strong> A decisão pela contratação é de responsabilidade exclusiva do cliente.</p>",
+    "custom_sections": [],
+}
+
+def default_editor_content() -> dict[str, Any]:
+    return dict(EDITOR_DEFAULTS)
+
+def normalize_editor_content(content: dict[str, Any] | None, fallback_defaults: bool = True) -> dict[str, Any]:
+    incoming = content if isinstance(content, dict) else {}
+    result = default_editor_content() if fallback_defaults else {key: "" for key in EDITOR_DEFAULTS}
+    aliases = {"intro": "study_financial", "observacoes": "strategy_explanation", "consideracoes": "important_considerations"}
+    for key, value in incoming.items():
+        target = aliases.get(key, key)
+        if target in result:
+            result[target] = value
+    result["custom_sections"] = result["custom_sections"] if isinstance(result["custom_sections"], list) else []
+    return result
+
 RUNTIME_DIR = Path(__file__).resolve().parent / "runtime_data"
 STUDIES_FILE = RUNTIME_DIR / "studies.json"
 STUDIES_SHEET_NAME = "Historico de Estudos"
@@ -302,7 +325,7 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: s
         _proposal_counter += 1
         estudo_id = f"EST-{datetime.now().year}-{_counter:05d}"
         proposal_id = f"ID {_proposal_counter:04d}"
-    empty_editor = {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []}
+    empty_editor = default_editor_content()
     study_item = {
         "estudo_id": estudo_id,
         "proposal_id": proposal_id,
@@ -471,10 +494,10 @@ def get_estudo(estudo_id: str) -> dict | None:
 
 
 def update_estudo_editor(estudo_id: str, editor_content: dict[str, Any], operador: str = "") -> dict | None:
-    allowed = {"intro", "observacoes", "consideracoes", "custom_sections"}
-    clean = {key: editor_content.get(key, "") for key in allowed}
+    allowed = set(EDITOR_DEFAULTS)
+    clean = normalize_editor_content(editor_content)
     clean["custom_sections"] = clean["custom_sections"] if isinstance(clean["custom_sections"], list) else []
-    for key in ("intro", "observacoes", "consideracoes"):
+    for key in ("study_financial", "selection_criteria", "how_consorcio_works", "strategy_explanation", "important_considerations"):
         clean[key] = re.sub(r"<(?!/?(?:strong|b|em|i|ul|ol|li|p|br)\b)[^>]*>", "", str(clean[key] or ""), flags=re.I)[:5000]
     clean["custom_sections"] = [
         {"title": re.sub(r"<[^>]+>", "", str(section.get("title") or ""))[:120], "text": re.sub(r"<(?!/?(?:strong|b|em|i|ul|ol|li|p|br)\b)[^>]*>", "", str(section.get("text") or ""), flags=re.I)[:3000]}
@@ -487,7 +510,7 @@ def update_estudo_editor(estudo_id: str, editor_content: dict[str, Any], operado
             history = list(item.get("editor_history") or [])
             version = int(item.get("editor_version") or 1) + 1
             edited_at = datetime.now().isoformat(timespec="seconds")
-            original = item.get("editor_original") or {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []}
+            original = normalize_editor_content(item.get("editor_original"), True)
             history.append({"version": version, "content": clean, "original": original, "edited_at": edited_at, "edited_by": operador or "Não informado"})
             item["template_campos"] = {**(item.get("template_campos") or {}), "__editor_content": clean, "__editor_original": original, "__editor_history": history}
             item["editor_content"] = clean
@@ -502,7 +525,7 @@ def update_estudo_editor(estudo_id: str, editor_content: dict[str, Any], operado
     item = _studies.get(estudo_id)
     if not item:
         return None
-    item["editor_original"] = item.get("editor_original") or {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []}
+    item["editor_original"] = normalize_editor_content(item.get("editor_original"), True)
     item["editor_content"] = clean
     item["editor_version"] = int(item.get("editor_version") or 1) + 1
     item["editor_updated_at"] = datetime.now().isoformat(timespec="seconds")
@@ -516,7 +539,7 @@ def restore_estudo_editor(estudo_id: str, version: int | None = None) -> dict | 
     item = get_estudo(estudo_id)
     if not item:
         return None
-    target = item.get("editor_original") or {"intro": "", "observacoes": "", "consideracoes": "", "custom_sections": []}
+    target = normalize_editor_content(item.get("editor_original"), True)
     if version is not None:
         for entry in item.get("editor_history") or []:
             if int(entry.get("version") or 0) == int(version):
