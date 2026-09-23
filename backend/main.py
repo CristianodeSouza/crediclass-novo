@@ -63,6 +63,27 @@ async def preview_oportunidades_piperun(limit: int = Query(default=25, ge=1, le=
     except Exception as error:
         logger.exception("Falha ao carregar preview PipeRun")
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
+
+
+@app.post("/api/piperun/{opportunity_id}/sync-plan")
+async def gerar_plano_sincronizacao_piperun(opportunity_id: str):
+    """Gera um plano de alterações sem executar escritas no PipeRun."""
+    try:
+        preview = await fetch_opportunity_notes(opportunity_id)
+        dados = preview.get("dados") or {}
+        credito = float(dados.get("credito_desejado") or 0)
+        steps = [
+            {"order": 1, "name": "Atualizar responsável", "method": "PUT", "endpoint": f"/v1/deals/{opportunity_id}", "payload": {"owner_id": 2609 if credito >= 1000000 else 2602}, "status": "simulação"},
+            {"order": 2, "name": "Atualizar cliente principal", "method": "PUT", "endpoint": "/v1/persons/{person_id}", "payload": {"name": dados.get("nome"), "cpf": dados.get("cpf"), "contactEmails": [dados.get("email")], "contactPhones": [dados.get("celular")]}, "status": "simulação"},
+            {"order": 3, "name": "Localizar ou criar empresa parceira", "method": "GET/POST", "endpoint": "/v1/companies?cnpj={cnpj}", "payload": {"cnpj": dados.get("cnpj_parceiro")}, "status": "simulação"},
+            {"order": 4, "name": "Localizar ou criar contatos relacionados", "method": "GET/POST", "endpoint": "/v1/persons", "payload": {"tipos": ["assessor", "gestor", "apoio"]}, "status": "simulação"},
+            {"order": 5, "name": "Vincular contatos à oportunidade", "method": "PUT", "endpoint": f"/v1/deals/{opportunity_id}/persons/{{person_id}}", "payload": {}, "status": "simulação"},
+            {"order": 6, "name": "Mover oportunidade para etapa destino", "method": "PUT", "endpoint": f"/v1/deals/{opportunity_id}", "payload": {"stage_id": 262860}, "status": "simulação"},
+        ]
+        return {"success": True, "simulation": True, "opportunity_id": opportunity_id, "extraction": preview, "steps": steps}
+    except Exception as error:
+        logger.exception("Falha ao gerar plano PipeRun %s", opportunity_id)
+        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
     except Exception as error:
         logger.exception("Falha ao importar oportunidade PipeRun %s", opportunity_id)
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
