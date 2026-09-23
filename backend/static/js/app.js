@@ -2470,10 +2470,6 @@ function renderSelectedGroupsECharts(items) {
   init("sgFinancialChart", {
     animationDuration: 420, color: colors, grid: { left: 110, right: 30, top: 22, bottom: 26 }, tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (value) => formatMoney(value) }, xAxis: { type: "value", axisLabel: { formatter: moneyAxis }, splitLine: { lineStyle: { color: "#e7edef" } } }, yAxis: { type: "category", data: analytics.map((entry) => `Grupo ${entry.groupId}`), axisTick: { show: false }, axisLine: { show: false } }, series: [{ name: metricLabel, type: "bar", data: analytics.map((entry, index) => ({ value: entry[field], itemStyle: { color: colors[index % colors.length] } })), barMaxWidth: 30, label: { show: true, position: "right", formatter: ({ value }) => formatMoney(value), color: "#27404a", fontSize: 11 } }]
   });
-  try {
-    const savedStudy = sessionStorage.getItem("crediclass.currentStudy");
-    if (savedStudy) currentStudy = JSON.parse(savedStudy);
-  } catch { currentStudy = null; }
   init("sgHistoryChart", {
     animationDuration: 420, color: ["#ef7a24", "#1d7188", "#5a8d5b"], legend: { bottom: 0, data: ["Urgente (3m)", "Rápido (6m)", "Moderado (12m)"] }, grid: { left: 42, right: 18, top: 24, bottom: 48 }, tooltip: { trigger: "axis", axisPointer: { type: "shadow" } }, xAxis: { type: "category", data: analytics.map((entry) => `Grupo ${entry.groupId}`), axisTick: { show: false } }, yAxis: { type: "value", name: "média", minInterval: 1, splitLine: { lineStyle: { color: "#e7edef" } } }, series: [{ name: "Urgente (3m)", type: "bar", data: analytics.map((entry) => entry.history("urgent")), barMaxWidth: 26 }, { name: "Rápido (6m)", type: "bar", data: analytics.map((entry) => entry.history("fast")), barMaxWidth: 26 }, { name: "Moderado (12m)", type: "bar", data: analytics.map((entry) => entry.history("moderate")), barMaxWidth: 26 }]
   });
@@ -4791,6 +4787,8 @@ async function saveCurrentStudy(options = {}) {
 }
 
 async function exportStudyPdf(studyId) {
+  if (window.__crediclassPdfRequest) return window.__crediclassPdfRequest;
+  window.__crediclassPdfRequest = (async () => {
   let targetStudyId = studyId;
   if (!targetStudyId && currentStudy) {
     if (!currentStudy.savedStudyId) {
@@ -4804,24 +4802,11 @@ async function exportStudyPdf(studyId) {
     showToast("Salve ou selecione um estudo antes de gerar o PDF.", "warning");
     return;
   }
-  let result;
-  let firstError = null;
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    try {
-      result = await apiPost(
-        `/estudos/${encodeURIComponent(targetStudyId)}/exportar-pdf`,
-        {},
-        { suppressErrorToast: true },
-      );
-      break;
-    } catch (error) {
-      firstError ||= error;
-      if (attempt < 4) await new Promise((resolve) => window.setTimeout(resolve, 1500 * (attempt + 1)));
-    }
-  }
-  if (!result) throw firstError || new Error("Nao foi possivel gerar o PDF.");
+  const result = await apiPost(`/estudos/${encodeURIComponent(targetStudyId)}/finalizar-pdf`, {}, { suppressErrorToast: true });
   showToast("PDF gerado.", "success");
   await openStudyPdfPreview(result.download_url, targetStudyId);
+  })();
+  try { return await window.__crediclassPdfRequest; } finally { window.__crediclassPdfRequest = null; }
 }
 
 function addEditorSection(editor, section = {}) {
