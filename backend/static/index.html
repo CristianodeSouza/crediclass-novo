@@ -642,13 +642,14 @@
         <section id="screen-crm-piperun" class="screen-panel">
           <div class="content-card crm-preview-card">
             <div class="table-toolbar">
-              <div><h2>CRM PipeRun</h2><p>Preview temporário das oportunidades e notas de formulário. Nenhum dado é gravado no CRM.</p></div>
+              <div></div>
               <button id="loadPipeRunPreviewBtn" class="btn btn-primary" type="button">Carregar oportunidades</button>
             </div>
             <div id="pipeRunPreviewState" class="table-state">Clique em “Carregar oportunidades” para consultar o PipeRun.</div>
             <div id="pipeRunPreviewTableWrap" class="table-wrap d-none">
-              <table class="data-table crm-preview-table"><thead><tr><th>Oportunidade</th><th>Nota</th><th>Cliente</th><th>E-mail</th><th>Celular</th><th>Crédito</th><th>Status</th></tr></thead><tbody id="pipeRunPreviewBody"></tbody></table>
+              <table class="data-table crm-preview-table"><thead><tr><th>Campo</th><th>Valor extraído</th></tr></thead><tbody id="pipeRunPreviewBody"></tbody></table>
             </div>
+            <div id="pipeRunPreviewDetails" class="crm-preview-details d-none"></div>
           </div>
         </section>
 

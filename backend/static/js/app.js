@@ -42,9 +42,9 @@ const screens = {
     action: "Salvar Configurações",
   },
   "crm-piperun": {
-    letter: "H) CRM PIPERUN",
-    title: "CRM PipeRun",
-    subtitle: "Extração temporária de oportunidades e notas do formulário",
+    letter: "",
+    title: "",
+    subtitle: "",
     action: "",
   },
 };
@@ -367,7 +367,7 @@ function activateScreen(screenName) {
   document.getElementById("screenLetter").textContent = meta.letter;
   document.getElementById("screenTitle").textContent = meta.title;
   document.getElementById("screenSubtitle").textContent = meta.subtitle;
-  document.querySelector(".page-header")?.classList.toggle("d-none", ["perfil", "motor360", "grupos-selecionados"].includes(screenName));
+  document.querySelector(".page-header")?.classList.toggle("d-none", ["perfil", "motor360", "grupos-selecionados", "crm-piperun"].includes(screenName));
   const primaryAction = document.getElementById("primaryAction");
   primaryAction.textContent = meta.action;
   primaryAction.classList.toggle("d-none", ["motor360", "estudo", "mapa-assembleia"].includes(screenName));
@@ -391,19 +391,28 @@ async function loadPipeRunPreview() {
   const state = document.getElementById("pipeRunPreviewState");
   const wrap = document.getElementById("pipeRunPreviewTableWrap");
   const body = document.getElementById("pipeRunPreviewBody");
+  const details = document.getElementById("pipeRunPreviewDetails");
   state.className = "table-state";
   state.textContent = "Consultando oportunidades e notas...";
   wrap.classList.add("d-none");
   body.innerHTML = "";
+  details.innerHTML = "";
+  details.classList.add("d-none");
   try {
     const response = await fetch("/api/piperun/63416847", { credentials: "same-origin", cache: "no-store" });
     const payload = await response.json();
     if (!response.ok || payload.success === false) throw new Error(payload.error || "Não foi possível consultar o PipeRun.");
     const dados = payload.dados || {};
     const safe = (value) => String(value ?? "-").replace(/[&<>\"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
-    body.innerHTML = `<tr><td>${safe(payload.crm_oportunidade_id)}</td><td>${safe(payload.nota_id || "-")}</td><td>${safe(dados.nome || "Não informado")}</td><td>${safe(dados.email || "Não informado")}</td><td>${safe(dados.celular || "Não informado")}</td><td>${safe(dados.credito_desejado || "Não informado")}</td><td><span class="crm-preview-status ${payload.encontrado ? "is-ok" : "is-warning"}">${payload.encontrado ? "Extraído" : "Nota não encontrada"}</span></td></tr>`;
+    const labels = { crm_oportunidade_id: "ID da oportunidade", nota_id: "ID da nota", nome: "Titular", email: "E-mail", celular: "Celular", cpf: "CPF", credito_desejado: "Crédito desejado", lance_proprio: "Lance máximo", parcela_desejada: "Parcela máxima", prazo_contemplacao: "Prazo de contemplação", renda_total: "Renda total", fgts: "FGTS", objetivo: "Objetivo" };
+    const rawFields = dados.campos_formulario || {};
+    const fields = { crm_oportunidade_id: payload.crm_oportunidade_id, nota_id: payload.nota_id, ...dados, ...Object.fromEntries(Object.entries(rawFields).map(([key, value]) => [`form_${key}`, Array.isArray(value) ? value.join(" | ") : value])) };
+    body.innerHTML = Object.entries(fields).filter(([, value]) => value !== null && value !== undefined && value !== "" && !Array.isArray(value) && typeof value !== "object").map(([key, value]) => `<tr><td>${safe(labels[key] || key)}</td><td>${safe(value)}</td></tr>`).join("");
+    const people = Array.isArray(dados.titulares) ? dados.titulares : [];
+    details.innerHTML = `<div class="crm-preview-section"><h3>Status da extração</h3><p><span class="crm-preview-status ${payload.encontrado ? "is-ok" : "is-warning"}">${payload.encontrado ? "Nota encontrada e extraída" : "Nota não encontrada"}</span></p></div>${people.length ? `<div class="crm-preview-section"><h3>Pessoas identificadas</h3><div class="crm-people-grid">${people.map((person, index) => `<article><strong>${safe(index === 0 ? "Titular" : `Pessoa ${index + 1}`)}</strong><span>${safe(person.nome || "Não informado")}</span><small>Renda: ${safe(person.renda || "0")} · FGTS: ${safe(person.lance_fgts || "0")}</small></article>`).join("")}</div></div>` : ""}${payload.nota_texto ? `<details class="crm-original-note"><summary>Visualizar nota original</summary><pre>${safe(payload.nota_texto)}</pre></details>` : ""}`;
     state.textContent = "Oportunidade 63416847 carregada temporariamente para teste.";
     wrap.classList.remove("d-none");
+    details.classList.remove("d-none");
   } catch (error) { state.className = "table-state table-state-error"; state.textContent = error.message; }
 }
 

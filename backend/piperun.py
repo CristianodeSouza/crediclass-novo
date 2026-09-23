@@ -62,6 +62,13 @@ def _date_input(value: str) -> str:
 def _parse_form(text: str) -> dict:
     lines = [line.strip().replace("::", ":") for line in _strip_html(text).splitlines() if line.strip()]
     result: dict = {}
+    raw_fields: dict[str, list[str]] = {}
+    for line in lines:
+        if ":" in line:
+            label, value = line.split(":", 1)
+            label, value = label.strip(), value.strip()
+            if label and value:
+                raw_fields.setdefault(label, []).append(value)
     people: list[dict] = []
     person: dict | None = None
     for line in lines:
@@ -109,6 +116,7 @@ def _parse_form(text: str) -> dict:
             result["objetivo"] = "Contemplar - moderado - 12 meses"
         elif "até 6" in prazo or "rápido" in perfil:
             result["objetivo"] = "Contemplar - rapido - 6 meses"
+    result["campos_formulario"] = raw_fields
     return result
 
 
@@ -139,6 +147,7 @@ async def fetch_opportunity_notes(opportunity_id: str) -> dict:
         "crm_oportunidade_id": str(opportunity_id),
         "dados": {key: value for key, value in dados.items() if value not in (None, "")},
         "nota_id": form_note.get("id") if form_note else None,
+        "nota_texto": form_note.get("text") if form_note else None,
         "encontrado": bool(form_note),
     }
 
