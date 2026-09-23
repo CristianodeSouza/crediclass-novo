@@ -41,6 +41,12 @@ const screens = {
     subtitle: "Configurações do sistema e preferências",
     action: "Salvar Configurações",
   },
+  "crm-piperun": {
+    letter: "H) CRM PIPERUN",
+    title: "CRM PipeRun",
+    subtitle: "Extração temporária de oportunidades e notas do formulário",
+    action: "",
+  },
 };
 
 const mapState = {
@@ -373,6 +379,32 @@ function activateScreen(screenName) {
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
+  if (screenName === "crm-piperun") resetPipeRunPreview();
+}
+
+function resetPipeRunPreview() {
+  const state = document.getElementById("pipeRunPreviewState");
+  if (state && !document.getElementById("pipeRunPreviewBody")?.children.length) state.textContent = "Clique em “Carregar oportunidades” para consultar o PipeRun.";
+}
+
+async function loadPipeRunPreview() {
+  const state = document.getElementById("pipeRunPreviewState");
+  const wrap = document.getElementById("pipeRunPreviewTableWrap");
+  const body = document.getElementById("pipeRunPreviewBody");
+  state.className = "table-state";
+  state.textContent = "Consultando oportunidades e notas...";
+  wrap.classList.add("d-none");
+  body.innerHTML = "";
+  try {
+    const response = await fetch("/api/piperun/63416847", { credentials: "same-origin", cache: "no-store" });
+    const payload = await response.json();
+    if (!response.ok || payload.success === false) throw new Error(payload.error || "Não foi possível consultar o PipeRun.");
+    const dados = payload.dados || {};
+    const safe = (value) => String(value ?? "-").replace(/[&<>\"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
+    body.innerHTML = `<tr><td>${safe(payload.crm_oportunidade_id)}</td><td>${safe(payload.nota_id || "-")}</td><td>${safe(dados.nome || "Não informado")}</td><td>${safe(dados.email || "Não informado")}</td><td>${safe(dados.celular || "Não informado")}</td><td>${safe(dados.credito_desejado || "Não informado")}</td><td><span class="crm-preview-status ${payload.encontrado ? "is-ok" : "is-warning"}">${payload.encontrado ? "Extraído" : "Nota não encontrada"}</span></td></tr>`;
+    state.textContent = "Oportunidade 63416847 carregada temporariamente para teste.";
+    wrap.classList.remove("d-none");
+  } catch (error) { state.className = "table-state table-state-error"; state.textContent = error.message; }
 }
 
 function formatMoney(value) {
@@ -5873,6 +5905,7 @@ document.getElementById("clientProfileForm").addEventListener("input", (event) =
   if (!event.target.matches("[data-holder-field]")) return;
   updateClientProfileTotals();
 });
+document.getElementById("loadPipeRunPreviewBtn")?.addEventListener("click", loadPipeRunPreview);
 
 document.getElementById("clientProfileForm").addEventListener("change", () => {
   invalidateInvestorAnalysisForProfileChange();

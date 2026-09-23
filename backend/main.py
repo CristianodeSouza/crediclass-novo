@@ -28,7 +28,7 @@ from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos, normalize_editor_content, restore_estudo_editor, update_estudo_editor
 from .pdf_bridge import build_react_pdf_payload, react_pdf_service_status, render_react_study_pdf
-from .piperun import fetch_opportunity_notes
+from .piperun import fetch_opportunities_preview, fetch_opportunity_notes
 from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
 
@@ -52,6 +52,16 @@ async def buscar_oportunidade_piperun(opportunity_id: str):
     except LookupError as error:
         return JSONResponse(status_code=404, content={"success": False, "error": str(error)})
     except RuntimeError as error:
+        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
+
+
+@app.get("/api/piperun-preview")
+async def preview_oportunidades_piperun(limit: int = Query(default=25, ge=1, le=50)):
+    """MVP: leitura temporária de oportunidades e notas, sem escrita no PipeRun."""
+    try:
+        return {"success": True, "temporary": True, "items": await fetch_opportunities_preview(limit)}
+    except Exception as error:
+        logger.exception("Falha ao carregar preview PipeRun")
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
     except Exception as error:
         logger.exception("Falha ao importar oportunidade PipeRun %s", opportunity_id)

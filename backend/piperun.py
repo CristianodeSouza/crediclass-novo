@@ -141,3 +141,31 @@ async def fetch_opportunity_notes(opportunity_id: str) -> dict:
         "nota_id": form_note.get("id") if form_note else None,
         "encontrado": bool(form_note),
     }
+
+
+async def fetch_opportunities_preview(limit: int = 25) -> list[dict]:
+    """Carrega uma amostra temporária de oportunidades e suas notas de formulário."""
+    token = os.getenv("PIPERUN_API_KEY", "").strip()
+    if not token:
+        raise RuntimeError("Integração PipeRun não configurada no ambiente.")
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.get(
+            f"{PIPERUN_BASE_URL}/deals",
+            headers={"token": token, "accept": "application/json"},
+        )
+        if response.status_code in (401, 403):
+            raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar oportunidades.")
+        if response.status_code >= 400:
+            raise RuntimeError(f"PipeRun recusou as oportunidades (HTTP {response.status_code}).")
+        payload = response.json()
+        deals = payload.get("data", [])
+        if isinstance(deals, dict):
+            deals = deals.get("data", [])
+        deals = deals[: max(1, min(int(limit), 50))]
+
+    result = []
+    for deal in deals:
+        deal_id = str(deal.get("id") or "").strip()
+        if deal_id.isdigit():
+            result.append({"oportunidade": deal, **await fetch_opportunity_notes(deal_id)})
+    return result
