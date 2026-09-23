@@ -128,6 +128,27 @@ class ReactPdfStackTest(unittest.TestCase):
         self.assertEqual(payload["sections"]["projectionRows"][0]["percent"], "42,43%")
         self.assertEqual(payload["sections"]["projectionRows"][0]["totalBid"], "R$ 143.162,64")
 
+    def test_bridge_preserva_tres_grupos_e_os_dois_cenarios_no_pdf(self):
+        study = json.loads(json.dumps(self.sample_study))
+        study["study_snapshot"] = {"groups": [
+            {"grupo": "40004", "administradora": "Itau", "quota_count": 1, "cenarios": [
+                {"id": "without_embedded", "label": "Sem embutido", "credito_liquido_projetado": 300000},
+                {"id": "with_embedded", "label": "Com embutido", "credito_liquido_projetado": 337409},
+            ]},
+            {"grupo": "40005", "administradora": "Bradesco", "quota_count": 2, "cenarios": [
+                {"id": "without_embedded", "label": "Sem embutido", "credito_liquido_projetado": 300000},
+                {"id": "with_embedded", "label": "Com embutido", "credito_liquido_projetado": 337409},
+            ]},
+            {"grupo": "40006", "administradora": "Porto", "quota_count": 1, "cenarios": [
+                {"id": "without_embedded", "label": "Sem embutido", "credito_liquido_projetado": 300000},
+                {"id": "with_embedded", "label": "Com embutido", "credito_liquido_projetado": 337409},
+            ]},
+        ]}
+        payload = build_react_pdf_payload(study, "4.0.83")
+        self.assertEqual(len(payload["selectedGroups"]), 3)
+        self.assertTrue(all(len(group["scenarios"]) == 2 for group in payload["selectedGroups"]))
+        self.assertEqual([group["groupId"] for group in payload["selectedGroups"]], ["40004", "40005", "40006"])
+
     def test_bridge_procura_node_local_empacotado(self):
         bridge = BRIDGE.read_text(encoding="utf-8")
         self.assertIn('PDF_SERVICE_NODEENV_DIR = PDF_SERVICE_DIR / ".nodeenv"', bridge)

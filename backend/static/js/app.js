@@ -2470,6 +2470,10 @@ function renderSelectedGroupsECharts(items) {
   init("sgFinancialChart", {
     animationDuration: 420, color: colors, grid: { left: 110, right: 30, top: 22, bottom: 26 }, tooltip: { trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: (value) => formatMoney(value) }, xAxis: { type: "value", axisLabel: { formatter: moneyAxis }, splitLine: { lineStyle: { color: "#e7edef" } } }, yAxis: { type: "category", data: analytics.map((entry) => `Grupo ${entry.groupId}`), axisTick: { show: false }, axisLine: { show: false } }, series: [{ name: metricLabel, type: "bar", data: analytics.map((entry, index) => ({ value: entry[field], itemStyle: { color: colors[index % colors.length] } })), barMaxWidth: 30, label: { show: true, position: "right", formatter: ({ value }) => formatMoney(value), color: "#27404a", fontSize: 11 } }]
   });
+  try {
+    const savedStudy = sessionStorage.getItem("crediclass.currentStudy");
+    if (savedStudy) currentStudy = JSON.parse(savedStudy);
+  } catch { currentStudy = null; }
   init("sgHistoryChart", {
     animationDuration: 420, color: ["#ef7a24", "#1d7188", "#5a8d5b"], legend: { bottom: 0, data: ["Urgente (3m)", "Rápido (6m)", "Moderado (12m)"] }, grid: { left: 42, right: 18, top: 24, bottom: 48 }, tooltip: { trigger: "axis", axisPointer: { type: "shadow" } }, xAxis: { type: "category", data: analytics.map((entry) => `Grupo ${entry.groupId}`), axisTick: { show: false } }, yAxis: { type: "value", name: "média", minInterval: 1, splitLine: { lineStyle: { color: "#e7edef" } } }, series: [{ name: "Urgente (3m)", type: "bar", data: analytics.map((entry) => entry.history("urgent")), barMaxWidth: 26 }, { name: "Rápido (6m)", type: "bar", data: analytics.map((entry) => entry.history("fast")), barMaxWidth: 26 }, { name: "Moderado (12m)", type: "bar", data: analytics.map((entry) => entry.history("moderate")), barMaxWidth: 26 }]
   });
@@ -4773,6 +4777,7 @@ async function saveCurrentStudy(options = {}) {
   const result = await apiPost("/estudos", payload);
     currentStudy.savedStudyId = result.estudo_id;
     currentStudy.proposalId = result.proposal_id || null;
+    sessionStorage.setItem("crediclass.currentStudy", JSON.stringify(currentStudy));
     document.getElementById("studyDisplayId")?.replaceChildren(document.createTextNode(result.proposal_id || result.estudo_id));
     document.getElementById("financialStudyHeaderNumber")?.replaceChildren(document.createTextNode(result.proposal_id || result.estudo_id));
     if (!options.silent) {
@@ -5648,6 +5653,10 @@ async function loadHealth() {
   const health = await apiGet("/health");
   document.getElementById("environmentLabel").textContent = health.environment;
   document.getElementById("systemVersionLabel").textContent = health.version;
+  const clientVersion = document.querySelector('meta[name="crediclass-build"]')?.content;
+  if (clientVersion && health.version && clientVersion !== health.version) {
+    showToast(`Nova versão disponível (${health.version}). Recarregue a página.`, "warning");
+  }
 }
 
 function assemblyFilters() {

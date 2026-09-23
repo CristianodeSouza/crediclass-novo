@@ -22,10 +22,13 @@ async function apiRequest(path, options = {}) {
     if (timeoutId) window.clearTimeout(timeoutId);
   });
 
-  const data = await response.json().catch(() => ({}));
+  const rawBody = await response.text();
+  let data = {};
+  try { data = rawBody ? JSON.parse(rawBody) : {}; } catch { /* respostas HTML/texto também são reportadas abaixo */ }
 
   if (!response.ok) {
-    const message = data.error || data.detail || "Erro ao comunicar com o servidor";
+    const responseText = rawBody.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
+    const message = data.error || data.detail || `Erro HTTP ${response.status}: ${responseText || response.statusText || "resposta vazia"}`;
     if (response.status === 401 && typeof showLogin === "function") {
       showLogin(message);
     }

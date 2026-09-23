@@ -351,6 +351,17 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
                 "groupId": str(selected.get("grupo") or selected.get("grupo_id") or "-"),
                 "administrator": str(selected.get("administradora") or selected.get("administrador") or "-"),
                 "quotaCount": str(selected.get("quota_count") or selected.get("cotas") or "1"),
+                "scenarios": [
+                    {
+                        "id": str(scenario.get("id") or scenario.get("scenario_id") or "-"),
+                        "label": str(scenario.get("label") or scenario.get("nome") or scenario.get("id") or "Cenario"),
+                        "credit": _format_money(scenario.get("credito_liquido_projetado") or scenario.get("credito")),
+                        "installment": _format_money(scenario.get("parcela_inicial") or scenario.get("parcela")),
+                        "bid": _format_money(scenario.get("valor_total_lance") or scenario.get("lance")),
+                        "available": _format_money(scenario.get("credito_maximo") or scenario.get("credito_disponivel")),
+                    }
+                    for scenario in (selected.get("cenarios") or []) if isinstance(scenario, dict)
+                ],
             }
         )
     return {
@@ -402,7 +413,11 @@ def build_react_pdf_payload(estudo: dict[str, Any], version: str) -> dict[str, A
                 "O objetivo deste material e apresentar cenarios comparativos para apoiar uma decisao clara e auditavel.",
                 "As informacoes apresentadas possuem carater informativo e ilustrativo e nao constituem garantia de resultado ou promessa de contemplacao.",
             ],
-            "operatorNotes": _operator_notes(template_campos) + ([str(editor.get("observacoes"))] if editor.get("observacoes") else []) + [f"{str(section.get('title') or 'Informação adicional')}: {str(section.get('text') or '')}" for section in custom_sections if isinstance(section, dict) and str(section.get('text') or '').strip()],
+            "operatorNotes": _operator_notes(template_campos) + ([str(editor.get("observacoes"))] if editor.get("observacoes") else []),
+            "customSections": [
+                {"title": str(section.get("title") or "Informação adicional"), "text": str(section.get("text") or "")}
+                for section in custom_sections if isinstance(section, dict) and str(section.get("text") or "").strip()
+            ],
             "strategyRows": strategy_rows,
             "historyMatrix": _history_matrix(financeiro, grupo, estudo),
             "contractRows": _contract_rows(estudo, grupo, financeiro),

@@ -579,6 +579,14 @@ function SelectedGroupsSection({ payload }) {
       ],
       rows: groups,
     }),
+    ...groups.flatMap((group, groupIndex) => (group.scenarios || []).map((scenario, scenarioIndex) =>
+      React.createElement(
+        View,
+        { key: `scenario-${groupIndex}-${scenarioIndex}`, style: styles.card },
+        React.createElement(Text, { style: styles.miniNote }, `${text(group.groupId)} · ${text(group.administrator)} · ${text(scenario.label)}`),
+        React.createElement(Text, { style: styles.paragraph }, `Credito: ${text(scenario.credit)} | Parcela: ${text(scenario.installment)} | Lance: ${text(scenario.bid)} | Disponivel: ${text(scenario.available)}`),
+      ),
+    )),
   );
 }
 

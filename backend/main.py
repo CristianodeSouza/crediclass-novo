@@ -231,6 +231,21 @@ def _render_study_pdf_file(estudo: dict, filename: str) -> dict:
     }
 
 
+@app.get("/api/estudos/{estudo_id}/pdf")
+def estudos_pdf_estavel(estudo_id: str):
+    """Regenera o PDF sob demanda; não depende do disco efêmero do Render."""
+    estudo = get_estudo(estudo_id)
+    if not estudo:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
+    try:
+        version = int(estudo.get("final_pdf_version") or estudo.get("editor_version") or 1)
+        rendered = _render_study_pdf_file(estudo, f"{estudo_id}-final-v{version}.pdf")
+        return FileResponse(FILES_DIR / rendered["filename"], media_type="application/pdf", filename=rendered["filename"])
+    except Exception as error:
+        logger.exception("Falha ao regenerar PDF do estudo %s", estudo_id)
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+
+
 def _write_preview_audit(payload: EstudoPreviewRequest, estudo: dict, rendered: dict, operador: str) -> dict:
     filename = str(rendered["filename"])
     pdf_path = FILES_DIR / filename
@@ -754,7 +769,7 @@ def estudos_finalizar_pdf(estudo_id: str):
         rendered = _render_study_pdf_file(estudo, f"{estudo_id}-final-v{int(estudo.get('editor_version') or 1)}.pdf")
         estudo["final_pdf_url"] = rendered.get("download_url") or ""
         estudo["final_pdf_version"] = int(estudo.get("editor_version") or 1)
-        return {**rendered, "kind": "final", "study_id": estudo_id, "editor_version": estudo["final_pdf_version"]}
+        return {**rendered, "download_url": f"/api/estudos/{estudo_id}/pdf", "kind": "final", "study_id": estudo_id, "editor_version": estudo["final_pdf_version"]}
     except Exception as error:
         return JSONResponse(status_code=503, content={"success": False, "error": str(error), "kind": "final"})
 
