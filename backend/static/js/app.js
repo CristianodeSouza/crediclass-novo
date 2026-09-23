@@ -4802,10 +4802,16 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
         editor.className = "modal fade";
         editor.innerHTML = `<div class="modal-dialog modal-xl modal-dialog-centered"><div class="modal-content"><div class="modal-header"><h5 class="modal-title">Editar textos do estudo</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><div style="display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1fr);gap:16px"><section><div class="btn-group mb-2" role="toolbar"><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="bold"><b>B</b></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="italic"><i>I</i></button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="insertUnorderedList">Lista</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="undo">Desfazer</button><button type="button" class="btn btn-sm btn-outline-secondary" data-cmd="redo">Refazer</button></div><label class="form-label">Introdução</label><div contenteditable="true" class="form-control mb-2" style="min-height:90px" data-editor-field="intro"></div><label class="form-label">Observações</label><div contenteditable="true" class="form-control mb-2" style="min-height:90px" data-editor-field="observacoes"></div><label class="form-label">Considerações finais</label><div contenteditable="true" class="form-control" style="min-height:90px" data-editor-field="consideracoes"></div><label class="form-label mt-2">Versões anteriores</label><select class="form-select" data-editor-history><option value="">Nenhuma versão selecionada</option></select></section><section><div class="small text-muted mb-2">A prévia oficial será atualizada após salvar. Dados financeiros e grupos não são editáveis.</div><iframe title="Prévia atual" style="width:100%;height:430px;border:1px solid #ddd" data-editor-preview></iframe></section></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-editor-restore>Restaurar original</button><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button><button type="button" class="btn btn-primary" data-editor-save>Atualizar prévia</button></div></div></div>`;
         document.body.appendChild(editor);
-        editor.querySelectorAll("[data-cmd]").forEach((button) => button.addEventListener("click", () => { document.execCommand(button.dataset.cmd, false); }));
+        editor._tiptapEditors = Object.fromEntries(["intro", "observacoes", "consideracoes"].map((field) => [field, window.CrediclassEditor?.create(editor.querySelector(`[data-editor-field="${field}"]`))]));
+        Object.values(editor._tiptapEditors).forEach((instance) => instance?.on("focus", () => { editor._activeEditor = instance; }));
+        editor.querySelectorAll("[data-cmd]").forEach((button) => button.addEventListener("click", () => {
+          const instance = editor._activeEditor || editor._tiptapEditors.intro;
+          const commands = { bold: "toggleBold", italic: "toggleItalic", insertUnorderedList: "toggleBulletList", undo: "undo", redo: "redo" };
+          instance?.chain().focus()[commands[button.dataset.cmd]]().run();
+        }));
         editor.querySelector("[data-editor-restore]").addEventListener("click", () => editor.querySelectorAll("[data-editor-field]").forEach((field) => { field.innerHTML = ""; }));
         editor.querySelector("[data-editor-save]").addEventListener("click", async () => {
-          const content = Object.fromEntries([...editor.querySelectorAll("[data-editor-field]")].map((field) => [field.dataset.editorField, field.innerHTML]));
+          const content = Object.fromEntries(Object.entries(editor._tiptapEditors).map(([field, instance]) => [field, instance?.getHTML() || ""]));
           await apiPut(`/estudos/${encodeURIComponent(editor.dataset.studyId)}/editor`, { editor_content: { ...content, custom_sections: [] } });
           window.bootstrap?.Modal?.getOrCreateInstance(editor)?.hide();
           showToast("Textos salvos. Gerando nova prévia...", "success");
@@ -4814,16 +4820,14 @@ async function openStudyPdfPreview(pdfUrl, studyId) {
       }
       editor.dataset.studyId = activeStudyId;
       const content = current.editor_content || {};
-      editor.querySelector('[data-editor-field="intro"]').innerHTML = content.intro || "";
-      editor.querySelector('[data-editor-field="observacoes"]').innerHTML = content.observacoes || "";
-      editor.querySelector('[data-editor-field="consideracoes"]').innerHTML = content.consideracoes || "";
+      ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent(content[field] || ""));
       const historySelect = editor.querySelector("[data-editor-history]");
       const history = await apiGet(`/estudos/${encodeURIComponent(activeStudyId)}/editor/history`);
       historySelect.innerHTML = `<option value="">Nenhuma versão selecionada</option>${(history.versions || []).map((version) => `<option value="${version.version}">Versão ${version.version} · ${version.edited_at || ""}</option>`).join("")}`;
       historySelect.onchange = () => {
         const version = (history.versions || []).find((entry) => String(entry.version) === historySelect.value);
         if (!version) return;
-        ["intro", "observacoes", "consideracoes"].forEach((field) => { editor.querySelector(`[data-editor-field="${field}"]`).innerHTML = version.content?.[field] || ""; });
+        ["intro", "observacoes", "consideracoes"].forEach((field) => editor._tiptapEditors?.[field]?.commands.setContent(version.content?.[field] || ""));
       };
       window.bootstrap?.Modal?.getOrCreateInstance(editor)?.show();
     });

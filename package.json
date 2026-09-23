@@ -1,0 +1,21 @@
+{
+  "name": "crediclass-frontend-editor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:editor": "node scripts/build-editor.mjs"
+  },
+  "dependencies": {
+    "@tiptap/core": "^2.11.0",
+    "@tiptap/extension-bold": "^2.11.0",
+    "@tiptap/extension-italic": "^2.11.0",
+    "@tiptap/extension-list-item": "^2.11.0",
+    "@tiptap/extension-ordered-list": "^2.11.0",
+    "@tiptap/extension-bullet-list": "^2.11.0",
+    "@tiptap/extension-history": "^2.11.0",
+    "@tiptap/extension-paragraph": "^2.11.0",
+    "@tiptap/extension-text": "^2.11.0",
+    "@tiptap/starter-kit": "^2.11.0",
+    "vite": "^6.0.0"
+  }
+}
