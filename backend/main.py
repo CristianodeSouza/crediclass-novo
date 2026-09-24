@@ -24,6 +24,7 @@ from .motor360_auditoria import audit_to_markdown, audit_to_pdf, get_motor360_au
 from .administrator_rules import normalize_admin_name, rules_by_administradora
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
+from .templates_estudos import get_template, list_templates
 from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
 from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos, normalize_editor_content, restore_estudo_editor, update_estudo_editor
@@ -897,6 +898,28 @@ def configuracoes_obter():
         "google_sheets_configurado": bool(settings.google_sheets_id and settings.google_service_account_json),
     }
     return data
+
+
+@app.get("/api/templates-estudos")
+def templates_estudos_listar(force_reload: bool = False):
+    try:
+        items = list_templates(force_reload=force_reload)
+        return {"success": True, "items": items, "total": len(items), "sheet": "Templates"}
+    except Exception as error:
+        logger.exception("Erro ao carregar templates de estudos")
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error), "sheet": "Templates"})
+
+
+@app.get("/api/templates-estudos/{slug}")
+def templates_estudos_detalhe(slug: str):
+    try:
+        item = get_template(slug, active_only=False)
+        if not item:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Template não encontrado."})
+        return {"success": True, "item": item}
+    except Exception as error:
+        logger.exception("Erro ao carregar template %s", slug)
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
 
 
 @app.put("/api/configuracoes")

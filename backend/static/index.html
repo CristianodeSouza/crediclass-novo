@@ -82,6 +82,10 @@
               <span class="nav-icon">CR</span>
               <span>CRM PipeRun</span>
             </button>
+            <button class="nav-item" type="button" data-screen="templates-estudos">
+              <span class="nav-icon">TE</span>
+              <span>Templates de Estudos</span>
+            </button>
           </div>
         </nav>
 
@@ -635,6 +639,22 @@
                   <button id="restartSyncBtn" class="btn btn-primary" type="button">Reiniciar Sincronizacao</button>
                 </div>
               </section>
+            </div>
+          </div>
+        </section>
+
+        <section id="screen-templates-estudos" class="screen-panel">
+          <div class="content-card templates-study-card">
+            <div class="table-toolbar">
+              <div><h2>Templates de Estudos</h2><p>Modelos administrativos carregados da aba Templates do Google Sheets.</p></div>
+              <button id="reloadStudyTemplatesBtn" class="btn btn-outline-primary" type="button">Recarregar templates</button>
+            </div>
+            <div id="studyTemplatesState" class="table-state">Clique em Templates de Estudos para carregar os modelos.</div>
+            <div id="studyTemplatesTableWrap" class="table-responsive d-none">
+              <table class="table table-hover align-middle viability-table">
+                <thead><tr><th>Administradora</th><th>Slug</th><th>Status</th><th>Versão</th><th>Atualizado em</th><th>Validação</th></tr></thead>
+                <tbody id="studyTemplatesBody"></tbody>
+              </table>
             </div>
           </div>
         </section>

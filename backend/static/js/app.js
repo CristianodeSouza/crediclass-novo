@@ -47,6 +47,12 @@ const screens = {
     subtitle: "",
     action: "",
   },
+  "templates-estudos": {
+    letter: "H) TEMPLATES DE ESTUDOS",
+    title: "Templates de Estudos",
+    subtitle: "Modelos administrativos utilizados na geração dos estudos HTML",
+    action: "",
+  },
 };
 
 const mapState = {
@@ -380,6 +386,32 @@ function activateScreen(screenName) {
     loadConfiguracoes();
   }
   if (screenName === "crm-piperun") resetPipeRunPreview();
+  if (screenName === "templates-estudos") loadStudyTemplates();
+}
+
+async function loadStudyTemplates(forceReload = false) {
+  const state = document.getElementById("studyTemplatesState");
+  const wrap = document.getElementById("studyTemplatesTableWrap");
+  const body = document.getElementById("studyTemplatesBody");
+  if (!state || !wrap || !body) return;
+  state.className = "table-state";
+  state.textContent = "Carregando templates da planilha...";
+  wrap.classList.add("d-none");
+  try {
+    const response = await fetch(`/api/templates-estudos${forceReload ? "?force_reload=true" : ""}`, { credentials: "same-origin", cache: "no-store" });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.success === false) throw new Error(payload.error || "Não foi possível carregar os templates.");
+    body.innerHTML = (payload.items || []).map((item) => {
+      const errors = item.validation_errors || [];
+      const badge = errors.length ? `<span class="badge text-bg-warning">${escapeHtml(errors.join("; "))}</span>` : `<span class="badge text-bg-success">Pronto</span>`;
+      return `<tr><td><strong>${escapeHtml(item.administradora || "-")}</strong></td><td><code>${escapeHtml(item.slug || "-")}</code></td><td>${escapeHtml(item.status || "-")}</td><td>${escapeHtml(item.versao || "-")}</td><td>${escapeHtml(item.atualizado_em || "-")}</td><td>${badge}</td></tr>`;
+    }).join("");
+    state.textContent = payload.total ? `${payload.total} template(s) carregado(s) da aba Templates.` : "Nenhum template cadastrado na aba Templates.";
+    wrap.classList.remove("d-none");
+  } catch (error) {
+    state.className = "table-state table-state-error";
+    state.textContent = error.message;
+  }
 }
 
 function resetPipeRunPreview() {
@@ -6127,6 +6159,7 @@ document.getElementById("restartSyncBtn").addEventListener("click", () => {
 
 document.getElementById("loginForm").addEventListener("submit", submitLogin);
 document.getElementById("logoutBtn").addEventListener("click", logout);
+document.getElementById("reloadStudyTemplatesBtn")?.addEventListener("click", () => loadStudyTemplates(true));
 
 bootApp().catch(() => showLogin("Nao foi possivel validar a sessao."));
 
