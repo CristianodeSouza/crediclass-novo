@@ -47,6 +47,12 @@ const screens = {
     subtitle: "",
     action: "",
   },
+  estudo: {
+    letter: "E) ESTUDO FINANCEIRO",
+    title: "Estudo Financeiro",
+    subtitle: "Template da administradora preenchido com os dados reais da seleção",
+    action: "",
+  },
   "templates-estudos": {
     letter: "H) TEMPLATES DE ESTUDOS",
     title: "Templates de Estudos",
@@ -382,6 +388,7 @@ function activateScreen(screenName) {
   if (screenName === "motor360") loadInvestorAnalysis();
   if (screenName === "mapa-assembleia") loadAssemblyMap();
   if (screenName === "grupos-selecionados") renderSelectedGroupsScreen();
+  if (screenName === "estudo") renderFinancialStudyScreen();
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
@@ -3416,6 +3423,14 @@ async function renderFinancialStudyScreen() {
     localStorage.setItem(FINANCIAL_STUDY_SECTIONS_KEY, JSON.stringify(preferences));
     screen.querySelector(`[data-study-content="${input.dataset.studySection}"]`)?.classList.toggle("d-none", !input.checked);
   }));
+}
+
+function financialStudyNextAssemblyBlock(item, data, generatedAt, loadError = "") {
+  if (loadError) return `<div class="financial-study-group-assembly-empty"><strong>Próxima assembleia indisponível</strong><span>${escapeHtml(loadError)}</span></div>`;
+  const cycle = financialStudyGroupAssemblyCycles(item, data, generatedAt)[0];
+  const event = cycle?.events?.find((entry) => entry.id === "assembleia");
+  if (!event) return `<div class="financial-study-group-assembly-empty"><strong>Próxima assembleia não cadastrada</strong><span>Não encontramos uma data futura disponível para este grupo.</span></div>`;
+  return `<div class="financial-study-deadlines"><span><small>Próxima assembleia</small><b>${financialStudyFormatCalendarDate(event.date)}</b></span></div>`;
 }
 
 function persistMotor360Selection() {
