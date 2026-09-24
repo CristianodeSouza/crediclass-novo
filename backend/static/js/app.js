@@ -3167,7 +3167,7 @@ function financialStudyGroupCard(item, assemblyData, generatedAt, assemblyError 
     <header class="financial-study-group-header"><div><strong>Grupo ${escapeHtml(groupId)}</strong><span>${escapeHtml(item.administradora || "-")} · ${quotas} ${quotas === 1 ? "cota" : "cotas"}</span></div><span class="financial-study-classification">${escapeHtml(financialStudyStrategyLabel(item.best_contemplation_strategy))}</span></header>
     <div class="financial-study-group-metrics">${summaryMetrics.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${value}</strong></div>`).join("")}</div>
     <div class="financial-study-group-financials">${scenarioColumn("Sem embutido", without)}${scenarioColumn("Com embutido", withEmbedded)}</div>
-    <div class="financial-study-group-assembly"><div class="financial-study-group-section-title"><strong>Agenda de assembleia</strong><span>Datas futuras vinculadas à administradora e ao vencimento da parcela</span></div>${financialStudyGroupAssemblyBlock(item, assemblyData, generatedAt, assemblyError)}</div>
+    <div class="financial-study-group-assembly"><div class="financial-study-group-section-title"><strong>Próxima assembleia</strong><span>Primeira assembleia futura encontrada para este grupo</span></div>${financialStudyNextAssemblyBlock(item, assemblyData, generatedAt, assemblyError)}</div>
     ${financialStudyProjectionSection(item)}
     ${financialStudyGroupProfileSection(item)}
   </article>`;
@@ -3351,7 +3351,10 @@ function renderItauReplicaStudy({ screen, items, profile, clientName, issueDate,
     return `<tr><td>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</td><td>${moneyValue(item.credito_maximo)}</td><td>${moneyValue(withEmbedded.credito_contratado || without.credito_contratado)}</td><td>${moneyValue(withEmbedded.parcela_inicial || without.parcela_inicial)}</td><td>${escapeHtml(String(item.prazo_restante || "-"))}</td><td>${escapeHtml(String(item.taxa_adm || "-"))}</td><td>${escapeHtml(String(item.taxa_adm_ano || "-"))}</td></tr>`;
   }).join("");
   const totalCredit = items.reduce((sum, item) => sum + Number(item.credito_maximo || 0) * qty(item), 0);
-  const nextAssembly = items.map((item) => financialStudyGroupAssemblyCycles(item, assemblyData, new Date())[0]?.events?.find((event) => event.id === "assembleia")?.date).filter(Boolean).sort((a, b) => a - b)[0];
+  const nextAssembly = items.flatMap((item) => {
+    const cycle = financialStudyGroupAssemblyCycles(item, assemblyData, new Date())[0];
+    return cycle?.events?.filter((event) => event.id === "assembleia").map((event) => event.date) || [];
+  }).filter(Boolean).sort((a, b) => a - b)[0];
   const nextAssemblyLabel = nextAssembly ? financialStudyFormatCalendarDate(nextAssembly) : "Não informado";
   const section = (title, content, extra = "") => `<section class="itau-replica-section ${extra}"><div class="itau-replica-bar">${title}</div>${content}</section>`;
   const groupBlocks = items.map((item) => {
@@ -3403,7 +3406,7 @@ async function renderFinancialStudyScreen() {
   const clientName = profile.nome || holderNames.join(", ") || "Cliente não informado";
   const generatedAt = new Date();
   const issueDate = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(generatedAt);
-  const proposalId = currentStudy?.proposalId || currentStudy?.proposal_id || "Aguardando geração";
+  const proposalId = currentStudy?.proposalId || currentStudy?.proposal_id || "PRÉVIA · NÃO PUBLICADO";
   const systemVersion = document.getElementById("systemVersionLabel")?.textContent?.trim() || "-";
   const highlighted = items[0];
   const highlightedGroup = String(highlighted?.grupo || highlighted?.grupo_id || "-");
@@ -3415,7 +3418,10 @@ async function renderFinancialStudyScreen() {
   let assemblyError = "";
   screen.setAttribute("aria-busy", "true");
   try {
-    assemblyData = await financialStudyAssemblyData();
+    assemblyData = await Promise.race([
+      financialStudyAssemblyData(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 12000)),
+    ]);
   } catch (error) {
     assemblyError = "Não foi possível consultar o Mapa de Assembleias neste momento.";
   }
