@@ -405,14 +405,27 @@ async function loadStudyTemplates(forceReload = false) {
       const errors = item.validation_errors || [];
       const badge = errors.length ? `<span class="badge text-bg-warning">${escapeHtml(errors.join("; "))}</span>` : `<span class="badge text-bg-success">Pronto</span>`;
       const source = item.drive_url ? `<a href="${escapeHtml(item.drive_url)}" target="_blank" rel="noopener">Abrir no Drive</a>` : escapeHtml(item.source_type || "Planilha");
-      return `<tr><td><strong>${escapeHtml(item.administradora || "-")}</strong></td><td><code>${escapeHtml(item.slug || "-")}</code></td><td>${escapeHtml(item.status || "-")}</td><td>${escapeHtml(item.versao || "-")}</td><td>${escapeHtml(item.atualizado_em || "-")}</td><td>${badge}</td><td>${source}</td></tr>`;
+      const details = `<button type="button" class="btn btn-sm btn-outline-secondary" data-template-details="${escapeHtml(item.slug || "")}">Ver estrutura</button>`;
+      window.studyTemplatesBySlug = window.studyTemplatesBySlug || {};
+      window.studyTemplatesBySlug[item.slug] = item;
+      return `<tr><td><strong>${escapeHtml(item.administradora || "-")}</strong></td><td><code>${escapeHtml(item.slug || "-")}</code></td><td>${escapeHtml(item.status || "-")}</td><td>${escapeHtml(item.versao || "-")}</td><td>${escapeHtml(item.atualizado_em || "-")}</td><td>${badge}</td><td>${source}<br>${details}</td></tr>`;
     }).join("");
     state.textContent = payload.total ? `${payload.total} template(s) carregado(s) da aba Templates.` : "Nenhum template cadastrado na aba Templates.";
     wrap.classList.remove("d-none");
+    body.querySelectorAll("[data-template-details]").forEach((button) => button.addEventListener("click", () => renderStudyTemplateDetails(window.studyTemplatesBySlug?.[button.dataset.templateDetails])));
   } catch (error) {
     state.className = "table-state table-state-error";
     state.textContent = error.message;
   }
+}
+
+function renderStudyTemplateDetails(item) {
+  const panel = document.getElementById("studyTemplateDetails");
+  if (!panel || !item) return;
+  const sections = Array.isArray(item.sections) ? item.sections : [];
+  panel.innerHTML = `<div class="table-toolbar"><div><h2>Mapa técnico · ${escapeHtml(item.administradora || "Template")}</h2><p>${escapeHtml(item.nome_arquivo || "Estrutura preparada para o HTML dinâmico")}</p></div><button type="button" class="btn btn-outline-secondary" data-close-template-details>Fechar</button></div><div class="template-section-map">${sections.map((section, index) => `<article><span>${String(index + 1).padStart(2, "0")}</span><div><strong>${escapeHtml(section.title || section.key)}</strong><small>${escapeHtml(section.kind || "section")}</small></div></article>`).join("") || "<p>Nenhuma seção mapeada.</p>"}</div>`;
+  panel.classList.remove("d-none");
+  panel.querySelector("[data-close-template-details]")?.addEventListener("click", () => panel.classList.add("d-none"));
 }
 
 function resetPipeRunPreview() {

@@ -21,6 +21,17 @@ INITIAL_DRIVE_TEMPLATE = {
     "drive_file_id": "14YhzgJodBgK6EQzx906TG8I20b7wNWhp",
     "drive_url": "https://drive.google.com/file/d/14YhzgJodBgK6EQzx906TG8I20b7wNWhp/view?usp=drive_link",
     "source_type": "google_drive",
+    "sections": [
+        {"key": "intro", "title": "Estudo Financeiro", "kind": "institutional"},
+        {"key": "investment_simulation", "title": "Simulação de investimento", "kind": "financial"},
+        {"key": "selection_criteria", "title": "Simulação melhores consórcios", "kind": "institutional"},
+        {"key": "contracting", "title": "Contratação", "kind": "groups_table"},
+        {"key": "strategies", "title": "Estratégias de contemplação", "kind": "financial"},
+        {"key": "bid_history", "title": "Histórico de lances contemplados", "kind": "history_table"},
+        {"key": "projection", "title": "Projeção de contemplação", "kind": "scenarios"},
+        {"key": "deadlines", "title": "Datas limites para adesão", "kind": "operational"},
+        {"key": "legal", "title": "Considerações importantes", "kind": "legal"},
+    ],
     "atualizado_por": "Administrador",
     "validation_errors": ["Registro inicial de referência; confirme a linha na aba Templates para publicar."],
     "is_valid": False,
@@ -47,6 +58,7 @@ def normalize_template(row: dict[str, Any], row_number: int | None = None) -> di
     item["secoes_visiveis"] = _json_cell(row.get("secoes_visiveis_json"), [])
     item["ordem_secoes"] = _json_cell(row.get("ordem_secoes_json"), [])
     item["imagens"] = _json_cell(row.get("imagens_json"), {})
+    item["sections"] = _json_cell(row.get("secoes_json"), [])
     item["row_number"] = row_number
     errors = []
     if not item["administradora"]: errors.append("administradora obrigatória")
