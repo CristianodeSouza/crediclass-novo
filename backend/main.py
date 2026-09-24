@@ -236,6 +236,45 @@ async def prevent_stale_frontend_assets(request: Request, call_next):
     return response
 
 
+@app.middleware("http")
+async def public_study_mobile_layout(request: Request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/estudo/") and response.headers.get("content-type", "").startswith("text/html"):
+        body = b""
+        async for chunk in response.body_iterator:
+            body += chunk
+        mobile_css = b"""
+<style id="crediclass-public-mobile">
+@media (max-width:700px) {
+  html,body { overflow-x:hidden !important; }
+  main { width:100% !important; margin:0 !important; box-shadow:none !important; }
+  header { padding:18px 12px !important; }
+  header h1 { font-size:22px !important; }
+  .meta { grid-template-columns:repeat(2,minmax(0,1fr)) !important; gap:8px !important; font-size:11px !important; }
+  section { margin:10px 6px !important; }
+  section h2 { padding:8px 10px !important; font-size:13px !important; }
+  .content { padding:10px !important; }
+  .cards { grid-template-columns:1fr !important; gap:6px !important; }
+  .table-wrap { overflow:visible !important; }
+  table, thead, tbody, tbody tr, tbody td { display:block !important; width:100% !important; }
+  thead { display:none !important; }
+  tbody tr { display:grid !important; grid-template-columns:1fr 1fr !important; gap:0 8px !important; padding:6px 0 !important; }
+  tbody td { display:flex !important; justify-content:space-between !important; gap:6px !important; padding:6px 3px !important; white-space:normal !important; overflow-wrap:anywhere !important; text-align:right !important; font-size:11px !important; }
+  tbody td::before { content:attr(data-label); color:#68787b; font-weight:700; text-align:left; }
+  tbody td:first-child { grid-column:1 / -1; text-align:left !important; font-weight:700; }
+  tbody td:first-child::before { display:none; }
+  footer { padding:12px !important; font-size:10px !important; }
+}
+@media (max-width:380px) { .meta { grid-template-columns:1fr !important; } }
+</style>
+"""
+        body = body.replace(b"</head>", mobile_css + b"</head>", 1)
+        headers = dict(response.headers)
+        headers.pop("content-length", None)
+        return Response(content=body, status_code=response.status_code, headers=headers, media_type="text/html")
+    return response
+
+
 @app.get("/")
 def index():
     return FileResponse(
