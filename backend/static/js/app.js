@@ -4958,7 +4958,7 @@ async function shareCurrentStudy() {
 }
 
 function buildStudyShareUrl(studyId) {
-  return `${window.location.origin}${window.location.pathname}?estudo_id=${encodeURIComponent(studyId)}`;
+  return `${window.location.origin}/estudo/${encodeURIComponent(studyId)}`;
 }
 
 function buildStudyEmailSubject(study) {
@@ -6233,6 +6233,27 @@ document.getElementById("restartSyncBtn").addEventListener("click", () => {
 document.getElementById("loginForm").addEventListener("submit", submitLogin);
 document.getElementById("logoutBtn").addEventListener("click", logout);
 document.getElementById("reloadStudyTemplatesBtn")?.addEventListener("click", () => loadStudyTemplates(true));
+
+// The Itaú renderer is inserted dynamically. Keep publication controls outside
+// the template markup so the public-link action cannot be confused with the
+// legacy preview actions.
+const studyPublishObserver = new MutationObserver(() => {
+  const toolbar = document.querySelector(".itau-replica-page .financial-study-toolbar");
+  if (toolbar && !toolbar.querySelector("[data-study-publish]")) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-primary";
+    button.dataset.studyPublish = "true";
+    button.textContent = "Gerar link para o cliente";
+    toolbar.appendChild(button);
+  }
+});
+studyPublishObserver.observe(document.body, { childList: true, subtree: true });
+document.addEventListener("click", (event) => {
+  if (event.target.closest("[data-study-publish]")) {
+    shareCurrentStudy().catch((error) => showToast(error.message || "Não foi possível gerar o link.", "danger"));
+  }
+});
 
 bootApp().catch(() => showLogin("Nao foi possivel validar a sessao."));
 

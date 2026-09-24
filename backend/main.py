@@ -11,12 +11,13 @@ import math
 import os
 import time
 import copy
+from html import escape as html_escape
 from threading import Lock
 from typing import Annotated
 from uuid import uuid4
 
 from fastapi import FastAPI, Query, Request, Response
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 
 from .auditoria import list_auditoria, record_auditoria
@@ -207,7 +208,7 @@ def _verify_session(token: str | None) -> str | None:
 
 
 def _public_auth_path(path: str) -> bool:
-    return path in {"/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/health", "/api/health/pdf-engine"}
+    return path in {"/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/health", "/api/health/pdf-engine"} or path.startswith("/api/public-estudos/")
 
 
 @app.middleware("http")
@@ -729,6 +730,50 @@ def estudos_obter(estudo_id: str):
     if not item:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
     return item
+
+
+@app.get("/api/public-estudos/{estudo_id}")
+def estudo_publico_dados(estudo_id: str):
+    """Leitura pública do snapshot publicado, sem expor as APIs administrativas."""
+    item = get_estudo(estudo_id)
+    if not item:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado ou link expirado."})
+    return {"success": True, "estudo": _public_study_payload(item), "public_url": f"/estudo/{estudo_id}"}
+
+
+def _public_study_payload(item: dict) -> dict:
+    cliente = item.get("cliente") or {}
+    public_cliente = {key: cliente.get(key) for key in ("nome", "credito_desejado", "objetivo", "renda_total", "parcela_desejada")}
+    public_groups = []
+    for group in item.get("grupos_selecionados") or [item.get("grupo") or {}]:
+        public_group = {key: group.get(key) for key in ("grupo", "grupo_id", "administradora", "credito_maximo", "prazo_restante")}
+        public_group["cenarios"] = [
+            {key: scenario.get(key) for key in ("id", "credito_contratado", "parcela_inicial", "parcela_pos_contemplacao", "saldo_devedor")}
+            for scenario in (group.get("cenarios") or []) if isinstance(scenario, dict)
+        ]
+        public_groups.append(public_group)
+    return {
+        "estudo_id": item.get("estudo_id"),
+        "proposal_id": item.get("proposal_id"),
+        "criado_em": item.get("criado_em"),
+        "cliente": public_cliente,
+        "grupo": {key: (item.get("grupo") or {}).get(key) for key in ("administradora", "grupo", "grupo_id")},
+        "grupos_selecionados": public_groups,
+    }
+
+
+@app.get("/estudo/{estudo_id}", response_class=HTMLResponse)
+def estudo_publico_pagina(estudo_id: str):
+    item = get_estudo(estudo_id)
+    if not item:
+        return HTMLResponse("<h1>Estudo não encontrado</h1><p>Solicite um novo link à Crediclass.</p>", status_code=404)
+    cliente = html_escape(str((item.get("cliente") or {}).get("nome") or "Cliente"))
+    grupo = item.get("grupo") or {}
+    administradora = html_escape(str(grupo.get("administradora") or "Administradora"))
+    estudo_json = json.dumps(_public_study_payload(item), ensure_ascii=False).replace("</", "<\\/")
+    return HTMLResponse(f'''<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Estudo Financeiro · {cliente}</title><style>
+body{{margin:0;background:#f1f3f3;color:#26343a;font:15px Arial,sans-serif}}main{{max-width:1050px;margin:24px auto;background:#fff;box-shadow:0 8px 28px #1e2d3230}}header{{padding:28px 34px;background:#2d444c;color:#fff}}header h1{{margin:10px 0;font-size:28px}}header p{{margin:6px 0;color:#dce5e8}}.meta{{display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:1px solid #ffffff33}}.meta b{{display:block;margin-top:4px}}section{{margin:18px 28px;border:1px solid #cfd7d8}}section h2{{margin:0;padding:9px 14px;background:#2d444c;color:#fff;font-size:15px}}.content{{padding:16px}}.cards{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}}.card{{padding:12px;background:#f6f7f7;border:1px solid #e0e5e5}}.card small{{display:block;color:#68787b}}.card b{{display:block;margin-top:5px;font-size:17px}}table{{width:100%;border-collapse:collapse;font-size:13px}}th,td{{padding:9px 7px;border-bottom:1px solid #e0e5e5;text-align:right;white-space:nowrap}}th:first-child,td:first-child{{text-align:left}}th{{background:#ecefef}}footer{{padding:20px 34px;background:#2d444c;color:#fff;font-size:12px}}@media(max-width:700px){{main{{margin:0}}section{{margin:12px}}.cards{{grid-template-columns:1fr 1fr}}.table-wrap{{overflow:auto}}}}
+</style></head><body><main><header><div>CREDICLASS · {administradora}</div><h1>Estudo Financeiro</h1><p>Estudo personalizado para {cliente}</p><div class="meta"><span>Cliente<b>{cliente}</b></span><span>Administradora<b>{administradora}</b></span><span>Gerado em<b>{html_escape(str(item.get("criado_em") or "-"))}</b></span><span>Estudo<b>{html_escape(str(item.get("proposal_id") or item.get("estudo_id")))}</b></span></div></header><div id="app"></div><footer>Informações de caráter informativo e ilustrativo. A decisão pela contratação é de responsabilidade do cliente.</footer></main><script>const study={estudo_json};const money=v=>new Intl.NumberFormat('pt-BR',{{style:'currency',currency:'BRL'}}).format(Number(v||0));const groups=study.grupos_selecionados||[];const rows=groups.map(g=>{{const s=(g.cenarios||[]).find(x=>x.id==='without_embedded')||{{}};return `<tr><td>Grupo ${{g.grupo||g.grupo_id||'-'}}</td><td>${{money(g.credito_maximo)}}</td><td>${{money(s.credito_contratado)}}</td><td>${{money(s.parcela_inicial)}}</td><td>${{g.prazo_restante||'-'}} meses</td></tr>`}}).join('');const c=study.cliente||{{}};document.getElementById('app').innerHTML=`<section><h2>Simulação de investimento</h2><div class="content cards"><div class="card"><small>Crédito desejado</small><b>${{money(c.credito_desejado)}}</b></div><div class="card"><small>Parcela desejada</small><b>${{money(c.parcela_desejada)}}</b></div><div class="card"><small>Renda total</small><b>${{money(c.renda_total)}}</b></div></div></section><section><h2>Contratação</h2><div class="content table-wrap"><table><thead><tr><th>Grupo</th><th>Crédito máximo</th><th>Crédito contratado</th><th>Parcela inicial</th><th>Prazo</th></tr></thead><tbody>${{rows}}</tbody></table></div></section><section><h2>Considerações importantes</h2><div class="content">Os cenários apresentados dependem das regras da administradora e da disponibilidade do grupo na data da contratação.</div></section>`;</script></body></html>''')
 
 
 @app.delete("/api/estudos/{estudo_id}")
