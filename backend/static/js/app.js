@@ -5110,12 +5110,6 @@ function renderHistoryTable(items) {
         <td><span class="status-badge">${escapeHtml(item.status || "-")}</span></td>
         <td><small>${escapeHtml(item.template_version || "-")}</small><br>${escapeHtml(item.operador || "-")}</td>
         <td><button class="btn btn-sm btn-outline-primary" type="button" data-history-action="copiar-link" data-study-url="${escapeHtml(publicUrl)}">Copiar link</button><a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" href="${escapeHtml(publicUrl)}">Abrir</a></td>
-        <td>
-          <div class="row-actions">
-            <button class="btn btn-sm btn-outline-primary" type="button" data-history-action="copiar-link" data-study-url="${escapeHtml(publicUrl)}">Copiar link</button>
-            <a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" href="${escapeHtml(publicUrl)}">Abrir</a>
-          </div>
-        </td>
       </tr>
     `;
   }).join("");
@@ -6239,6 +6233,16 @@ document.getElementById("logoutBtn").addEventListener("click", logout);
 document.getElementById("reloadStudyTemplatesBtn")?.addEventListener("click", () => loadStudyTemplates(true));
 document.querySelector("[data-history-reload]")?.addEventListener("click", loadHistoryStudies);
 document.querySelector("[data-history-filter]")?.addEventListener("click", loadHistoryStudies);
+document.querySelector("[data-clear-history]")?.addEventListener("click", async () => {
+  if (!window.confirm("Excluir definitivamente todos os estudos antigos? Os grupos e templates serão preservados.")) return;
+  try {
+    const result = await apiPost("/estudos/limpar", {});
+    showToast(`${result.deleted || 0} estudo(s) excluído(s).`, "success");
+    await loadHistoryStudies();
+  } catch (error) {
+    showToast(error.message || "Não foi possível limpar os estudos.", "danger");
+  }
+});
 document.getElementById("historyTableBody")?.addEventListener("click", async (event) => {
   const button = event.target.closest('[data-history-action="copiar-link"]');
   if (!button) return;
