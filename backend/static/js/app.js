@@ -404,7 +404,8 @@ async function loadStudyTemplates(forceReload = false) {
     body.innerHTML = (payload.items || []).map((item) => {
       const errors = item.validation_errors || [];
       const badge = errors.length ? `<span class="badge text-bg-warning">${escapeHtml(errors.join("; "))}</span>` : `<span class="badge text-bg-success">Pronto</span>`;
-      return `<tr><td><strong>${escapeHtml(item.administradora || "-")}</strong></td><td><code>${escapeHtml(item.slug || "-")}</code></td><td>${escapeHtml(item.status || "-")}</td><td>${escapeHtml(item.versao || "-")}</td><td>${escapeHtml(item.atualizado_em || "-")}</td><td>${badge}</td></tr>`;
+      const source = item.drive_url ? `<a href="${escapeHtml(item.drive_url)}" target="_blank" rel="noopener">Abrir no Drive</a>` : escapeHtml(item.source_type || "Planilha");
+      return `<tr><td><strong>${escapeHtml(item.administradora || "-")}</strong></td><td><code>${escapeHtml(item.slug || "-")}</code></td><td>${escapeHtml(item.status || "-")}</td><td>${escapeHtml(item.versao || "-")}</td><td>${escapeHtml(item.atualizado_em || "-")}</td><td>${badge}</td><td>${source}</td></tr>`;
     }).join("");
     state.textContent = payload.total ? `${payload.total} template(s) carregado(s) da aba Templates.` : "Nenhum template cadastrado na aba Templates.";
     wrap.classList.remove("d-none");

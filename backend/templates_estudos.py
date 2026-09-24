@@ -11,6 +11,20 @@ from .sheets_client import get_service
 TEMPLATES_SHEET_NAME = "Templates"
 CACHE_TTL_SECONDS = 60
 TEMPLATE_HEADERS = ["template_id", "administradora", "slug", "status", "versao", "logo_url", "cor_primaria", "cor_secundaria", "titulo_estudo", "texto_introducao", "texto_criterios", "texto_como_funciona", "texto_contemplacao", "texto_uso_credito", "texto_observacoes", "secoes_visiveis_json", "ordem_secoes_json", "imagens_json", "atualizado_em", "atualizado_por"]
+INITIAL_DRIVE_TEMPLATE = {
+    "template_id": "itau-estudo-imovel-v1",
+    "administradora": "ITAU",
+    "slug": "itau",
+    "status": "Rascunho",
+    "versao": "1.0",
+    "nome_arquivo": "EF AQUISIÇÃO DE IMÓVEL - exemplo de estudo - Consorcio Itaú - 2M.pdf",
+    "drive_file_id": "14YhzgJodBgK6EQzx906TG8I20b7wNWhp",
+    "drive_url": "https://drive.google.com/file/d/14YhzgJodBgK6EQzx906TG8I20b7wNWhp/view?usp=drive_link",
+    "source_type": "google_drive",
+    "atualizado_por": "Administrador",
+    "validation_errors": ["Registro inicial de referência; confirme a linha na aba Templates para publicar."],
+    "is_valid": False,
+}
 _cache: dict[str, Any] = {"items": None, "expires_at": 0.0}
 _cache_lock = threading.Lock()
 
@@ -64,6 +78,8 @@ def list_templates(force_reload: bool = False) -> list[dict[str, Any]]:
         if not force_reload and _cache["items"] is not None and now < _cache["expires_at"]:
             return copy.deepcopy(_cache["items"])
     items = _read_rows()
+    if not any(item.get("is_valid") for item in items):
+        items.append(copy.deepcopy(INITIAL_DRIVE_TEMPLATE))
     with _cache_lock:
         _cache["items"] = items
         _cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
