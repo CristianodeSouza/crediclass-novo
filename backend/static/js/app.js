@@ -3427,7 +3427,10 @@ async function renderFinancialStudyScreen() {
   }
   if (renderToken !== financialStudyRenderToken) return;
   screen.removeAttribute("aria-busy");
-  if (administrators.length === 1 && financialStudyComparable(administrators[0]) === "itau") {
+  // financialStudyComparable normalizes names to uppercase without accents.
+  // Keep the Itaú flow exclusively on the replica renderer; the legacy generic
+  // study must never be selected for this administrator.
+  if (administrators.length === 1 && financialStudyComparable(administrators[0]) === "ITAU") {
     renderItauReplicaStudy({ screen, items, profile, clientName, issueDate, proposalId, systemVersion, assemblyData, assemblyError });
     return;
   }
