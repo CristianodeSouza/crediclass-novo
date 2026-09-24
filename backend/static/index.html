@@ -9,8 +9,8 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <meta name="crediclass-build" content="4.0.93">
-    <link href="/static/css/style.css?v=4.0.93" rel="stylesheet">
+    <meta name="crediclass-build" content="4.0.94">
+    <link href="/static/css/style.css?v=4.0.94" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -659,7 +659,7 @@
           <div class="content-card">
             <div class="table-toolbar"><div><h2>Histórico de Estudos</h2><p>Links compartilháveis e snapshots dos estudos gerados.</p></div><button class="btn btn-outline-primary" type="button" data-history-reload>Atualizar</button></div>
             <div class="history-filter-grid"><label>Cliente<input id="historyCliente" type="search" placeholder="Nome do cliente"></label><label>Administradora<input id="historyAdministradora" type="search" placeholder="Itaú"></label><label>Data inicial<input id="historyStartDate" type="date"></label><label>Data final<input id="historyEndDate" type="date"></label><button class="btn btn-outline-secondary" type="button" data-history-filter>Filtrar</button></div>
-            <div id="historyLoading" class="table-state d-none">Carregando histórico...</div><div id="historyError" class="table-state table-state-error d-none">Não foi possível carregar o histórico.</div><div id="historyEmpty" class="table-state d-none">Nenhum estudo encontrado.</div>
+            <p id="historySubtitle" class="text-muted mb-3">Links públicos gerados pela Crediclass</p><div id="historyLoading" class="table-state d-none">Carregando histórico...</div><div id="historyError" class="table-state table-state-error d-none">Não foi possível carregar o histórico.</div><div id="historyEmpty" class="table-state d-none">Nenhum estudo encontrado.</div>
             <div id="historyTableWrap" class="table-responsive"><table class="table table-hover align-middle viability-table"><thead><tr><th>Estudo</th><th>Data</th><th>Cliente</th><th>Administradora</th><th>Grupo</th><th>Crédito</th><th>Versão</th><th>Status</th><th>Link compartilhável</th><th>Ações</th></tr></thead><tbody id="historyTableBody"></tbody></table></div>
             <div class="d-none"><strong id="historyTotal">0</strong><strong id="historyDone">0</strong><strong id="historyOpen">0</strong><strong id="historyCanceled">0</strong><strong id="historyUpdated"></strong><canvas id="historyStrategyChart"></canvas><canvas id="historyEvolutionChart"></canvas></div>
           </div>
@@ -927,7 +927,7 @@
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
     <script src="/static/js/api.js?v=4.0.90"></script>
-    <script src="/static/js/app.js?v=4.0.93"></script>
+    <script src="/static/js/app.js?v=4.0.94"></script>
   </body>
 </html>
 

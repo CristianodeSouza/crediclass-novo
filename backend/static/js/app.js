@@ -4906,7 +4906,7 @@ async function saveCurrentStudy(options = {}) {
       // showToast(`Estudo salvo: ${result.estudo_id}`, "success");
       showToast(`Estudo salvo: ${result.proposal_id || result.estudo_id}`, "success");
     }
-  loadHistoryStudies();
+  loadHistoryStudies().catch(() => {});
   return result;
 }
 
@@ -5228,16 +5228,18 @@ async function loadHistoryStudies() {
     Object.entries(getHistoryFilters()).forEach(([key, value]) => {
       if (value) query.set(key, value);
     });
-    const data = await apiGet(`/estudos?${query.toString()}`);
+    const data = await apiGet(`/estudos?${query.toString()}`, { timeoutMs: 15000 });
     historyState.items = data.items || [];
     renderHistorySummary(historyState.items);
     renderHistoryTable(historyState.items);
-    document.getElementById("historySubtitle").textContent = `${data.total} estudo(s) encontrado(s)`;
+    const historySubtitle = document.getElementById("historySubtitle");
+    if (historySubtitle) historySubtitle.textContent = `${data.total} estudo(s) encontrado(s)`;
     setHistoryState(historyState.items.length ? "ready" : "empty");
     addOperationalLog(`Historico de Estudos carregado: ${data.total} estudo(s)`);
   } catch (error) {
     renderHistorySummary([]);
-    document.getElementById("historySubtitle").textContent = "Erro ao carregar estudos";
+    const historySubtitle = document.getElementById("historySubtitle");
+    if (historySubtitle) historySubtitle.textContent = "Erro ao carregar estudos";
     setHistoryState("error");
     addOperationalLog("Falha ao carregar Historico de Estudos");
   }
