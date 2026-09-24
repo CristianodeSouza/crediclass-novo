@@ -399,12 +399,11 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
     selected: list[tuple[str, str, int]] = []
     header_positions = headers_index(headers)
     for field in SUMMARY_FIELDS:
-        # Legacy exports expose the four profile columns through the old
-        # fixed map. Do not extend the read range to the newer 3/6/12/24
-        # month aliases when those headers are absent; history columns remain
-        # authoritative in that layout.
-        if field in {"lance_investidor", "lance_conservador_24m", "lance_moderado_12m", "lance_agressivo_6m", "lance_super_agressivo_3m"} and find_header(headers, field) is None and any(history_key_from_header(h) for h in headers):
-            continue
+        # BL:BP are the official profile thresholds in the group map. Some
+        # sheet versions also contain monthly history columns, but those
+        # columns must not suppress the fixed profile fields: Motor 360 needs
+        # the values from BM/BN/BO/BP even when their display labels include
+        # line breaks or the aliases "Rápido" and "Urgente".
         try:
             header, index = summary_field_index(headers, field, header_positions)
         except KeyError:
