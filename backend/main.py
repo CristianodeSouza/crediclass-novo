@@ -38,6 +38,7 @@ BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 FILES_DIR = BASE_DIR / "generated_files"
 DATA_DIR = BASE_DIR / "data"
+ITAU_TEMPLATE_PATH = BASE_DIR / "templates" / "itau-estudo-financeiro.html"
 FILES_DIR.mkdir(exist_ok=True)
 logger = logging.getLogger("crediclass.api")
 PDF_RENDER_LOCK = Lock()
@@ -812,6 +813,11 @@ def estudo_publico_pagina(estudo_id: str):
     cliente = html_escape(str((item.get("cliente") or {}).get("nome") or "Cliente"))
     grupo = item.get("grupo") or {}
     administradora = html_escape(str(grupo.get("administradora") or "Administradora"))
+    if administradora.upper().replace("Ú", "U") == "ITAU" and ITAU_TEMPLATE_PATH.exists():
+        template = ITAU_TEMPLATE_PATH.read_text(encoding="utf-8")
+        template = template.replace("<title>Estudo Financeiro | Aquisição de Imóvel</title>", f"<title>Estudo Financeiro | {cliente}</title>")
+        template = template.replace(">Prezado,</text>", f">Prezado, <tspan font-weight=\"700\">{cliente}</tspan></text>", 1)
+        return HTMLResponse(template)
     estudo_json = json.dumps(_public_study_payload(item), ensure_ascii=False).replace("</", "<\\/")
     return HTMLResponse(f'''<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#2d444c"><title>Estudo Financeiro · {cliente}</title><style>
 *{{box-sizing:border-box}}html,body{{width:100%;min-width:0;overflow-x:hidden}}body{{margin:0;background:#f1f3f3;color:#26343a;font:15px Arial,sans-serif}}main{{width:min(1050px,100%);margin:24px auto;background:#fff;box-shadow:0 8px 28px #1e2d3230}}header{{padding:28px 34px;background:#2d444c;color:#fff}}header h1{{margin:10px 0;font-size:28px;line-height:1.15}}header p{{margin:6px 0;color:#dce5e8;overflow-wrap:anywhere}}.meta{{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-top:18px;padding-top:14px;border-top:1px solid #ffffff33}}.meta span{{min-width:0;overflow-wrap:anywhere}}.meta b{{display:block;margin-top:4px;overflow-wrap:anywhere}}section{{margin:18px 28px;border:1px solid #cfd7d8;min-width:0}}section h2{{margin:0;padding:9px 14px;background:#2d444c;color:#fff;font-size:15px;line-height:1.25}}.content{{padding:16px;min-width:0}}.cards{{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}}.card{{min-width:0;padding:12px;background:#f6f7f7;border:1px solid #e0e5e5}}.card small{{display:block;color:#68787b}}.card b{{display:block;margin-top:5px;font-size:17px;overflow-wrap:anywhere}}.table-wrap{{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}}table{{width:100%;border-collapse:collapse;font-size:13px}}th,td{{padding:9px 7px;border-bottom:1px solid #e0e5e5;text-align:right;white-space:nowrap}}th:first-child,td:first-child{{text-align:left}}th{{background:#ecefef}}footer{{padding:20px 34px;background:#2d444c;color:#fff;font-size:12px;overflow-wrap:anywhere}}@media(max-width:700px){{main{{margin:0;box-shadow:none}}header{{padding:22px 16px}}header h1{{font-size:25px}}.meta{{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;font-size:13px}}section{{margin:12px 10px}}section h2{{font-size:14px}}.content{{padding:12px}}.cards{{grid-template-columns:1fr}}footer{{padding:16px}}}}@media(max-width:380px){{.meta{{grid-template-columns:1fr}}}}
