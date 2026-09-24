@@ -720,6 +720,9 @@ def estudos_listar(
             if float(item.get("cliente", {}).get("credito_desejado") or item.get("financeiro", {}).get("credito") or 0) <= credito_maximo
         ]
 
+    for item in items:
+        item.setdefault("public_url", f"/estudo/{item.get('estudo_id')}" if item.get("estudo_id") else None)
+        item.setdefault("template_version", get_settings().version)
     return {"total": len(items), "items": items}
 
 
