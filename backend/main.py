@@ -54,7 +54,7 @@ def _itau_template_fill(template: str, item: dict) -> str:
             return "-"
 
     def set_text(source, x, y, value):
-        pattern = rf'(<text\b(?=[^>]*\bx="{re.escape(str(x))}"\b)(?=[^>]*\by="{re.escape(str(y))}"\b)[^>]*>).*?(</text>)'
+        pattern = rf'(<text\b(?=[^>]*\bx="{re.escape(str(x))}")(?=[^>]*\by="{re.escape(str(y))}")[^>]*>).*?(</text>)'
         return re.sub(pattern, lambda match: f"{match.group(1)}{html_escape(str(value))}{match.group(2)}", source, count=1, flags=re.S)
 
     first = groups[0] if groups else {}
