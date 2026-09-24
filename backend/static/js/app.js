@@ -3341,6 +3341,27 @@ function financialStudyProfileMatrix(items) {
   }).join("")}</div>`;
 }
 
+function renderItauReplicaStudy({ screen, items, profile, clientName, issueDate, proposalId, systemVersion, assemblyData, assemblyError }) {
+  const moneyValue = (value) => formatMoney(Number(value || 0));
+  const qty = (item) => Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1)));
+  const scenario = (item, id) => (item.cenarios || []).find((entry) => entry.id === id) || {};
+  const rows = items.map((item) => {
+    const without = scenario(item, "without_embedded");
+    const withEmbedded = scenario(item, "with_embedded");
+    return `<tr><td>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</td><td>${moneyValue(item.credito_maximo)}</td><td>${moneyValue(withEmbedded.credito_contratado || without.credito_contratado)}</td><td>${moneyValue(withEmbedded.parcela_inicial || without.parcela_inicial)}</td><td>${escapeHtml(String(item.prazo_restante || "-"))}</td><td>${escapeHtml(String(item.taxa_adm || "-"))}</td><td>${escapeHtml(String(item.taxa_adm_ano || "-"))}</td></tr>`;
+  }).join("");
+  const totalCredit = items.reduce((sum, item) => sum + Number(item.credito_maximo || 0) * qty(item), 0);
+  const nextAssembly = items.map((item) => financialStudyGroupAssemblyCycles(item, assemblyData, new Date())[0]?.events?.find((event) => event.id === "assembleia")?.date).filter(Boolean).sort((a, b) => a - b)[0];
+  const nextAssemblyLabel = nextAssembly ? financialStudyFormatCalendarDate(nextAssembly) : "Não informado";
+  const section = (title, content, extra = "") => `<section class="itau-replica-section ${extra}"><div class="itau-replica-bar">${title}</div>${content}</section>`;
+  const groupBlocks = items.map((item) => {
+    const without = scenario(item, "without_embedded");
+    const withEmbedded = scenario(item, "with_embedded");
+    return `<article class="itau-replica-group"><header><strong>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</strong><span>${escapeHtml(item.administradora || "ITAÚ")} · ${qty(item)} cota(s)</span></header><div class="itau-replica-group-grid"><span><small>Crédito contratado</small><b>${moneyValue(withEmbedded.credito_contratado || without.credito_contratado)}</b></span><span><small>Parcela inicial</small><b>${moneyValue(withEmbedded.parcela_inicial || without.parcela_inicial)}</b></span><span><small>Prazo</small><b>${escapeHtml(String(item.prazo_restante || "-"))} meses</b></span><span><small>Próxima assembleia</small><b>${nextAssemblyLabel}</b></span></div></article>`;
+  }).join("");
+  screen.innerHTML = `<div class="financial-study-page itau-replica-page"><div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro · Itaú</h2><p>Réplica HTML do modelo Itaú preenchida com a composição atual.</p></div></div><article class="itau-replica-document"><header class="itau-replica-header"><img src="/static/images/crediclass-logo.png" alt="Crediclass"><span>Estudo Financeiro | Aquisição de Imóvel</span><h1>ESTUDO FINANCEIRO</h1><p>Prezado <strong>${escapeHtml(clientName)}</strong>,</p><p>O presente estudo foi elaborado com base nas informações fornecidas e nas condições disponíveis na data de emissão.</p><div class="itau-replica-meta"><span>Data de emissão <b>${escapeHtml(issueDate)}</b></span><span>Número do estudo <b>${escapeHtml(proposalId)}</b></span></div></header>${section("SIMULAÇÃO DE INVESTIMENTO", `<div class="itau-replica-highlight"><span>Crédito desejado</span><strong>${moneyValue(profile.credito_desejado)}</strong><span>Parcela desejada</span><strong>${moneyValue(profile.parcela_desejada ?? profile.parcela_ideal)}</strong><span>Renda total</span><strong>${moneyValue(profile.renda_total)}</strong></div>`)}${section("SIMULAÇÃO MELHORES CONSÓRCIOS", `<div class="itau-replica-two-col"><div><h3>Administradora selecionada</h3><strong>ITAÚ CONSÓRCIOS</strong><p>Os grupos apresentados foram selecionados considerando histórico de lances, estabilidade e saúde financeira.</p></div><div><h3>Critérios de seleção</h3><ul><li>Histórico de contemplações.</li><li>Estabilidade dos lances.</li><li>Compatibilidade com a renda e parcela.</li><li>Aplicabilidade de lance embutido.</li></ul></div></div>`)}${section("CONTRATAÇÃO", `<div class="itau-replica-table-wrap"><table class="itau-replica-table"><thead><tr><th>Grupo</th><th>Crédito máx.</th><th>Crédito contratado</th><th>Parcela</th><th>Prazo</th><th>Tx ADM total</th><th>Tx ADM ano</th></tr></thead><tbody>${rows}</tbody><tfoot><tr><th>Total</th><th>${moneyValue(totalCredit)}</th><th colspan="5">Composição atual selecionada</th></tr></tfoot></table></div>`)}${section("ESTRATÉGIAS DE CONTEMPLAÇÃO", `<div class="itau-replica-strategies"><div><strong>Estratégia 1) Investidor</strong><p>Sorteio e lance fixo, visando maior alavancagem.</p></div><div><strong>Estratégia 2) Conservadora</strong><p>Sorteio e lance livre conservador, conforme histórico.</p></div><div><strong>Estratégia 3) Moderada</strong><p>Sorteio e lance livre moderado, conforme histórico.</p></div></div>`)}${section("HISTÓRICO DE LANCES CONTEMPLADOS", `<div class="itau-replica-history"><p>Histórico mensal dos grupos selecionados, conforme dados carregados da base operacional.</p>${groupBlocks}</div>`)}${section("PROJEÇÃO DE CONTEMPLAÇÃO", `<div class="itau-replica-projection"><span>Crédito contratado <b>${moneyValue(totalCredit)}</b></span><span>Próxima assembleia <b>${nextAssemblyLabel}</b></span><span>Grupos selecionados <b>${items.length}</b></span></div>`)}${section("DATAS LIMITES PARA ADESÃO", `<div class="itau-replica-deadlines"><span>Emissão <b>${escapeHtml(issueDate.split(",")[0])}</b></span><span>Próxima assembleia <b>${nextAssemblyLabel}</b></span><span>Administradora <b>ITAÚ</b></span></div>`)}${section("CONSIDERAÇÕES IMPORTANTES", `<p>Os cenários, projeções e simulações possuem caráter informativo e ilustrativo. A Crediclass não garante rentabilidade, percentuais ou prazos de contemplação. A decisão pela contratação é de responsabilidade exclusiva do cliente.`, "is-legal")}<footer class="itau-replica-footer"><span>Crediclass · Estudo Financeiro</span><span>${escapeHtml(proposalId)} · versão ${escapeHtml(systemVersion)}</span></footer></article></div>`;
+}
+
 async function renderFinancialStudyScreen() {
   // Agenda de contratação e assembleias
   const renderToken = ++financialStudyRenderToken;
@@ -3400,6 +3421,10 @@ async function renderFinancialStudyScreen() {
   }
   if (renderToken !== financialStudyRenderToken) return;
   screen.removeAttribute("aria-busy");
+  if (administrators.length === 1 && financialStudyComparable(administrators[0]) === "itau") {
+    renderItauReplicaStudy({ screen, items, profile, clientName, issueDate, proposalId, systemVersion, assemblyData, assemblyError });
+    return;
+  }
   screen.innerHTML = `<div class="financial-study-page">
     <div class="financial-study-toolbar no-print"><div><h2>Estudo Financeiro</h2><p>Prévia somente leitura dos grupos e cenários selecionados para conferência antes do envio ao cliente.</p></div></div>
     <div class="financial-study-customizer no-print d-none" data-study-customizer-panel><strong>Seções visíveis</strong>${Object.entries({ cliente: "Cliente e objetivo", resumo: "Resumo financeiro", grupos: "Grupos selecionados" }).map(([id, label]) => `<label><input type="checkbox" data-study-section="${id}" ${preferences[id] ? "checked" : ""}> ${label}</label>`).join("")}</div>
