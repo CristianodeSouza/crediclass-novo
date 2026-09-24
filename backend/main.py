@@ -28,7 +28,7 @@ from .configuracoes import get_configuracoes, update_configuracoes
 from .templates_estudos import get_template, list_templates
 from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
-from .estudos import build_estudo_audit_payload, build_estudo_preview, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos, normalize_editor_content, restore_estudo_editor, update_estudo_editor
+from .estudos import build_estudo_audit_payload, build_estudo_preview, clear_all_estudos, create_estudo, delete_estudo, export_estudo_pdf, get_estudo, list_estudos, normalize_editor_content, restore_estudo_editor, update_estudo_editor
 from .pdf_bridge import build_react_pdf_payload, react_pdf_service_status, render_react_study_pdf
 from .piperun import fetch_opportunities_preview, fetch_opportunity_notes
 from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
@@ -785,6 +785,13 @@ def estudos_excluir(estudo_id: str):
     if not delete_estudo(estudo_id):
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo nao encontrado"})
     return {"success": True}
+
+
+@app.post("/api/estudos/limpar")
+def estudos_limpar():
+    total = clear_all_estudos()
+    logger.warning("Todos os estudos foram removidos: total=%s", total)
+    return {"success": True, "deleted": total}
 
 
 @app.get("/api/estudos/{estudo_id}/editor")

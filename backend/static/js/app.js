@@ -5112,11 +5112,8 @@ function renderHistoryTable(items) {
         <td><button class="btn btn-sm btn-outline-primary" type="button" data-history-action="copiar-link" data-study-url="${escapeHtml(publicUrl)}">Copiar link</button><a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" href="${escapeHtml(publicUrl)}">Abrir</a></td>
         <td>
           <div class="row-actions">
-            <button class="btn btn-sm btn-outline-primary" type="button" data-history-action="visualizar" data-study-id="${escapeHtml(item.estudo_id)}">Ver</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="pdf" data-study-id="${escapeHtml(item.estudo_id)}">PDF</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="email" data-study-id="${escapeHtml(item.estudo_id)}">E-mail</button>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-history-action="duplicar" data-study-id="${escapeHtml(item.estudo_id)}">Duplicar</button>
-            <button class="btn btn-sm btn-outline-danger" type="button" data-history-action="excluir" data-study-id="${escapeHtml(item.estudo_id)}">Excluir</button>
+            <button class="btn btn-sm btn-outline-primary" type="button" data-history-action="copiar-link" data-study-url="${escapeHtml(publicUrl)}">Copiar link</button>
+            <a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" href="${escapeHtml(publicUrl)}">Abrir</a>
           </div>
         </td>
       </tr>

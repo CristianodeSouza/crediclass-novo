@@ -568,6 +568,25 @@ def delete_estudo(estudo_id: str) -> bool:
     return True
 
 
+def clear_all_estudos() -> int:
+    """Remove todos os registros da base de estudos, preservando o cabeçalho."""
+    if sheets_enabled():
+        ensure_studies_sheet()
+        settings = get_settings()
+        service = get_service()
+        rows = read_studies_from_sheet()
+        service.spreadsheets().values().clear(
+            spreadsheetId=settings.google_sheets_id,
+            range=f"'{STUDIES_SHEET_NAME}'!A2:X",
+            body={},
+        ).execute()
+        return len(rows)
+    total = len(_studies)
+    _studies.clear()
+    save_studies_to_disk()
+    return total
+
+
 def ascii_text(value) -> str:
     text = str(value or "")
     normalized = unicodedata.normalize("NFKD", text)
