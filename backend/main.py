@@ -756,7 +756,14 @@ def estudos_listar(
     credito_maximo: float | None = None,
 ):
     logger.info("GET /api/estudos cliente=%s grupo=%s status=%s", cliente, grupo, status)
-    items = list_estudos()
+    try:
+        items = list_estudos()
+    except Exception:
+        logger.exception("Falha ao carregar o histórico de estudos")
+        return JSONResponse(
+            status_code=503,
+            content={"success": False, "retryable": True, "items": [], "total": 0, "error": "Histórico temporariamente indisponível"},
+        )
 
     if cliente:
         needle = cliente.lower()

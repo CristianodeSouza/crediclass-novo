@@ -5219,7 +5219,18 @@ async function loadHistoryStudies() {
     Object.entries(getHistoryFilters()).forEach(([key, value]) => {
       if (value) query.set(key, value);
     });
-    const data = await apiGet(`/estudos?${query.toString()}`, { timeoutMs: 15000 });
+    let data;
+    let lastError;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        data = await apiGet(`/estudos?${query.toString()}`, { timeoutMs: 15000 });
+        break;
+      } catch (error) {
+        lastError = error;
+        if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 700 * (attempt + 1)));
+      }
+    }
+    if (!data) throw lastError || new Error("Não foi possível carregar o histórico.");
     historyState.items = data.items || [];
     renderHistorySummary(historyState.items);
     renderHistoryTable(historyState.items);
