@@ -53,6 +53,12 @@ const screens = {
     subtitle: "Template da administradora preenchido com os dados reais da seleção",
     action: "",
   },
+  historico: {
+    letter: "F) HISTÓRICO DE ESTUDOS",
+    title: "Histórico de Estudos",
+    subtitle: "Links compartilháveis e registros dos estudos gerados",
+    action: "",
+  },
   "templates-estudos": {
     letter: "H) TEMPLATES DE ESTUDOS",
     title: "Templates de Estudos",
@@ -389,6 +395,7 @@ function activateScreen(screenName) {
   if (screenName === "mapa-assembleia") loadAssemblyMap();
   if (screenName === "grupos-selecionados") renderSelectedGroupsScreen();
   if (screenName === "estudo") renderFinancialStudyScreen();
+  if (screenName === "historico") loadHistoryStudies();
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
@@ -5020,18 +5027,14 @@ function setHistoryState(state) {
 }
 
 function getHistoryFilters() {
+  const value = (id) => document.getElementById(id)?.value || "";
   return {
-    data_inicio: document.getElementById("historyStartDate").value,
-    data_fim: document.getElementById("historyEndDate").value,
-    cliente: document.getElementById("historyCliente").value.trim(),
-    grupo: document.getElementById("historyGrupo").value.trim(),
-    administradora: document.getElementById("historyAdministradora").value.trim(),
-    tipo_bem: document.getElementById("historyTipoBem").value.trim(),
-    status: document.getElementById("historyStatus").value,
-    operador: document.getElementById("historyOperador").value,
-    estrategia: document.getElementById("historyEstrategia").value,
-    credito_minimo: document.getElementById("historyCreditoMinimo").value ? toNumber(document.getElementById("historyCreditoMinimo").value) : "",
-    credito_maximo: document.getElementById("historyCreditoMaximo").value ? toNumber(document.getElementById("historyCreditoMaximo").value) : "",
+    data_inicio: value("historyStartDate"), data_fim: value("historyEndDate"),
+    cliente: value("historyCliente").trim(), grupo: value("historyGrupo").trim(),
+    administradora: value("historyAdministradora").trim(), tipo_bem: value("historyTipoBem").trim(),
+    status: value("historyStatus"), operador: value("historyOperador"), estrategia: value("historyEstrategia"),
+    credito_minimo: value("historyCreditoMinimo") ? toNumber(value("historyCreditoMinimo")) : "",
+    credito_maximo: value("historyCreditoMaximo") ? toNumber(value("historyCreditoMaximo")) : "",
   };
 }
 
@@ -5094,6 +5097,7 @@ function renderHistoryTable(items) {
     const cliente = item.cliente || {};
     const grupo = item.grupo || {};
     const financeiro = item.financeiro || {};
+    const publicUrl = item.public_url ? `${window.location.origin}${item.public_url}` : buildStudyShareUrl(item.estudo_id);
     return `
       <tr>
         <td><strong>${escapeHtml(item.proposal_id || "—")}</strong><small class="d-block text-muted">${escapeHtml(item.estudo_id || "")}</small></td>
@@ -5104,7 +5108,8 @@ function renderHistoryTable(items) {
         <td>${formatMoney(cliente.credito_desejado || financeiro.credito || null)}</td>
         <td>${escapeHtml(item.estrategia || "-")}</td>
         <td><span class="status-badge">${escapeHtml(item.status || "-")}</span></td>
-        <td>${escapeHtml(item.operador || "-")}</td>
+        <td><small>${escapeHtml(item.template_version || "-")}</small><br>${escapeHtml(item.operador || "-")}</td>
+        <td><button class="btn btn-sm btn-outline-primary" type="button" data-history-action="copiar-link" data-study-url="${escapeHtml(publicUrl)}">Copiar link</button><a class="btn btn-sm btn-outline-secondary" target="_blank" rel="noopener" href="${escapeHtml(publicUrl)}">Abrir</a></td>
         <td>
           <div class="row-actions">
             <button class="btn btn-sm btn-outline-primary" type="button" data-history-action="visualizar" data-study-id="${escapeHtml(item.estudo_id)}">Ver</button>
@@ -6233,6 +6238,19 @@ document.getElementById("restartSyncBtn").addEventListener("click", () => {
 document.getElementById("loginForm").addEventListener("submit", submitLogin);
 document.getElementById("logoutBtn").addEventListener("click", logout);
 document.getElementById("reloadStudyTemplatesBtn")?.addEventListener("click", () => loadStudyTemplates(true));
+document.querySelector("[data-history-reload]")?.addEventListener("click", loadHistoryStudies);
+document.querySelector("[data-history-filter]")?.addEventListener("click", loadHistoryStudies);
+document.getElementById("historyTableBody")?.addEventListener("click", async (event) => {
+  const button = event.target.closest('[data-history-action="copiar-link"]');
+  if (!button) return;
+  const url = button.dataset.studyUrl;
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast("Link copiado.", "success");
+  } catch {
+    window.prompt("Link do estudo", url);
+  }
+});
 
 // The Itaú renderer is inserted dynamically. Keep publication controls outside
 // the template markup so the public-link action cannot be confused with the

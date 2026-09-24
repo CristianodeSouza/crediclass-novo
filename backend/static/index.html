@@ -66,6 +66,10 @@
               <span class="nav-icon">EF</span>
               <span>Estudo Financeiro</span>
             </button>
+            <button class="nav-item" type="button" data-screen="historico">
+              <span class="nav-icon">HE</span>
+              <span>Histórico de Estudos</span>
+            </button>
           </div>
 
           <div class="nav-section nav-section-admin">
@@ -649,6 +653,16 @@
 
         <section id="screen-estudo" class="screen-panel">
           <div class="content-card"><div class="placeholder-card compact-placeholder"><span class="state-badge">Estudo Financeiro</span><h2>Carregando estudo...</h2><p>O template será preenchido com os grupos selecionados e os dados do cliente.</p></div></div>
+        </section>
+
+        <section id="screen-historico" class="screen-panel">
+          <div class="content-card">
+            <div class="table-toolbar"><div><h2>Histórico de Estudos</h2><p>Links compartilháveis e snapshots dos estudos gerados.</p></div><button class="btn btn-outline-primary" type="button" data-history-reload>Atualizar</button></div>
+            <div class="history-filter-grid"><label>Cliente<input id="historyCliente" type="search" placeholder="Nome do cliente"></label><label>Administradora<input id="historyAdministradora" type="search" placeholder="Itaú"></label><label>Data inicial<input id="historyStartDate" type="date"></label><label>Data final<input id="historyEndDate" type="date"></label><button class="btn btn-outline-secondary" type="button" data-history-filter>Filtrar</button></div>
+            <div id="historyLoading" class="table-state d-none">Carregando histórico...</div><div id="historyError" class="table-state table-state-error d-none">Não foi possível carregar o histórico.</div><div id="historyEmpty" class="table-state d-none">Nenhum estudo encontrado.</div>
+            <div id="historyTableWrap" class="table-responsive"><table class="table table-hover align-middle viability-table"><thead><tr><th>Estudo</th><th>Data</th><th>Cliente</th><th>Administradora</th><th>Grupo</th><th>Crédito</th><th>Versão</th><th>Status</th><th>Link compartilhável</th><th>Ações</th></tr></thead><tbody id="historyTableBody"></tbody></table></div>
+            <div class="d-none"><strong id="historyTotal">0</strong><strong id="historyDone">0</strong><strong id="historyOpen">0</strong><strong id="historyCanceled">0</strong><strong id="historyUpdated"></strong><canvas id="historyStrategyChart"></canvas><canvas id="historyEvolutionChart"></canvas></div>
+          </div>
         </section>
 
         <section id="screen-templates-estudos" class="screen-panel">
