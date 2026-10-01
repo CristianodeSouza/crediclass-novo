@@ -33,6 +33,29 @@ def normalize_editor_content(content: dict[str, Any] | None, fallback_defaults: 
     result["custom_sections"] = result["custom_sections"] if isinstance(result["custom_sections"], list) else []
     return result
 
+
+SHEETS_CELL_LIMIT = 49000
+
+
+def dumps_cell_bounded(value: Any) -> str:
+    """Serialize a JSON cell without exceeding Google Sheets' 50k limit."""
+    serialized = dumps_cell(value)
+    if len(serialized) <= SHEETS_CELL_LIMIT:
+        return serialized
+    if isinstance(value, list):
+        reduced = list(value)
+        while reduced and len(dumps_cell(reduced)) > SHEETS_CELL_LIMIT:
+            reduced = reduced[len(reduced) // 2:]
+        return dumps_cell(reduced)
+    if isinstance(value, dict):
+        reduced = dict(value)
+        for key in sorted(reduced, key=lambda item: len(dumps_cell(reduced[item])), reverse=True):
+            reduced.pop(key, None)
+            if len(dumps_cell(reduced)) <= SHEETS_CELL_LIMIT:
+                reduced["_truncated"] = True
+                return dumps_cell(reduced)
+    return dumps_cell({"_truncated": True, "original_length": len(serialized)})
+
 RUNTIME_DIR = Path(__file__).resolve().parent / "runtime_data"
 STUDIES_FILE = RUNTIME_DIR / "studies.json"
 STUDIES_SHEET_NAME = "Historico de Estudos"
@@ -203,21 +226,21 @@ def study_item_to_row(item: dict[str, Any]) -> list[str]:
         str(grupo.get("administradora") or ""),
         str(grupo.get("tipo_bem") or ""),
         normalized["estrategia"],
-        dumps_cell(cliente),
-        dumps_cell(grupo),
-        dumps_cell(normalized["cenario"]),
-        dumps_cell(normalized["financeiro"]),
-        dumps_cell(normalized["template_campos"]),
+        dumps_cell_bounded(cliente),
+        dumps_cell_bounded(grupo),
+        dumps_cell_bounded(normalized["cenario"]),
+        dumps_cell_bounded(normalized["financeiro"]),
+        dumps_cell_bounded(normalized["template_campos"]),
         str(normalized.get("cancelado_em") or ""),
-        dumps_cell(normalized["editor_content"]),
-        dumps_cell(normalized["editor_original"]),
-        dumps_cell(normalized["editor_history"]),
+        dumps_cell_bounded(normalized["editor_content"]),
+        dumps_cell_bounded(normalized["editor_original"]),
+        dumps_cell_bounded(normalized["editor_history"]),
         str(normalized["editor_version"]),
         normalized["editor_updated_by"],
         normalized["editor_updated_at"],
         normalized["final_pdf_url"],
         str(normalized["final_pdf_version"]),
-        dumps_cell(normalized["grupos_selecionados"]),
+        dumps_cell_bounded(normalized["grupos_selecionados"]),
     ]
 
 
