@@ -7078,4 +7078,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .itau-replica-table tfoot{display:none}
   .itau-replica-group-grid{grid-template-columns:1fr 1fr}
   .itau-replica-footer{padding:14px 12px}
+  .itau-replica-table td::before{content:none}
+  .itau-replica-scenario-table td:nth-child(1)::before{content:"Cenário"}.itau-replica-scenario-table td:nth-child(2)::before{content:"Crédito"}.itau-replica-scenario-table td:nth-child(3)::before{content:"Líquido"}.itau-replica-scenario-table td:nth-child(4)::before{content:"Lance próprio"}.itau-replica-scenario-table td:nth-child(5)::before{content:"Embutido"}.itau-replica-scenario-table td:nth-child(6)::before{content:"Lance total"}.itau-replica-scenario-table td:nth-child(7)::before{content:"Saldo devedor"}.itau-replica-scenario-table td:nth-child(8)::before{content:"Parcela inicial"}.itau-replica-scenario-table td:nth-child(9)::before{content:"Pós-contemplação"}.itau-replica-scenario-table td:nth-child(10)::before{content:"% lance"}
+  .itau-replica-history-table td:nth-child(1)::before{content:"Mês"}.itau-replica-history-table td:nth-child(2)::before{content:"Menor lance"}.itau-replica-history-table td:nth-child(3)::before{content:"Maior lance"}.itau-replica-history-table td:nth-child(4)::before{content:"Contemplações"}.itau-replica-history-table td:nth-child(5)::before{content:"Média"}
+  .itau-replica-table td::before{flex:0 0 46%;font-weight:600}
+  .itau-replica-table td:first-child::before{content:none}
 }

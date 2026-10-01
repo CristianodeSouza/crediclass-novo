@@ -12,6 +12,8 @@ import os
 import time
 import copy
 import re
+import unicodedata
+from datetime import date
 from html import escape as html_escape
 from threading import Lock
 from typing import Annotated
@@ -155,6 +157,40 @@ def _public_scenario_values(scenario: dict) -> dict:
     return {**scenario, "lance_proprio": own, "lance_embutido": embedded, "lance_total": total, "credito_liquido": liquid}
 
 
+def _public_next_assembly(group: dict) -> str:
+    """Resolve the next assembly from the same calendar used by Mapa Assembleia."""
+    try:
+        def comparable(value):
+            return "".join(ch for ch in unicodedata.normalize("NFKD", str(value or "")).upper() if not unicodedata.combining(ch))
+        administrator = comparable(group.get("administradora"))
+        # The customer-facing Itaú calendar is the 5th-day faixa, whose
+        # October 2026 assembly is 16/10/2026.
+        wanted_due_day = 5 if administrator == "ITAU" else int(str(group.get("vencimento_parcela") or "0").strip())
+        calendar = _assembly_calendar_payload()
+        today = date.today()
+        candidates = []
+        for schedule in calendar.get("schedules", []):
+            if comparable(schedule.get("administrator")) != administrator:
+                continue
+            for month in schedule.get("months", []):
+                due = next((event for event in month.get("events", []) if event.get("id") == "vencimento_parcela"), None)
+                assembly = next((event for event in month.get("events", []) if event.get("id") == "assembleia"), None)
+                if not due or not assembly or int(due.get("value") or 0) != wanted_due_day:
+                    continue
+                year = int(calendar.get("metadata", {}).get("reference_year") or today.year)
+                month_number = int(month.get("number") or 0)
+                if month_number < 1 or month_number > 12:
+                    continue
+                candidate = date(year, month_number, int(assembly.get("value") or 0))
+                if candidate >= today:
+                    candidates.append(candidate)
+        if candidates:
+            return min(candidates).strftime("%d/%m/%Y")
+    except Exception:
+        logger.exception("Falha ao resolver próxima assembleia pública")
+    return "Não informado"
+
+
 def _public_itau_html(payload: dict, client_name: str) -> str:
     groups = payload.get("grupos_selecionados") or []
     cliente = payload.get("cliente") or {}
@@ -171,8 +207,9 @@ def _public_itau_html(payload: dict, client_name: str) -> str:
         first_scenario = next((item for item in scenarios if item.get("id") == "without_embedded"), scenarios[0] if scenarios else {})
         maximum = group.get("credito_maximo")
         contracted = first_scenario.get("credito_contratado")
+        next_assembly = _public_next_assembly(group)
         rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{_public_money(maximum)}</td><td>{_public_money(contracted)}</td><td>{html_escape(str(group.get('prazo_total') or 'Não informado'))}</td><td>{html_escape(str(group.get('prazo_restante') or 'Não informado'))}</td><td>{_public_percent(group.get('taxa_adm'))}</td><td>{_public_percent(group.get('taxa_adm_ano'))}</td><td>{_public_percent(group.get('percentual_comprometimento') or group.get('comprometimento_renda'))}</td><td>{html_escape(str(group.get('chance_relativa') or group.get('chance_contemplacao') or 'Não informado'))}</td></tr>")
-        date_rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{html_escape(str(group.get('limite_adesao_reserva') or group.get('limite_adesao') or 'Não informado'))}</td><td>{html_escape(str(group.get('limite_adesao_assembleia') or group.get('proxima_assembleia') or 'Não informado'))}</td><td>{html_escape(str(group.get('vencimento_primeira_parcela') or group.get('vencimento_parcela') or 'Não informado'))}</td><td>{html_escape(str(group.get('proxima_assembleia') or 'Não informado'))}</td><td>{html_escape(str(group.get('vencimento_lance') or 'Não informado'))}</td></tr>")
+        date_rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{html_escape(str(group.get('limite_adesao_reserva') or group.get('limite_adesao') or 'Não informado'))}</td><td>{html_escape(str(group.get('limite_adesao_assembleia') or next_assembly))}</td><td>{html_escape(str(group.get('vencimento_primeira_parcela') or group.get('vencimento_parcela') or 'Não informado'))}</td><td>{html_escape(next_assembly)}</td><td>{html_escape(str(group.get('vencimento_lance') or 'Não informado'))}</td></tr>")
         scenario_rows = []
         for raw_scenario in scenarios:
             scenario = _public_scenario_values(raw_scenario)
