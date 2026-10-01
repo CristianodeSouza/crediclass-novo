@@ -58,6 +58,32 @@
   }
 }
 
+/* Composição consolidada do operador: contraste e leitura prioritários. */
+.motor360-cart-summary {
+  color: #111;
+  font-size: .88rem;
+}
+.motor360-cart-summary .motor360-cart-heading span,
+.motor360-cart-summary .motor360-cart-heading p,
+.motor360-cart-summary .motor360-cart-metrics small,
+.motor360-cart-summary .motor360-cart-metrics em,
+.motor360-cart-summary .motor360-cart-profiles span,
+.motor360-cart-summary .motor360-cart-profiles small {
+  color: #111;
+  font-size: .82rem;
+}
+.motor360-cart-summary .motor360-cart-heading h3,
+.motor360-cart-summary .motor360-cart-metrics b,
+.motor360-cart-summary .motor360-cart-profiles strong,
+.motor360-cart-summary .motor360-cart-profiles b {
+  color: #000;
+  font-size: .95rem;
+}
+.motor360-cart-summary .motor360-cart-profiles b.is-gap,
+.motor360-cart-summary .motor360-cart-scenario > header > span.is-warning {
+  color: #c44d00;
+}
+
 .d-none {
   display: none !important;
 }
