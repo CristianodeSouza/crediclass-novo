@@ -19,6 +19,14 @@ class FinancialStudyEngineTest(unittest.TestCase):
         self.assertEqual(restored["grupos_selecionados"][1]["taxa_adm"], 0.17)
         self.assertEqual(restored["grupos_selecionados"][11]["historico"]["2026-12"]["menor_lance"], 0.11)
 
+    def test_snapshot_preserva_casos_de_quantidade_dinamica(self):
+        for count in (1, 2, 4, 5, 8, 10, 12):
+            groups = [{"grupo": f"G-{index}", "taxa_adm": 0.10 + index / 100} for index in range(count)]
+            item = normalize_study_item({"grupo": groups[0], "grupos_selecionados": groups})
+            restored = study_item_from_row(study_item_to_row(item))
+            self.assertEqual(len(restored["grupos_selecionados"]), count)
+            self.assertEqual(restored["grupos_selecionados"][-1]["grupo"], f"G-{count - 1}")
+
     def test_build_financeiro_calcula_credito_e_lance_embutido(self):
         payload = EstudoRequest(
             cliente=EstudoCliente(
