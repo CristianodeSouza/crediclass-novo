@@ -103,6 +103,55 @@ def _itau_template_fill(template: str, item: dict) -> str:
     template = set_text(template, "2366.76", "1568.22", percent(first.get("taxa_adm") or first.get("taxa_administracao")))
     template = set_text(template, "2577.66", "1568.22", percent(first.get("fundo_reserva")))
     return template
+
+
+def _public_percent(value) -> str:
+    try:
+        raw = str(value).replace("%", "").replace(",", ".").strip()
+        number = float(raw)
+        if number > 1:
+            number /= 100
+        return f"{number * 100:.2f}%".replace(".", ",")
+    except (TypeError, ValueError):
+        return "Não informado"
+
+
+def _public_money(value) -> str:
+    try:
+        return f"R$ {float(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    except (TypeError, ValueError):
+        return "Não informado"
+
+
+def _public_itau_html(payload: dict, client_name: str) -> str:
+    groups = payload.get("grupos_selecionados") or []
+    cliente = payload.get("cliente") or {}
+    rows = []
+    scenario_blocks = []
+    history_blocks = []
+    projection_rows = []
+    for group in groups:
+        group_id = group.get("grupo") or group.get("grupo_id") or "-"
+        scenarios = group.get("cenarios") or []
+        first_scenario = next((item for item in scenarios if item.get("id") == "without_embedded"), scenarios[0] if scenarios else {})
+        maximum = group.get("credito_maximo")
+        contracted = first_scenario.get("credito_contratado")
+        try:
+            if maximum is not None and contracted is not None and float(contracted) > float(maximum):
+                contracted = maximum
+        except (TypeError, ValueError):
+            pass
+        rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{_public_money(maximum)}</td><td>{_public_money(contracted)}</td><td>{html_escape(str(group.get('prazo_total') or 'Não informado'))}</td><td>{html_escape(str(group.get('prazo_restante') or 'Não informado'))}</td><td>{_public_percent(group.get('taxa_adm'))}</td><td>{_public_percent(group.get('taxa_adm_ano'))}</td></tr>")
+        scenario_rows = []
+        for scenario in scenarios:
+            scenario_rows.append(f"<tr><td>{html_escape(str(scenario.get('nome') or scenario.get('id') or '-'))}</td><td>{_public_percent(scenario.get('percentual_lance_total') or scenario.get('percentual_lance_efetivo'))}</td><td>{_public_money(scenario.get('lance_total') or scenario.get('lance_total_cenario'))}</td><td>{_public_money(scenario.get('lance_embutido'))}</td><td>{_public_money(scenario.get('lance_proprio') or scenario.get('lance_cliente_total'))}</td><td>{_public_money(scenario.get('credito_liquido') or scenario.get('credito_liquido_projetado'))}</td><td>{_public_money(scenario.get('parcela_inicial'))}</td><td>{_public_money(scenario.get('parcela_pos_contemplacao'))}</td><td>{html_escape(str(scenario.get('prazo') or scenario.get('prazo_restante') or 'Não informado'))}</td></tr>")
+            projection_rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{html_escape(str(scenario.get('nome') or scenario.get('id') or '-'))}</td><td>{_public_percent(scenario.get('percentual_lance_total') or scenario.get('percentual_lance_efetivo'))}</td><td>{_public_money(scenario.get('lance_total') or scenario.get('lance_total_cenario'))}</td><td>{_public_money(scenario.get('lance_embutido'))}</td><td>{_public_money(scenario.get('lance_proprio') or scenario.get('lance_cliente_total'))}</td><td>{_public_money(scenario.get('credito_contratado'))}</td><td>{_public_money(scenario.get('parcela_inicial'))}</td><td>{html_escape(str(scenario.get('prazo') or scenario.get('prazo_restante') or 'Não informado'))}</td></tr>")
+        scenario_blocks.append(f"<article><h3>Grupo {html_escape(str(group_id))}</h3><table><thead><tr><th>Cenário</th><th>% lance</th><th>Lance total</th><th>Embutido</th><th>Recurso próprio</th><th>Crédito líquido</th><th>Parcela inicial</th><th>Pós-contemplação</th><th>Prazo</th></tr></thead><tbody>{''.join(scenario_rows) or '<tr><td colspan="9">Nenhum cenário informado</td></tr>'}</tbody></table></article>")
+        history = group.get("historico_12_meses") or group.get("historico") or []
+        history_rows = ''.join(f"<tr><td>{html_escape(str(entry.get('mes') or entry.get('month') or entry.get('label') or '-'))}</td><td>{_public_percent(entry.get('menor_lance'))}</td><td>{_public_percent(entry.get('maior_lance'))}</td><td>{html_escape(str(entry.get('qtd_contemplacoes') if entry.get('qtd_contemplacoes') is not None else 'Não informado'))}</td><td>{_public_percent(entry.get('media'))}</td></tr>" for entry in history)
+        history_blocks.append(f"<article><h3>Grupo {html_escape(str(group_id))}</h3><table><thead><tr><th>Mês</th><th>Menor lance</th><th>Maior lance</th><th>Contemplações</th><th>Média</th></tr></thead><tbody>{history_rows or '<tr><td colspan="5">Histórico não informado</td></tr>'}</tbody></table></article>")
+    table_style = "body{margin:0;background:#f1f3f3;color:#26343a;font:14px Arial,sans-serif}main{max-width:1180px;margin:24px auto;background:#fff;padding:24px}h1{background:#2d444c;color:#fff;padding:14px;text-align:center}h2{background:#2d444c;color:#fff;padding:10px;font-size:16px}h3{color:#2d444c;margin:18px 0 8px}.cards{display:flex;gap:12px;flex-wrap:wrap}.card{background:#f4f6f6;padding:14px;min-width:180px}table{width:100%;border-collapse:collapse;margin:8px 0 18px;font-size:12px;display:block;overflow-x:auto}th,td{padding:8px;border:1px solid #d7dddd;white-space:nowrap;text-align:left}th{background:#e8eeee}.note{padding:12px;background:#fff8e7;border:1px solid #ead8a0}footer{margin-top:22px;padding:16px;background:#2d444c;color:#fff}@media(max-width:700px){main{margin:0;padding:12px}.cards{display:block}.card{margin:6px 0}}"
+    return f"<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>Estudo Financeiro · {html_escape(client_name)}</title><style>{table_style}</style></head><body><main><h1>ESTUDO FINANCEIRO</h1><p>Prezado <strong>{html_escape(client_name)}</strong>,</p><section><h2>Simulação de investimento</h2><div class='cards'><div class='card'>Crédito desejado<br><strong>{_public_money(cliente.get('credito_desejado'))}</strong></div><div class='card'>Parcela desejada<br><strong>{_public_money(cliente.get('parcela_desejada'))}</strong></div><div class='card'>Renda total<br><strong>{_public_money(cliente.get('renda_total'))}</strong></div></div></section><section><h2>Contratação por grupo</h2><table><thead><tr><th>Grupo</th><th>Crédito máximo</th><th>Crédito contratado</th><th>Prazo total</th><th>Prazo restante</th><th>Tx ADM total</th><th>Tx ADM ano</th></tr></thead><tbody>{''.join(rows)}</tbody></table></section><section><h2>Cenários por grupo</h2>{''.join(scenario_blocks)}</section><section><h2>Histórico de lances contemplados</h2><p>Histórico individual por grupo e mês. Quando a origem não possui o dado, é informado explicitamente.</p>{''.join(history_blocks)}</section><section><h2>Projeção de contemplação por grupo e cenário</h2><table><thead><tr><th>Grupo</th><th>Cenário</th><th>Percentual</th><th>Lance total</th><th>Pagamento pela carta</th><th>Recurso próprio</th><th>Crédito</th><th>Parcela</th><th>Prazo</th></tr></thead><tbody>{''.join(projection_rows) or '<tr><td colspan="9">Nenhuma projeção informada</td></tr>'}</tbody></table></section><p class='note'>Taxa administrativa anual: quando não existir na origem dos dados, o estudo exibe “Não informado” e não inventa um cálculo.</p><footer>Crediclass · Estudo Financeiro · {html_escape(str(payload.get('proposal_id') or payload.get('estudo_id') or 'Não publicado'))}</footer></main></body></html>"
 FILES_DIR.mkdir(exist_ok=True)
 logger = logging.getLogger("crediclass.api")
 PDF_RENDER_LOCK = Lock()
@@ -920,10 +969,7 @@ def estudo_publico_pagina(estudo_id: str):
     grupo = item.get("grupo") or {}
     administradora = html_escape(str(grupo.get("administradora") or "Administradora"))
     if administradora.upper().replace("Ú", "U") == "ITAU" and ITAU_TEMPLATE_PATH.exists():
-        template = ITAU_TEMPLATE_PATH.read_text(encoding="utf-8")
-        template = template.replace("<title>Estudo Financeiro | Aquisição de Imóvel</title>", f"<title>Estudo Financeiro | {cliente}</title>")
-        template = template.replace(">Prezado,</text>", f">Prezado, <tspan font-weight=\"700\">{cliente}</tspan></text>", 1)
-        return HTMLResponse(_html_with_download_control(_itau_template_fill(template, _public_study_payload(item))))
+        return HTMLResponse(_html_with_download_control(_public_itau_html(_public_study_payload(item), cliente)))
     public_payload = _public_study_payload(item)
     public_payload["consolidado"] = {
         key: (item.get("financeiro") or {}).get(key)
