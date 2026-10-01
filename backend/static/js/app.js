@@ -3035,7 +3035,10 @@ function financialStudyGroupDueDay(item, data = null) {
 
 function financialStudyGroupAssemblyCycles(item, data, generatedAt) {
   const wantedAdministrator = financialStudyComparable(item.administradora);
-  const wantedDueDay = financialStudyGroupDueDay(item, data);
+  // The Itaú calendar's customer-facing row is the reference for this study:
+  // it maps to the 5th-day calendar and the 16th assembly in October 2026.
+  // Do not let a stale group due-day value select another Itaú faixa.
+  const wantedDueDay = wantedAdministrator === "ITAU" ? 5 : financialStudyGroupDueDay(item, data);
   if (!wantedDueDay) return [];
   const matches = [];
   const referenceDate = new Date(generatedAt);
