@@ -7058,3 +7058,24 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .sg-panel header small { max-width: none; text-align: left; }
   .sg-chart, .sg-panel-financial .sg-chart { height: 280px; }
 }
+@media (max-width:760px){
+  .itau-replica-page{padding:4px;background:#f3f5f5}
+  .itau-replica-document{box-shadow:none}
+  .itau-replica-header{padding:18px 12px}
+  .itau-replica-header h1{font-size:1.15rem;margin-left:-4px;margin-right:-4px;padding:10px 6px}
+  .itau-replica-section{margin:0 4px 12px;border-radius:4px;overflow:hidden}
+  .itau-replica-bar{padding:9px 10px;text-align:left;font-size:.78rem}
+  .itau-replica-table-wrap{padding:0 8px 8px;overflow:visible}
+  .itau-replica-table{min-width:0;width:100%;font-size:.75rem;display:block}
+  .itau-replica-table thead{display:none}
+  .itau-replica-table tbody,.itau-replica-table tr,.itau-replica-table td{display:block;width:100%;box-sizing:border-box}
+  .itau-replica-table tbody tr{margin:8px 0;border:1px solid #d5dddd;border-radius:5px;background:#fff;overflow:hidden}
+  .itau-replica-table td{display:flex;justify-content:space-between;gap:12px;min-height:31px;padding:7px 8px;text-align:right!important;white-space:normal;border-bottom:1px solid #e5eaea}
+  .itau-replica-table td:first-child{font-weight:700;text-align:left!important;background:#eef2f2}
+  .itau-replica-table td:last-child{border-bottom:0}
+  .itau-replica-strategy-table td:nth-child(1)::before{content:"Grupo"}.itau-replica-strategy-table td:nth-child(2)::before{content:"Estratégia"}.itau-replica-strategy-table td:nth-child(3)::before{content:"Referência"}.itau-replica-strategy-table td:nth-child(4)::before{content:"Lance ideal"}.itau-replica-strategy-table td:nth-child(5)::before{content:"Lance disponível"}.itau-replica-strategy-table td:nth-child(6)::before{content:"Distância"}.itau-replica-strategy-table td:nth-child(7)::before{content:"Cenário"}
+  .itau-replica-table td::before{color:#6c7b7e;font-size:.7rem;text-align:left}
+  .itau-replica-table tfoot{display:none}
+  .itau-replica-group-grid{grid-template-columns:1fr 1fr}
+  .itau-replica-footer{padding:14px 12px}
+}
