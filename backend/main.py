@@ -1061,7 +1061,7 @@ def estudo_publico_pagina(estudo_id: str):
     )
     # The public URL must use the same Itaú study layout as the operator,
     # including names such as "ITAÚ CONSÓRCIOS" returned by persisted studies.
-    if "ITAU" in administradora_key:
+    if "ITAU" in administradora_key or item.get("grupos_selecionados"):
         return HTMLResponse(_html_with_download_control(_public_itau_html(_public_study_payload(item), cliente)))
     public_payload = _public_study_payload(item)
     public_payload["consolidado"] = {
