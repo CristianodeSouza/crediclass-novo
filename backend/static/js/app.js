@@ -3456,6 +3456,12 @@ function renderItauReplicaStudy({ screen, items, profile, clientName, issueDate,
   const firstSectionBar = documentRoot?.querySelector(".itau-replica-section .itau-replica-bar");
   if (firstSectionBar?.textContent?.trim() === "SIMULAÇÃO DE INVESTIMENTO") firstSectionBar.textContent = "DADOS DO CLIENTE";
   documentRoot?.querySelector(".itau-replica-header")?.insertAdjacentHTML("afterend", supplementalSections);
+  // O Quadro Resumo já consolida exatamente estes dados por grupo. Remova a
+  // cópia antiga de Simulação de Investimentos para evitar informação repetida.
+  documentRoot?.querySelectorAll(".itau-replica-section").forEach((section) => {
+    const title = section.querySelector(".itau-replica-bar")?.textContent?.trim();
+    if (title === "SIMULAÇÃO DE INVESTIMENTOS") section.remove();
+  });
 }
 
 async function downloadRenderedStudyHtml(screen) {
