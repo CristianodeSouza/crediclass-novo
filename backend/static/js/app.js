@@ -3361,9 +3361,14 @@ function renderItauReplicaStudy({ screen, items, profile, clientName, issueDate,
   const rows = items.map((item) => {
     const without = scenario(item, "without_embedded");
     const withEmbedded = scenario(item, "with_embedded");
-    return `<tr><td>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</td><td>${moneyValue(item.credito_maximo)}</td><td>${moneyValue(withEmbedded.credito_contratado || without.credito_contratado)}</td><td>${moneyValue(withEmbedded.parcela_inicial || without.parcela_inicial)}</td><td>${escapeHtml(String(item.prazo_restante || "-"))}</td><td>${escapeHtml(String(item.taxa_adm || "-"))}</td><td>${escapeHtml(String(item.taxa_adm_ano || "-"))}</td></tr>`;
+    const contracted = withEmbedded.credito_contratado ?? without.credito_contratado;
+    return `<tr><td>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</td><td>${moneyValue(item.credito_maximo)}</td><td>${moneyValue(contracted)}</td><td>${moneyValue(withEmbedded.parcela_inicial ?? without.parcela_inicial)}</td><td>${escapeHtml(String(item.prazo_restante || "-"))}</td><td>${item.taxa_adm == null ? "Não informado" : formatPercent(item.taxa_adm)}</td><td>${item.taxa_adm_ano == null ? "Não informado" : formatPercent(item.taxa_adm_ano)}</td></tr>`;
   }).join("");
-  const totalCredit = items.reduce((sum, item) => sum + Number(item.credito_maximo || 0) * qty(item), 0);
+  const totalCredit = items.reduce((sum, item) => {
+    const without = scenario(item, "without_embedded");
+    const withEmbedded = scenario(item, "with_embedded");
+    return sum + Number(withEmbedded.credito_contratado ?? without.credito_contratado ?? 0) * qty(item);
+  }, 0);
   const nextAssembly = items.flatMap((item) => {
     const cycle = financialStudyGroupAssemblyCycles(item, assemblyData, new Date())[0];
     return cycle?.events?.filter((event) => event.id === "assembleia").map((event) => event.date) || [];

@@ -822,6 +822,14 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('data-config-user-action="remover"', app_js)
         self.assertIn('apiPut("/configuracoes", { usuarios })', app_js)
 
+    def test_estudo_itau_formata_taxas_e_totaliza_credito_contratado(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('formatPercent(item.taxa_adm)', app_js)
+        self.assertIn('formatPercent(item.taxa_adm_ano)', app_js)
+        self.assertIn('withEmbedded.credito_contratado ?? without.credito_contratado', app_js)
+        self.assertIn('totalCredit = items.reduce', app_js)
+        self.assertNotIn('sum + Number(item.credito_maximo || 0) * qty(item)', app_js)
+
 
 if __name__ == "__main__":
     unittest.main()

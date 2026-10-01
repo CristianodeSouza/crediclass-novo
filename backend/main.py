@@ -76,6 +76,16 @@ def _itau_template_fill(template: str, item: dict) -> str:
             pass
         return value
 
+    def percent(value):
+        try:
+            raw = str(value).replace("%", "").replace(",", ".").strip()
+            number = float(raw)
+            if number > 1:
+                number /= 100
+            return f"{number * 100:.2f}%".replace(".", ",")
+        except (TypeError, ValueError):
+            return "Não informado"
+
     def set_text(source, x, y, value):
         pattern = rf'(<text\b(?=[^>]*\bx="{re.escape(str(x))}")(?=[^>]*\by="{re.escape(str(y))}")[^>]*>).*?(</text>)'
         return re.sub(pattern, lambda match: f"{match.group(1)}{html_escape(str(value))}{match.group(2)}", source, count=1, flags=re.S)
@@ -90,8 +100,8 @@ def _itau_template_fill(template: str, item: dict) -> str:
         template = set_text(template, "248.05", y, f"Grupo {group.get('grupo') or group.get('grupo_id')}" if group else "")
         template = set_text(template, "582.98", y, money(scenario_credit(group, selected)) if group else "")
         template = set_text(template, "869.89", y, money(selected.get("parcela_inicial")) if group else "")
-    template = set_text(template, "2366.76", "1568.22", f"{float(first.get('taxa_adm') or first.get('taxa_administracao') or 0) * 100:.2f}%".replace('.', ','))
-    template = set_text(template, "2577.66", "1568.22", f"{float(first.get('fundo_reserva') or 0) * 100:.2f}%".replace('.', ','))
+    template = set_text(template, "2366.76", "1568.22", percent(first.get("taxa_adm") or first.get("taxa_administracao")))
+    template = set_text(template, "2577.66", "1568.22", percent(first.get("fundo_reserva")))
     return template
 FILES_DIR.mkdir(exist_ok=True)
 logger = logging.getLogger("crediclass.api")
