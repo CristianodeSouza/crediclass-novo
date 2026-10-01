@@ -208,7 +208,8 @@ def _public_itau_html(payload: dict, client_name: str) -> str:
         maximum = group.get("credito_maximo")
         contracted = first_scenario.get("credito_contratado")
         next_assembly = _public_next_assembly(group)
-        rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{_public_money(maximum)}</td><td>{_public_money(contracted)}</td><td>{html_escape(str(group.get('prazo_total') or 'Não informado'))}</td><td>{html_escape(str(group.get('prazo_restante') or 'Não informado'))}</td><td>{_public_percent(group.get('taxa_adm'))}</td><td>{_public_percent(group.get('taxa_adm_ano'))}</td><td>{_public_percent(group.get('percentual_comprometimento') or group.get('comprometimento_renda'))}</td><td>{html_escape(str(group.get('chance_relativa') or group.get('chance_contemplacao') or 'Não informado'))}</td></tr>")
+        annual_rate = _first_present(group.get('taxa_adm_ano'), group.get('taxa_ano'), (group.get('source_values') or {}).get('taxa_adm_ano'), (group.get('source_values') or {}).get('taxa_ano'))
+        rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{_public_money(maximum)}</td><td>{_public_money(contracted)}</td><td>{html_escape(str(group.get('prazo_total') or 'Não informado'))}</td><td>{html_escape(str(group.get('prazo_restante') or 'Não informado'))}</td><td>{_public_percent(group.get('taxa_adm'))}</td><td>{_public_percent(annual_rate)}</td><td>{_public_percent(group.get('percentual_comprometimento') or group.get('comprometimento_renda'))}</td><td>{html_escape(str(group.get('chance_relativa') or group.get('chance_contemplacao') or 'Não informado'))}</td></tr>")
         date_rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{html_escape(str(group.get('limite_adesao_reserva') or group.get('limite_adesao') or 'Não informado'))}</td><td>{html_escape(str(group.get('limite_adesao_assembleia') or next_assembly))}</td><td>{html_escape(str(group.get('vencimento_primeira_parcela') or group.get('vencimento_parcela') or 'Não informado'))}</td><td>{html_escape(next_assembly)}</td><td>{html_escape(str(group.get('vencimento_lance') or 'Não informado'))}</td></tr>")
         scenario_rows = []
         for raw_scenario in scenarios:
@@ -995,7 +996,7 @@ def _public_study_payload(item: dict) -> dict:
         public_group = {key: group.get(key) for key in (
             "grupo", "grupo_id", "administradora", "tipo_bem", "credito_minimo", "credito_maximo",
             "prazo_total", "prazo_restante", "taxa_adm", "fundo_reserva", "percentual_lance_embutido",
-            "taxa_adm_ano", "vencimento_parcela", "parcela_reduzida", "historico", "historico_12_meses",
+            "taxa_adm_ano", "taxa_ano", "vencimento_parcela", "parcela_reduzida", "historico", "historico_12_meses",
             "proxima_assembleia", "limite_adesao", "limite_adesao_reserva", "limite_adesao_assembleia", "vencimento_primeira_parcela", "vencimento_lance", "source_values", "best_contemplation_strategy",
             "percentual_comprometimento", "comprometimento_renda", "chance_contemplacao", "chance_relativa", "ranking",
             "contemplation_classification", "missing_fields",
