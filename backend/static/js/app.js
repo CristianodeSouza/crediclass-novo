@@ -4657,6 +4657,35 @@ function renderStudyGroupsComparison(groups = []) {
     </tbody></table></div>`;
 }
 
+function renderStudyGroupsDetails(groups = []) {
+  const screen = document.getElementById("screen-estudo");
+  if (!screen) return;
+  let container = document.getElementById("financialStudyGroupsDetails");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "financialStudyGroupsDetails";
+    container.className = "content-card financial-study-groups-details";
+    screen.appendChild(container);
+  }
+  const safe = (value) => value === null || value === undefined || value === "" ? "-" : value;
+  const renderScenarioRows = (group) => (group.cenarios || []).map((scenario) => `
+    <tr><td>${escapeHtml(String(safe(scenario.nome || scenario.id)))}</td>
+      <td>${formatMoney(scenario.credito_contratado)}</td>
+      <td>${formatMoney(scenario.lance_total ?? scenario.lance_proprio)}</td>
+      <td>${formatMoney(scenario.parcela_inicial)}</td>
+      <td>${safe(scenario.prazo || scenario.prazo_restante) === "-" ? "-" : `${safe(scenario.prazo || scenario.prazo_restante)} meses`}</td>
+    </tr>`).join("");
+  const renderHistoryRows = (group) => Object.entries(group.historico || {}).map(([month, item]) => `
+    <tr><td>${escapeHtml(month)}</td><td>${item?.menor_lance == null ? "-" : formatPercent(item.menor_lance)}</td>
+      <td>${item?.maior_lance == null ? "-" : formatPercent(item.maior_lance)}</td><td>${safe(item?.qtd_contemplacoes)}</td></tr>`).join("");
+  container.innerHTML = groups.length ? `<div class="table-toolbar"><div><h2>Detalhamento por grupo</h2><p>Cenários e histórico permanecem vinculados ao respectivo identificador.</p></div></div>
+    ${groups.map((group) => `<article class="financial-study-group-block" data-group-id="${escapeHtml(String(group.grupo_id || group.grupo || ""))}">
+      <h3>Grupo ${escapeHtml(String(safe(group.grupo || group.grupo_id)))}</h3>
+      <div class="table-responsive"><table class="table table-sm"><thead><tr><th colspan="5">Cenários</th></tr><tr><th>Cenário</th><th>Crédito</th><th>Lance</th><th>Parcela</th><th>Prazo</th></tr></thead><tbody>${renderScenarioRows(group) || `<tr><td colspan="5">Nenhum cenário informado</td></tr>`}</tbody></table></div>
+      <div class="table-responsive"><table class="table table-sm"><thead><tr><th colspan="4">Histórico de lances</th></tr><tr><th>Mês</th><th>Menor lance</th><th>Maior lance</th><th>Contemplações</th></tr></thead><tbody>${renderHistoryRows(group) || `<tr><td colspan="4">Nenhum histórico informado</td></tr>`}</tbody></table></div>
+    </article>`).join("")}` : `<div class="placeholder-card compact-placeholder"><h2>Nenhum grupo associado</h2></div>`;
+}
+
 function renderStudySummary(financial, group, viabilityItem) {
   document.getElementById("studyCreditoOriginal").textContent = formatMoney(financial.creditoContratado);
   document.getElementById("studyLanceEmbutido").textContent = `${formatPercent(financial.percentualEmbutido)} / ${formatMoney(financial.lanceEmbutido)}`;
@@ -4861,6 +4890,7 @@ async function openFinancialStudy(groupId, viabilityItem) {
     currentStudy.group = group;
     currentStudy.groups = selectedMotor360SnapshotItems().length ? selectedMotor360SnapshotItems() : [group];
     renderStudyGroupsComparison(currentStudy.groups);
+    renderStudyGroupsDetails(currentStudy.groups);
     const financial = computeStudy(payload, viabilityItem, group);
     currentStudy.financial = financial;
     renderStudyClient(payload);
