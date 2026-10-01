@@ -1052,7 +1052,7 @@ def estudo_publico_pagina(estudo_id: str):
     if not item:
         return HTMLResponse("<h1>Estudo não encontrado</h1><p>Solicite um novo link à Crediclass.</p>", status_code=404)
     cliente = html_escape(str((item.get("cliente") or {}).get("nome") or "Cliente"))
-    grupo = item.get("grupo") or {}
+    grupo = item.get("grupo") or next(iter(item.get("grupos_selecionados") or []), {}) or {}
     administradora_raw = str(grupo.get("administradora") or "Administradora")
     administradora = html_escape(administradora_raw)
     administradora_key = "".join(
