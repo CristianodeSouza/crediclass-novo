@@ -50,7 +50,9 @@ def _download_html_controls() -> str:
 
 
 def _html_with_download_control(content: str) -> str:
-    return content + _download_html_controls()
+    if content.lstrip().startswith("<svg"):
+        return f'<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;background:#f1f3f3">{content}{_download_html_controls()}</body></html>'
+    return content.replace("</body>", f"{_download_html_controls()}</body>") if "</body>" in content else content + _download_html_controls()
 
 
 def _itau_template_fill(template: str, item: dict) -> str:
