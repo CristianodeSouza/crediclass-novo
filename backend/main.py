@@ -123,6 +123,33 @@ def _public_money(value) -> str:
         return "Não informado"
 
 
+def _first_present(*values):
+    """Return the first actually supplied value; zero is valid data."""
+    return next((value for value in values if value is not None and value != ""), None)
+
+
+def _public_scenario_values(scenario: dict) -> dict:
+    """Normalize scenario aliases without converting missing values to zero."""
+    embedded = _first_present(scenario.get("lance_embutido"), scenario.get("valor_lance_embutido"))
+    own = _first_present(scenario.get("lance_cliente_total"), scenario.get("lance_proprio"), scenario.get("recurso_proprio"))
+    contracted = scenario.get("credito_contratado")
+    # The engine's projected liquid credit is authoritative for these scenarios;
+    # an old zero-valued alias must not mask it.
+    liquid = _first_present(scenario.get("credito_liquido_projetado"), scenario.get("credito_disponivel"), scenario.get("credito_liquido"))
+    if liquid is None and contracted is not None and embedded is not None:
+        try:
+            liquid = float(contracted) - float(embedded)
+        except (TypeError, ValueError):
+            liquid = None
+    total = _first_present(scenario.get("lance_total_cenario"), scenario.get("lance_total"))
+    if total is None and own is not None and embedded is not None:
+        try:
+            total = float(own) + float(embedded)
+        except (TypeError, ValueError):
+            total = None
+    return {**scenario, "lance_proprio": own, "lance_embutido": embedded, "lance_total": total, "credito_liquido": liquid}
+
+
 def _public_itau_html(payload: dict, client_name: str) -> str:
     groups = payload.get("grupos_selecionados") or []
     cliente = payload.get("cliente") or {}
@@ -138,17 +165,13 @@ def _public_itau_html(payload: dict, client_name: str) -> str:
         first_scenario = next((item for item in scenarios if item.get("id") == "without_embedded"), scenarios[0] if scenarios else {})
         maximum = group.get("credito_maximo")
         contracted = first_scenario.get("credito_contratado")
-        try:
-            if maximum is not None and contracted is not None and float(contracted) > float(maximum):
-                contracted = maximum
-        except (TypeError, ValueError):
-            pass
         rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{_public_money(maximum)}</td><td>{_public_money(contracted)}</td><td>{html_escape(str(group.get('prazo_total') or 'Não informado'))}</td><td>{html_escape(str(group.get('prazo_restante') or 'Não informado'))}</td><td>{_public_percent(group.get('taxa_adm'))}</td><td>{_public_percent(group.get('taxa_adm_ano'))}</td><td>{_public_percent(group.get('percentual_comprometimento') or group.get('comprometimento_renda'))}</td><td>{html_escape(str(group.get('chance_relativa') or group.get('chance_contemplacao') or 'Não informado'))}</td></tr>")
         date_rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{html_escape(str(group.get('limite_adesao_reserva') or group.get('limite_adesao') or 'Não informado'))}</td><td>{html_escape(str(group.get('limite_adesao_assembleia') or group.get('proxima_assembleia') or 'Não informado'))}</td><td>{html_escape(str(group.get('vencimento_primeira_parcela') or group.get('vencimento_parcela') or 'Não informado'))}</td><td>{html_escape(str(group.get('proxima_assembleia') or 'Não informado'))}</td><td>{html_escape(str(group.get('vencimento_lance') or 'Não informado'))}</td></tr>")
         scenario_rows = []
-        for scenario in scenarios:
-            scenario_rows.append(f"<tr><td>{html_escape(str(scenario.get('nome') or scenario.get('id') or '-'))}</td><td>{_public_percent(scenario.get('percentual_lance_total') or scenario.get('percentual_lance_efetivo'))}</td><td>{_public_money(scenario.get('lance_total') or scenario.get('lance_total_cenario'))}</td><td>{_public_money(scenario.get('lance_embutido'))}</td><td>{_public_money(scenario.get('lance_proprio') or scenario.get('lance_cliente_total'))}</td><td>{_public_money(scenario.get('credito_liquido') or scenario.get('credito_liquido_projetado'))}</td><td>{_public_money(scenario.get('saldo_apos_lance') or scenario.get('saldo_devedor'))}</td><td>{_public_money(scenario.get('parcela_inicial'))}</td><td>{_public_money(scenario.get('parcela_pos_contemplacao'))}</td><td>{html_escape(str(scenario.get('prazo') or scenario.get('prazo_restante') or 'Não informado'))}</td></tr>")
-            projection_rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{html_escape(str(scenario.get('nome') or scenario.get('id') or '-'))}</td><td>{_public_percent(scenario.get('percentual_lance_total') or scenario.get('percentual_lance_efetivo'))}</td><td>{_public_money(scenario.get('lance_total') or scenario.get('lance_total_cenario'))}</td><td>{_public_money(scenario.get('lance_embutido'))}</td><td>{_public_money(scenario.get('lance_proprio') or scenario.get('lance_cliente_total'))}</td><td>{_public_money(scenario.get('credito_contratado'))}</td><td>{_public_money(scenario.get('parcela_inicial'))}</td><td>{html_escape(str(scenario.get('prazo') or scenario.get('prazo_restante') or 'Não informado'))}</td></tr>")
+        for raw_scenario in scenarios:
+            scenario = _public_scenario_values(raw_scenario)
+            scenario_rows.append(f"<tr><td>{html_escape(str(scenario.get('nome') or scenario.get('id') or '-'))}</td><td>{_public_percent(_first_present(scenario.get('percentual_lance_total'), scenario.get('percentual_lance_efetivo')))}</td><td>{_public_money(scenario.get('lance_total'))}</td><td>{_public_money(scenario.get('lance_embutido'))}</td><td>{_public_money(scenario.get('lance_proprio'))}</td><td>{_public_money(scenario.get('credito_liquido'))}</td><td>{_public_money(_first_present(scenario.get('saldo_apos_lance'), scenario.get('saldo_devedor')))}</td><td>{_public_money(scenario.get('parcela_inicial'))}</td><td>{_public_money(scenario.get('parcela_pos_contemplacao'))}</td><td>{html_escape(str(_first_present(scenario.get('prazo'), scenario.get('prazo_restante')) or 'Não informado'))}</td></tr>")
+            projection_rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{html_escape(str(scenario.get('nome') or scenario.get('id') or '-'))}</td><td>{_public_percent(_first_present(scenario.get('percentual_lance_total'), scenario.get('percentual_lance_efetivo')))}</td><td>{_public_money(scenario.get('lance_total'))}</td><td>{_public_money(scenario.get('lance_embutido'))}</td><td>{_public_money(scenario.get('lance_proprio'))}</td><td>{_public_money(scenario.get('credito_contratado'))}</td><td>{_public_money(scenario.get('parcela_inicial'))}</td><td>{html_escape(str(_first_present(scenario.get('prazo'), scenario.get('prazo_restante')) or 'Não informado'))}</td></tr>")
             for profile in scenario.get("perfis_contemplacao") or []:
                 strategy_rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{html_escape(str(profile.get('label') or profile.get('id') or 'Estratégia'))}</td><td>{_public_percent(profile.get('percentual_referencia'))}</td><td>{_public_money(profile.get('lance_ideal_total') or profile.get('lance_ideal'))}</td><td>{_public_money(profile.get('lance_cliente') or profile.get('lance_ideal'))}</td><td>{_public_money(scenario.get('credito_contratado'))}</td><td>{_public_money(scenario.get('parcela_inicial'))}</td><td>{html_escape(str(scenario.get('prazo') or scenario.get('prazo_restante') or 'Não informado'))}</td></tr>")
         scenario_blocks.append(f"<article><h3>Grupo {html_escape(str(group_id))}</h3><table><thead><tr><th>Cenário</th><th>% lance</th><th>Lance total</th><th>Embutido</th><th>Recurso próprio</th><th>Crédito líquido</th><th>Saldo após lance</th><th>Parcela inicial</th><th>Pós-contemplação</th><th>Prazo</th></tr></thead><tbody>{''.join(scenario_rows) or '<tr><td colspan="10">Nenhum cenário informado</td></tr>'}</tbody></table></article>")

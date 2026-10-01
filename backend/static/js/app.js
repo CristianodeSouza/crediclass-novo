@@ -2998,13 +2998,7 @@ function financialStudyStrategyLabel(value) {
 }
 
 function financialStudyScenario(item, scenarioId) {
-  const scenario = (item.cenarios || []).find((entry) => entry.id === scenarioId) || {};
-  const maximum = Number(item.credito_maximo);
-  const contracted = Number(scenario.credito_contratado);
-  if (Number.isFinite(maximum) && maximum > 0 && Number.isFinite(contracted) && contracted > maximum) {
-    return { ...scenario, credito_contratado: maximum, data_quality_warning: "credito_contratado_acima_do_maximo" };
-  }
-  return scenario;
+  return (item.cenarios || []).find((entry) => entry.id === scenarioId) || {};
 }
 
 function financialStudyGroupRow(item) {
@@ -3355,9 +3349,19 @@ function financialStudyProfileMatrix(items) {
 }
 
 function renderItauReplicaStudy({ screen, items, profile, clientName, issueDate, proposalId, systemVersion, assemblyData, assemblyError }) {
-  const moneyValue = (value) => formatMoney(Number(value || 0));
+  const moneyValue = (value) => value === null || value === undefined || value === "" ? "Não informado" : formatMoney(Number(value));
   const qty = (item) => Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1)));
-  const scenario = (item, id) => financialStudyScenario(item, id);
+  const scenario = (item, id) => {
+    const raw = financialStudyScenario(item, id);
+    const embedded = raw.lance_embutido ?? raw.valor_lance_embutido;
+    const own = raw.lance_cliente_total ?? raw.lance_proprio ?? raw.recurso_proprio;
+    const contracted = raw.credito_contratado;
+    const liquid = raw.credito_liquido_projetado ?? raw.credito_disponivel ?? raw.credito_liquido
+      ?? (contracted != null && embedded != null ? Number(contracted) - Number(embedded) : contracted);
+    const total = raw.lance_total_cenario ?? raw.lance_total
+      ?? (own != null && embedded != null ? Number(own) + Number(embedded) : null);
+    return { ...raw, lance_proprio: own, lance_embutido: embedded, lance_total: total, credito_liquido: liquid };
+  };
   const rows = items.map((item) => {
     const without = scenario(item, "without_embedded");
     const withEmbedded = scenario(item, "with_embedded");
