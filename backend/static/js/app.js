@@ -3352,6 +3352,10 @@ function financialStudyProfileMatrix(items) {
 
 function renderItauReplicaStudy({ screen, items, profile, clientName, issueDate, proposalId, systemVersion, assemblyData, assemblyError }) {
   const moneyValue = (value) => value === null || value === undefined || value === "" ? "Não informado" : formatMoney(Number(value));
+  const monthYear = (value) => {
+    const match = String(value || "").match(/^(\d{4})[-\/]?(\d{1,2})$/);
+    return match ? `${String(Number(match[2])).padStart(2, "0")}/${match[1]}` : String(value || "Não informado");
+  };
   const qty = (item) => Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1)));
   const scenario = (item, id) => {
     const raw = financialStudyScenario(item, id);
@@ -3391,7 +3395,7 @@ function renderItauReplicaStudy({ screen, items, profile, clientName, issueDate,
     }).join("");
     const historyRows = (item.historico_12_meses || item.historico || []).map((entry) => {
       const average = entry.media ?? (entry.menor_lance != null && entry.maior_lance != null ? (Number(entry.menor_lance) + Number(entry.maior_lance)) / 2 : null);
-      return `<tr><td>${escapeHtml(entry.mes || entry.month || entry.label || "-")}</td><td>${entry.menor_lance == null ? "Não informado" : formatPercent(entry.menor_lance)}</td><td>${entry.maior_lance == null ? "Não informado" : formatPercent(entry.maior_lance)}</td><td>${entry.qtd_contemplacoes ?? "Não informado"}</td><td>${average == null ? "Não informado" : formatPercent(average)}</td></tr>`;
+      return `<tr><td>${escapeHtml(monthYear(entry.mes || entry.month || entry.label))}</td><td>${entry.menor_lance == null ? "Não informado" : formatPercent(entry.menor_lance)}</td><td>${entry.maior_lance == null ? "Não informado" : formatPercent(entry.maior_lance)}</td><td>${entry.qtd_contemplacoes ?? "Não informado"}</td><td>${average == null ? "Não informado" : formatPercent(average)}</td></tr>`;
     }).join("");
     return `<article class="itau-replica-group"><header><strong>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</strong><span>${escapeHtml(item.administradora || "ITAÚ")} · ${qty(item)} cota(s)</span></header><div class="itau-replica-group-grid"><span><small>Crédito mínimo</small><b>${moneyValue(item.credito_minimo)}</b></span><span><small>Crédito máximo</small><b>${moneyValue(item.credito_maximo)}</b></span><span><small>Prazo total / restante</small><b>${escapeHtml(String(item.prazo_total || "-"))} / ${escapeHtml(String(item.prazo_restante || "-"))} meses</b></span><span><small>Taxa administrativa</small><b>${item.taxa_adm == null ? "Não informado" : formatPercent(item.taxa_adm)}</b></span><span><small>Fundo de reserva</small><b>${item.fundo_reserva == null ? "Não informado" : formatPercent(item.fundo_reserva)}</b></span><span><small>Próxima assembleia</small><b>${nextAssemblyLabel}</b></span></div><h4>Cenários do grupo</h4><div class="itau-replica-table-wrap"><table class="itau-replica-table"><thead><tr><th>Cenário</th><th>Crédito</th><th>Líquido</th><th>Lance próprio</th><th>Embutido</th><th>Total</th><th>Saldo</th><th>Parcela inicial</th><th>Pós-contemplação</th><th>% lance</th></tr></thead><tbody>${scenarioRows || `<tr><td colspan="10">Nenhum cenário informado</td></tr>`}</tbody></table></div><h4>Histórico mensal</h4><div class="itau-replica-table-wrap"><table class="itau-replica-table"><thead><tr><th>Mês</th><th>Menor lance</th><th>Maior lance</th><th>Contemplações</th><th>Média</th></tr></thead><tbody>${historyRows || `<tr><td colspan="5">Histórico não informado</td></tr>`}</tbody></table></div></article>`;
   }).join("");

@@ -116,6 +116,11 @@ def _public_percent(value) -> str:
         return "Não informado"
 
 
+def _public_month_year(value) -> str:
+    match = re.match(r"^(\d{4})[-/](\d{1,2})$", str(value or "").strip())
+    return f"{int(match.group(2)):02d}/{match.group(1)}" if match else (str(value) if value else "Não informado")
+
+
 def _public_money(value) -> str:
     try:
         return f"R$ {float(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -186,7 +191,7 @@ def _public_itau_html(payload: dict, client_name: str) -> str:
         history = group.get("historico_12_meses") or group.get("historico") or []
         def history_row(entry):
             average = _first_present(entry.get('media'), (float(entry['menor_lance']) + float(entry['maior_lance'])) / 2 if entry.get('menor_lance') is not None and entry.get('maior_lance') is not None else None)
-            return f"<tr><td>{html_escape(str(entry.get('mes') or entry.get('month') or entry.get('label') or '-'))}</td><td>{_public_percent(entry.get('menor_lance'))}</td><td>{_public_percent(entry.get('maior_lance'))}</td><td>{html_escape(str(entry.get('qtd_contemplacoes') if entry.get('qtd_contemplacoes') is not None else 'Não informado'))}</td><td>{_public_percent(average)}</td></tr>"
+            return f"<tr><td>{html_escape(_public_month_year(entry.get('mes') or entry.get('month') or entry.get('label')))}</td><td>{_public_percent(entry.get('menor_lance'))}</td><td>{_public_percent(entry.get('maior_lance'))}</td><td>{html_escape(str(entry.get('qtd_contemplacoes') if entry.get('qtd_contemplacoes') is not None else 'Não informado'))}</td><td>{_public_percent(average)}</td></tr>"
         history = [entry for entry in history if entry.get('menor_lance') is not None or entry.get('maior_lance') is not None or entry.get('qtd_contemplacoes') is not None or entry.get('media') is not None]
         history_rows = ''.join(history_row(entry) for entry in history)
         history_note = f"<p>Histórico disponível até {html_escape(str(history[-1].get('label') or history[-1].get('mes') or 'o último mês informado'))}.</p>" if history else "<p>Histórico não informado.</p>"
