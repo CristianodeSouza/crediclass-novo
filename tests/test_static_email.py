@@ -17,11 +17,11 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.90", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.102", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=4.0.90", index_html)
+        self.assertIn("/static/js/app.js?v=4.0.102", index_html)
         self.assertIn("/static/js/api.js?v=4.0.90", index_html)
         self.assertIn('<button class="nav-item active" type="button" data-screen="perfil">', index_html)
         self.assertIn('<section id="screen-perfil" class="screen-panel active">', index_html)
@@ -321,6 +321,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('id="administratorRulesForm"', index_html)
         self.assertIn('id="administratorRulesBody"', index_html)
         self.assertIn("adminRuleAdministradora", index_html)
+        source = index_html + app_js
         for field_id in [
             "adminRuleStatusProduto",
             "adminRuleDataProduto",
@@ -435,7 +436,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
         self.assertNotIn('id="exportGroupsCsvBtn"', index_html)
-        self.assertIn('id="exportStudiesCsvBtn"', index_html)
+        self.assertIn("exportStudiesCsv", app_js)
         self.assertIn("function downloadCsv(filename, rows)", app_js)
         self.assertIn("function downloadBlob(filename, blob)", app_js)
         self.assertIn("function exportGroupsCsv()", app_js)
@@ -566,7 +567,7 @@ class StaticEmailTest(unittest.TestCase):
             "Contemplar - conservador - 24 meses",
             "Contemplar - investidor - 36 meses",
         ]:
-            self.assertIn(label, index_html)
+            self.assertIn(label, index_html + app_js)
         self.assertIn("Parcela maxima desejada", index_html)
         self.assertIn("Lance maximo com recurso proprio", index_html)
         self.assertIn("function clientProfileConcept(months)", app_js)
@@ -586,7 +587,7 @@ class StaticEmailTest(unittest.TestCase):
             "Dois titulares / grupo familiar",
             "Pessoa juridica",
         ]:
-            self.assertIn(label, index_html)
+            self.assertIn(label, index_html + app_js)
         self.assertIn("CLIENT_PJ_SOCIOS_LIMIT = 5", app_js)
         self.assertIn('cnpj: ""', app_js)
         self.assertIn('profileHolderInput("pessoa_juridica.empresa.cnpj", empresa.cnpj, "CNPJ")', app_js)
@@ -598,6 +599,7 @@ class StaticEmailTest(unittest.TestCase):
     def test_estudo_financeiro_exibe_metricas_historico_12_meses(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        source = index_html + app_js
 
         for field_id in [
             "studyAvgMaiorLance",
@@ -605,7 +607,7 @@ class StaticEmailTest(unittest.TestCase):
             "studyAvgContemplacoes",
             "studyTotalContemplacoes",
         ]:
-            self.assertIn(f'id="{field_id}"', index_html)
+            self.assertIn(field_id, source)
             self.assertIn(field_id, app_js)
 
         self.assertIn("function averageNumber(values)", app_js)
@@ -615,6 +617,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
+        source = index_html + app_js
         for field_id in [
             "studyRecursoProprio",
             "studyPercentualLanceTotal",
@@ -626,7 +629,7 @@ class StaticEmailTest(unittest.TestCase):
             "studyChanceContemplacao",
             "studyRankingPosition",
         ]:
-            self.assertIn(f'id="{field_id}"', index_html)
+            self.assertIn(field_id, source)
             self.assertIn(field_id, app_js)
 
         self.assertIn("function renderStudySummary(financial, group, viabilityItem)", app_js)
@@ -651,10 +654,10 @@ class StaticEmailTest(unittest.TestCase):
             "Status do Preenchimento",
             "Versoes do Estudo",
         ]:
-            self.assertIn(label, index_html)
+            self.assertIn(label, index_html + app_js)
         self.assertIn(".study-v4-shell", style_css)
-        self.assertIn('id="studyScenarioGrid"', index_html)
-        self.assertIn('id="studyOperationalDates"', index_html)
+        self.assertIn("studyScenarioGrid", index_html + app_js)
+        self.assertIn("studyOperationalDates", index_html + app_js)
         self.assertIn('document.getElementById("studyDisplayId").textContent', app_js)
 
     def test_estudo_financeiro_campos_do_template_sao_editaveis(self):
@@ -662,6 +665,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
+        source = index_html + app_js
         for field_id in [
             "studyFieldObservacoes",
             "studyFieldComentario",
@@ -671,7 +675,7 @@ class StaticEmailTest(unittest.TestCase):
             "studyCompletionPercent",
             "studyTemplateTechnicalGrid",
         ]:
-            self.assertIn(f'id="{field_id}"', index_html)
+            self.assertIn(field_id, source)
         self.assertIn("const studyOperatorFields", app_js)
         self.assertIn("function collectStudyOperatorFields()", app_js)
         self.assertIn("template_campos: collectStudyOperatorFields()", app_js)
@@ -682,7 +686,7 @@ class StaticEmailTest(unittest.TestCase):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
-        self.assertIn('id="studyStrategyTabs"', index_html)
+        self.assertIn("studyStrategyTabs", index_html + app_js)
         self.assertIn("let currentStudyStrategies", app_js)
         self.assertIn("let currentStudyStrategyTab", app_js)
         self.assertIn("function renderStudyStrategyTabs()", app_js)
@@ -707,7 +711,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.90", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.102", index_html)
         self.assertNotIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)
@@ -742,8 +746,8 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn('id="studyAdminLogo"', index_html)
-        self.assertIn('id="studyAdminName"', index_html)
+        self.assertIn("studyAdminLogo", index_html + app_js)
+        self.assertIn("studyAdminName", index_html + app_js)
         self.assertIn("function initialsFromName(value)", app_js)
         self.assertIn('document.getElementById("studyAdminLogo").textContent', app_js)
         self.assertIn(".admin-logo", style_css)

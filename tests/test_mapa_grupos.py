@@ -193,7 +193,7 @@ class MapaGruposTest(unittest.TestCase):
             rows = sheets_client.read_summary_rows(include_history=True)
 
         self.assertEqual(rows[0]["JAN-26 Menor Lance"], "24")
-        self.assertEqual(service.values_api.get_kwargs["range"], "'Grupos'!A2:BM")
+        self.assertEqual(service.values_api.get_kwargs["range"], "'Grupos'!A2:BP")
 
     def test_read_summary_rows_usa_colunas_fixas_do_mapa_de_grupos(self):
         sheets_client.clear_rows_cache()
