@@ -3384,10 +3384,16 @@ function renderItauReplicaStudy({ screen, items, profile, clientName, issueDate,
     return cycle?.events?.filter((event) => event.id === "assembleia").map((event) => event.date) || [];
   }).filter(Boolean).sort((a, b) => a - b)[0];
   const nextAssemblyLabel = nextAssembly ? financialStudyFormatCalendarDate(nextAssembly) : "Não informado";
+  const nextAssemblyLabelForItem = (item) => {
+    const cycle = financialStudyGroupAssemblyCycles(item, assemblyData, new Date())[0];
+    const event = cycle?.events?.find((entry) => entry.id === "assembleia");
+    return event ? financialStudyFormatCalendarDate(event.date) : "Não informado";
+  };
   const section = (title, content, extra = "") => `<section class="itau-replica-section ${extra}"><div class="itau-replica-bar">${title}</div>${content}</section>`;
   const groupBlocks = items.map((item) => {
     const without = scenario(item, "without_embedded");
     const withEmbedded = scenario(item, "with_embedded");
+    const nextAssemblyLabel = nextAssemblyLabelForItem(item);
     const scenarioRows = (item.cenarios || []).map((entry) => {
       const value = scenario(item, entry.id);
       const bidPercent = value.percentual_lance_efetivo ?? value.percentual_lance_total ?? value.percentual_lance;
