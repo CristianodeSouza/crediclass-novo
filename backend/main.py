@@ -66,6 +66,16 @@ def _itau_template_fill(template: str, item: dict) -> str:
         except (TypeError, ValueError):
             return "-"
 
+    def scenario_credit(group, scenario):
+        value = scenario.get("credito_contratado")
+        maximum = group.get("credito_maximo")
+        try:
+            if value is not None and maximum is not None and float(value) > float(maximum):
+                return maximum
+        except (TypeError, ValueError):
+            pass
+        return value
+
     def set_text(source, x, y, value):
         pattern = rf'(<text\b(?=[^>]*\bx="{re.escape(str(x))}")(?=[^>]*\by="{re.escape(str(y))}")[^>]*>).*?(</text>)'
         return re.sub(pattern, lambda match: f"{match.group(1)}{html_escape(str(value))}{match.group(2)}", source, count=1, flags=re.S)
@@ -78,7 +88,7 @@ def _itau_template_fill(template: str, item: dict) -> str:
         group = groups[index] if index < len(groups) else {}
         selected = next((s for s in (group.get("cenarios") or []) if s.get("id") == "without_embedded"), {})
         template = set_text(template, "248.05", y, f"Grupo {group.get('grupo') or group.get('grupo_id')}" if group else "")
-        template = set_text(template, "582.98", y, money(selected.get("credito_contratado")) if group else "")
+        template = set_text(template, "582.98", y, money(scenario_credit(group, selected)) if group else "")
         template = set_text(template, "869.89", y, money(selected.get("parcela_inicial")) if group else "")
     template = set_text(template, "2366.76", "1568.22", f"{float(first.get('taxa_adm') or first.get('taxa_administracao') or 0) * 100:.2f}%".replace('.', ','))
     template = set_text(template, "2577.66", "1568.22", f"{float(first.get('fundo_reserva') or 0) * 100:.2f}%".replace('.', ','))
@@ -843,17 +853,33 @@ def _public_study_payload(item: dict) -> dict:
         public_group = {key: group.get(key) for key in (
             "grupo", "grupo_id", "administradora", "tipo_bem", "credito_minimo", "credito_maximo",
             "prazo_total", "prazo_restante", "taxa_adm", "fundo_reserva", "percentual_lance_embutido",
-            "historico", "proxima_assembleia", "limite_adesao",
+            "taxa_adm_ano", "vencimento_parcela", "parcela_reduzida", "historico", "historico_12_meses",
+            "proxima_assembleia", "limite_adesao", "source_values", "best_contemplation_strategy",
+            "contemplation_classification", "missing_fields",
         )}
         public_group["cenarios"] = [
             {key: scenario.get(key) for key in (
                 "id", "nome", "credito_contratado", "credito_liquido", "lance_embutido", "lance_proprio",
                 "lance_total", "percentual_lance_total", "parcela_inicial", "parcela_pos_contemplacao",
                 "saldo_devedor", "prazo", "prazo_restante", "credito_disponivel",
+                "credito_minimo", "credito_maximo", "taxa_adm", "taxa_adm_ano", "fundo_reserva",
+                "percentual_lance_embutido", "lance_cliente_total", "percentual_lance_cliente",
+                "perfis_contemplacao", "source_values", "best_contemplation_strategy",
             )}
             for scenario in (group.get("cenarios") or []) if isinstance(scenario, dict)
         ]
         public_groups.append(public_group)
+        public_group["historico_12_meses"] = list(group.get("historico_12_meses") or group.get("historico") or [])
+    financeiro = item.get("financeiro") or {}
+    consolidated = {
+        key: financeiro.get(key)
+        for key in (
+            "credito", "credito_original", "credito_disponivel", "credito_liquido_total", "credito_maximo_total",
+            "parcela_inicial", "parcela_inicial_total", "parcela_pos_contemplacao_total", "lance_embutido_total",
+            "lance_proprio_total", "lance_total", "saldo_devedor_total", "recurso_proprio", "percentual_lance_total",
+            "comprometimento_renda",
+        )
+    }
     return {
         "estudo_id": item.get("estudo_id"),
         "proposal_id": item.get("proposal_id"),
@@ -861,7 +887,15 @@ def _public_study_payload(item: dict) -> dict:
         "cliente": public_cliente,
         "grupo": {key: (item.get("grupo") or {}).get(key) for key in ("administradora", "grupo", "grupo_id")},
         "grupos_selecionados": public_groups,
-        "financeiro": item.get("financeiro") or {},
+        "financeiro": financeiro,
+        "consolidado": consolidated,
+        "rastreabilidade": {
+            "cliente": "estudo.cliente",
+            "grupo": "estudo.grupos_selecionados[]",
+            "cenario": "estudo.grupos_selecionados[].cenarios[]",
+            "historico": "estudo.grupos_selecionados[].historico_12_meses[]",
+            "consolidado": "estudo.financeiro",
+        },
         "template_campos": item.get("template_campos") or {},
         "editor_content": item.get("editor_content") or {},
     }
