@@ -3408,7 +3408,9 @@ function renderItauReplicaStudy({ screen, items, profile, clientName, issueDate,
     })));
     return (explicit.length ? explicit : fromScenarios);
   });
-  const strategyMarkup = strategies.map((strategy) => `<div><strong>Grupo ${escapeHtml(String(strategy.grupo || "-"))} · ${escapeHtml(strategy.estrategia || strategy.nome || "Estratégia")}</strong><p>Referência: ${strategy.percentual_lance == null ? "Não informado" : formatPercent(strategy.percentual_lance)} · Lance necessário: ${moneyValue(strategy.lance_proprio ?? strategy.lance_necessario)} · Distância: ${moneyValue(strategy.falta_para_ideal)}</p></div>`).join("") || `<p>Estratégias não informadas nos dados do estudo.</p>`;
+  const strategyKey = (strategy) => `${strategy.grupo || "-"}|${strategy.estrategia || strategy.nome || "Estratégia"}`;
+  const uniqueStrategies = [...new Map(strategies.map((strategy) => [strategyKey(strategy), strategy])).values()];
+  const strategyMarkup = uniqueStrategies.length ? `<div class="itau-replica-table-wrap"><table class="itau-replica-table itau-replica-strategy-table"><thead><tr><th>Grupo</th><th>Estratégia</th><th>Referência</th><th>Lance necessário</th><th>Distância</th><th>Cenário</th></tr></thead><tbody>${uniqueStrategies.map((strategy) => `<tr><td>Grupo ${escapeHtml(String(strategy.grupo || "-"))}</td><td>${escapeHtml(strategy.estrategia || strategy.nome || "Estratégia")}</td><td>${strategy.percentual_lance == null ? "Não informado" : formatPercent(strategy.percentual_lance)}</td><td>${moneyValue(strategy.lance_proprio ?? strategy.lance_necessario)}</td><td>${moneyValue(strategy.falta_para_ideal)}</td><td>${escapeHtml(strategy.cenario || "Sem embutido")}</td></tr>`).join("")}</tbody></table></div>` : `<p>Estratégias não informadas nos dados do estudo.</p>`;
   const ownResources = Number(profile.lance_proprio || profile.lance_recursos_proprios || 0);
   const fgts = Number(profile.fgts || profile.fgts_total || 0);
   const summaryRows = items.map((item) => {

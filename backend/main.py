@@ -158,6 +158,7 @@ def _public_itau_html(payload: dict, client_name: str) -> str:
     history_blocks = []
     projection_rows = []
     strategy_rows = []
+    strategy_seen = set()
     date_rows = []
     for group in groups:
         group_id = group.get("grupo") or group.get("grupo_id") or "-"
@@ -175,7 +176,10 @@ def _public_itau_html(payload: dict, client_name: str) -> str:
             scenario_rows.append(f"<tr><td>{html_escape(str(scenario_label))}</td><td>{_public_percent(bid_percent)}</td><td>{_public_money(scenario.get('lance_total'))}</td><td>{_public_money(scenario.get('lance_embutido'))}</td><td>{_public_money(scenario.get('lance_proprio'))}</td><td>{_public_money(scenario.get('credito_liquido'))}</td><td>{_public_money(_first_present(scenario.get('saldo_apos_lance'), scenario.get('saldo_devedor')))}</td><td>{_public_money(scenario.get('parcela_inicial'))}</td><td>{_public_money(scenario.get('parcela_pos_contemplacao'))}</td><td>{html_escape(str(_first_present(scenario.get('prazo'), scenario.get('prazo_restante')) or 'Não informado'))}</td></tr>")
             projection_rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{html_escape(str(scenario.get('nome') or scenario.get('id') or '-'))}</td><td>{_public_percent(bid_percent)}</td><td>{_public_money(scenario.get('lance_total'))}</td><td>{_public_money(scenario.get('lance_embutido'))}</td><td>{_public_money(scenario.get('lance_proprio'))}</td><td>{_public_money(scenario.get('credito_contratado'))}</td><td>{_public_money(scenario.get('parcela_inicial'))}</td><td>{html_escape(str(_first_present(scenario.get('prazo'), scenario.get('prazo_restante')) or 'Não informado'))}</td></tr>")
             for profile in scenario.get("perfis_contemplacao") or []:
-                strategy_rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{html_escape(str(profile.get('label') or profile.get('id') or 'Estratégia'))}</td><td>{_public_percent(profile.get('percentual_referencia'))}</td><td>{_public_money(profile.get('lance_ideal_total') or profile.get('lance_ideal'))}</td><td>{_public_money(profile.get('lance_cliente') or profile.get('lance_ideal'))}</td><td>{_public_money(scenario.get('credito_contratado'))}</td><td>{_public_money(scenario.get('parcela_inicial'))}</td><td>{html_escape(str(scenario.get('prazo') or scenario.get('prazo_restante') or 'Não informado'))}</td></tr>")
+                strategy_key = (str(group_id), str(profile.get('id') or profile.get('label') or 'Estratégia'))
+                if strategy_key not in strategy_seen:
+                    strategy_seen.add(strategy_key)
+                    strategy_rows.append(f"<tr><td>Grupo {html_escape(str(group_id))}</td><td>{html_escape(str(profile.get('label') or profile.get('id') or 'Estratégia'))}</td><td>{_public_percent(profile.get('percentual_referencia'))}</td><td>{_public_money(profile.get('lance_ideal_total') or profile.get('lance_ideal'))}</td><td>{_public_money(profile.get('lance_cliente') or profile.get('lance_ideal'))}</td><td>{_public_money(scenario.get('credito_contratado'))}</td><td>{_public_money(scenario.get('parcela_inicial'))}</td><td>{html_escape(str(scenario.get('prazo') or scenario.get('prazo_restante') or 'Não informado'))}</td></tr>")
         scenario_blocks.append(f"<article><h3>Grupo {html_escape(str(group_id))}</h3><table><thead><tr><th>Cenário</th><th>% lance</th><th>Lance total</th><th>Embutido</th><th>Recurso próprio</th><th>Crédito líquido</th><th>Saldo após lance</th><th>Parcela inicial</th><th>Pós-contemplação</th><th>Prazo</th></tr></thead><tbody>{''.join(scenario_rows) or '<tr><td colspan="10">Nenhum cenário informado</td></tr>'}</tbody></table></article>")
         history = group.get("historico_12_meses") or group.get("historico") or []
         def history_row(entry):
