@@ -827,9 +827,17 @@ def _public_study_payload(item: dict) -> dict:
     public_cliente = {key: cliente.get(key) for key in ("nome", "credito_desejado", "objetivo", "renda_total", "parcela_desejada")}
     public_groups = []
     for group in item.get("grupos_selecionados") or [item.get("grupo") or {}]:
-        public_group = {key: group.get(key) for key in ("grupo", "grupo_id", "administradora", "credito_maximo", "prazo_restante")}
+        public_group = {key: group.get(key) for key in (
+            "grupo", "grupo_id", "administradora", "tipo_bem", "credito_minimo", "credito_maximo",
+            "prazo_total", "prazo_restante", "taxa_adm", "fundo_reserva", "percentual_lance_embutido",
+            "historico", "proxima_assembleia", "limite_adesao",
+        )}
         public_group["cenarios"] = [
-            {key: scenario.get(key) for key in ("id", "credito_contratado", "parcela_inicial", "parcela_pos_contemplacao", "saldo_devedor")}
+            {key: scenario.get(key) for key in (
+                "id", "nome", "credito_contratado", "credito_liquido", "lance_embutido", "lance_proprio",
+                "lance_total", "percentual_lance_total", "parcela_inicial", "parcela_pos_contemplacao",
+                "saldo_devedor", "prazo", "prazo_restante", "credito_disponivel",
+            )}
             for scenario in (group.get("cenarios") or []) if isinstance(scenario, dict)
         ]
         public_groups.append(public_group)
@@ -840,6 +848,9 @@ def _public_study_payload(item: dict) -> dict:
         "cliente": public_cliente,
         "grupo": {key: (item.get("grupo") or {}).get(key) for key in ("administradora", "grupo", "grupo_id")},
         "grupos_selecionados": public_groups,
+        "financeiro": item.get("financeiro") or {},
+        "template_campos": item.get("template_campos") or {},
+        "editor_content": item.get("editor_content") or {},
     }
 
 

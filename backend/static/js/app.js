@@ -4633,6 +4633,30 @@ function renderStudyGroup(group) {
   ].map(([label, value]) => studyField(label, value)).join("");
 }
 
+// A apresentação do estudo usa a coleção persistida; o primeiro grupo só alimenta
+// os blocos legados de detalhe. A tabela comparativa nunca depende de posições fixas.
+function renderStudyGroupsComparison(groups = []) {
+  const screen = document.getElementById("screen-estudo");
+  if (!screen) return;
+  let card = document.getElementById("financialStudyGroupsComparison");
+  if (!card) {
+    card = document.createElement("div");
+    card.id = "financialStudyGroupsComparison";
+    card.className = "content-card financial-study-groups-comparison";
+    screen.appendChild(card);
+  }
+  if (!groups.length) {
+    card.innerHTML = `<div class="placeholder-card compact-placeholder"><h2>Nenhum grupo associado</h2><p>Selecione ao menos um grupo no Motor 360 para montar o Estudo Financeiro.</p></div>`;
+    return;
+  }
+  const value = (item, fallback = "-") => item === null || item === undefined || item === "" ? fallback : item;
+  const money = (item) => item === null || item === undefined || item === "" ? "-" : formatMoney(item);
+  card.innerHTML = `<div class="table-toolbar"><div><h2>Grupos selecionados</h2><p>${groups.length} grupo(s) persistido(s) no snapshot deste estudo.</p></div></div>
+    <div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Grupo</th><th>Crédito máx.</th><th>Taxa ADM</th><th>Prazo</th><th>Histórico</th><th>Cenários</th></tr></thead><tbody>
+      ${groups.map((group) => `<tr><td>${escapeHtml(String(value(group.grupo || group.grupo_id)))}</td><td>${money(group.credito_maximo)}</td><td>${formatPercent(group.taxa_adm)}</td><td>${value(group.prazo_restante || group.prazo_total)} meses</td><td>${Object.keys(group.historico || {}).length} mês(es)</td><td>${(group.cenarios || []).length}</td></tr>`).join("")}
+    </tbody></table></div>`;
+}
+
 function renderStudySummary(financial, group, viabilityItem) {
   document.getElementById("studyCreditoOriginal").textContent = formatMoney(financial.creditoContratado);
   document.getElementById("studyLanceEmbutido").textContent = `${formatPercent(financial.percentualEmbutido)} / ${formatMoney(financial.lanceEmbutido)}`;
@@ -4835,6 +4859,8 @@ async function openFinancialStudy(groupId, viabilityItem) {
   try {
     const group = await apiGet(`/grupos/${encodeURIComponent(groupId)}`);
     currentStudy.group = group;
+    currentStudy.groups = selectedMotor360SnapshotItems().length ? selectedMotor360SnapshotItems() : [group];
+    renderStudyGroupsComparison(currentStudy.groups);
     const financial = computeStudy(payload, viabilityItem, group);
     currentStudy.financial = financial;
     renderStudyClient(payload);

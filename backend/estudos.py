@@ -61,6 +61,7 @@ STUDIES_HEADERS = [
     "editor_updated_at",
     "final_pdf_url",
     "final_pdf_version",
+    "grupos_selecionados_json",
 ]
 
 
@@ -140,13 +141,13 @@ def ensure_studies_sheet() -> None:
         ).execute()
     result = service.spreadsheets().values().get(
         spreadsheetId=settings.google_sheets_id,
-        range=f"'{STUDIES_SHEET_NAME}'!A1:X2",
+        range=f"'{STUDIES_SHEET_NAME}'!A1:Y2",
     ).execute()
     rows = result.get("values", [])
     if not rows or rows[0] != STUDIES_HEADERS:
         service.spreadsheets().values().update(
             spreadsheetId=settings.google_sheets_id,
-            range=f"'{STUDIES_SHEET_NAME}'!A1:X1",
+            range=f"'{STUDIES_SHEET_NAME}'!A1:Y1",
             valueInputOption="RAW",
             body={"values": [STUDIES_HEADERS]},
         ).execute()
@@ -162,6 +163,8 @@ def normalize_study_item(item: dict[str, Any]) -> dict[str, Any]:
         "operador": str(item.get("operador") or "Não informado"),
         "grupo_id": str(item.get("grupo_id") or ""),
         "grupo": item.get("grupo") or {},
+        "grupos_selecionados": item.get("grupos_selecionados") or [],
+        "study_snapshot": item.get("study_snapshot") or None,
         "cliente": item.get("cliente") or {},
         "cenario": item.get("cenario") or None,
         "financeiro": item.get("financeiro") or {},
@@ -176,6 +179,10 @@ def normalize_study_item(item: dict[str, Any]) -> dict[str, Any]:
         "final_pdf_version": int(item.get("final_pdf_version") or 0),
         "estrategia": str(item.get("estrategia") or "Lance Total"),
     }
+    if not normalized["grupos_selecionados"] and normalized["study_snapshot"]:
+        normalized["grupos_selecionados"] = normalized["study_snapshot"].get("groups") or []
+    if not normalized["grupos_selecionados"] and normalized["grupo"]:
+        normalized["grupos_selecionados"] = [normalized["grupo"]]
     if item.get("cancelado_em"):
         normalized["cancelado_em"] = str(item.get("cancelado_em"))
     return normalized
@@ -210,6 +217,7 @@ def study_item_to_row(item: dict[str, Any]) -> list[str]:
         normalized["editor_updated_at"],
         normalized["final_pdf_url"],
         str(normalized["final_pdf_version"]),
+        dumps_cell(normalized["grupos_selecionados"]),
     ]
 
 
@@ -239,6 +247,7 @@ def study_item_from_row(row: list[Any]) -> dict[str, Any]:
             "editor_updated_at": payload.get("editor_updated_at"),
             "final_pdf_url": payload.get("final_pdf_url"),
             "final_pdf_version": payload.get("final_pdf_version"),
+            "grupos_selecionados": loads_cell(payload.get("grupos_selecionados_json"), []),
         }
     )
 
@@ -249,7 +258,7 @@ def read_studies_from_sheet() -> list[tuple[int, dict[str, Any]]]:
     service = get_service()
     result = service.spreadsheets().values().get(
         spreadsheetId=settings.google_sheets_id,
-        range=f"'{STUDIES_SHEET_NAME}'!A:X",
+        range=f"'{STUDIES_SHEET_NAME}'!A:Y",
     ).execute()
     values = result.get("values", [])
     if not values:
@@ -270,7 +279,7 @@ def write_study_row_to_sheet(row_number: int, item: dict[str, Any]) -> None:
     service = get_service()
     service.spreadsheets().values().update(
         spreadsheetId=settings.google_sheets_id,
-        range=f"'{STUDIES_SHEET_NAME}'!A{row_number}:X{row_number}",
+        range=f"'{STUDIES_SHEET_NAME}'!A{row_number}:Y{row_number}",
         valueInputOption="RAW",
         body={"values": [study_item_to_row(item)]},
     ).execute()
@@ -282,7 +291,7 @@ def append_study_row_to_sheet(item: dict[str, Any]) -> None:
     service = get_service()
     service.spreadsheets().values().append(
         spreadsheetId=settings.google_sheets_id,
-        range=f"'{STUDIES_SHEET_NAME}'!A:P",
+        range=f"'{STUDIES_SHEET_NAME}'!A:Y",
         valueInputOption="RAW",
         insertDataOption="INSERT_ROWS",
         body={"values": [study_item_to_row(item)]},
@@ -577,7 +586,7 @@ def clear_all_estudos() -> int:
         rows = read_studies_from_sheet()
         service.spreadsheets().values().clear(
             spreadsheetId=settings.google_sheets_id,
-            range=f"'{STUDIES_SHEET_NAME}'!A2:X",
+            range=f"'{STUDIES_SHEET_NAME}'!A2:Y",
             body={},
         ).execute()
         return len(rows)

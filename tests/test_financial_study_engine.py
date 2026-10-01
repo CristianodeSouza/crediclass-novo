@@ -1,10 +1,24 @@
 import unittest
+from backend.estudos import normalize_study_item, study_item_to_row, study_item_from_row
 
 from backend.financial_study_engine import build_financeiro
 from backend.models import EstudoCliente, EstudoRequest
 
 
 class FinancialStudyEngineTest(unittest.TestCase):
+    def test_snapshot_preserva_quantidade_e_identidade_dos_grupos(self):
+        groups = [
+            {"grupo": str(40000 + index), "taxa_adm": 0.16 + index / 100, "prazo_restante": 240 - index,
+             "historico": {f"2026-{index + 1:02d}": {"menor_lance": index / 100}},
+             "cenarios": [{"id": "without_embedded", "credito_contratado": 100000 + index}]}
+            for index in range(12)
+        ]
+        item = normalize_study_item({"estudo_id": "EST-2026-00069", "grupo": groups[0], "grupos_selecionados": groups})
+        restored = study_item_from_row(study_item_to_row(item))
+        self.assertEqual([group["grupo"] for group in restored["grupos_selecionados"]], [str(40000 + i) for i in range(12)])
+        self.assertEqual(restored["grupos_selecionados"][1]["taxa_adm"], 0.17)
+        self.assertEqual(restored["grupos_selecionados"][11]["historico"]["2026-12"]["menor_lance"], 0.11)
+
     def test_build_financeiro_calcula_credito_e_lance_embutido(self):
         payload = EstudoRequest(
             cliente=EstudoCliente(
