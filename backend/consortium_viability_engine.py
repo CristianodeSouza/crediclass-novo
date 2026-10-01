@@ -579,6 +579,11 @@ def analyze_client_consortium_viability(
             "ignored_scenarios": ignored_contemplation_scenarios,
         }
         selected = approved_scenarios[0]
+        history_quality_alerts = [
+            "historico_menor_maior_inconsistente"
+            for entry in (group.get("historico_12_meses") or [])
+            if entry.get("menor_lance") is not None and entry.get("maior_lance") is not None and parse_decimal(entry.get("menor_lance")) > parse_decimal(entry.get("maior_lance"))
+        ]
         item = {
             **group_ref,
             "grupo_id": str(group.get("grupo_id") or group_ref["grupo"]),
@@ -613,7 +618,7 @@ def analyze_client_consortium_viability(
             "contemplation_classification": contemplation_classification,
             "destaque_preferencia": preference in distinct_matches,
             "source_values": source_values,
-            "alerts": [],
+            "alerts": sorted(set(history_quality_alerts)),
             "selected_scenario": selected["id"],
             "selection_stage": "preselection",
             "stage_results": stage_results,

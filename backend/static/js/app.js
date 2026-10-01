@@ -2237,7 +2237,9 @@ function renderMotor360GroupCard(item) {
   const scenarios = Array.isArray(item.cenarios) ? item.cenarios : [];
   const byId = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
   const profiles = byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [];
-  const status = item.result === "preselected" ? "Pré-selecionado" : item.alerts?.length ? formatMotor360Reason(item.alerts[0]) : "Compatível por crédito";
+  const requestedPreference = investorState.result?.preferencia_declarada;
+  const objectiveCompatible = !requestedPreference || (item.compatible_contemplation_strategies || []).includes(requestedPreference);
+  const status = item.result === "preselected" ? "Pré-selecionado" : item.alerts?.length ? formatMotor360Reason(item.alerts[0]) : objectiveCompatible ? "Compatível por crédito e objetivo" : "Compatível por crédito; objetivo não atendido";
   const groupId = String(item.grupo || item.grupo_id || "");
   const auditId = escapeHtml(groupId);
   const anchorId = motor360GroupAnchorId(groupId);
@@ -2545,7 +2547,7 @@ function renderSelectedGroupsAnalyticalPanel(items) {
     ["Comprom. renda", (entry) => entry.incomeCommitment == null ? "-" : formatPercent(entry.incomeCommitment)],
     ["Taxa adm.", (entry) => formatPercent(entry.adminRate)],
     ["Fundo reserva", (entry) => formatPercent(entry.reserveRate)],
-    ["Chance relativa", (entry) => `${entry.probability}% · ${entry.probabilityLabel}`],
+    ["Índice de aderência", (entry) => `${entry.score}/100 · ${entry.scoreLabel}`],
   ];
   const profileRows = Object.entries(profileNames).map(([id, label]) => `<tr class="${profileFilter === id ? "is-focus" : ""}"><th>${label}</th>${analytics.map((entry) => { const value = entry.profile(id); const gap = Number(value.falta_para_ideal || 0) * entry.quotaCount; const state = value.atinge_perfil ? "is-positive" : gap ? "is-negative" : "is-warning"; return `<td class="${state}"><strong>${formatPercent(value.percentual_referencia)}</strong><small>${value.atinge_perfil ? "Perfil atingido" : gap ? `Faltam ${formatMoney(gap)}` : "Sem referência"}</small></td>`; }).join("")}</tr>`).join("");
   const comparativeRows = analytics.map((entry) => `<tr><th>Grupo ${escapeHtml(entry.groupId)}<small>${escapeHtml(entry.item.administradora || "-")}</small></th>${metricRows.map(([, formatter]) => `<td>${formatter(entry)}</td>`).join("")}</tr>`).join("");
