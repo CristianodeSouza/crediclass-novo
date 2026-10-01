@@ -3382,11 +3382,30 @@ function renderItauReplicaStudy({ screen, items, profile, clientName, issueDate,
   const groupBlocks = items.map((item) => {
     const without = scenario(item, "without_embedded");
     const withEmbedded = scenario(item, "with_embedded");
-    const scenarioRows = [without, withEmbedded, ...(item.cenarios || []).filter((entry) => !["without_embedded", "with_embedded"].includes(entry.id))].map((entry) => `<tr><td>${escapeHtml(entry.nome || entry.id || "-")}</td><td>${moneyValue(entry.credito_contratado)}</td><td>${moneyValue(entry.credito_liquido)}</td><td>${moneyValue(entry.lance_proprio)}</td><td>${moneyValue(entry.lance_embutido)}</td><td>${moneyValue(entry.lance_total)}</td><td>${moneyValue(entry.saldo_devedor)}</td><td>${moneyValue(entry.parcela_inicial)}</td><td>${moneyValue(entry.parcela_pos_contemplacao)}</td><td>${entry.percentual_lance_total == null ? "Não informado" : formatPercent(entry.percentual_lance_total)}</td></tr>`).join("");
-    const historyRows = (item.historico_12_meses || item.historico || []).map((entry) => `<tr><td>${escapeHtml(entry.mes || entry.month || entry.label || "-")}</td><td>${entry.menor_lance == null ? "Não informado" : formatPercent(entry.menor_lance)}</td><td>${entry.maior_lance == null ? "Não informado" : formatPercent(entry.maior_lance)}</td><td>${entry.qtd_contemplacoes ?? "Não informado"}</td><td>${entry.media == null ? "Não informado" : formatPercent(entry.media)}</td></tr>`).join("");
+    const scenarioRows = (item.cenarios || []).map((entry) => {
+      const value = scenario(item, entry.id);
+      const bidPercent = value.percentual_lance_efetivo ?? value.percentual_lance_total ?? value.percentual_lance;
+      return `<tr><td>${escapeHtml(value.nome || value.label || value.id || "-")}</td><td>${moneyValue(value.credito_contratado)}</td><td>${moneyValue(value.credito_liquido)}</td><td>${moneyValue(value.lance_proprio)}</td><td>${moneyValue(value.lance_embutido)}</td><td>${moneyValue(value.lance_total)}</td><td>${moneyValue(value.saldo_devedor)}</td><td>${moneyValue(value.parcela_inicial)}</td><td>${moneyValue(value.parcela_pos_contemplacao)}</td><td>${bidPercent == null ? "Não informado" : formatPercent(bidPercent)}</td></tr>`;
+    }).join("");
+    const historyRows = (item.historico_12_meses || item.historico || []).map((entry) => {
+      const average = entry.media ?? (entry.menor_lance != null && entry.maior_lance != null ? (Number(entry.menor_lance) + Number(entry.maior_lance)) / 2 : null);
+      return `<tr><td>${escapeHtml(entry.mes || entry.month || entry.label || "-")}</td><td>${entry.menor_lance == null ? "Não informado" : formatPercent(entry.menor_lance)}</td><td>${entry.maior_lance == null ? "Não informado" : formatPercent(entry.maior_lance)}</td><td>${entry.qtd_contemplacoes ?? "Não informado"}</td><td>${average == null ? "Não informado" : formatPercent(average)}</td></tr>`;
+    }).join("");
     return `<article class="itau-replica-group"><header><strong>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</strong><span>${escapeHtml(item.administradora || "ITAÚ")} · ${qty(item)} cota(s)</span></header><div class="itau-replica-group-grid"><span><small>Crédito mínimo</small><b>${moneyValue(item.credito_minimo)}</b></span><span><small>Crédito máximo</small><b>${moneyValue(item.credito_maximo)}</b></span><span><small>Prazo total / restante</small><b>${escapeHtml(String(item.prazo_total || "-"))} / ${escapeHtml(String(item.prazo_restante || "-"))} meses</b></span><span><small>Taxa administrativa</small><b>${item.taxa_adm == null ? "Não informado" : formatPercent(item.taxa_adm)}</b></span><span><small>Fundo de reserva</small><b>${item.fundo_reserva == null ? "Não informado" : formatPercent(item.fundo_reserva)}</b></span><span><small>Próxima assembleia</small><b>${nextAssemblyLabel}</b></span></div><h4>Cenários do grupo</h4><div class="itau-replica-table-wrap"><table class="itau-replica-table"><thead><tr><th>Cenário</th><th>Crédito</th><th>Líquido</th><th>Lance próprio</th><th>Embutido</th><th>Total</th><th>Saldo</th><th>Parcela inicial</th><th>Pós-contemplação</th><th>% lance</th></tr></thead><tbody>${scenarioRows || `<tr><td colspan="10">Nenhum cenário informado</td></tr>`}</tbody></table></div><h4>Histórico mensal</h4><div class="itau-replica-table-wrap"><table class="itau-replica-table"><thead><tr><th>Mês</th><th>Menor lance</th><th>Maior lance</th><th>Contemplações</th><th>Média</th></tr></thead><tbody>${historyRows || `<tr><td colspan="5">Histórico não informado</td></tr>`}</tbody></table></div></article>`;
   }).join("");
-  const strategies = items.flatMap((item) => (item.estrategias || item.financeiro?.estrategias || []).map((strategy) => ({ ...strategy, grupo: item.grupo || item.grupo_id })));
+  const strategies = items.flatMap((item) => {
+    const explicit = item.estrategias || item.financeiro?.estrategias || [];
+    const fromScenarios = (item.cenarios || []).flatMap((entry) => (entry.perfis_contemplacao || []).map((profile) => ({
+      estrategia: profile.label,
+      percentual_lance: profile.percentual_referencia,
+      lance_necessario: profile.lance_ideal_total ?? profile.lance_ideal,
+      lance_proprio: profile.lance_cliente,
+      falta_para_ideal: profile.falta_para_ideal,
+      grupo: item.grupo || item.grupo_id,
+      cenario: entry.label || entry.id,
+    })));
+    return (explicit.length ? explicit : fromScenarios);
+  });
   const strategyMarkup = strategies.map((strategy) => `<div><strong>Grupo ${escapeHtml(String(strategy.grupo || "-"))} · ${escapeHtml(strategy.estrategia || strategy.nome || "Estratégia")}</strong><p>Referência: ${strategy.percentual_lance == null ? "Não informado" : formatPercent(strategy.percentual_lance)} · Lance necessário: ${moneyValue(strategy.lance_proprio ?? strategy.lance_necessario)} · Distância: ${moneyValue(strategy.falta_para_ideal)}</p></div>`).join("") || `<p>Estratégias não informadas nos dados do estudo.</p>`;
   const ownResources = Number(profile.lance_proprio || profile.lance_recursos_proprios || 0);
   const fgts = Number(profile.fgts || profile.fgts_total || 0);
