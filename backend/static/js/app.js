@@ -3397,20 +3397,21 @@ function renderItauReplicaStudy({ screen, items, profile, clientName, issueDate,
   }).join("");
   const strategies = items.flatMap((item) => {
     const explicit = item.estrategias || item.financeiro?.estrategias || [];
-    const fromScenarios = (item.cenarios || []).flatMap((entry) => (entry.perfis_contemplacao || []).map((profile) => ({
+    const eligibleScenarios = (item.cenarios || []).filter((entry) => entry.credit_compatible && entry.term_compatible && entry.income_compatible && entry.liquidez_preservada !== false);
+    const fromScenarios = eligibleScenarios.flatMap((entry) => (entry.perfis_contemplacao || []).map((profile) => ({
       estrategia: profile.label,
       percentual_lance: profile.percentual_referencia,
-      lance_necessario: profile.lance_ideal_total ?? profile.lance_ideal,
-      lance_proprio: profile.lance_cliente,
+      lance_ideal: entry.id === "with_embedded" ? (profile.lance_ideal_total ?? profile.lance_ideal) : profile.lance_ideal,
+      lance_disponivel: entry.lance_total_cenario,
       falta_para_ideal: profile.falta_para_ideal,
       grupo: item.grupo || item.grupo_id,
       cenario: entry.label || entry.id,
     })));
     return (explicit.length ? explicit : fromScenarios);
   });
-  const strategyKey = (strategy) => `${strategy.grupo || "-"}|${strategy.estrategia || strategy.nome || "Estratégia"}`;
+  const strategyKey = (strategy) => `${strategy.grupo || "-"}|${strategy.estrategia || strategy.nome || "Estratégia"}|${strategy.cenario || "-"}`;
   const uniqueStrategies = [...new Map(strategies.map((strategy) => [strategyKey(strategy), strategy])).values()];
-  const strategyMarkup = uniqueStrategies.length ? `<div class="itau-replica-table-wrap"><table class="itau-replica-table itau-replica-strategy-table"><thead><tr><th>Grupo</th><th>Estratégia</th><th>Referência</th><th>Lance necessário</th><th>Distância</th><th>Cenário</th></tr></thead><tbody>${uniqueStrategies.map((strategy) => `<tr><td>Grupo ${escapeHtml(String(strategy.grupo || "-"))}</td><td>${escapeHtml(strategy.estrategia || strategy.nome || "Estratégia")}</td><td>${strategy.percentual_lance == null ? "Não informado" : formatPercent(strategy.percentual_lance)}</td><td>${moneyValue(strategy.lance_proprio ?? strategy.lance_necessario)}</td><td>${moneyValue(strategy.falta_para_ideal)}</td><td>${escapeHtml(strategy.cenario || "Sem embutido")}</td></tr>`).join("")}</tbody></table></div>` : `<p>Estratégias não informadas nos dados do estudo.</p>`;
+  const strategyMarkup = uniqueStrategies.length ? `<div class="itau-replica-table-wrap"><table class="itau-replica-table itau-replica-strategy-table"><thead><tr><th>Grupo</th><th>Estratégia</th><th>Referência</th><th>Lance ideal</th><th>Lance disponível</th><th>Distância</th><th>Cenário elegível</th></tr></thead><tbody>${uniqueStrategies.map((strategy) => `<tr><td>Grupo ${escapeHtml(String(strategy.grupo || "-"))}</td><td>${escapeHtml(strategy.estrategia || strategy.nome || "Estratégia")}</td><td>${strategy.percentual_lance == null ? "Não informado" : formatPercent(strategy.percentual_lance)}</td><td>${moneyValue(strategy.lance_ideal)}</td><td>${moneyValue(strategy.lance_disponivel)}</td><td>${moneyValue(strategy.falta_para_ideal)}</td><td>${escapeHtml(strategy.cenario || "Não informado")}</td></tr>`).join("")}</tbody></table></div>` : `<p>Não há estratégias em cenários elegíveis.</p>`;
   const ownResources = Number(profile.lance_proprio || profile.lance_recursos_proprios || 0);
   const fgts = Number(profile.fgts || profile.fgts_total || 0);
   const summaryRows = items.map((item) => {
