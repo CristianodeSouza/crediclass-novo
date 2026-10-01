@@ -1052,8 +1052,15 @@ def estudo_publico_pagina(estudo_id: str):
         return HTMLResponse("<h1>Estudo não encontrado</h1><p>Solicite um novo link à Crediclass.</p>", status_code=404)
     cliente = html_escape(str((item.get("cliente") or {}).get("nome") or "Cliente"))
     grupo = item.get("grupo") or {}
-    administradora = html_escape(str(grupo.get("administradora") or "Administradora"))
-    if administradora.upper().replace("Ú", "U") == "ITAU" and ITAU_TEMPLATE_PATH.exists():
+    administradora_raw = str(grupo.get("administradora") or "Administradora")
+    administradora = html_escape(administradora_raw)
+    administradora_key = "".join(
+        char for char in unicodedata.normalize("NFKD", administradora_raw).upper()
+        if not unicodedata.combining(char)
+    )
+    # The public URL must use the same Itaú study layout as the operator,
+    # including names such as "ITAÚ CONSÓRCIOS" returned by persisted studies.
+    if "ITAU" in administradora_key and ITAU_TEMPLATE_PATH.exists():
         return HTMLResponse(_html_with_download_control(_public_itau_html(_public_study_payload(item), cliente)))
     public_payload = _public_study_payload(item)
     public_payload["consolidado"] = {
