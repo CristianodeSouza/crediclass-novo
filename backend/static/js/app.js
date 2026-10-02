@@ -6314,7 +6314,12 @@ function motor360FirstRequiredBid() {
   if (!result || !profile) return null;
   const profileAliases = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" };
   const profileIds = new Set([profile, profileAliases[profile]].filter(Boolean));
-  const source = [...(result.items || []), ...(result.credit_items || []), ...(investorState.audit?.group_results || [])];
+  const auditedEligible = (investorState.audit?.group_results || []).filter((item) => item.stage_results?.credito?.approved && item.stage_results?.prazo?.approved);
+  const source = result.items?.length
+    ? result.items
+    : auditedEligible.length
+      ? auditedEligible
+      : (result.credit_items || []).filter((item) => item.recommendable !== false);
   const required = source.map((item) => {
     const scenarios = item.cenarios || item.scenarios || [];
     const scenario = scenarios.find((entry) => entry.id === "without_embedded") || scenarios[0];
