@@ -4521,6 +4521,8 @@ function collectClientProfile() {
     data_nascimento_conjuge: summary.data_nascimento_conjuge,
     objetivo: objective,
     contemplacao_perfil: document.getElementById("clientProfileContemplacaoPerfil")?.value || objectiveProfile || null,
+    filtro_lance_embutido: document.getElementById("clientProfileFiltroLanceEmbutido")?.value || null,
+    filtro_parcela_reduzida: document.getElementById("clientProfileFiltroParcelaReduzida")?.value || null,
     tipo_bem: document.getElementById("clientProfileTipoBem").value,
     tipo_bem_explicit: Boolean(document.getElementById("clientProfileTipoBem").value),
     estado_bem: document.getElementById("clientProfileEstadoBem").value,
@@ -5073,6 +5075,8 @@ async function saveCurrentStudy(options = {}) {
       credito_desejado: currentStudy.payload.credito_desejado,
       objetivo: currentStudy.payload.objetivo,
       contemplacao_perfil: currentStudy.payload.contemplacao_perfil || null,
+      filtro_lance_embutido: currentStudy.payload.filtro_lance_embutido || null,
+      filtro_parcela_reduzida: currentStudy.payload.filtro_parcela_reduzida || null,
       prazo_desejado: currentStudy.payload.prazo_desejado,
       lance_proprio: currentStudy.payload.lance_proprio,
       fgts: currentStudy.payload.fgts,
@@ -6224,7 +6228,7 @@ document.getElementById("groupFormModal").addEventListener("blur", (event) => {
   document.getElementById(id).addEventListener("input", updateClientProfileTotals);
 });
 
-["clientProfilePrazo", "clientProfileObjetivo", "clientProfileContemplacaoPerfil", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
+["clientProfilePrazo", "clientProfileObjetivo", "clientProfileContemplacaoPerfil", "clientProfileFiltroLanceEmbutido", "clientProfileFiltroParcelaReduzida", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
   document.getElementById(id).addEventListener("change", updateClientProfileTotals);
 });
 

@@ -75,6 +75,17 @@ def _active_status(value: Any) -> tuple[bool, str]:
     return False, "missing" if not status else "inactive"
 
 
+def _group_feature_flags(group: dict[str, Any]) -> dict[str, bool]:
+    embedded_percent = normalize_percent(group.get("percentual_lance_embutido"), allow_one=False) or Decimal("0")
+    embedded_text = normalize_text(str(group.get("modalidades_embutido") or group.get("base_calculo_embutido") or ""))
+    reduced_value = parse_decimal(group.get("parcela_reduzida"))
+    reduced_text = normalize_text(str(group.get("parcela_reduzida") or ""))
+    return {
+        "lance_embutido": embedded_percent > 0 or bool(embedded_text and embedded_text not in {"nao", "não", "n", "nenhum"}),
+        "parcela_reduzida": (reduced_value is not None and reduced_value > 0) or reduced_text not in {"", "nao", "não", "n", "0", "0,00", "0.00"},
+    }
+
+
 def _positive_integer(value: Any) -> int | None:
     parsed = parse_decimal(value)
     if parsed is None or parsed <= 0 or parsed != parsed.to_integral_value():
@@ -280,6 +291,20 @@ def analyze_client_consortium_viability(
             group_results.append({**group_ref, "result": "rejected", "justification": [excluded[-1]["reason"]], "scenarios": []})
             continue
 
+        feature_flags = _group_feature_flags(group)
+        requested_embedded = str(getattr(payload, "filtro_lance_embutido", "") or "").strip().lower()
+        requested_reduced = str(getattr(payload, "filtro_parcela_reduzida", "") or "").strip().lower()
+        if requested_embedded in {"sim", "nao"} and feature_flags["lance_embutido"] != (requested_embedded == "sim"):
+            counters["embedded_filter_rejected"] += 1
+            excluded.append({**group_ref, "reason": "filtro_lance_embutido", "detail": f"Grupo {'possui' if feature_flags['lance_embutido'] else 'não possui'} lance embutido; filtro: {requested_embedded}."})
+            group_results.append({**group_ref, "result": "excluded_group_filter", "justification": ["filtro_lance_embutido"], "scenarios": []})
+            continue
+        if requested_reduced in {"sim", "nao"} and feature_flags["parcela_reduzida"] != (requested_reduced == "sim"):
+            counters["reduced_installment_filter_rejected"] += 1
+            excluded.append({**group_ref, "reason": "filtro_parcela_reduzida", "detail": f"Grupo {'possui' if feature_flags['parcela_reduzida'] else 'não possui'} parcela reduzida; filtro: {requested_reduced}."})
+            group_results.append({**group_ref, "result": "excluded_group_filter", "justification": ["filtro_parcela_reduzida"], "scenarios": []})
+            continue
+
         step_started = time.perf_counter()
         minimum = parse_decimal(group.get("credito_minimo"))
         maximum = parse_decimal(group.get("credito_maximo"))
@@ -416,6 +441,7 @@ def analyze_client_consortium_viability(
         ]
         contemplation_capacities = _contemplation_capacity(group)
         source_values = {
+            "filtros_grupo": feature_flags,
             "prazo_restante": remaining_term,
             "credito_minimo": money(minimum),
             "credito_maximo": money(maximum),

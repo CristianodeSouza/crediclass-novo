@@ -923,6 +923,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .client-profile-section .profile-objective-field {
   grid-column: 1 / -1;
 }
+.profile-filter-pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; grid-column:1 / -1; }
+@media (max-width:700px) { .profile-filter-pair { grid-template-columns:1fr; } }
 
 .client-profile-section .profile-contracting-field {
   grid-column: span 2;

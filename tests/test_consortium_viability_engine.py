@@ -49,6 +49,17 @@ def group(identifier="G1", **overrides):
 
 
 class Motor360RfcTest(unittest.TestCase):
+    def test_filtros_de_lance_embutido_e_parcela_reduzida(self):
+        result = analyze_client_consortium_viability(payload(
+            contemplacao_perfil=None,
+            filtro_lance_embutido="sim",
+            filtro_parcela_reduzida="sim",
+        ), [
+            group(modalidades_embutido="Sobre o Crédito", parcela_reduzida="500"),
+            group("G2", modalidades_embutido="Não", parcela_reduzida=""),
+        ])
+        self.assertEqual([item["grupo"] for item in result["items"]], ["G1"])
+
     def test_perfil_explicito_filtra_grupo_antes_da_selecao(self):
         result = analyze_client_consortium_viability(payload(
             contemplacao_perfil="urgent",

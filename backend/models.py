@@ -294,6 +294,8 @@ class AuditoriaV4(BaseModel):
 
 class ViabilidadeRequest(BaseModel):
     objetivo: str
+    filtro_lance_embutido: Literal["sim", "nao"] | None = None
+    filtro_parcela_reduzida: Literal["sim", "nao"] | None = None
     contemplacao_perfil: Literal["urgent", "fast", "moderate", "conservative", "long_term"] | None = None
     credito_desejado: float = Field(gt=0)
     prazo_desejado: int = Field(gt=0)
@@ -441,6 +443,8 @@ class EstudoCliente(BaseModel):
     credito_desejado: float = Field(gt=0)
     objetivo: str = ""
     contemplacao_perfil: Literal["urgent", "fast", "moderate", "conservative", "long_term"] | None = None
+    filtro_lance_embutido: Literal["sim", "nao"] | None = None
+    filtro_parcela_reduzida: Literal["sim", "nao"] | None = None
     prazo_desejado: int | None = Field(default=None, gt=0)
     lance_proprio: float | None = Field(default=None, ge=0)
     fgts: float | None = Field(default=None, ge=0)
