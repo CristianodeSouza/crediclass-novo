@@ -4661,7 +4661,9 @@ function loadClientProfile() {
   const objective = CLIENT_OBJECTIVE_RULES[profile.objetivo] ? profile.objetivo : "Contemplar - urgente - 3 meses";
   setInputValue("clientProfileObjetivo", objective);
   updateClientProfileTotals();
+  investorState.simulatedBid = null;
   applyClientProfileToFlow(collectClientProfile());
+  syncMotor360BidExplorer();
 }
 
 function resetClientProfile() {
@@ -4670,6 +4672,8 @@ function resetClientProfile() {
   window.localStorage.removeItem(CLIENT_PROFILE_STORAGE_KEY);
   renderClientProfileTitulares({ tipo_contratacao: "pf_individual" });
   updateClientProfileTotals();
+  investorState.simulatedBid = null;
+  syncMotor360BidExplorer();
   showToast("Perfil do cliente limpo.", "success");
 }
 
@@ -6274,6 +6278,7 @@ document.getElementById("clientProfileTipoContratacao").addEventListener("change
 
 document.getElementById("clientProfileForm").addEventListener("input", (event) => {
   invalidateInvestorAnalysisForProfileChange();
+  syncMotor360BidExplorer();
   if (!event.target.matches("[data-holder-field]")) return;
   updateClientProfileTotals();
 });
