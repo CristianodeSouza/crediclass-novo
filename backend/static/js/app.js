@@ -3888,6 +3888,7 @@ async function loadMotor360Audit(auditId) {
     if (!response.ok) throw new Error("Auditoria não encontrada.");
     investorState.audit = await response.json();
     const audit = investorState.audit;
+    syncMotor360BidExplorer();
     const metadata = audit.metadata || {};
     const snapshot = audit.data_source?.base_snapshot || {};
     addMotor360ExecutionLog("Auditoria técnica carregada", `${metadata.audit_id || auditId} · ${metadata.duration_ms ?? 0} ms.`);
@@ -6313,9 +6314,10 @@ function motor360FirstRequiredBid() {
   if (!result || !profile) return null;
   const profileAliases = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" };
   const profileIds = new Set([profile, profileAliases[profile]].filter(Boolean));
-  const source = [...(result.items || []), ...(result.credit_items || [])];
+  const source = [...(result.items || []), ...(result.credit_items || []), ...(investorState.audit?.group_results || [])];
   const required = source.map((item) => {
-    const scenario = (item.cenarios || []).find((entry) => entry.id === "without_embedded") || item.cenarios?.[0];
+    const scenarios = item.cenarios || item.scenarios || [];
+    const scenario = scenarios.find((entry) => entry.id === "without_embedded") || scenarios[0];
     const row = (scenario?.perfis_contemplacao || []).find((entry) => profileIds.has(entry.id));
     return row?.lance_ideal;
   }).filter((value) => Number.isFinite(Number(value)));
