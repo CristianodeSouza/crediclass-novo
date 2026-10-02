@@ -6306,10 +6306,23 @@ document.getElementById("groupFormModal").addEventListener("blur", (event) => {
 });
 
 let motor360BidExplorerTimer = null;
+function motor360FirstRequiredBid() {
+  const result = investorState.result;
+  const profile = result?.perfil_contemplacao;
+  if (!result || !profile) return null;
+  const source = [...(result.items || []), ...(result.credit_items || [])];
+  const required = source.map((item) => {
+    const scenario = (item.cenarios || []).find((entry) => entry.id === "without_embedded") || item.cenarios?.[0];
+    const row = (scenario?.perfis_contemplacao || []).find((entry) => entry.id === profile);
+    return row?.lance_ideal;
+  }).filter((value) => Number.isFinite(Number(value)));
+  return required.length ? Math.min(...required.map(Number)) : null;
+}
 function syncMotor360BidExplorer() {
   const range = document.getElementById("motor360BidRange");
   const value = document.getElementById("motor360BidValue");
   const declared = document.getElementById("motor360DeclaredBid");
+  const marker = document.getElementById("motor360FirstMatchMarker");
   if (!range || !value || !declared) return;
   const totals = updateClientProfileTotals();
   const declaredBid = Number(totals.lance || 0);
@@ -6319,6 +6332,14 @@ function syncMotor360BidExplorer() {
   if (investorState.simulatedBid == null) range.value = String(declaredBid);
   value.textContent = formatMoney(Number(range.value || 0));
   declared.textContent = formatMoney(declaredBid);
+  const firstRequired = motor360FirstRequiredBid();
+  if (marker && firstRequired != null) {
+    const position = Math.max(0, Math.min(100, (firstRequired / max) * 100));
+    marker.style.left = `${position}%`;
+    marker.hidden = false;
+    marker.title = `Primeiro grupo compatível a partir de ${formatMoney(firstRequired)}`;
+    marker.querySelector("span")?.replaceChildren(document.createTextNode(`Primeiro grupo: ${formatMoney(firstRequired)}`));
+  } else if (marker) marker.hidden = true;
 }
 document.getElementById("motor360BidRange")?.addEventListener("input", (event) => {
   investorState.simulatedBid = Number(event.target.value || 0);

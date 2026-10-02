@@ -438,7 +438,7 @@
             <section class="motor360-bid-explorer" aria-label="Simulador de lance">
               <div><strong>Explorar lance para encontrar grupos</strong><p>O lance declarado permanece como referência. Ajuste abaixo apenas para simular cenários e descobrir o menor valor necessário.</p></div>
               <label for="motor360BidRange">Lance simulado <output id="motor360BidValue">R$ 0,00</output></label>
-              <input id="motor360BidRange" type="range" min="0" max="1000000" step="1000" value="0">
+              <div class="motor360-bid-range-wrap"><input id="motor360BidRange" type="range" min="0" max="1000000" step="1000" value="0"><span id="motor360FirstMatchMarker" class="motor360-first-match-marker" hidden><i></i><span></span></span></div>
               <small>Declarado pelo cliente: <strong id="motor360DeclaredBid">R$ 0,00</strong> · O resultado será recalculado automaticamente.</small>
             </section>
             <aside id="investorPreferencesPanel" class="investor-preferences-panel" aria-label="Filtro">

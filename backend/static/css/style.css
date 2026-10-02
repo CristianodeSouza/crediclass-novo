@@ -928,7 +928,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-bid-explorer p { margin:3px 0; color:#647277; font-size:.86rem; }
 .motor360-bid-explorer label { display:flex; justify-content:space-between; gap:12px; font-weight:700; }
 .motor360-bid-explorer output { color:#b84f08; font-size:1.05rem; }
+.motor360-bid-range-wrap { position:relative; padding: 10px 0 24px; }
 .motor360-bid-explorer input[type=range] { width:100%; accent-color:#e8751a; }
+.motor360-first-match-marker { position:absolute; top:0; transform:translateX(-50%); display:grid; justify-items:center; color:#16803c; font-size:11px; font-weight:700; white-space:nowrap; pointer-events:none; }
+.motor360-first-match-marker i { display:block; width:13px; height:13px; border:3px solid #fff; border-radius:50%; background:#20a44b; box-shadow:0 0 0 2px #16803c, 0 1px 4px rgb(15 23 42 / 25%); }
 .motor360-no-match-alert { display:grid; gap:6px; margin:12px 0; padding:18px 20px; border:1px solid #e8a15b; border-left:5px solid #e8751a; border-radius:8px; background:#fff7ed; color:#5f3215; }
 .motor360-no-match-alert strong { font-size:1.05rem; color:#b84f08; }
 .motor360-no-match-alert span { line-height:1.45; }
