@@ -3961,6 +3961,7 @@ function renderInvestorAnalysis(result) {
     ["Pré-selecionados", result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0],
     ["Eliminados por crédito", result.audit?.summary?.total_credit_rejected ?? 0],
     ["Eliminados por prazo/renda", result.audit?.summary?.total_term_income_rejected ?? 0],
+    ["Eliminados pelo perfil de contemplação", result.audit?.summary?.total_selected_profile_rejected ?? 0],
     ["Eliminados por lance do perfil", contemplationRejected.length],
     ["Dados incompletos", totals.dados_incompletos ?? 0],
     ["Grupos exibidos", items.length],
