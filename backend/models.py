@@ -440,6 +440,7 @@ class EstudoCliente(BaseModel):
     titulares: dict[str, Any] = Field(default_factory=dict)
     credito_desejado: float = Field(gt=0)
     objetivo: str = ""
+    contemplacao_perfil: Literal["urgent", "fast", "moderate", "conservative", "long_term"] | None = None
     prazo_desejado: int | None = Field(default=None, gt=0)
     lance_proprio: float | None = Field(default=None, ge=0)
     fgts: float | None = Field(default=None, ge=0)

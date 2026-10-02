@@ -49,6 +49,27 @@ def group(identifier="G1", **overrides):
 
 
 class Motor360RfcTest(unittest.TestCase):
+    def test_perfil_explicito_filtra_grupo_antes_da_selecao(self):
+        result = analyze_client_consortium_viability(payload(
+            contemplacao_perfil="urgent",
+            lance_proprio=100000,
+            fgts=0,
+        ), [group(lance_super_agressivo_3m="90%", lance_conservador_24m="5%")])
+        self.assertEqual(result["perfil_contemplacao"], "urgent")
+        self.assertEqual(result["items"], [])
+        self.assertTrue(any(item.get("result") == "excluded_contemplation" for item in result["audit"]["group_results"]))
+
+    def test_perfil_explicito_preserva_matriz_dos_demais_perfis(self):
+        result = analyze_client_consortium_viability(payload(
+            contemplacao_perfil="urgent",
+            lance_proprio=500000,
+            fgts=0,
+            parcela_limite=1000000,
+        ), [group(lance_super_agressivo_3m="5%", lance_conservador_24m="5%")])
+        self.assertEqual(len(result["items"]), 1)
+        profiles = result["items"][0]["cenarios"][0]["perfis_contemplacao"]
+        self.assertTrue(any(profile["id"] == "conservative" for profile in profiles))
+
     def test_lista_grupo_menor_para_composicao_manual_de_ate_50_cotas(self):
         history = [
             {"mes": "2026-04", "qtd_contemplacoes": 2},

@@ -365,7 +365,7 @@ def create_estudo(payload: EstudoRequest, grupo: dict | None = None, operador: s
         "grupo_id": payload.grupo_id,
         "grupo": grupo_data,
         "cenario": cenario,
-        "study_snapshot": {"schema": str(raw_snapshot.get("schema") or "motor360-selection/v1"), "groups": selected_groups} if raw_snapshot else None,
+        "study_snapshot": {key: json.loads(json.dumps(value, ensure_ascii=False)) for key, value in raw_snapshot.items() if key in {"schema", "capturedAt", "captured_at", "perfil_contemplacao", "matriz_contemplacao", "grupos_rejeitados"}} | {"groups": selected_groups} if raw_snapshot else None,
         "grupos_selecionados": selected_groups,
         "financeiro": financeiro,
         "template_campos": {**payload.template_campos, "__editor_content": empty_editor, "__editor_original": empty_editor, "__editor_history": []},
@@ -406,6 +406,9 @@ def _validated_study_snapshot(payload: EstudoPreviewRequest) -> dict[str, Any]:
     return json.loads(json.dumps({
         "schema": schema,
         "captured_at": str(raw_snapshot.get("capturedAt") or raw_snapshot.get("captured_at") or datetime.now().isoformat(timespec="seconds")),
+        "perfil_contemplacao": raw_snapshot.get("perfil_contemplacao"),
+        "matriz_contemplacao": raw_snapshot.get("matriz_contemplacao") or [],
+        "grupos_rejeitados": raw_snapshot.get("grupos_rejeitados") or [],
         "groups": groups,
     }, ensure_ascii=False))
 

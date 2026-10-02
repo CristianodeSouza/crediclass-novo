@@ -5069,6 +5069,7 @@ async function saveCurrentStudy(options = {}) {
       titulares: currentStudy.payload.titulares,
       credito_desejado: currentStudy.payload.credito_desejado,
       objetivo: currentStudy.payload.objetivo,
+      contemplacao_perfil: currentStudy.payload.contemplacao_perfil || null,
       prazo_desejado: currentStudy.payload.prazo_desejado,
       lance_proprio: currentStudy.payload.lance_proprio,
       fgts: currentStudy.payload.fgts,
@@ -5088,7 +5089,7 @@ async function saveCurrentStudy(options = {}) {
       selected_scenario_id: investorState.selectedGroupScenario || "without_embedded",
     })),
   };
-  payload.study_snapshot = { schema: "motor360-selection/v1", capturedAt: new Date().toISOString(), groups: payload.grupos_selecionados };
+  payload.study_snapshot = { schema: "motor360-selection/v2", capturedAt: new Date().toISOString(), perfil_contemplacao: currentStudy.payload.contemplacao_perfil || null, matriz_contemplacao: investorState.result?.items || [], grupos_rejeitados: investorState.result?.audit?.group_results?.filter((entry) => entry.result === "excluded_contemplation") || [], groups: payload.grupos_selecionados };
   const result = await apiPost("/estudos", payload);
     currentStudy.savedStudyId = result.estudo_id;
     currentStudy.proposalId = result.proposal_id || null;

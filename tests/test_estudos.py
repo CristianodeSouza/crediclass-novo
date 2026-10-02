@@ -10,6 +10,23 @@ from backend.estudos import export_estudo_pdf
 
 
 class EstudosTest(unittest.TestCase):
+    def test_snapshot_persiste_perfil_matriz_e_rejeitados(self):
+        payload = EstudoRequest(
+            cliente=EstudoCliente(nome="Cliente Motor", credito_desejado=500000, contemplacao_perfil="urgent"),
+            grupo_id="128",
+            study_snapshot={
+                "schema": "motor360-selection/v2",
+                "perfil_contemplacao": "urgent",
+                "matriz_contemplacao": [{"grupo": "128", "urgent": True}],
+                "grupos_rejeitados": [{"grupo": "129", "reason": "lance_insuficiente_para_perfil"}],
+                "groups": [{"grupo": "128", "cenarios": [{"id": "without_embedded"}, {"id": "with_embedded"}] }],
+            },
+        )
+        with patch("backend.main.get_grupo", return_value={"grupo_id": "128", "grupo": "128"}):
+            created = estudos_criar(payload)
+        detail = estudos_obter(created["estudo_id"])
+        self.assertEqual(detail["study_snapshot"]["perfil_contemplacao"], "urgent")
+        self.assertEqual(detail["study_snapshot"]["grupos_rejeitados"][0]["reason"], "lance_insuficiente_para_perfil")
     def test_criar_estudo_valida_grupo_e_retorna_id(self):
         payload = EstudoRequest(
             cliente=EstudoCliente(
