@@ -125,7 +125,7 @@ const investorState = {
   result: null,
   simulatedBid: null,
   preferences: [],
-  administrator: savedMotor360Administrator,
+  administrator: "",
   audit: null,
   selectedGroupIds: new Set(savedMotor360SelectedGroups.map(String)),
   selectedScenarioIds: new Map(Object.entries(JSON.parse(localStorage.getItem("crediclass.motor360.selectedScenarios") || "{}"))),
@@ -3875,16 +3875,15 @@ function syncMotor360AdministratorFilter(sourceItems) {
     .map(motor360AdministratorName)
     .find(Boolean);
 
-  if (!availableKeys.has(motor360AdministratorKey(investorState.administrator))) {
-    investorState.administrator = availableKeys.has(motor360AdministratorKey(selectedAdministrator))
-      ? administratorByKey.get(motor360AdministratorKey(selectedAdministrator))
-      : administrators[0] || "";
+  if (!investorState.administrator || !availableKeys.has(motor360AdministratorKey(investorState.administrator))) {
+    investorState.administrator = "";
   } else {
     investorState.administrator = administratorByKey.get(motor360AdministratorKey(investorState.administrator));
   }
 
   [...investorState.selectedGroupIds].forEach((id) => {
     const selectedItem = investorState.selectedGroupData.get(id);
+    if (!investorState.administrator) return;
     if (motor360AdministratorKey(selectedItem) === motor360AdministratorKey(investorState.administrator)) return;
     investorState.selectedGroupIds.delete(id);
     investorState.quotaCounts.delete(id);
@@ -3893,7 +3892,7 @@ function syncMotor360AdministratorFilter(sourceItems) {
 
   if (select) {
     select.innerHTML = administrators.length
-      ? administrators.map((administrator) => `<option value="${escapeHtml(administrator)}">${escapeHtml(administrator)}</option>`).join("")
+      ? `<option value="">Todas as administradoras</option>${administrators.map((administrator) => `<option value="${escapeHtml(administrator)}">${escapeHtml(administrator)}</option>`).join("")}`
       : '<option value="">Nenhuma administradora disponível</option>';
     select.value = investorState.administrator;
     select.disabled = !administrators.length;
@@ -3944,11 +3943,11 @@ function renderInvestorAnalysis(result) {
   const selectedAdministrator = syncMotor360AdministratorFilter([...sourceItems, ...compositionItems]);
   updateInvestorPreferenceSummary();
   const selectedAdministratorKey = motor360AdministratorKey(selectedAdministrator);
-  const administratorItems = sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey);
+  const administratorItems = selectedAdministratorKey ? sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey) : sourceItems;
   const items = applyInvestorPreferences(administratorItems, investorState.preferences);
-  const administratorCompositionItems = compositionItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey);
+  const administratorCompositionItems = selectedAdministratorKey ? compositionItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey) : compositionItems;
   const creditRejectedByTerm = creditItems.filter((item) => (
-    motor360AdministratorKey(item) === selectedAdministratorKey && !item.recommendable
+    (!selectedAdministratorKey || motor360AdministratorKey(item) === selectedAdministratorKey) && !item.recommendable
   ));
   const contemplationRejected = (result.audit?.group_results || []).filter((item) => item.result === "excluded_contemplation");
   const summaryItems = [
@@ -6328,7 +6327,7 @@ updateInvestorPreferenceSummary();
 document.getElementById("investorPreferencesOptions")?.addEventListener("change", syncInvestorPreferencesFromInputs);
 document.getElementById("investorAdministratorFilter")?.addEventListener("change", (event) => {
   const nextAdministrator = String(event.target.value || "");
-  if (!nextAdministrator || nextAdministrator === investorState.administrator) return;
+  if (nextAdministrator === investorState.administrator) return;
   const hadSelectedGroups = investorState.selectedGroupIds.size > 0;
   clearMotor360GroupSelection();
   investorState.administrator = nextAdministrator;
