@@ -3976,7 +3976,10 @@ function renderInvestorAnalysis(result) {
   if (!items.length && !administratorCompositionItems.length) {
     const profileLabel = { urgent: "Urgente", fast: "Rápido", moderate: "Moderado", conservative: "Conservador", long_term: "Investidor" }[result.perfil_contemplacao] || "selecionado";
     const rejectedHtml = contemplationRejected.length ? `<details class="motor360-credit-excluded" open><summary>${contemplationRejected.length} grupo(s) não atingem o perfil ${profileLabel}</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th></tr></thead><tbody>${contemplationRejected.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>Lance disponível abaixo da faixa do perfil selecionado.</td></tr>`).join("")}</tbody></table></div></details>` : "";
-    results.innerHTML = `${result.perfil_contemplacao ? `<div class="table-state">Nenhum grupo contempla no perfil ${profileLabel} com o lance ofertado. Os grupos compatíveis apenas por crédito não serão exibidos como selecionados.</div>` : '<div class="table-state">Nenhum grupo atende à faixa de crédito contratada nos cenários calculados.</div>'}${rejectedHtml}${renderMotor360Audit(investorState.audit)}`;
+    const explicitMessage = result.perfil_contemplacao
+      ? `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado para o perfil ${profileLabel}</strong><span>O lance do cliente (${formatMoney(client.lance_cliente_total)}) não atende ao percentual mínimo de contemplação dos grupos compatíveis. Ajuste o lance ou selecione um perfil com prazo maior.</span></div>`
+      : '<div class="table-state">Nenhum grupo atende à faixa de crédito contratada nos cenários calculados.</div>';
+    results.innerHTML = `${explicitMessage}${rejectedHtml}${renderMotor360Audit(investorState.audit)}`;
     setInvestorAnalysisState("results");
     return;
   }
