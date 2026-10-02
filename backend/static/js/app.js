@@ -123,6 +123,7 @@ const savedMotor360SelectedData = (() => {
 const savedMotor360Administrator = localStorage.getItem("crediclass.motor360.administrator") || "";
 const investorState = {
   result: null,
+  simulatedBid: null,
   preferences: [],
   administrator: savedMotor360Administrator,
   audit: null,
@@ -4498,6 +4499,8 @@ function collectClientProfile() {
   const summary = totals.holderSummary;
   const objective = document.getElementById("clientProfileObjetivo").value;
   const objectiveProfile = objective.includes("urgente") ? "urgent" : objective.includes("rapido") ? "fast" : objective.includes("moderado") ? "moderate" : objective.includes("conservador") ? "conservative" : objective.includes("investidor") && objective.includes("36") ? "long_term" : "";
+  const declaredBid = totals.lance;
+  const simulatedBid = Number.isFinite(Number(investorState.simulatedBid)) ? Number(investorState.simulatedBid) : declaredBid;
   return {
     tipo_contratacao: totals.titulares.tipo_contratacao,
     titulares: totals.titulares,
@@ -4506,11 +4509,11 @@ function collectClientProfile() {
     credito_desejado: toNumber(document.getElementById("clientProfileCredito").value),
     prazo_desejado: Number(document.getElementById("clientProfilePrazo").value),
     conceito_ia: totals.conceito,
-    lance_proprio: totals.lance,
-    lance_proprio_participantes: totals.lance,
+    lance_proprio: simulatedBid,
+    lance_proprio_participantes: simulatedBid,
     lance_proprio_manual: totals.lanceManual,
     own_resources_source: totals.lance > 0 ? "participants" : "manual",
-    lance_recursos_proprios: summary.lance_recursos_proprios || 0,
+    lance_recursos_proprios: simulatedBid,
     fgts_titular: summary.fgts_titular,
     fgts_conjuge: summary.fgts_conjuge,
     fgts: totals.fgts,
@@ -6234,6 +6237,34 @@ document.getElementById("groupFormModal").addEventListener("blur", (event) => {
 ["clientProfilePrazo", "clientProfileObjetivo", "clientProfileContemplacaoPerfil", "clientProfileFiltroLanceEmbutido", "clientProfileFiltroParcelaReduzida", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
   document.getElementById(id).addEventListener("change", updateClientProfileTotals);
 });
+
+let motor360BidExplorerTimer = null;
+function syncMotor360BidExplorer() {
+  const range = document.getElementById("motor360BidRange");
+  const value = document.getElementById("motor360BidValue");
+  const declared = document.getElementById("motor360DeclaredBid");
+  if (!range || !value || !declared) return;
+  const totals = updateClientProfileTotals();
+  const declaredBid = Number(totals.lance || 0);
+  const desiredCredit = toNumber(document.getElementById("clientProfileCredito")?.value) || 0;
+  const max = Math.max(1000000, Math.ceil(Math.max(desiredCredit, declaredBid) * 1.5 / 1000) * 1000);
+  range.max = String(max);
+  if (investorState.simulatedBid == null) range.value = String(declaredBid);
+  value.textContent = formatMoney(Number(range.value || 0));
+  declared.textContent = formatMoney(declaredBid);
+}
+document.getElementById("motor360BidRange")?.addEventListener("input", (event) => {
+  investorState.simulatedBid = Number(event.target.value || 0);
+  const value = document.getElementById("motor360BidValue");
+  if (value) value.textContent = formatMoney(investorState.simulatedBid);
+  clearTimeout(motor360BidExplorerTimer);
+  motor360BidExplorerTimer = setTimeout(() => loadInvestorAnalysis(), 450);
+});
+document.getElementById("clientProfileLanceProprio")?.addEventListener("input", () => {
+  investorState.simulatedBid = null;
+  syncMotor360BidExplorer();
+});
+syncMotor360BidExplorer();
 
 document.getElementById("clientProfileTipoContratacao").addEventListener("change", (event) => {
   const current = collectClientTitularesFromForm();

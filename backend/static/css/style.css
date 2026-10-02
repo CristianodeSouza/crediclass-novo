@@ -924,6 +924,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
   grid-column: 1 / -1;
 }
 .profile-filter-pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; grid-column:1 / -1; }
+.motor360-bid-explorer { display:grid; gap:8px; margin:12px 0; padding:14px 16px; border:1px solid #d9e0e0; border-left:4px solid var(--brand-orange, #e8751a); border-radius:8px; background:#fffaf5; }
+.motor360-bid-explorer p { margin:3px 0; color:#647277; font-size:.86rem; }
+.motor360-bid-explorer label { display:flex; justify-content:space-between; gap:12px; font-weight:700; }
+.motor360-bid-explorer output { color:#b84f08; font-size:1.05rem; }
+.motor360-bid-explorer input[type=range] { width:100%; accent-color:#e8751a; }
 .motor360-no-match-alert { display:grid; gap:6px; margin:12px 0; padding:18px 20px; border:1px solid #e8a15b; border-left:5px solid #e8751a; border-radius:8px; background:#fff7ed; color:#5f3215; }
 .motor360-no-match-alert strong { font-size:1.05rem; color:#b84f08; }
 .motor360-no-match-alert span { line-height:1.45; }

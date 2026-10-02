@@ -435,6 +435,12 @@
               <strong>Filtro</strong>
               <span id="investorPreferencesSummary" class="text-muted">Nenhuma preferência selecionada</span>
             </div>
+            <section class="motor360-bid-explorer" aria-label="Simulador de lance">
+              <div><strong>Explorar lance para encontrar grupos</strong><p>O lance declarado permanece como referência. Ajuste abaixo apenas para simular cenários e descobrir o menor valor necessário.</p></div>
+              <label for="motor360BidRange">Lance simulado <output id="motor360BidValue">R$ 0,00</output></label>
+              <input id="motor360BidRange" type="range" min="0" max="1000000" step="1000" value="0">
+              <small>Declarado pelo cliente: <strong id="motor360DeclaredBid">R$ 0,00</strong> · O resultado será recalculado automaticamente.</small>
+            </section>
             <aside id="investorPreferencesPanel" class="investor-preferences-panel" aria-label="Filtro">
               <div class="investor-preferences-heading">
                 <strong>Critérios de ordenação</strong>
