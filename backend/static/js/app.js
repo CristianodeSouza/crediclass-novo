@@ -3912,13 +3912,14 @@ function renderMotor360ContemplationMatrix(items, selectedProfile, rejectedItems
     ["urgent", "Urgente"], ["fast", "Rápido"], ["moderate", "Moderado"],
     ["conservative", "Conservador"], ["long_term", "Investidor"],
   ];
+  const profileAliases = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" };
   const rows = [...items, ...rejectedItems].map((item) => {
     const scenario = (item.cenarios || []).find((entry) => entry.id === "without_embedded") || (item.cenarios || [])[0];
     const values = scenario?.perfis_contemplacao || [];
     const cells = profiles.map(([id, label]) => {
-      const profile = values.find((entry) => entry.id === id);
+      const profile = values.find((entry) => entry.id === profileAliases[id] || entry.id === id);
       if (!profile || profile.atinge_perfil == null) return `<td><span class="text-muted">Sem dado</span></td>`;
-      return `<td><strong class="${profile.atinge_perfil ? "text-success" : "text-danger"}">${profile.atinge_perfil ? "Atende" : "Não atende"}</strong><small>${formatPercent(profile.percentual_referencia)}</small></td>`;
+      return `<td><strong class="${profile.atinge_perfil ? "text-success" : "text-danger"}">${profile.atinge_perfil ? "Atende" : "Não atende"}</strong> <small>${formatPercent(profile.percentual_referencia)}</small></td>`;
     }).join("");
     const rejected = rejectedItems.includes(item) ? " <small>(não selecionado)</small>" : "";
     return `<tr><th>${escapeHtml(item.grupo || item.grupo_id || "-")}${rejected}</th>${cells}</tr>`;
