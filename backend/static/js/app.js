@@ -3822,6 +3822,56 @@ function renderMotor360GroupAudit(groupId) {
   dialog.showModal();
 }
 
+function motor360BlockingReasonAdvice(reason) {
+  const advice = {
+    prazo_restante_nao_informado: "Preencher o prazo remanescente do grupo na planilha antes de apresentá-lo como opção final.",
+    taxa_administracao_nao_informada: "Preencher a taxa administrativa total do grupo na planilha para concluir o cálculo do cenário.",
+    credito_minimo_nao_informado: "Informar o crédito mínimo do grupo e revisar a linha na base.",
+    credito_maximo_nao_informado: "Informar o crédito máximo do grupo e revisar a linha na base.",
+    credito_fora_da_faixa: "Ajustar o crédito desejado ou orientar o cliente que este grupo não comporta o valor solicitado.",
+    prazo_remanescente_insuficiente: "Validar prazo e renda do cliente; o prazo disponível não suporta o cenário calculado.",
+    lance_insuficiente_para_perfil: "Aumentar o lance simulado ou orientar o cliente a escolher um perfil de contemplação menos urgente.",
+    percentual_lance_embutido_nao_informado: "Informar o percentual de lance embutido do grupo na planilha.",
+    filtro_lance_embutido: "Revisar o filtro de lance embutido selecionado pelo operador.",
+    filtro_parcela_reduzida: "Revisar o filtro de parcela reduzida selecionado pelo operador.",
+  };
+  return advice[reason] || "Revisar os dados do grupo e os parâmetros do perfil do cliente antes de apresentá-lo como opção final.";
+}
+
+function renderMotor360BlockingDiagnostics(audit) {
+  const entries = audit?.group_results || [];
+  const grouped = new Map();
+  entries.forEach((entry) => {
+    const reasons = [
+      ...(entry.missing_fields || []).map((field) => field.reason),
+      ...(entry.justification || []),
+    ].filter(Boolean).map(String);
+    const actionable = entry.result === "excluded_term_income" || entry.result === "excluded_contemplation" || reasons.length;
+    if (!actionable) return;
+    const key = `${entry.administradora || "-"}|${reasons.sort().join(",") || entry.result || "sem_motivo"}`;
+    const current = grouped.get(key) || { administradora: entry.administradora || "-", reasons: [], groups: [], count: 0 };
+    current.count += 1;
+    current.reasons = [...new Set([...current.reasons, ...reasons])];
+    if (current.groups.length < 8) current.groups.push(entry.grupo || entry.grupo_id || "-");
+    grouped.set(key, current);
+  });
+  const cards = [...grouped.values()].sort((left, right) => right.count - left.count).map((item) => {
+    const reasons = item.reasons.length ? item.reasons : ["dados_insuficientes"];
+    const labels = reasons.map(formatMotor360Reason).join("; ");
+    const advice = reasons.map(motor360BlockingReasonAdvice).filter((value, index, values) => values.indexOf(value) === index).join(" ");
+    return `<article class="motor360-blocking-card"><div class="motor360-blocking-card-title"><strong>${item.count} grupo(s) · ${escapeHtml(item.administradora)}</strong><span>${escapeHtml(item.groups.join(", "))}${item.count > item.groups.length ? " e outros" : ""}</span></div><p><strong>O que bloqueou:</strong> ${escapeHtml(labels)}</p><p class="motor360-blocking-advice"><strong>Como corrigir:</strong> ${escapeHtml(advice)}</p></article>`;
+  }).join("");
+  const summary = audit?.summary || {};
+  const dialog = document.createElement("dialog");
+  dialog.id = "motor360BlockingDiagnosticsDialog";
+  dialog.className = "motor360-blocking-dialog";
+  dialog.innerHTML = `<div class="motor360-blocking-dialog-header"><div><h3>O que está impedindo os grupos</h3><p>Diagnóstico da execução ${escapeHtml(audit?.metadata?.audit_id || "")}</p></div><button class="btn btn-outline-secondary btn-sm" type="button">Fechar</button></div><div class="motor360-blocking-dialog-body"><div class="motor360-blocking-summary"><span><small>Compatíveis por crédito</small><b>${summary.total_credit_compatible ?? 0}</b></span><span><small>Eliminados por prazo/renda</small><b>${summary.total_term_income_rejected ?? 0}</b></span><span><small>Eliminados pelo perfil</small><b>${summary.total_selected_profile_rejected ?? 0}</b></span><span><small>Dados incompletos</small><b>${summary.groups_with_incomplete_data ?? 0}</b></span></div><p class="motor360-blocking-intro">Os grupos abaixo podem ter atendido parte da necessidade, mas não foram apresentados como opções finais porque faltou informação, o cenário financeiro não fechou ou o lance não atingiu o perfil escolhido.</p>${cards || '<div class="table-state">Nenhum impedimento detalhado foi registrado nesta auditoria.</div>'}</div>`;
+  dialog.querySelector("button")?.addEventListener("click", () => dialog.close());
+  dialog.addEventListener("close", () => dialog.remove(), { once: true });
+  document.body.append(dialog);
+  dialog.showModal();
+}
+
 async function loadMotor360Audit(auditId) {
   if (!auditId) return;
   try {
@@ -3980,7 +4030,8 @@ function renderInvestorAnalysis(result) {
     const explicitMessage = result.perfil_contemplacao
       ? `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado para o perfil ${profileLabel}</strong><span>O lance do cliente (${formatMoney(client.lance_cliente_total)}) não atende ao percentual mínimo de contemplação dos grupos compatíveis. Ajuste o lance ou selecione um perfil com prazo maior.</span></div>`
       : '<div class="table-state">Nenhum grupo atende à faixa de crédito contratada nos cenários calculados.</div>';
-    results.innerHTML = `${explicitMessage}${rejectedHtml}${renderMotor360Audit(investorState.audit)}`;
+    results.innerHTML = `${explicitMessage}<button type="button" class="btn btn-outline-secondary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>Ver detalhes do que está impedindo os grupos</button>${rejectedHtml}${renderMotor360Audit(investorState.audit)}`;
+    results.querySelector("[data-motor360-blocking-diagnostics]")?.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit));
     setInvestorAnalysisState("results");
     return;
   }
@@ -4000,6 +4051,7 @@ function renderInvestorAnalysis(result) {
     ${renderMotor360ChanceChart(items)}
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
     ${renderMotor360Audit(investorState.audit)}
+    <button type="button" class="btn btn-outline-secondary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>Ver impedimentos e orientações</button>
     <div class="motor360-selection-toolbar motor360-selection-toolbar-final"><strong>Próxima etapa</strong><span id="motor360SelectionSummary">${investorState.selectedGroupIds.size} grupo(s) selecionado(s) para a próxima etapa</span><button class="btn btn-primary btn-sm" type="button" data-screen-jump="grupos-selecionados">Ver grupos selecionados</button></div>
   `;
   results.querySelectorAll(".motor360-scenario-card").forEach((card) => {
@@ -4011,6 +4063,7 @@ function renderInvestorAnalysis(result) {
     card.querySelector(".motor360-scenario-title")?.insertAdjacentHTML("beforeend", `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""}> Escolher para contratação</label>`);
   });
   results.querySelectorAll("[data-screen-jump]").forEach((button) => button.addEventListener("click", () => activateScreen(button.dataset.screenJump)));
+  results.querySelectorAll("[data-motor360-blocking-diagnostics]").forEach((button) => button.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit)));
   results.querySelectorAll(".motor360-scenario-select-input").forEach((input) => input.addEventListener("change", (event) => {
     const groupId = String(event.target.dataset.groupId || "");
     const ids = selectedScenarioIdsForGroup(groupId);
