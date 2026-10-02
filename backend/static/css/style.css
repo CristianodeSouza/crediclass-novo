@@ -6471,12 +6471,19 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-blocking-card-title span { color: #687780; font-size: 12px; text-align: right; }
 .motor360-blocking-card p { margin: 8px 0 0; line-height: 1.4; font-size: 13px; }
 .motor360-blocking-advice { color: #344d32; }
+.motor360-blocking-requirements { margin-top: 10px; padding-top: 10px; border-top: 1px solid #edf0f1; }
+.motor360-blocking-requirements > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 7px; }
+.motor360-blocking-requirements section { padding: 9px 10px; border-radius: 6px; font-size: 12px; }
+.motor360-blocking-requirements section.is-ok { background: #effaf2; color: #176b35; }
+.motor360-blocking-requirements section.is-failed { background: #fff1f1; color: #a51d2d; }
+.motor360-blocking-requirements ul { margin: 5px 0 0; padding-left: 18px; }
 @media (max-width: 700px) {
   .motor360-blocking-dialog { width: calc(100vw - 18px); max-height: 92vh; }
   .motor360-blocking-dialog-body { max-height: calc(92vh - 78px); padding: 14px; }
   .motor360-blocking-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .motor360-blocking-card-title { display: grid; gap: 4px; }
   .motor360-blocking-card-title span { text-align: left; }
+  .motor360-blocking-requirements > div { grid-template-columns: 1fr; }
 }
 .motor360-profile-cell { min-width: 0; font-size: 0.72rem; text-align: left; }
 .motor360-profile-head, .motor360-profile-row { display: grid; grid-template-columns: 0.9fr 1fr 1fr; gap: 6px; align-items: stretch; }

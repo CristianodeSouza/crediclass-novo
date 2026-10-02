@@ -3840,6 +3840,7 @@ function motor360BlockingReasonAdvice(reason) {
 
 function renderMotor360BlockingDiagnostics(audit) {
   const entries = audit?.group_results || [];
+  const requirementLabels = { status: "Status do grupo", tipo_bem: "Tipo de bem", credito: "Faixa de crédito", prazo: "Prazo e renda", contemplacao: "Contemplação no perfil selecionado", grupo_filter: "Filtros do operador" };
   const grouped = new Map();
   entries.forEach((entry) => {
     const reasons = [
@@ -3849,17 +3850,25 @@ function renderMotor360BlockingDiagnostics(audit) {
     const actionable = entry.result === "excluded_term_income" || entry.result === "excluded_contemplation" || reasons.length;
     if (!actionable) return;
     const key = `${entry.administradora || "-"}|${reasons.sort().join(",") || entry.result || "sem_motivo"}`;
-    const current = grouped.get(key) || { administradora: entry.administradora || "-", reasons: [], groups: [], count: 0 };
+    const requirements = Object.entries(entry.stage_results || {}).map(([stage, value]) => ({ label: requirementLabels[stage] || stage.replaceAll("_", " "), ok: Boolean(value?.approved) }));
+    const current = grouped.get(key) || { administradora: entry.administradora || "-", reasons: [], groups: [], examples: [], count: 0 };
     current.count += 1;
     current.reasons = [...new Set([...current.reasons, ...reasons])];
     if (current.groups.length < 8) current.groups.push(entry.grupo || entry.grupo_id || "-");
+    if (current.examples.length < 3) current.examples.push({ group: entry.grupo || entry.grupo_id || "-", requirements });
     grouped.set(key, current);
   });
   const cards = [...grouped.values()].sort((left, right) => right.count - left.count).map((item) => {
     const reasons = item.reasons.length ? item.reasons : ["dados_insuficientes"];
     const labels = reasons.map(formatMotor360Reason).join("; ");
     const advice = reasons.map(motor360BlockingReasonAdvice).filter((value, index, values) => values.indexOf(value) === index).join(" ");
-    return `<article class="motor360-blocking-card"><div class="motor360-blocking-card-title"><strong>${item.count} grupo(s) · ${escapeHtml(item.administradora)}</strong><span>${escapeHtml(item.groups.join(", "))}${item.count > item.groups.length ? " e outros" : ""}</span></div><p><strong>O que bloqueou:</strong> ${escapeHtml(labels)}</p><p class="motor360-blocking-advice"><strong>Como corrigir:</strong> ${escapeHtml(advice)}</p></article>`;
+    const requirementHtml = item.examples.map((example) => {
+      const ok = example.requirements.filter((requirement) => requirement.ok).map((requirement) => `<li>${escapeHtml(requirement.label)}</li>`).join("") || "<li>Nenhum requisito aprovado foi registrado.</li>";
+      const failed = example.requirements.filter((requirement) => !requirement.ok).map((requirement) => `<li>${escapeHtml(requirement.label)}</li>`).join("") || "<li>Nenhum requisito reprovado nesta etapa.</li>";
+      const missing = (entries.find((entry) => String(entry.grupo || entry.grupo_id) === String(example.group))?.missing_fields || []).map((field) => `<li>${escapeHtml(field.field || field.column || "Campo não informado")}: ${escapeHtml(formatMotor360Reason(field.reason || "dados_insuficientes"))}</li>`).join("");
+      return `<div class="motor360-blocking-requirements"><strong>Grupo ${escapeHtml(String(example.group))}</strong><div><section class="is-ok"><b>Requisitos cumpridos (OK)</b><ul>${ok}</ul></section><section class="is-failed"><b>Requisitos não cumpridos</b><ul>${failed}${missing}</ul></section></div></div>`;
+    }).join("");
+    return `<article class="motor360-blocking-card"><div class="motor360-blocking-card-title"><strong>${item.count} grupo(s) · ${escapeHtml(item.administradora)}</strong><span>${escapeHtml(item.groups.join(", "))}${item.count > item.groups.length ? " e outros" : ""}</span></div><p><strong>O que bloqueou:</strong> ${escapeHtml(labels)}</p>${requirementHtml}<p class="motor360-blocking-advice"><strong>Como corrigir:</strong> ${escapeHtml(advice)}</p></article>`;
   }).join("");
   const summary = audit?.summary || {};
   const dialog = document.createElement("dialog");
