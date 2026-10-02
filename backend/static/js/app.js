@@ -3928,6 +3928,7 @@ function renderInvestorAnalysis(result) {
   const creditRejectedByTerm = creditItems.filter((item) => (
     motor360AdministratorKey(item) === selectedAdministratorKey && !item.recommendable
   ));
+  const contemplationRejected = (result.audit?.excluded_groups || []).filter((item) => item.reason === "lance_insuficiente_para_perfil");
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
     ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
@@ -3939,6 +3940,7 @@ function renderInvestorAnalysis(result) {
     ["Pré-selecionados", result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0],
     ["Eliminados por crédito", result.audit?.summary?.total_credit_rejected ?? 0],
     ["Eliminados por prazo/renda", result.audit?.summary?.total_term_income_rejected ?? 0],
+    ["Eliminados por lance do perfil", contemplationRejected.length],
     ["Dados incompletos", totals.dados_incompletos ?? 0],
     ["Grupos exibidos", items.length],
     ["Grupos para composição", administratorCompositionItems.length],
@@ -3966,6 +3968,7 @@ function renderInvestorAnalysis(result) {
     <div class="motor360-multiple-quota-note" role="note"><strong>Composição com mais de uma cota</strong><span>Lista de grupos em que uma cota não atende sozinha ao crédito solicitado. O operador pode adicionar até 50 cotas por grupo ao carrinho e combinar somente grupos desta administradora.</span></div>
     <div class="motor360-composition-list">${administratorCompositionItems.length ? administratorCompositionItems.map(renderMotor360CompositionCard).join("") : '<div class="table-state">Nenhum grupo desta administradora exige composição de múltiplas cotas.</div>'}</div>
     ${creditRejectedByTerm.length ? `<details class="motor360-credit-excluded"><summary>Compatíveis por crédito, mas eliminados por prazo/renda (${creditRejectedByTerm.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Prazo restante</th><th>Motivo</th></tr></thead><tbody>${creditRejectedByTerm.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td><td>Prazo/renda insuficiente no cenário compatível por crédito.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
+    ${contemplationRejected.length ? `<details class="motor360-credit-excluded" open><summary>Grupos fora do perfil de contemplação selecionado (${contemplationRejected.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th></tr></thead><tbody>${contemplationRejected.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>Lance disponível abaixo da faixa do perfil selecionado.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
     ${renderMotor360ChanceChart(items)}
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
     ${renderMotor360Audit(investorState.audit)}
