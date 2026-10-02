@@ -294,6 +294,7 @@ class AuditoriaV4(BaseModel):
 
 class ViabilidadeRequest(BaseModel):
     objetivo: str
+    contemplacao_perfil: Literal["urgent", "fast", "moderate", "conservative", "long_term"] | None = None
     credito_desejado: float = Field(gt=0)
     prazo_desejado: int = Field(gt=0)
     lance_proprio: float = Field(ge=0)

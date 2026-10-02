@@ -4466,6 +4466,8 @@ function updateClientProfileTotals() {
 function collectClientProfile() {
   const totals = updateClientProfileTotals();
   const summary = totals.holderSummary;
+  const objective = document.getElementById("clientProfileObjetivo").value;
+  const objectiveProfile = objective.includes("urgente") ? "urgent" : objective.includes("rapido") ? "fast" : objective.includes("moderado") ? "moderate" : objective.includes("conservador") ? "conservative" : objective.includes("investidor") && objective.includes("36") ? "long_term" : "";
   return {
     tipo_contratacao: totals.titulares.tipo_contratacao,
     titulares: totals.titulares,
@@ -4490,7 +4492,8 @@ function collectClientProfile() {
     parcela_desejada: toNumber(document.getElementById("clientProfileParcelaIdeal").value),
     data_nascimento: summary.data_nascimento,
     data_nascimento_conjuge: summary.data_nascimento_conjuge,
-    objetivo: document.getElementById("clientProfileObjetivo").value,
+    objetivo: objective,
+    contemplacao_perfil: objectiveProfile || null,
     tipo_bem: document.getElementById("clientProfileTipoBem").value,
     tipo_bem_explicit: Boolean(document.getElementById("clientProfileTipoBem").value),
     estado_bem: document.getElementById("clientProfileEstadoBem").value,
