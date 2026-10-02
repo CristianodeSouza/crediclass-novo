@@ -4270,6 +4270,7 @@ async function loadInvestorAnalysis() {
     if (requestId !== investorAnalysisRequestId) return;
     investorState.result = result;
     investorState.audit = null;
+    syncMotor360BidExplorer();
     addMotor360ExecutionLog("Análise concluída", `${result.total_grupos_analisados ?? 0} analisados · ${result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0} pré-selecionados.`);
     renderInvestorAnalysis(result);
     loadMotor360Audit(result.audit_id);
