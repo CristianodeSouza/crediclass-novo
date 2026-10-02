@@ -3907,6 +3907,25 @@ function motor360ScenarioSourceMetrics(item) {
   return `<div class="motor360-scenario-source-metrics"><div><small>Taxa Adm</small><b>${formatPercent(item?.taxa_adm)}</b></div><div><small>Fundo de Reserva</small><b>${formatPercent(item?.fundo_reserva)}</b></div><div><small>Crédito desejado líquido</small><b>${formatMoney(clientCredit)}</b></div></div>`;
 }
 
+function renderMotor360ContemplationMatrix(items, selectedProfile) {
+  const profiles = [
+    ["urgent", "Urgente"], ["fast", "Rápido"], ["moderate", "Moderado"],
+    ["conservative", "Conservador"], ["long_term", "Investidor"],
+  ];
+  const rows = items.map((item) => {
+    const scenario = (item.cenarios || []).find((entry) => entry.id === "without_embedded") || (item.cenarios || [])[0];
+    const values = scenario?.perfis_contemplacao || [];
+    const cells = profiles.map(([id, label]) => {
+      const profile = values.find((entry) => entry.id === id);
+      if (!profile || profile.atinge_perfil == null) return `<td><span class="text-muted">Sem dado</span></td>`;
+      return `<td><strong class="${profile.atinge_perfil ? "text-success" : "text-danger"}">${profile.atinge_perfil ? "Atende" : "Não atende"}</strong><small>${formatPercent(profile.percentual_referencia)}</small></td>`;
+    }).join("");
+    return `<tr><th>${escapeHtml(item.grupo || item.grupo_id || "-")}</th>${cells}</tr>`;
+  }).join("");
+  if (!rows) return "";
+  return `<details class="motor360-profile-matrix" open><summary>Matriz de contemplação por grupo · perfil aplicado: ${escapeHtml(selectedProfile || "não informado")}</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th>${profiles.map(([, label]) => `<th>${label}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
+}
+
 function renderInvestorAnalysis(result) {
   const status = document.getElementById("investorAnalysisStatus");
   const summary = document.getElementById("investorAnalysisSummary");
@@ -3959,6 +3978,7 @@ function renderInvestorAnalysis(result) {
   }
   results.innerHTML = `
     ${renderMotor360SelectedGroupsDock()}
+    ${renderMotor360ContemplationMatrix(items, result.perfil_contemplacao)}
     <div class="motor360-single-quota-note" role="note">
       <strong>Crédito atendido com 1 cota</strong>
       <span>Os grupos listados abaixo possuem crédito líquido disponível em uma cota suficiente para a necessidade do cliente, após a validação do crédito desejado, da parcela e dos recursos de lance com RP e/ou FGTS.</span>
