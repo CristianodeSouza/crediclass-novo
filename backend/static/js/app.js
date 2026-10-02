@@ -3907,12 +3907,12 @@ function motor360ScenarioSourceMetrics(item) {
   return `<div class="motor360-scenario-source-metrics"><div><small>Taxa Adm</small><b>${formatPercent(item?.taxa_adm)}</b></div><div><small>Fundo de Reserva</small><b>${formatPercent(item?.fundo_reserva)}</b></div><div><small>Crédito desejado líquido</small><b>${formatMoney(clientCredit)}</b></div></div>`;
 }
 
-function renderMotor360ContemplationMatrix(items, selectedProfile) {
+function renderMotor360ContemplationMatrix(items, selectedProfile, rejectedItems = []) {
   const profiles = [
     ["urgent", "Urgente"], ["fast", "Rápido"], ["moderate", "Moderado"],
     ["conservative", "Conservador"], ["long_term", "Investidor"],
   ];
-  const rows = items.map((item) => {
+  const rows = [...items, ...rejectedItems].map((item) => {
     const scenario = (item.cenarios || []).find((entry) => entry.id === "without_embedded") || (item.cenarios || [])[0];
     const values = scenario?.perfis_contemplacao || [];
     const cells = profiles.map(([id, label]) => {
@@ -3920,7 +3920,8 @@ function renderMotor360ContemplationMatrix(items, selectedProfile) {
       if (!profile || profile.atinge_perfil == null) return `<td><span class="text-muted">Sem dado</span></td>`;
       return `<td><strong class="${profile.atinge_perfil ? "text-success" : "text-danger"}">${profile.atinge_perfil ? "Atende" : "Não atende"}</strong><small>${formatPercent(profile.percentual_referencia)}</small></td>`;
     }).join("");
-    return `<tr><th>${escapeHtml(item.grupo || item.grupo_id || "-")}</th>${cells}</tr>`;
+    const rejected = rejectedItems.includes(item) ? " <small>(não selecionado)</small>" : "";
+    return `<tr><th>${escapeHtml(item.grupo || item.grupo_id || "-")}${rejected}</th>${cells}</tr>`;
   }).join("");
   if (!rows) return "";
   return `<details class="motor360-profile-matrix" open><summary>Matriz de contemplação por grupo · perfil aplicado: ${escapeHtml(selectedProfile || "não informado")}</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th>${profiles.map(([, label]) => `<th>${label}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
@@ -3947,7 +3948,7 @@ function renderInvestorAnalysis(result) {
   const creditRejectedByTerm = creditItems.filter((item) => (
     motor360AdministratorKey(item) === selectedAdministratorKey && !item.recommendable
   ));
-  const contemplationRejected = (result.audit?.excluded_groups || []).filter((item) => item.reason === "lance_insuficiente_para_perfil");
+  const contemplationRejected = (result.audit?.group_results || []).filter((item) => item.result === "excluded_contemplation");
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
     ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
@@ -3978,7 +3979,7 @@ function renderInvestorAnalysis(result) {
   }
   results.innerHTML = `
     ${renderMotor360SelectedGroupsDock()}
-    ${renderMotor360ContemplationMatrix(items, result.perfil_contemplacao)}
+    ${renderMotor360ContemplationMatrix(items, result.perfil_contemplacao, contemplationRejected)}
     <div class="motor360-single-quota-note" role="note">
       <strong>Crédito atendido com 1 cota</strong>
       <span>Os grupos listados abaixo possuem crédito líquido disponível em uma cota suficiente para a necessidade do cliente, após a validação do crédito desejado, da parcela e dos recursos de lance com RP e/ou FGTS.</span>
@@ -4516,7 +4517,7 @@ function collectClientProfile() {
     data_nascimento: summary.data_nascimento,
     data_nascimento_conjuge: summary.data_nascimento_conjuge,
     objetivo: objective,
-    contemplacao_perfil: objectiveProfile || null,
+    contemplacao_perfil: document.getElementById("clientProfileContemplacaoPerfil")?.value || objectiveProfile || null,
     tipo_bem: document.getElementById("clientProfileTipoBem").value,
     tipo_bem_explicit: Boolean(document.getElementById("clientProfileTipoBem").value),
     estado_bem: document.getElementById("clientProfileEstadoBem").value,
@@ -6219,7 +6220,7 @@ document.getElementById("groupFormModal").addEventListener("blur", (event) => {
   document.getElementById(id).addEventListener("input", updateClientProfileTotals);
 });
 
-["clientProfilePrazo", "clientProfileObjetivo", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
+["clientProfilePrazo", "clientProfileObjetivo", "clientProfileContemplacaoPerfil", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
   document.getElementById(id).addEventListener("change", updateClientProfileTotals);
 });
 
