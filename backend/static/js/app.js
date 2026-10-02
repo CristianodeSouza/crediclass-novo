@@ -6320,7 +6320,7 @@ function motor360FirstRequiredBid() {
     const scenario = scenarios.find((entry) => entry.id === "without_embedded") || scenarios[0];
     const row = (scenario?.perfis_contemplacao || []).find((entry) => profileIds.has(entry.id));
     return row?.lance_ideal;
-  }).filter((value) => Number.isFinite(Number(value)));
+  }).filter((value) => value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value)) && Number(value) > 0);
   return required.length ? Math.min(...required.map(Number)) : null;
 }
 function syncMotor360BidExplorer() {
