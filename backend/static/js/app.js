@@ -4046,6 +4046,7 @@ function renderInvestorAnalysis(result) {
     return;
   }
   results.innerHTML = `
+    <button type="button" class="btn btn-outline-secondary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>Ver impedimentos e orientações</button>
     ${renderMotor360SelectedGroupsDock()}
     ${renderMotor360ContemplationMatrix(items, result.perfil_contemplacao, contemplationRejected)}
     <div class="motor360-single-quota-note" role="note">
@@ -4061,7 +4062,6 @@ function renderInvestorAnalysis(result) {
     ${renderMotor360ChanceChart(items)}
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
     ${renderMotor360Audit(investorState.audit)}
-    <button type="button" class="btn btn-outline-secondary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>Ver impedimentos e orientações</button>
     <div class="motor360-selection-toolbar motor360-selection-toolbar-final"><strong>Próxima etapa</strong><span id="motor360SelectionSummary">${investorState.selectedGroupIds.size} grupo(s) selecionado(s) para a próxima etapa</span><button class="btn btn-primary btn-sm" type="button" data-screen-jump="grupos-selecionados">Ver grupos selecionados</button></div>
   `;
   results.querySelectorAll(".motor360-scenario-card").forEach((card) => {
