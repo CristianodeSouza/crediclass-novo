@@ -6454,7 +6454,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-audit-scenarios span { margin-top: 5px; }
 .motor360-group-audit-alerts { margin: 0 18px 18px; }
 .motor360-group-audit-alerts p { margin: 5px 0 0; }
-.motor360-blocking-diagnostics-trigger { margin: 12px 0; }
+.motor360-blocking-diagnostics-trigger { position: sticky; top: 10px; z-index: 30; display: block; width: fit-content; margin: 10px 0 14px; padding: 8px 14px; background: #fff; box-shadow: 0 2px 8px rgb(15 23 42 / 12%); }
 .motor360-blocking-dialog { width: min(920px, calc(100vw - 32px)); max-width: none; max-height: 86vh; padding: 0; border: 0; border-radius: 12px; color: #26343a; box-shadow: 0 24px 70px rgb(15 23 42 / 28%); }
 .motor360-blocking-dialog::backdrop { background: rgb(15 23 42 / 52%); }
 .motor360-blocking-dialog-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px; border-bottom: 1px solid #e5e7eb; background: #fff; }
