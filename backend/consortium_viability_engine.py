@@ -241,6 +241,7 @@ def analyze_client_consortium_viability(
     selected_profile = str(getattr(payload, "contemplacao_perfil", "") or "").strip().lower()
     if selected_profile not in {key for key, _, _, _ in STRATEGY_TARGETS}:
         selected_profile = None
+    selected_profile_row = {"urgent": "super_aggressive", "fast": "aggressive", "moderate": "moderate", "conservative": "conservative", "long_term": "investor"}.get(selected_profile)
     explicit_type = bool(getattr(payload, "tipo_bem_explicit", False))
     requested_type = str(getattr(payload, "tipo_bem", "") or "") if explicit_type else ""
     counters = Counter()
@@ -401,8 +402,8 @@ def analyze_client_consortium_viability(
         ]
         selected_profile_scenarios = [
             scenario for scenario in administrator_scenarios
-            if selected_profile is not None and any(
-                profile.get("id") == selected_profile and profile.get("atinge_perfil") is True
+            if selected_profile_row is not None and any(
+                profile.get("id") == selected_profile_row and profile.get("atinge_perfil") is True
                 for profile in scenario.get("perfis_contemplacao", [])
             )
         ]
@@ -411,7 +412,7 @@ def analyze_client_consortium_viability(
         approved_scenarios = [
             scenario for scenario in term_scenarios
             if selected_profile is None
-            or any(profile.get("id") == selected_profile and profile.get("atinge_perfil") is True for profile in scenario.get("perfis_contemplacao", []))
+            or any(profile.get("id") == selected_profile_row and profile.get("atinge_perfil") is True for profile in scenario.get("perfis_contemplacao", []))
         ]
         contemplation_capacities = _contemplation_capacity(group)
         source_values = {
