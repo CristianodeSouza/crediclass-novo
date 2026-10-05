@@ -3982,7 +3982,10 @@ function renderMotor360ContemplationMatrix(items, selectedProfile, rejectedItems
       return `<td><strong class="${profile.atinge_perfil ? "text-success" : "text-danger"}">${profile.atinge_perfil ? "Atende" : "Não atende"}</strong> <small>${formatPercent(profile.percentual_referencia)}</small></td>`;
     }).join("");
     const rejected = rejectedItems.includes(item) ? " <small>(não selecionado)</small>" : "";
-    return `<tr><th>${escapeHtml(item.grupo || item.grupo_id || "-")}${rejected}</th>${cells}</tr>`;
+    const groupLabel = [item.administradora, item.grupo || item.grupo_id || "-"]
+      .filter((value) => value !== null && value !== undefined && String(value).trim())
+      .join(" · ");
+    return `<tr><th>${escapeHtml(groupLabel || "-")}${rejected}</th>${cells}</tr>`;
   }).join("");
   if (!rows) return "";
   return `<details class="motor360-profile-matrix" open><summary>Matriz de contemplação por grupo · perfil aplicado: ${escapeHtml(selectedProfile || "não informado")}</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th>${profiles.map(([, label]) => `<th>${label}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
