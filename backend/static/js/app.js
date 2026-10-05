@@ -4010,6 +4010,7 @@ function renderInvestorAnalysis(result) {
     (!selectedAdministratorKey || motor360AdministratorKey(item) === selectedAdministratorKey) && !item.recommendable
   ));
   const contemplationRejected = (result.audit?.group_results || []).filter((item) => item.result === "excluded_contemplation");
+  const matrixItems = result.matrix_items || [...(result.items || []), ...contemplationRejected];
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
     ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
@@ -4041,7 +4042,7 @@ function renderInvestorAnalysis(result) {
     const explicitMessage = result.perfil_contemplacao
       ? `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado para o perfil ${profileLabel}</strong><span>O lance do cliente (${formatMoney(client.lance_cliente_total)}) não atende ao percentual mínimo de contemplação dos grupos compatíveis. Ajuste o lance ou selecione um perfil com prazo maior.</span>${diagnosticButton}</div>`
       : `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado</strong><span>Nenhum grupo passou por todas as validações do Motor 360.</span>${diagnosticButton}</div>`;
-    results.innerHTML = `${explicitMessage}${rejectedHtml}${renderMotor360Audit(investorState.audit)}`;
+    results.innerHTML = `${explicitMessage}${renderMotor360ContemplationMatrix(matrixItems, result.perfil_contemplacao)}${rejectedHtml}${renderMotor360Audit(investorState.audit)}`;
     results.querySelector("[data-motor360-blocking-diagnostics]")?.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit));
     setInvestorAnalysisState("results");
     return;
@@ -4049,7 +4050,7 @@ function renderInvestorAnalysis(result) {
   results.innerHTML = `
     <button type="button" class="btn btn-outline-secondary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>Ver impedimentos e orientações</button>
     ${renderMotor360SelectedGroupsDock()}
-    ${renderMotor360ContemplationMatrix(items, result.perfil_contemplacao, contemplationRejected)}
+    ${renderMotor360ContemplationMatrix(matrixItems, result.perfil_contemplacao)}
     <div class="motor360-single-quota-note" role="note">
       <strong>Crédito atendido com 1 cota</strong>
       <span>Os grupos listados abaixo possuem crédito líquido disponível em uma cota suficiente para a necessidade do cliente, após a validação do crédito desejado, da parcela e dos recursos de lance com RP e/ou FGTS.</span>
