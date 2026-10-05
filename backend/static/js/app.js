@@ -4003,7 +4003,9 @@ function renderInvestorAnalysis(result) {
   const compositionItems = result.composition_items || [];
   const showingCreditStage = !finalItems.length && creditItems.length > 0 && !result.perfil_contemplacao;
   const sourceItems = showingCreditStage ? creditItems : finalItems;
-  const selectedAdministrator = syncMotor360AdministratorFilter([...sourceItems, ...compositionItems]);
+  const contemplationRejected = (result.audit?.group_results || []).filter((item) => item.result === "excluded_contemplation");
+  const matrixItems = result.matrix_items || [...(result.items || []), ...contemplationRejected];
+  const selectedAdministrator = syncMotor360AdministratorFilter([...sourceItems, ...compositionItems, ...matrixItems]);
   updateInvestorPreferenceSummary();
   const selectedAdministratorKey = motor360AdministratorKey(selectedAdministrator);
   const administratorItems = selectedAdministratorKey ? sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey) : sourceItems;
@@ -4012,8 +4014,6 @@ function renderInvestorAnalysis(result) {
   const creditRejectedByTerm = creditItems.filter((item) => (
     (!selectedAdministratorKey || motor360AdministratorKey(item) === selectedAdministratorKey) && !item.recommendable
   ));
-  const contemplationRejected = (result.audit?.group_results || []).filter((item) => item.result === "excluded_contemplation");
-  const matrixItems = result.matrix_items || [...(result.items || []), ...contemplationRejected];
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
     ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
