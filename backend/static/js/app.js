@@ -6340,21 +6340,24 @@ function syncMotor360BidExplorer() {
   const max = Math.max(1000000, Math.ceil(Math.max(desiredCredit, declaredBid) * 1.5 / 1000) * 1000);
   range.max = String(max);
   if (investorState.simulatedBid == null) range.value = String(declaredBid);
-  value.textContent = formatMoney(Number(range.value || 0));
-  declared.textContent = formatMoney(declaredBid);
+  const simulatedBid = Number(range.value || 0);
+  const bidPercent = desiredCredit > 0 ? simulatedBid / desiredCredit : null;
+  const declaredPercent = desiredCredit > 0 ? declaredBid / desiredCredit : null;
+  value.textContent = `${formatMoney(simulatedBid)} · ${bidPercent == null ? "-" : formatPercent(bidPercent)}`;
+  declared.textContent = `${formatMoney(declaredBid)} · ${declaredPercent == null ? "-" : formatPercent(declaredPercent)}`;
   const firstRequired = motor360FirstRequiredBid();
   if (marker && firstRequired != null) {
     const position = Math.max(0, Math.min(100, (firstRequired / max) * 100));
     marker.style.left = `${position}%`;
     marker.hidden = false;
     marker.title = `Primeiro grupo compatível a partir de ${formatMoney(firstRequired)}`;
-    marker.querySelector("span")?.replaceChildren(document.createTextNode(`Primeiro grupo: ${formatMoney(firstRequired)}`));
+    const firstRequiredPercent = desiredCredit > 0 ? firstRequired / desiredCredit : null;
+    marker.querySelector("span")?.replaceChildren(document.createTextNode(`Primeiro grupo: ${formatMoney(firstRequired)} · ${firstRequiredPercent == null ? "-" : formatPercent(firstRequiredPercent)}`));
   } else if (marker) marker.hidden = true;
 }
 document.getElementById("motor360BidRange")?.addEventListener("input", (event) => {
   investorState.simulatedBid = Number(event.target.value || 0);
-  const value = document.getElementById("motor360BidValue");
-  if (value) value.textContent = formatMoney(investorState.simulatedBid);
+  syncMotor360BidExplorer();
   clearTimeout(motor360BidExplorerTimer);
   motor360BidExplorerTimer = setTimeout(() => loadInvestorAnalysis(), 450);
 });
