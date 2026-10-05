@@ -4004,7 +4004,12 @@ function renderInvestorAnalysis(result) {
   const showingCreditStage = !finalItems.length && creditItems.length > 0 && !result.perfil_contemplacao;
   const sourceItems = showingCreditStage ? creditItems : finalItems;
   const contemplationRejected = (result.audit?.group_results || []).filter((item) => item.result === "excluded_contemplation");
-  const matrixItems = result.matrix_items || [...(result.items || []), ...contemplationRejected];
+  const auditedMatrixItems = (investorState.audit?.group_results || []).map((entry) => ({
+    grupo: entry.grupo,
+    administradora: entry.administradora,
+    cenarios: entry.scenarios || [],
+  }));
+  const matrixItems = result.matrix_items || (auditedMatrixItems.length ? auditedMatrixItems : [...(result.items || []), ...contemplationRejected]);
   const selectedAdministrator = syncMotor360AdministratorFilter([...sourceItems, ...compositionItems, ...matrixItems]);
   updateInvestorPreferenceSummary();
   const selectedAdministratorKey = motor360AdministratorKey(selectedAdministrator);
