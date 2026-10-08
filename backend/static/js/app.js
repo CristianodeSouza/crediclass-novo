@@ -125,6 +125,7 @@ const investorState = {
   result: null,
   simulatedBid: null,
   lastDeclaredBid: null,
+  lastDesiredCredit: null,
   preferences: [],
   administrator: "",
   audit: null,
@@ -6452,10 +6453,14 @@ function syncMotor360BidExplorer() {
   const totals = updateClientProfileTotals();
   const declaredBid = Number(totals.lance || 0);
   const desiredCredit = toNumber(document.getElementById("clientProfileCredito")?.value) || 0;
-  if (investorState.lastDeclaredBid !== null && investorState.lastDeclaredBid !== declaredBid) {
+  if (
+    (investorState.lastDeclaredBid !== null && investorState.lastDeclaredBid !== declaredBid)
+    || (investorState.lastDesiredCredit !== null && investorState.lastDesiredCredit !== desiredCredit)
+  ) {
     investorState.simulatedBid = null;
   }
   investorState.lastDeclaredBid = declaredBid;
+  investorState.lastDesiredCredit = desiredCredit;
   // The slider scale represents the requested credit. The client's current
   // bid remains the initial cursor position, while the operator may explore
   // the full 0..100% credit range dynamically for the selected profile.
