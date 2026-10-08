@@ -280,6 +280,14 @@ def analyze_client_consortium_viability(
             "vencimento_parcela": str(group.get("vencimento_parcela") or ""),
             "source_row": group.get("source_row"),
         }
+        # Rows without the two parts of the business key are invalid source
+        # records. Keep them in the audit, but never expose them as a matrix
+        # candidate or a selectable group.
+        if group_ref["grupo"] == "-" or group_ref["administradora"] == "-":
+            counters["invalid_identity"] += 1
+            excluded.append({**group_ref, "reason": "identificacao_grupo_invalida", "detail": "Administradora e número do grupo são obrigatórios para análise."})
+            group_results.append({**group_ref, "result": "excluded_invalid_identity", "justification": ["identificacao_grupo_invalida"], "scenarios": [], "missing_fields": []})
+            continue
         step_started = time.perf_counter()
         active, status_reason = _active_status(group.get("status"))
         durations["status"] += time.perf_counter() - step_started
@@ -509,23 +517,32 @@ def analyze_client_consortium_viability(
                     "lance_embutido": money(embedded_amount),
                     "saldo_devedor": money(balance),
                     "parcela_inicial": money(initial_installment),
+                    "credito_total_minimo": money(liquid_credit * Decimal(minimum_quotas)) if minimum_quotas else None,
+                    "parcela_total_minima": money(initial_installment * Decimal(minimum_quotas)) if minimum_quotas else None,
+                    "parcela_maxima_compatível": bool(minimum_quotas and initial_installment * Decimal(minimum_quotas) <= income_limit),
                     "perfis_contemplacao": profile_rows,
                     "credit_compatible": True,
                     "term_compatible": None,
                     "composition_candidate": True,
                 })
-            selected_composition_scenario = next(
-                (
-                    scenario for scenario in composition_scenarios
-                    if not selected_profile
-                    or any(
-                        profile.get("id") == selected_profile_row and profile.get("atinge_perfil") is True
-                        for profile in scenario.get("perfis_contemplacao", [])
+            composition_financial_scenarios = [
+                scenario for scenario in composition_scenarios
+                if (
+                    scenario.get("cotas_minimas") is not None
+                    and 1 <= int(scenario["cotas_minimas"]) <= 50
+                    and (parse_decimal(scenario.get("credito_total_minimo")) or Decimal("0")) >= desired
+                    and scenario.get("parcela_maxima_compatível") is True
+                    and (
+                        not selected_profile
+                        or any(
+                            profile.get("id") == selected_profile_row and profile.get("atinge_perfil") is True
+                            for profile in scenario.get("perfis_contemplacao", [])
+                        )
                     )
-                ),
-                None,
-            )
-            if selected_composition_scenario and any((parse_decimal(scenario.get("credito_liquido_projetado")) or Decimal("0")) * Decimal("50") >= desired for scenario in composition_scenarios):
+                )
+            ]
+            selected_composition_scenario = composition_financial_scenarios[0] if composition_financial_scenarios else None
+            if selected_composition_scenario:
                 composition_capacity_key = preference if preference in contemplation_capacities else next(iter(contemplation_capacities), "")
                 composition_items.append({
                     **group_ref,
@@ -545,6 +562,7 @@ def analyze_client_consortium_viability(
                     "capacidade_contemplacoes_selecionada": contemplation_capacities.get(composition_capacity_key or ""),
                     "historico_12_meses": list(group.get("historico_12_meses") or []),
                     "best_contemplation_strategy": _reference_name(composition_capacity_key),
+                    "selected_composition_scenario": selected_composition_scenario["id"],
                     "selection_stage": "composition",
                     "composition_candidate": True,
                     "cotas_minimas_sem_embutido": next((scenario["cotas_minimas"] for scenario in composition_scenarios if scenario["id"] == "without_embedded"), None),
@@ -717,6 +735,7 @@ def analyze_client_consortium_viability(
     }
     if selected_profile:
         eligible_items = [item for item in eligible_items if (str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip()) in matrix_approved_keys]
+        credit_eligible_items = [item for item in credit_eligible_items if (str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip()) in matrix_approved_keys]
         composition_items = [item for item in composition_items if (str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip()) in matrix_approved_keys]
 
     def ordering_key(item: dict[str, Any]) -> tuple[Any, ...]:
@@ -866,22 +885,40 @@ def analyze_client_consortium_viability(
             {"level": "info", "message": "As fórmulas de crédito contratado, saldo devedor e prazo são registradas por cenário e por grupo na auditoria."},
         ],
     }
-    audit["execution_steps"] = audit["execution_steps"][:4] + [
-        {"order": 5, "id": "preselection", "name": "Refinamento: 1 cota ou composicao", "formula_or_rule": "Somente grupos aprovados na matriz; classifica atendimento em uma cota ou necessidade de composicao.", "input_count": len(matrix_approved_keys), "approved_count": len(eligible_items) + len(composition_items), "rejected_count": max(0, len(matrix_approved_keys) - len(eligible_items) - len(composition_items)), "incomplete_count": 0, "duration_ms": round((durations["term"] + durations["administrator_rules"]) * 1000, 3)},
-        {"order": 6, "id": "preliminary_order", "name": "Refinamento: ordem preliminar", "formula_or_rule": "Maior prazo remanescente, menor taxa administrativa total, administradora e grupo. Nao e ranking final.", "input_count": len(eligible_items) + len(composition_items), "approved_count": len(eligible_items) + len(composition_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["ranking"] * 1000, 3)},
+    def audit_key(entry: dict[str, Any]) -> tuple[str, str]:
+        return (str(entry.get("administradora") or "").strip().lower(), str(entry.get("grupo") or "").strip())
+
+    matrix_entries = [entry for entry in group_results if entry.get("stage_results", {}).get("contemplacao")]
+    matrix_incomplete_entries = [
+        entry for entry in matrix_entries
+        if any(field.get("column") == "BL:BP" for field in entry.get("missing_fields", []))
     ]
-    audit_steps = audit["execution_steps"]
-    matrix_incomplete_count = counters["matrix_incomplete"]
-    matrix_evaluated_count = counters["matrix_evaluated"]
-    matrix_rejected_count = counters["selected_profile_rejected"] if selected_profile else counters["contemplation_rejected"]
-    matrix_step = {"order": 3, "id": "matrix", "name": "Matriz de contemplacao", "formula_or_rule": "Lance do cliente ou simulado >= faixa do perfil selecionado; todas as administradoras", "input_count": matrix_evaluated_count + matrix_incomplete_count, "approved_count": len(matrix_approved_keys), "rejected_count": matrix_rejected_count, "incomplete_count": matrix_incomplete_count, "duration_ms": round(durations["contemplation"] * 1000, 3)}
-    audit["execution_steps"] = [audit_steps[0], audit_steps[1], matrix_step] + [
-        {**step, "order": index, "name": f"Refinamento: {step['name']}"}
-        for index, step in enumerate(audit_steps[2:], 4)
+    matrix_credit_keys = {
+        audit_key(entry) for entry in matrix_entries
+        if audit_key(entry) in matrix_approved_keys and entry.get("stage_results", {}).get("credito", {}).get("approved")
+    }
+    matrix_term_keys = {
+        audit_key(entry) for entry in matrix_entries
+        if audit_key(entry) in matrix_credit_keys and entry.get("stage_results", {}).get("prazo", {}).get("approved")
+    }
+    matrix_input_count = len(matrix_entries)
+    matrix_incomplete_count = len(matrix_incomplete_entries)
+    matrix_rejected_count = max(0, matrix_input_count - len(matrix_approved_keys) - matrix_incomplete_count)
+    lower_list_count = len(eligible_items) + len(composition_items)
+    initial_steps = audit["execution_steps"]
+    audit["execution_steps"] = [
+        initial_steps[0],
+        initial_steps[1],
+        {"order": 3, "id": "matrix", "name": "Matriz de contemplação", "formula_or_rule": "Lance efetivo (declarado ou simulado) >= faixa do perfil; o cenário aprovado é exibido na matriz.", "input_count": matrix_input_count, "approved_count": len(matrix_approved_keys), "rejected_count": matrix_rejected_count, "incomplete_count": matrix_incomplete_count, "duration_ms": round(durations["contemplation"] * 1000, 3)},
+        {"order": 4, "id": "credit", "name": "Refinamento: faixa de crédito", "formula_or_rule": "Somente candidatos aprovados na matriz; O <= crédito contratado <= U.", "input_count": len(matrix_approved_keys), "approved_count": len(matrix_credit_keys), "rejected_count": max(0, len(matrix_approved_keys) - len(matrix_credit_keys)), "incomplete_count": 0, "duration_ms": round(durations["credit_decision"] * 1000, 3)},
+        {"order": 5, "id": "term", "name": "Refinamento: prazo e renda", "formula_or_rule": "Somente candidatos aprovados em matriz e crédito; parcela e prazo devem respeitar o limite de renda.", "input_count": len(matrix_credit_keys), "approved_count": len(matrix_term_keys), "rejected_count": max(0, len(matrix_credit_keys) - len(matrix_term_keys)), "incomplete_count": 0, "duration_ms": round(durations["term"] * 1000, 3)},
+        {"order": 6, "id": "preselection", "name": "Refinamento: 1 cota ou composição", "formula_or_rule": "Somente candidatos aprovados nas etapas anteriores; composição exige crédito e parcela total compatíveis em até 50 cotas.", "input_count": len(matrix_term_keys), "approved_count": lower_list_count, "rejected_count": max(0, len(matrix_term_keys) - lower_list_count), "incomplete_count": 0, "duration_ms": round(durations["administrator_rules"] * 1000, 3)},
+        {"order": 7, "id": "preliminary_order", "name": "Ordem preliminar", "formula_or_rule": "Maior prazo remanescente, menor taxa administrativa total, administradora e grupo. Não é ranking final.", "input_count": lower_list_count, "approved_count": lower_list_count, "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["ranking"] * 1000, 3)},
     ]
     matrix_items = [
         {"grupo": entry.get("grupo"), "administradora": entry.get("administradora"), "cenarios": entry.get("scenarios", []), "stage_results": entry.get("stage_results", {}), "result": entry.get("result"), "missing_fields": entry.get("missing_fields", [])}
         for entry in group_results
+        if str(entry.get("grupo") or "").strip() not in {"", "-"} and str(entry.get("administradora") or "").strip() not in {"", "-"}
     ]
     administrators_analyzed = sorted({str(group.get("administradora") or "").strip() for group in groups if str(group.get("administradora") or "").strip()}, key=normalize_text)
     return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "perfil_contemplacao": selected_profile, "administradoras_analisadas": administrators_analyzed, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(eligible_items), "total_grupos_viaveis": len(eligible_items), "total_grupos_composicao": len(composition_items), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Matriz de contemplacao aplicada primeiro pelo lance e perfil em todas as administradoras.", "Refinamento de credito aplicado somente aos grupos aprovados na matriz.", "Refinamento de prazo, renda e dados financeiros aplicado aos candidatos da matriz.", "Candidatos classificados em 1 cota ou composicao.", "Ordem preliminar aplicada sem ranking definitivo."], "items": eligible_items, "credit_items": credit_eligible_items, "matrix_items": matrix_items, "composition_items": composition_items, "audit": audit}

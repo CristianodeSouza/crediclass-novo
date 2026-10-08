@@ -396,6 +396,34 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(mapping["missing_rows"], 1)
         self.assertEqual(result["audit"]["group_results"][0]["result"], "excluded_term_income")
 
+    def test_composition_requires_minimum_quota_to_fit_the_income_limit(self):
+        result = analyze_client_consortium_viability(payload(
+            credito_desejado=600000, parcela_limite=12000, renda_total=40000,
+        ), [group(
+            "PARCELA-ALTA", credito_maximo=300000, prazo_restante=30,
+            percentual_lance_embutido=None,
+        )])
+        self.assertEqual(result["composition_items"], [])
+
+    def test_invalid_source_identity_is_audited_but_never_reaches_matrix(self):
+        result = analyze_client_consortium_viability(payload(), [
+            group("", administradora=""),
+            group("40174", administradora="ITAÚ", percentual_lance_embutido=None),
+        ])
+        self.assertEqual(len(result["matrix_items"]), 1)
+        self.assertEqual(result["matrix_items"][0]["grupo"], "40174")
+        self.assertEqual(result["audit"]["group_results"][0]["result"], "excluded_invalid_identity")
+
+    def test_audit_refinement_steps_receive_only_the_previous_stage_output(self):
+        result = analyze_client_consortium_viability(payload(contemplacao_perfil="urgent", lance_proprio=500000, parcela_limite=100000), [
+            group("APROVADO", percentual_lance_embutido=None, lance_super_agressivo_3m="10%"),
+            group("PERFIL", percentual_lance_embutido=None, lance_super_agressivo_3m="99%"),
+        ])
+        steps = {step["id"]: step for step in result["audit"]["execution_steps"]}
+        self.assertEqual(steps["credit"]["input_count"], steps["matrix"]["approved_count"])
+        self.assertEqual(steps["term"]["input_count"], steps["credit"]["approved_count"])
+        self.assertEqual(steps["preselection"]["input_count"], steps["term"]["approved_count"])
+
     def test_declared_objective_mapping_remains_specific(self):
         self.assertEqual(map_declared_objective_to_preference("Contemplar - urgente - 3 meses"), "urgent")
         self.assertEqual(map_declared_objective_to_preference("Contemplar - rapido - 6 meses"), "fast")

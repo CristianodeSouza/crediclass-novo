@@ -2276,15 +2276,17 @@ function renderMotor360CompositionCard(item) {
   const groupKey = motor360GroupKey(item);
   const anchorId = motor360GroupAnchorId(groupId);
   const selected = investorState.selectedGroupIds.has(groupKey);
-  const quotaCount = selected ? Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupKey) || 1))) : Math.max(1, Number(item.cotas_minimas_sem_embutido || 1));
+  const scenarios = item.cenarios || [];
+  const eligibleScenario = scenarios.find((scenario) => scenario.id === item.selected_composition_scenario);
+  const defaultQuotas = eligibleScenario?.cotas_minimas ?? item.cotas_minimas_sem_embutido ?? 1;
+  const quotaCount = selected ? Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupKey) || 1))) : Math.max(1, Number(defaultQuotas));
   const quotaCapacity = motor360QuotaCapacity(item);
   const quotaLimit = Number.isFinite(Number(quotaCapacity?.limite_cotas)) ? Number(quotaCapacity.limite_cotas) : null;
   const quotaExceeded = selected && quotaLimit !== null && quotaCount > quotaLimit;
   const quotaWarning = quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : "";
-  const scenarios = item.cenarios || [];
   const status = "Em composição";
   const scenarioCards = scenarios.map((scenario) => `<article class="motor360-composition-scenario"><strong>${scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido"}</strong><dl><div><dt>Cotas mínimas neste cenário</dt><dd>${escapeHtml(String(scenario.cotas_minimas ?? "-"))}</dd></div><div><dt>Crédito líquido por cota</dt><dd>${formatMoney(scenario.credito_liquido_projetado)}</dd></div><div><dt>Crédito líquido selecionado</dt><dd>${formatMoney(Number(scenario.credito_liquido_projetado || 0) * quotaCount)}</dd></div><div><dt>Parcela por cota</dt><dd>${formatMoney(scenario.parcela_inicial)}</dd></div><div><dt>Parcela total</dt><dd>${formatMoney(Number(scenario.parcela_inicial || 0) * quotaCount)}</dd></div><div><dt>Saldo devedor total</dt><dd>${formatMoney(Number(scenario.saldo_devedor || 0) * quotaCount)}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>Pendente da distribuição do lance</dd></div></dl></article>`).join("");
-  const minimumSummary = `mínimo sem embutido: ${item.cotas_minimas_sem_embutido ?? "-"} cota(s) · com embutido: ${item.cotas_minimas_com_embutido ?? "não disponível"} cota(s)`;
+  const minimumSummary = `cenário elegível: ${eligibleScenario?.id === "with_embedded" ? "com embutido" : "sem embutido"} · mínimo sem embutido: ${item.cotas_minimas_sem_embutido ?? "-"} cota(s) · com embutido: ${item.cotas_minimas_com_embutido ?? "não disponível"} cota(s)`;
   return `<article id="${anchorId}" class="motor360-composition-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>Grupo ${escapeHtml(groupId)}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p><p>${escapeHtml(minimumSummary)}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo${selected && quotaCount > 1 ? " total" : ""}</small><b>${formatMoney(Number(item.credito_maximo || 0) * quotaCount)}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status">${escapeHtml(status)}</span><div class="motor360-composition-actions"><div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}"><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${escapeHtml(groupKey)}" ${selected ? "checked" : ""}><span>Adicionar ao carrinho</span></label>${selected ? `<label class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="50" value="${quotaCount}" data-quota-action="input" data-group-id="${escapeHtml(groupKey)}"></label>` : ""}${quotaWarning}</div></div></div></header><div class="motor360-composition-scenarios">${scenarioCards}</div></article>`;
 }
 
@@ -3986,13 +3988,20 @@ function renderMotor360ContemplationMatrix(items, selectedProfile, rejectedItems
     ["conservative", "Conservador"], ["long_term", "Investidor"],
   ];
   const profileAliases = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" };
-  const rows = [...items, ...rejectedItems].map((item) => {
-    const scenario = (item.cenarios || []).find((entry) => entry.id === "without_embedded") || (item.cenarios || [])[0];
-    const values = scenario?.perfis_contemplacao || [];
+  const rows = [...items, ...rejectedItems].filter((item) => (
+    String(item?.administradora || "").trim() && String(item?.grupo || item?.grupo_id || "").trim()
+  )).map((item) => {
+    const scenarios = item.cenarios || item.scenarios || [];
     const cells = profiles.map(([id, label]) => {
-      const profile = values.find((entry) => entry.id === profileAliases[id] || entry.id === id);
-      if (!profile || profile.atinge_perfil == null) return `<td><span class="text-muted">Sem dado</span></td>`;
-      return `<td><strong class="${profile.atinge_perfil ? "text-success" : "text-danger"}">${profile.atinge_perfil ? "Atende" : "Não atende"}</strong> <small>${formatPercent(profile.percentual_referencia)}</small></td>`;
+      const profileId = profileAliases[id] || id;
+      const matches = scenarios.map((scenario) => ({ scenario, profile: (scenario.perfis_contemplacao || []).find((entry) => entry.id === profileId || entry.id === id) })).filter((entry) => entry.profile);
+      if (!matches.length || matches.every((entry) => entry.profile.atinge_perfil == null)) return `<td><span class="text-muted">Sem dado</span></td>`;
+      const approved = matches.filter((entry) => entry.profile.atinge_perfil === true);
+      const reference = (approved[0] || matches[0]).profile;
+      const scenarioLabel = approved.length
+        ? approved.map((entry) => entry.scenario.id === "with_embedded" ? "com embutido" : "sem embutido").join(" / ")
+        : "";
+      return `<td><strong class="${approved.length ? "text-success" : "text-danger"}">${approved.length ? "Atende" : "Não atende"}</strong> <small>${formatPercent(reference.percentual_referencia)}${scenarioLabel ? ` · ${scenarioLabel}` : ""}</small></td>`;
     }).join("");
     const rejected = rejectedItems.includes(item) ? " <small>(não selecionado)</small>" : "";
     const groupLabel = [item.administradora, item.grupo || item.grupo_id || "-"]
@@ -4308,7 +4317,9 @@ async function loadInvestorAnalysis() {
     investorState.result = result;
     investorState.audit = result.audit || null;
     syncMotor360BidExplorer();
-    addMotor360ExecutionLog("Análise concluída", `${result.total_grupos_analisados ?? 0} analisados · ${result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0} pré-selecionados.`);
+    const oneQuotaCount = Number(result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0);
+    const compositionCount = Number(result.total_grupos_composicao ?? 0);
+    addMotor360ExecutionLog("Análise concluída", `${result.total_grupos_analisados ?? 0} analisados · ${oneQuotaCount} em 1 cota · ${compositionCount} em composição.`);
     renderInvestorAnalysis(result);
     loadMotor360Audit(result.audit_id);
   } catch (error) {
@@ -4601,7 +4612,10 @@ function collectClientProfile() {
   const objective = document.getElementById("clientProfileObjetivo").value;
   const objectiveProfile = objective.includes("urgente") ? "urgent" : objective.includes("rapido") ? "fast" : objective.includes("moderado") ? "moderate" : objective.includes("conservador") ? "conservative" : objective.includes("investidor") && objective.includes("36") ? "long_term" : "";
   const declaredBid = totals.lance;
-  const simulatedBid = Number.isFinite(Number(investorState.simulatedBid)) ? Number(investorState.simulatedBid) : declaredBid;
+  const hasSimulatedBid = investorState.simulatedBid !== null
+    && investorState.simulatedBid !== undefined
+    && Number.isFinite(Number(investorState.simulatedBid));
+  const simulatedBid = hasSimulatedBid ? Number(investorState.simulatedBid) : declaredBid;
   return {
     tipo_contratacao: totals.titulares.tipo_contratacao,
     titulares: totals.titulares,
