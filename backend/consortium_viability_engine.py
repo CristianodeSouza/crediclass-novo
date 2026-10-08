@@ -432,8 +432,6 @@ def analyze_client_consortium_viability(
                 for profile in scenario.get("perfis_contemplacao", [])
             )
         ]
-        if selected_profile and administrator_scenarios and not selected_profile_scenarios:
-            counters["selected_profile_rejected"] += 1
         durations["contemplation"] += time.perf_counter() - step_started
         # An explicit client profile makes contemplation the first eligibility gate.
         approved_scenarios = [
@@ -552,6 +550,15 @@ def analyze_client_consortium_viability(
         missing_fields = [field for field in missing_fields if field]
         if missing_fields:
             incomplete_groups.append({**group_ref, "missing_fields": missing_fields})
+        matrix_data_incomplete = bool(administrator_scenarios) and (
+            not has_ranges
+            or any(field["column"] == "BL:BP" for field in missing_fields)
+        )
+        if administrator_scenarios:
+            counters["matrix_incomplete"] += int(matrix_data_incomplete)
+            counters["matrix_evaluated"] += int(not matrix_data_incomplete)
+        if selected_profile and administrator_scenarios and not matrix_data_incomplete and not selected_profile_scenarios:
+            counters["selected_profile_rejected"] += 1
         stage_results = {
             "credito": {"approved": bool(credit_scenarios), "scenario_ids": [scenario["id"] for scenario in credit_scenarios], "rule": "O <= crédito contratado <= U"},
             "prazo": {"approved": bool(term_scenarios), "scenario_ids": [scenario["id"] for scenario in term_scenarios], "rule": "F >= ceil(saldo após lance / parcela máxima)"},
@@ -820,7 +827,7 @@ def analyze_client_consortium_viability(
         "incomplete_groups": incomplete_groups,
         "excluded_groups": excluded,
         "final_ordering": {"rules": ["Maior prazo remanescente", "Menor taxa administrativa total", "Administradora", "Numero do grupo"], "selected_preferences": [], "execution_summary": "Esta e uma ordem preliminar da pre-selecao; ranking definitivo sera aplicado em etapa posterior."},
-        "summary": {"total_loaded": len(groups), "total_analyzed": len(groups), "total_matrix_candidates": len(matrix_approved_keys), "total_matrix_rejected": max(0, counters["active"] - counters["type_rejected"] - len(matrix_approved_keys)), "total_preselected": len(eligible_items), "total_composition_candidates": len(composition_items), "total_credit_compatible": len(credit_eligible_items), "total_credit_rejected": counters["credit_rejected"], "total_term_income_rejected": counters["term_rejected"], "total_selected_profile_rejected": max(0, counters["active"] - counters["type_rejected"] - len(matrix_approved_keys)), "groups_with_incomplete_data": len(incomplete_groups), "incomplete_field_occurrences": incomplete_field_occurrences, "total_rejected": len(excluded)},
+        "summary": {"total_loaded": len(groups), "total_analyzed": len(groups), "total_matrix_candidates": len(matrix_approved_keys), "total_matrix_evaluated": counters["matrix_evaluated"], "total_matrix_incomplete": counters["matrix_incomplete"], "total_matrix_rejected": counters["selected_profile_rejected"] if selected_profile else counters["contemplation_rejected"], "total_preselected": len(eligible_items), "total_composition_candidates": len(composition_items), "total_credit_compatible": len(credit_eligible_items), "total_credit_rejected": counters["credit_rejected"], "total_term_income_rejected": counters["term_rejected"], "total_selected_profile_rejected": counters["selected_profile_rejected"] if selected_profile else 0, "groups_with_incomplete_data": len(incomplete_groups), "incomplete_field_occurrences": incomplete_field_occurrences, "total_rejected": len(excluded)},
         "schema_notes": {"columns_used": {"official_decision_field": "used_in_decision", "compatibility_field": "used", "compatibility_note": "The used field mirrors used_in_decision for compatibility with prior consumers."}},
         "warnings": [
             {"level": "info", "message": "O/U participa exclusivamente da elegibilidade de crédito. AJ, AK e AL são referências e não aprovam nem eliminam grupos nesta fase."},
@@ -832,8 +839,10 @@ def analyze_client_consortium_viability(
         {"order": 6, "id": "preliminary_order", "name": "Refinamento: ordem preliminar", "formula_or_rule": "Maior prazo remanescente, menor taxa administrativa total, administradora e grupo. Nao e ranking final.", "input_count": len(eligible_items) + len(composition_items), "approved_count": len(eligible_items) + len(composition_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["ranking"] * 1000, 3)},
     ]
     audit_steps = audit["execution_steps"]
-    matrix_incomplete_count = sum(1 for item in incomplete_groups if item.get("missing_fields"))
-    matrix_step = {"order": 3, "id": "matrix", "name": "Matriz de contemplacao", "formula_or_rule": "Lance do cliente ou simulado >= faixa do perfil selecionado; todas as administradoras", "input_count": counters["active"] - counters["type_rejected"], "approved_count": len(matrix_approved_keys), "rejected_count": max(0, counters["active"] - counters["type_rejected"] - len(matrix_approved_keys) - matrix_incomplete_count), "incomplete_count": matrix_incomplete_count, "duration_ms": round(durations["contemplation"] * 1000, 3)}
+    matrix_incomplete_count = counters["matrix_incomplete"]
+    matrix_evaluated_count = counters["matrix_evaluated"]
+    matrix_rejected_count = counters["selected_profile_rejected"] if selected_profile else counters["contemplation_rejected"]
+    matrix_step = {"order": 3, "id": "matrix", "name": "Matriz de contemplacao", "formula_or_rule": "Lance do cliente ou simulado >= faixa do perfil selecionado; todas as administradoras", "input_count": matrix_evaluated_count + matrix_incomplete_count, "approved_count": len(matrix_approved_keys), "rejected_count": matrix_rejected_count, "incomplete_count": matrix_incomplete_count, "duration_ms": round(durations["contemplation"] * 1000, 3)}
     audit["execution_steps"] = [audit_steps[0], audit_steps[1], matrix_step] + [
         {**step, "order": index, "name": f"Refinamento: {step['name']}"}
         for index, step in enumerate(audit_steps[2:], 4)
