@@ -4641,6 +4641,9 @@ function collectClientProfile() {
     && investorState.simulatedBid !== undefined
     && Number.isFinite(Number(investorState.simulatedBid));
   const simulatedBid = hasSimulatedBid ? Number(investorState.simulatedBid) : declaredBid;
+  const withEmbedded = document.getElementById("investorFilterWithEmbedded")?.checked === true;
+  const withoutEmbedded = document.getElementById("investorFilterWithoutEmbedded")?.checked === true;
+  const embeddedFilter = withEmbedded && withoutEmbedded ? "ambos" : withEmbedded ? "sim" : withoutEmbedded ? "nao" : null;
   return {
     tipo_contratacao: totals.titulares.tipo_contratacao,
     titulares: totals.titulares,
@@ -4670,7 +4673,7 @@ function collectClientProfile() {
     objetivo: objective,
     administradora: investorState.administrator || null,
     contemplacao_perfil: document.getElementById("clientProfileContemplacaoPerfil")?.value || objectiveProfile || null,
-    filtro_lance_embutido: document.getElementById("clientProfileFiltroLanceEmbutido")?.value || null,
+    filtro_lance_embutido: embeddedFilter || document.getElementById("clientProfileFiltroLanceEmbutido")?.value || null,
     filtro_parcela_reduzida: document.getElementById("clientProfileFiltroParcelaReduzida")?.value || null,
     tipo_bem: document.getElementById("clientProfileTipoBem").value,
     tipo_bem_explicit: Boolean(document.getElementById("clientProfileTipoBem").value),
@@ -6506,6 +6509,11 @@ document.getElementById("advanceClientProfileBtn").addEventListener("click", adv
 renderInvestorPreferenceOptions();
 updateInvestorPreferenceSummary();
 document.getElementById("investorPreferencesOptions")?.addEventListener("change", syncInvestorPreferencesFromInputs);
+["investorFilterWithEmbedded", "investorFilterWithoutEmbedded"].forEach((id) => {
+  document.getElementById(id)?.addEventListener("change", () => {
+    if (investorState.result) loadInvestorAnalysis();
+  });
+});
 document.getElementById("investorAdministratorFilter")?.addEventListener("change", (event) => {
   const nextAdministrator = String(event.target.value || "");
   if (nextAdministrator === investorState.administrator) return;

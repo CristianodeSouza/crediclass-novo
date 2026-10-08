@@ -310,6 +310,7 @@ def analyze_client_consortium_viability(
         feature_flags = _group_feature_flags(group)
         requested_embedded = str(getattr(payload, "filtro_lance_embutido", "") or "").strip().lower()
         requested_reduced = str(getattr(payload, "filtro_parcela_reduzida", "") or "").strip().lower()
+        scenario_filter = {"with_embedded"} if requested_embedded == "sim" else {"without_embedded"} if requested_embedded == "nao" else {"with_embedded", "without_embedded"}
         if requested_embedded in {"sim", "nao"} and feature_flags["lance_embutido"] != (requested_embedded == "sim"):
             counters["embedded_filter_rejected"] += 1
             excluded.append({**group_ref, "reason": "filtro_lance_embutido", "detail": f"Grupo {'possui' if feature_flags['lance_embutido'] else 'não possui'} lance embutido; filtro: {requested_embedded}."})
@@ -439,11 +440,11 @@ def analyze_client_consortium_viability(
         step_started = time.perf_counter()
         contemplation_scenarios = [
             scenario for scenario in scenarios
-            if scenario["contemplation_compatible"] is True
+            if scenario["id"] in scenario_filter and scenario["contemplation_compatible"] is True
         ]
         selected_profile_scenarios = [
             scenario for scenario in scenarios
-            if selected_profile_row is not None and any(
+            if scenario["id"] in scenario_filter and selected_profile_row is not None and any(
                 profile.get("id") == selected_profile_row and profile.get("atinge_perfil") is True
                 for profile in scenario.get("perfis_contemplacao", [])
             )
@@ -452,6 +453,7 @@ def analyze_client_consortium_viability(
         # An explicit client profile makes contemplation the first eligibility gate.
         approved_scenarios = [
             scenario for scenario in term_scenarios
+            if scenario["id"] in scenario_filter
             if selected_profile is None
             or any(profile.get("id") == selected_profile_row and profile.get("atinge_perfil") is True for profile in scenario.get("perfis_contemplacao", []))
         ]
@@ -943,6 +945,7 @@ def analyze_client_consortium_viability(
         {"grupo": entry.get("grupo"), "administradora": entry.get("administradora"), "cenarios": entry.get("scenarios", []), "stage_results": entry.get("stage_results", {}), "result": entry.get("result"), "missing_fields": entry.get("missing_fields", [])}
         for entry in group_results
         if str(entry.get("grupo") or "").strip() not in {"", "-"} and str(entry.get("administradora") or "").strip() not in {"", "-"}
+        and entry.get("stage_results", {}).get("contemplacao", {}).get("approved") is True
     ]
     administrators_analyzed = sorted({str(group.get("administradora") or "").strip() for group in groups if str(group.get("administradora") or "").strip()}, key=normalize_text)
     return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "perfil_contemplacao": selected_profile, "administradoras_analisadas": administrators_analyzed, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(eligible_items), "total_grupos_viaveis": len(eligible_items), "total_grupos_composicao": len(composition_items), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Matriz de contemplacao aplicada primeiro pelo lance e perfil em todas as administradoras.", "Refinamento de credito aplicado somente aos grupos aprovados na matriz.", "Refinamento de prazo, renda e dados financeiros aplicado aos candidatos da matriz.", "Candidatos classificados em 1 cota ou composicao.", "Ordem preliminar aplicada sem ranking definitivo."], "items": eligible_items, "credit_items": credit_eligible_items, "matrix_items": matrix_items, "composition_items": composition_items, "audit": audit}

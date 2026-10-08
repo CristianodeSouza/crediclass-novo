@@ -295,7 +295,7 @@ class AuditoriaV4(BaseModel):
 class ViabilidadeRequest(BaseModel):
     objetivo: str
     administradora: str | None = None
-    filtro_lance_embutido: Literal["sim", "nao"] | None = None
+    filtro_lance_embutido: str | None = None
     filtro_parcela_reduzida: Literal["sim", "nao"] | None = None
     contemplacao_perfil: Literal["urgent", "fast", "moderate", "conservative", "long_term"] | None = None
     credito_desejado: float = Field(gt=0)
