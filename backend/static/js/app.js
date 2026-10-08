@@ -4002,7 +4002,8 @@ function renderMotor360ContemplationMatrix(items, selectedProfile, rejectedItems
       const profileId = profileAliases[id] || id;
       const matches = scenarios.map((scenario) => ({ scenario, profile: (scenario.perfis_contemplacao || []).find((entry) => entry.id === profileId || entry.id === id) })).filter((entry) => entry.profile);
       if (!matches.length || matches.every((entry) => entry.profile.atinge_perfil == null)) return `<td><span class="text-muted">Sem dado</span></td>`;
-      const approved = matches.filter((entry) => entry.profile.atinge_perfil === true);
+      const eligibleIds = Array.isArray(item.eligible_scenarios) ? new Set(item.eligible_scenarios) : null;
+      const approved = matches.filter((entry) => entry.profile.atinge_perfil === true && (!eligibleIds || eligibleIds.has(entry.scenario.id)));
       const reference = (approved[0] || matches[0]).profile;
       const scenarioLabel = approved.length
         ? approved.map((entry) => entry.scenario.id === "with_embedded" ? "com embutido" : "sem embutido").join(" / ")
@@ -4063,15 +4064,16 @@ function renderInvestorAnalysis(result) {
   ]);
   const matchesSelectedScenario = (item) => {
     if (!selectedScenarioIds.size) return true;
+    const hasEligibleScenarioList = Array.isArray(item.eligible_scenarios);
     const eligibleScenarioIds = new Set([
       ...(item.eligible_scenarios || []),
-      item.selected_composition_scenario,
+      ...(hasEligibleScenarioList ? [] : [item.selected_composition_scenario]),
     ].filter(Boolean));
     // When the backend already identified the scenarios that passed all
     // gates, this is authoritative. Do not fall back to a profile-only
     // match, otherwise a group approved only with embedded lance leaks into
     // the "without embedded" list (and vice versa).
-    if (eligibleScenarioIds.size) return [...eligibleScenarioIds].some((id) => selectedScenarioIds.has(id));
+    if (hasEligibleScenarioList) return [...eligibleScenarioIds].some((id) => selectedScenarioIds.has(id));
     return (item.cenarios || item.scenarios || []).some((scenario) => (
       selectedScenarioIds.has(scenario.id)
       && (scenario.eligible === true || (scenario.credit_compatible === true && scenario.term_compatible === true))

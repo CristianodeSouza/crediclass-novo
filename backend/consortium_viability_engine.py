@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.114"
+MOTOR_VERSION = "4.0.115"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -547,6 +547,9 @@ def analyze_client_consortium_viability(
                     )
                 )
             ]
+            eligible_composition_ids = {scenario["id"] for scenario in composition_financial_scenarios}
+            for scenario in composition_scenarios:
+                scenario["eligible"] = scenario["id"] in eligible_composition_ids
             selected_composition_scenario = composition_financial_scenarios[0] if composition_financial_scenarios else None
             if selected_composition_scenario:
                 composition_capacity_key = preference if preference in contemplation_capacities else next(iter(contemplation_capacities), "")
