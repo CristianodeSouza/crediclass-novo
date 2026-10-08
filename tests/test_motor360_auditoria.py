@@ -48,6 +48,10 @@ class Motor360AuditoriaTest(unittest.TestCase):
         self.assertIn("Aprovados no perfil", markdown)
         self.assertIn("Ocorrências de campos incompletos", markdown)
         self.assertNotIn("total_incomplete", stored["summary"])
+        pdf = motor360_auditoria.audit_to_pdf(stored)
+        self.assertTrue(pdf.startswith(b"%PDF-1.4"))
+        self.assertGreater(len(pdf), 500)
+        self.assertNotIn(b"Refinamento: 1 cota ou composicao", pdf)
 
 
 if __name__ == "__main__":
