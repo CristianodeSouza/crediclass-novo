@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 from pathlib import Path
 
 
@@ -17,12 +17,12 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.111", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.112", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=4.0.111", index_html)
-        self.assertIn("/static/js/api.js?v=4.0.111", index_html)
+        self.assertIn("/static/js/app.js?v=4.0.112", index_html)
+        self.assertIn("/static/js/api.js?v=4.0.112", index_html)
         self.assertIn('<button class="nav-item active" type="button" data-screen="perfil">', index_html)
         self.assertIn('<section id="screen-perfil" class="screen-panel active">', index_html)
 
@@ -102,6 +102,11 @@ class StaticEmailTest(unittest.TestCase):
 
         self.assertIn('entry.scenario.id === "with_embedded" ? "com embutido" : "sem embutido"', app_js)
         self.assertIn("cenário elegível:", app_js)
+
+    def test_motor_360_nao_deixa_cenario_nao_elegivel_vazar_no_filtro(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        self.assertIn("if (eligibleScenarioIds.size) return [...eligibleScenarioIds].some((id) => selectedScenarioIds.has(id));", app_js)
 
     def test_mapa_grupos_exibe_resumo_compacto_sem_cards_financeiros(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -723,7 +728,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.111", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.112", index_html)
         self.assertNotIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)

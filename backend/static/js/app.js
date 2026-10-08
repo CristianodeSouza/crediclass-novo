@@ -4067,7 +4067,11 @@ function renderInvestorAnalysis(result) {
       ...(item.eligible_scenarios || []),
       item.selected_composition_scenario,
     ].filter(Boolean));
-    if ([...eligibleScenarioIds].some((id) => selectedScenarioIds.has(id))) return true;
+    // When the backend already identified the scenarios that passed all
+    // gates, this is authoritative. Do not fall back to a profile-only
+    // match, otherwise a group approved only with embedded lance leaks into
+    // the "without embedded" list (and vice versa).
+    if (eligibleScenarioIds.size) return [...eligibleScenarioIds].some((id) => selectedScenarioIds.has(id));
     return (item.cenarios || item.scenarios || []).some((scenario) => (
       selectedScenarioIds.has(scenario.id)
       && (!result.perfil_contemplacao || (scenario.perfis_contemplacao || []).some((profile) => {
