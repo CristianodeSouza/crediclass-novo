@@ -2275,7 +2275,8 @@ function renderMotor360GroupCard(item) {
       const embeddedNote = scenario.id === "with_embedded" ? `<small>Embutido considerado: ${formatMoney(scaleMoney(value.lance_embutido))}</small>` : "";
       return `<div class="motor360-profile-card-value ${value.atinge_perfil ? "is-hit" : "is-gap"}"><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${value.atinge_perfil ? "Atinge o perfil" : `Faltam ${formatMoney(scaleMoney(value.falta_para_ideal))}`}</span><em>${idealLabel}: ${formatMoney(scaleMoney(value.lance_ideal))}</em>${embeddedNote}</div>`;
     }).join("");
-    return `<section class="motor360-scenario-profiles"><div class="motor360-profile-section-title"><h4>Perfis de contemplação</h4><small>Referência: ${formatMoney(scenario.lance_cliente_total)}</small></div><div class="motor360-profile-card-values">${values || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section>`;
+    const scenarioLabel = scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
+    return `<section class="motor360-scenario-profiles"><div class="motor360-profile-section-title"><h4>Perfis · ${scenarioLabel}</h4><small>Referência: ${formatMoney(scenario.lance_cliente_total)}</small></div><div class="motor360-profile-card-values">${values || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section>`;
   };
   const scaledScenarioCards = scenarios.map((scenario) => {
     const title = scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido";
