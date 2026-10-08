@@ -4001,8 +4001,6 @@ function renderInvestorAnalysis(result) {
   const finalItems = result.items || [];
   const creditItems = result.credit_items || [];
   const compositionItems = result.composition_items || [];
-  const showingCreditStage = !finalItems.length && creditItems.length > 0 && !result.perfil_contemplacao;
-  const sourceItems = showingCreditStage ? creditItems : finalItems;
   const contemplationRejected = (result.audit?.group_results || []).filter((item) => item.result === "excluded_contemplation");
   const auditedMatrixItems = (investorState.audit?.group_results || []).map((entry) => ({
     grupo: entry.grupo,
@@ -4010,12 +4008,23 @@ function renderInvestorAnalysis(result) {
     cenarios: entry.scenarios || [],
   }));
   const matrixItems = result.matrix_items || (auditedMatrixItems.length ? auditedMatrixItems : [...(result.items || []), ...contemplationRejected]);
-  const selectedAdministrator = syncMotor360AdministratorFilter([...sourceItems, ...compositionItems, ...matrixItems]);
+  const matrixProfileAliases = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" };
+  const matrixProfileId = matrixProfileAliases[result.perfil_contemplacao] || result.perfil_contemplacao;
+  const matrixApprovedKeys = new Set(matrixItems.filter((item) => {
+    const scenarios = item.cenarios || item.scenarios || [];
+    return scenarios.some((scenario) => (scenario.perfis_contemplacao || []).some((profile) => profile.id === matrixProfileId && profile.atinge_perfil === true));
+  }).map((item) => `${motor360AdministratorKey(item)}|${String(item.grupo || item.grupo_id || "")}`));
+  const onlyMatrixApproved = (items) => items.filter((item) => matrixApprovedKeys.has(`${motor360AdministratorKey(item)}|${String(item.grupo || item.grupo_id || "")}`));
+  const rawSourceItems = !finalItems.length && creditItems.length > 0 && !result.perfil_contemplacao ? creditItems : finalItems;
+  const sourceItems = result.perfil_contemplacao ? onlyMatrixApproved(rawSourceItems) : rawSourceItems;
+  const filteredCompositionItems = result.perfil_contemplacao ? onlyMatrixApproved(compositionItems) : compositionItems;
+  const showingCreditStage = !finalItems.length && creditItems.length > 0 && !result.perfil_contemplacao;
+  const selectedAdministrator = syncMotor360AdministratorFilter([...sourceItems, ...filteredCompositionItems, ...matrixItems]);
   updateInvestorPreferenceSummary();
   const selectedAdministratorKey = motor360AdministratorKey(selectedAdministrator);
   const administratorItems = selectedAdministratorKey ? sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey) : sourceItems;
   const items = applyInvestorPreferences(administratorItems, investorState.preferences);
-  const administratorCompositionItems = selectedAdministratorKey ? compositionItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey) : compositionItems;
+  const administratorCompositionItems = selectedAdministratorKey ? filteredCompositionItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey) : filteredCompositionItems;
   const creditRejectedByTerm = creditItems.filter((item) => (
     (!selectedAdministratorKey || motor360AdministratorKey(item) === selectedAdministratorKey) && !item.recommendable
   ));
