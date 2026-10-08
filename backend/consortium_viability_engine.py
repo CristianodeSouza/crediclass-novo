@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.125"
+MOTOR_VERSION = "4.0.126"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -927,38 +927,6 @@ def analyze_client_consortium_viability(
             {"level": "info", "message": "As fórmulas de crédito contratado, saldo devedor e prazo são registradas por cenário e por grupo na auditoria."},
         ],
     }
-    def audit_key(entry: dict[str, Any]) -> tuple[str, str]:
-        return (str(entry.get("administradora") or "").strip().lower(), str(entry.get("grupo") or "").strip())
-
-    matrix_entries = [entry for entry in group_results if entry.get("stage_results", {}).get("contemplacao")]
-    matrix_incomplete_entries = [
-        entry for entry in matrix_entries
-        if any(field.get("column") == "BL:BP" for field in entry.get("missing_fields", []))
-    ]
-    matrix_credit_keys = {
-        audit_key(entry) for entry in matrix_entries
-        if audit_key(entry) in matrix_approved_keys and entry.get("stage_results", {}).get("credito", {}).get("approved")
-    }
-    matrix_term_keys = {
-        audit_key(entry) for entry in matrix_entries
-        if audit_key(entry) in matrix_credit_keys and entry.get("stage_results", {}).get("prazo", {}).get("approved")
-    }
-    matrix_input_count = len(matrix_entries)
-    matrix_incomplete_count = len(matrix_incomplete_entries)
-    matrix_rejected_count = max(0, matrix_input_count - len(matrix_approved_keys) - matrix_incomplete_count)
-    composition_keys = {audit_key(item) for item in composition_items}
-    lower_list_keys = matrix_term_keys | composition_keys
-    lower_list_count = len(lower_list_keys)
-    initial_steps = audit["execution_steps"]
-    audit["execution_steps"] = [
-        initial_steps[0],
-        initial_steps[1],
-        {"order": 3, "id": "matrix", "name": "Matriz de contemplação", "formula_or_rule": "Lance efetivo (declarado ou simulado) >= faixa do perfil; o cenário aprovado é exibido na matriz.", "input_count": matrix_input_count, "approved_count": len(matrix_approved_keys), "rejected_count": matrix_rejected_count, "incomplete_count": matrix_incomplete_count, "duration_ms": round(durations["contemplation"] * 1000, 3)},
-        {"order": 4, "id": "credit", "name": "Refinamento: faixa de crédito", "formula_or_rule": "Somente candidatos aprovados na matriz; O <= crédito contratado <= U.", "input_count": len(matrix_approved_keys), "approved_count": len(matrix_credit_keys), "rejected_count": max(0, len(matrix_approved_keys) - len(matrix_credit_keys)), "incomplete_count": 0, "duration_ms": round(durations["credit_decision"] * 1000, 3)},
-        {"order": 5, "id": "term", "name": "Refinamento: prazo e renda", "formula_or_rule": "Somente candidatos aprovados em matriz e crédito; parcela e prazo devem respeitar o limite de renda.", "input_count": len(matrix_credit_keys), "approved_count": len(matrix_term_keys), "rejected_count": max(0, len(matrix_credit_keys) - len(matrix_term_keys)), "incomplete_count": 0, "duration_ms": round(durations["term"] * 1000, 3)},
-        {"order": 6, "id": "preselection", "name": "Refinamento: 1 cota ou composição", "formula_or_rule": "Candidatos aprovados na matriz são classificados em 1 cota ou composição; composição exige crédito e parcela total compatíveis em até 50 cotas.", "input_count": len(lower_list_keys), "approved_count": lower_list_count, "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["administrator_rules"] * 1000, 3)},
-        {"order": 7, "id": "preliminary_order", "name": "Ordem preliminar", "formula_or_rule": "Maior prazo remanescente, menor taxa administrativa total, administradora e grupo. Não é ranking final.", "input_count": lower_list_count, "approved_count": lower_list_count, "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["ranking"] * 1000, 3)},
-    ]
     def matrix_eligible_scenarios(entry: dict[str, Any]) -> list[dict[str, Any]]:
         eligible = []
         for scenario in entry.get("scenarios", []):
