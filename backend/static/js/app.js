@@ -2254,10 +2254,24 @@ function renderMotor360GroupCard(item) {
   const quotaExceeded = selected && quotaLimit !== null && quotaCount > quotaLimit;
   const scaleMoney = (value) => value === null || value === undefined ? value : Number(value) * quotaCount;
   const quotaControl = selected ? `<div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}"><div class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="50" value="${quotaCount}" data-quota-action="input" data-group-id="${auditId}" aria-label="Quantidade de cotas do grupo ${auditId}"></div>${quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : ""}</div>` : "";
+  const selectedProfileId = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" }[investorState.result?.perfil_contemplacao] || investorState.result?.perfil_contemplacao;
+  const scenarioRequirementStatus = (scenario) => {
+    const profileOk = !selectedProfileId || (scenario.perfis_contemplacao || []).some((profile) => profile.id === selectedProfileId && profile.atinge_perfil === true);
+    const requirements = [
+      ["Crédito", scenario.credit_compatible === true],
+      ["Prazo/renda", scenario.term_compatible !== false && scenario.income_compatible !== false],
+      ["Perfil", profileOk],
+    ];
+    const failed = requirements.filter(([, ok]) => !ok).map(([label]) => label);
+    const ok = failed.length === 0;
+    return { ok, failed, title: ok ? "Todos os requisitos do cenário foram atendidos." : `Não atende: ${failed.join(", ")}.` };
+  };
   const scaledScenarioCards = scenarios.map((scenario) => {
     const title = scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido";
-    const compatible = scenario.credit_compatible;
-    return `<article class="motor360-scenario-card ${compatible ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${compatible ? "Crédito OK" : "Crédito requer análise"}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado</small><b>${formatMoney(scaleMoney(scenario.credito_contratado))}</b></div><div><small>Lance do cliente</small><b>${formatMoney(scenario.lance_cliente_total)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Lance embutido</small><b>${formatMoney(scaleMoney(scenario.lance_embutido))}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(scaleMoney(scenario.lance_total_cenario))} <em>(${formatPercent(scenario.percentual_lance_efetivo)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(scaleMoney(scenario.saldo_devedor))}</b></div><div><small>Parcela inicial</small><b>${formatMoney(scaleMoney(scenario.parcela_inicial))}</b></div><div><small>Parcela pós-contemplação</small><b>${scenario.parcela_pos_contemplacao == null ? "Não calculada" : formatMoney(scaleMoney(scenario.parcela_pos_contemplacao))}</b></div></div><small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small></article>`;
+    const requirement = scenarioRequirementStatus(scenario);
+    const statusLabel = requirement.ok ? "Requisitos atendidos" : "Requisitos não atendidos";
+    const info = `<span class="motor360-requirement-info" title="${escapeHtml(requirement.title)}" aria-label="${escapeHtml(requirement.title)}" tabindex="0">i</span>`;
+    return `<article class="motor360-scenario-card ${requirement.ok ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusLabel} ${info}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado</small><b>${formatMoney(scaleMoney(scenario.credito_contratado))}</b></div><div><small>Lance do cliente</small><b>${formatMoney(scenario.lance_cliente_total)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Lance embutido</small><b>${formatMoney(scaleMoney(scenario.lance_embutido))}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(scaleMoney(scenario.lance_total_cenario))} <em>(${formatPercent(scenario.percentual_lance_efetivo)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(scaleMoney(scenario.saldo_devedor))}</b></div><div><small>Parcela inicial</small><b>${formatMoney(scaleMoney(scenario.parcela_inicial))}</b></div><div><small>Parcela pós-contemplação</small><b>${scenario.parcela_pos_contemplacao == null ? "Não calculada" : formatMoney(scaleMoney(scenario.parcela_pos_contemplacao))}</b></div></div><small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small></article>`;
   }).join("");
   const profileDisplayLabels = { conservative: "Conservador (24 meses)", moderate: "Moderado (12 meses)", aggressive: "Agressivo / Rápido (6 meses)", super_aggressive: "Super agressivo / Urgente (3 meses)" };
   const scaledProfileCards = profiles.map((profile) => {
@@ -4131,13 +4145,7 @@ function renderInvestorAnalysis(result) {
     const title = card.querySelector(".motor360-scenario-title strong")?.textContent || "";
     const scenarioId = title.includes("com lance") ? "with_embedded" : "without_embedded";
     const scenario = (groupItem?.scenarios || []).find((item) => item.id === scenarioId) || {};
-    const profileAliases = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" };
-    const profileId = profileAliases[result.perfil_contemplacao] || result.perfil_contemplacao;
-    const profileApproved = !profileId || (scenario.perfis_contemplacao || []).some((profile) => profile.id === profileId && profile.atinge_perfil === true);
-    const selectable = scenario.credit_compatible === true && scenario.term_compatible === true && profileApproved;
-    const action = selectable
-      ? `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""}> Escolher para contratação</label>`
-      : `<span class="motor360-scenario-unavailable">Indisponível: cenário não atende crédito, prazo/renda ou perfil.</span>`;
+    const action = `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""}> Escolher para análise</label>`;
     card.querySelector(".motor360-scenario-title")?.insertAdjacentHTML("beforeend", action);
   });
   results.querySelectorAll("[data-screen-jump]").forEach((button) => button.addEventListener("click", () => activateScreen(button.dataset.screenJump)));
