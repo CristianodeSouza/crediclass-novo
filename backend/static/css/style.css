@@ -2301,6 +2301,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-scenario-grid b { color: #147a48; font-size: 0.8rem; }
 .motor360-scenario-grid em { color: var(--muted); font-size: 0.65rem; font-style: normal; font-weight: 400; }
 .motor360-scenario-note { display: block; margin-top: 8px; color: var(--muted); font-size: 0.68rem; }
+.motor360-scenario-profiles { margin-top: 12px; padding-top: 9px; border-top: 1px solid var(--line); }
+.motor360-scenario-profiles .motor360-profile-card-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .motor360-profile-section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .motor360-profile-section-title small { color: var(--muted); font-size: 0.68rem; }
 .motor360-profile-card-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
