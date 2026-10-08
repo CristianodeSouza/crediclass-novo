@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.119"
+MOTOR_VERSION = "4.0.120"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -1040,6 +1040,9 @@ def analyze_client_consortium_viability(
     audit["parameters"]["post_matrix_selection"] = "matrix_approved_groups_only"
     audit["summary"]["total_post_matrix_groups"] = len(final_items)
     audit["summary"]["total_requires_composition"] = sum(1 for item in final_items if item.get("requires_composition"))
+    audit["summary"]["total_preselected"] = len(final_items)
+    audit["summary"]["total_composition_candidates"] = sum(1 for item in final_items if item.get("requires_composition"))
+    audit["final_ordering"]["execution_summary"] = "Os grupos foram ordenados após a matriz; crédito, prazo, renda e composição permanecem como indicadores para decisão do operador."
     audit["execution_steps"] = [
         audit["execution_steps"][0],
         audit["execution_steps"][1],
