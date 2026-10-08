@@ -311,11 +311,10 @@ def analyze_client_consortium_viability(
         requested_embedded = str(getattr(payload, "filtro_lance_embutido", "") or "").strip().lower()
         requested_reduced = str(getattr(payload, "filtro_parcela_reduzida", "") or "").strip().lower()
         scenario_filter = {"with_embedded"} if requested_embedded == "sim" else {"without_embedded"} if requested_embedded == "nao" else {"with_embedded", "without_embedded"}
-        if requested_embedded in {"sim", "nao"} and feature_flags["lance_embutido"] != (requested_embedded == "sim"):
-            counters["embedded_filter_rejected"] += 1
-            excluded.append({**group_ref, "reason": "filtro_lance_embutido", "detail": f"Grupo {'possui' if feature_flags['lance_embutido'] else 'não possui'} lance embutido; filtro: {requested_embedded}."})
-            group_results.append({**group_ref, "result": "excluded_group_filter", "justification": ["filtro_lance_embutido"], "scenarios": []})
-            continue
+        # The scenario filter is applied after both financial scenarios and
+        # the selected profile are evaluated. A group may support both
+        # scenarios, so filtering by the group's capability here would wrongly
+        # remove it from the other valid scenario (e.g. group 1031).
         if requested_reduced in {"sim", "nao"} and feature_flags["parcela_reduzida"] != (requested_reduced == "sim"):
             counters["reduced_installment_filter_rejected"] += 1
             excluded.append({**group_ref, "reason": "filtro_parcela_reduzida", "detail": f"Grupo {'possui' if feature_flags['parcela_reduzida'] else 'não possui'} parcela reduzida; filtro: {requested_reduced}."})
