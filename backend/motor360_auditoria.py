@@ -91,9 +91,9 @@ def audit_to_markdown(audit: dict[str, Any]) -> str:
         f"- Grupos carregados: {summary.get('total_loaded', 0)}",
         f"- Grupos analisados: {summary.get('total_analyzed', 0)}",
         f"- Compatíveis por crédito: {summary.get('total_credit_compatible', 0)}",
-        f"- Pré-selecionados: {summary.get('total_preselected', 0)}",
-        f"- Eliminados por crédito: {summary.get('total_credit_rejected', 0)}",
-        f"- Eliminados por prazo/renda: {summary.get('total_term_income_rejected', 0)}",
+        f"- Aprovados no perfil: {summary.get('total_post_matrix_groups', summary.get('total_preselected', 0))}",
+        f"- Crédito compatível (indicador): {summary.get('total_credit_compatible', 0)}",
+        f"- Prazo/renda requer análise (indicador): {summary.get('total_term_income_rejected', 0)}",
         f"- Grupos com dados incompletos: {summary.get('groups_with_incomplete_data', 0)}",
         f"- Ocorrências de campos incompletos: {summary.get('incomplete_field_occurrences', 0)}",
         f"- Excluídos: {summary.get('total_rejected', 0)}",
@@ -153,7 +153,7 @@ def _audit_pdf_lines(audit: dict[str, Any]) -> list[tuple[str, int, bool]]:
     line(f"Grupos pre-selecionados no documento: {len(selected_groups)}", 9)
     heading("2. Base e criterios aplicados")
     line(f"Base: {source.get('source_name', '-')} | Linhas analisadas: {source.get('total_rows', 0)} | Hash: {source.get('base_snapshot', {}).get('fingerprint', '-')}")
-    line("Filtro aplicado: somente grupos aprovados na pre-selecao, preservando o mesmo cenario para credito e prazo/renda.")
+    line("Filtro aplicado: somente grupos aprovados na matriz; crédito, prazo, renda e composição permanecem como indicadores para análise do operador.")
     heading("3. Sequencia de filtros")
     for step in audit.get("execution_steps", []):
         line(f"{step.get('order', '-')}. {step.get('name', '-')}: {step.get('formula_or_rule', '-')} | Entrada {step.get('input_count', 0)} | Aprovados {step.get('approved_count', 0)} | Eliminados {step.get('rejected_count', 0)} | Incompletos {step.get('incomplete_count', 0)}")

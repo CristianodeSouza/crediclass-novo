@@ -2242,7 +2242,7 @@ function renderMotor360GroupCard(item) {
   const profiles = byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [];
   const requestedPreference = investorState.result?.preferencia_declarada;
   const objectiveCompatible = !requestedPreference || (item.compatible_contemplation_strategies || []).includes(requestedPreference);
-  const status = item.matrix_approved ? "Aprovado no perfil de contemplação" : item.result === "preselected" ? "Pré-selecionado" : item.alerts?.length ? formatMotor360Reason(item.alerts[0]) : objectiveCompatible ? "Indicador compatível" : "Requer análise";
+  const status = item.matrix_approved ? "Aprovado no perfil de contemplação" : item.alerts?.length ? formatMotor360Reason(item.alerts[0]) : objectiveCompatible ? "Indicador compatível" : "Requer análise";
   const groupId = String(item.grupo || item.grupo_id || "");
   const groupKey = motor360GroupKey(item);
   const auditId = escapeHtml(groupKey);
@@ -2273,38 +2273,18 @@ function renderMotor360GroupCard(item) {
   return `<article id="${anchorId}" class="motor360-group-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo${selected && quotaCount > 1 ? " total" : ""}</small><b>${formatMoney(scaleMoney(item.credito_maximo))}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status">${escapeHtml(status)}</span><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${auditId}" ${selected ? "checked" : ""}><span>Selecionar grupo</span></label>${quotaControl}<button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros${selected && quotaCount > 1 ? ` · ${quotaCount} cotas` : ""}</h4><div class="motor360-scenario-list">${scaledScenarioCards}</div></section><section class="motor360-group-section"><div class="motor360-profile-section-title"><h4>Perfis de contemplação</h4><small>Referência comparada ao lance ofertado pelo cliente: ${formatMoney(byId.without_embedded?.lance_cliente_total ?? byId.with_embedded?.lance_cliente_total)}</small></div><div class="motor360-profile-card-list">${scaledProfileCards || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div></article>`;
 }
 
-function renderMotor360CompositionCard(item) {
-  const groupId = String(item.grupo || item.grupo_id || "");
-  const groupKey = motor360GroupKey(item);
-  const anchorId = motor360GroupAnchorId(groupId);
-  const selected = investorState.selectedGroupIds.has(groupKey);
-  const scenarios = item.cenarios || [];
-  const eligibleScenario = scenarios.find((scenario) => scenario.id === item.selected_composition_scenario);
-  const defaultQuotas = eligibleScenario?.cotas_minimas ?? item.cotas_minimas_sem_embutido ?? 1;
-  const quotaCount = selected ? Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupKey) || 1))) : Math.max(1, Number(defaultQuotas));
-  const quotaCapacity = motor360QuotaCapacity(item);
-  const quotaLimit = Number.isFinite(Number(quotaCapacity?.limite_cotas)) ? Number(quotaCapacity.limite_cotas) : null;
-  const quotaExceeded = selected && quotaLimit !== null && quotaCount > quotaLimit;
-  const quotaWarning = quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : "";
-  const status = "Em composição";
-  const scenarioCards = scenarios.map((scenario) => {
-    const scenarioQuotaCount = selected ? quotaCount : Math.max(1, Number(scenario.cotas_minimas || 1));
-    return `<article class="motor360-composition-scenario"><strong>${scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido"}</strong><dl><div><dt>Cotas mínimas neste cenário</dt><dd>${escapeHtml(String(scenario.cotas_minimas ?? "-"))}</dd></div><div><dt>Crédito líquido por cota</dt><dd>${formatMoney(scenario.credito_liquido_projetado)}</dd></div><div><dt>Crédito líquido selecionado</dt><dd>${formatMoney(Number(scenario.credito_liquido_projetado || 0) * scenarioQuotaCount)}</dd></div><div><dt>Parcela por cota</dt><dd>${formatMoney(scenario.parcela_inicial)}</dd></div><div><dt>Parcela total</dt><dd>${formatMoney(Number(scenario.parcela_inicial || 0) * scenarioQuotaCount)}</dd></div><div><dt>Saldo devedor total</dt><dd>${formatMoney(Number(scenario.saldo_devedor || 0) * scenarioQuotaCount)}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>Pendente da distribuição do lance</dd></div></dl></article>`;
-  }).join("");
-  const minimumSummary = `cenário elegível: ${eligibleScenario?.id === "with_embedded" ? "com embutido" : "sem embutido"} · mínimo sem embutido: ${item.cotas_minimas_sem_embutido ?? "-"} cota(s) · com embutido: ${item.cotas_minimas_com_embutido ?? "não disponível"} cota(s)`;
-  return `<article id="${anchorId}" class="motor360-composition-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>Grupo ${escapeHtml(groupId)}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p><p>${escapeHtml(minimumSummary)}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo${selected && quotaCount > 1 ? " total" : ""}</small><b>${formatMoney(Number(item.credito_maximo || 0) * quotaCount)}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status">${escapeHtml(status)}</span><div class="motor360-composition-actions"><div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}"><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${escapeHtml(groupKey)}" ${selected ? "checked" : ""}><span>Adicionar ao carrinho</span></label>${selected ? `<label class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="50" value="${quotaCount}" data-quota-action="input" data-group-id="${escapeHtml(groupKey)}"></label>` : ""}${quotaWarning}</div></div></div></header><div class="motor360-composition-scenarios">${scenarioCards}</div></article>`;
-}
-
 function selectedMotor360Items() {
   const currentItems = new Map([
-    ...(investorState.result?.items || []),
-    ...(investorState.result?.credit_items || []),
-    ...(investorState.result?.composition_items || []),
+    ...(investorState.result?.final_items || investorState.result?.items || []),
   ].map((item) => [motor360GroupKey(item), item]));
   return [...investorState.selectedGroupIds].map((id) => {
     const item = currentItems.get(id) || investorState.selectedGroupData.get(id);
     return item ? { ...item, cenarios: selectedScenariosForItem(item) } : null;
   }).filter((item) => item && item.cenarios.length);
+}
+
+function motor360FinalItems(result = investorState.result) {
+  return result?.final_items || result?.items || [];
 }
 
 function renderMotor360SelectedGroupsDock() {
@@ -2415,15 +2395,13 @@ async function downloadStudyAuditLog() {
 
 function selectedMotor360SnapshotItems() {
   const currentItems = new Map([
-    ...(investorState.result?.items || []),
-    ...(investorState.result?.credit_items || []),
-    ...(investorState.result?.composition_items || []),
+    ...(investorState.result?.final_items || investorState.result?.items || []),
   ].map((item) => [String(item.grupo || item.grupo_id || ""), item]));
   return [...investorState.selectedGroupIds].map((id) => {
     const item = currentItems.get(id) || investorState.selectedGroupData.get(id);
     if (!item) return null;
     return { ...item, cenarios: Array.isArray(item.cenarios) ? item.cenarios : [] };
-  }).filter((item) => item && ["without_embedded", "with_embedded"].every((id) => item.cenarios.some((scenario) => scenario.id === id)));
+  }).filter((item) => item && item.cenarios.length);
 }
 
 function invalidateInvestorAnalysisForProfileChange() {
@@ -3778,7 +3756,7 @@ function renderMotor360Audit(audit) {
     const embeddedScenario = (item.scenarios || []).find((entry) => entry.id === "with_embedded") || {};
     const stages = item.stage_results || {};
     const mark = (stage) => stages[stage]?.approved ? "Aprovado" : "Reprovado";
-    const resultLabel = item.result === "preselected" ? "Pré-selecionado" : item.result === "composition" ? "Em composição" : item.result === "excluded_composition" ? "Composição rejeitada" : item.result === "excluded_contemplation" ? "Eliminado na matriz/perfil" : item.result === "excluded_term_income" ? "Eliminado em prazo/renda" : item.result === "rejected" ? "Eliminado por status/tipo" : "Eliminado na faixa de crédito";
+    const resultLabel = item.result === "matrix_approved" || item.matrix_approved ? "Aprovado no perfil" : item.result === "excluded_contemplation" ? "Fora do perfil" : item.result === "rejected" ? "Fora da análise" : "Indicador para análise";
     const approvedScenarios = stages.contemplacao?.scenario_ids || [];
     return `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${formatMoney(scenario.credito_contratado)}</td><td>${formatMoney(scenario.credito_minimo)} a ${formatMoney(scenario.credito_maximo)}</td><td>${mark("credito")}</td><td>${formatMoney(scenario.parcela_inicial)}<br><small>com emb.: ${formatMoney(embeddedScenario.parcela_inicial)}</small></td><td>${escapeHtml(String(scenario.prazo_apos_lance_limite_renda_meses ?? "-"))} / ${escapeHtml(String(item.source_values?.prazo_restante ?? "-"))}</td><td>${mark("prazo")}</td><td>${mark("contemplacao")}<br><small>${escapeHtml(approvedScenarios.length ? `cenário(s): ${approvedScenarios.join(", ")}` : "nenhum cenário aprovado")}</small></td><td>${resultLabel}</td></tr>`;
   }).join("");
@@ -3863,7 +3841,7 @@ function renderMotor360BlockingDiagnostics(audit) {
       ...(entry.missing_fields || []).map((field) => field.reason),
       ...(entry.justification || []),
     ].filter(Boolean).map(String);
-    const actionable = entry.result === "excluded_term_income" || entry.result === "excluded_contemplation" || reasons.length;
+    const actionable = entry.result !== "matrix_approved" && !entry.matrix_approved && reasons.length;
     if (!actionable) return;
     const key = `${entry.administradora || "-"}|${reasons.sort().join(",") || entry.result || "sem_motivo"}`;
     const requirements = Object.entries(entry.stage_results || {}).map(([stage, value]) => ({ label: requirementLabels[stage] || stage.replaceAll("_", " "), ok: Boolean(value?.approved) }));
@@ -4030,8 +4008,6 @@ function renderInvestorAnalysis(result) {
   const client = result.cliente || {};
   const totals = result.contadores || {};
   const finalItems = result.final_items || result.items || [];
-  const creditItems = result.credit_items || [];
-  const compositionItems = result.composition_items || [];
   const contemplationRejected = (result.audit?.group_results || []).filter((item) => item.result === "excluded_contemplation");
   const auditedMatrixItems = (investorState.audit?.group_results || []).map((entry) => ({
     grupo: entry.grupo,
@@ -4046,14 +4022,10 @@ function renderInvestorAnalysis(result) {
     return scenarios.some((scenario) => (scenario.perfis_contemplacao || []).some((profile) => profile.id === matrixProfileId && profile.atinge_perfil === true));
   }).map((item) => `${motor360AdministratorKey(item)}|${String(item.grupo || item.grupo_id || "")}`));
   const onlyMatrixApproved = (items) => items.filter((item) => matrixApprovedKeys.has(`${motor360AdministratorKey(item)}|${String(item.grupo || item.grupo_id || "")}`));
-  const rawSourceItems = finalItems.length ? finalItems : (!finalItems.length && creditItems.length > 0 && !result.perfil_contemplacao ? creditItems : finalItems);
-  const sourceItems = result.perfil_contemplacao ? onlyMatrixApproved(rawSourceItems) : rawSourceItems;
-  const filteredCompositionItems = result.perfil_contemplacao ? onlyMatrixApproved(compositionItems) : compositionItems;
-  const showingCreditStage = !finalItems.length && creditItems.length > 0 && !result.perfil_contemplacao;
+  const sourceItems = result.perfil_contemplacao ? onlyMatrixApproved(finalItems) : finalItems;
   const selectedAdministrator = syncMotor360AdministratorFilter([
     ...(result.administradoras_analisadas || []),
     ...sourceItems,
-    ...filteredCompositionItems,
     ...matrixItems,
   ]);
   updateInvestorPreferenceSummary();
@@ -4098,15 +4070,10 @@ function renderInvestorAnalysis(result) {
   } : investorState.audit;
   const scopedContemplationRejected = scoped(contemplationRejected);
   const scenarioSourceItems = scenarioFiltered(sourceItems);
-  const scenarioCompositionItems = scenarioFiltered(filteredCompositionItems);
   const administratorItems = selectedAdministratorKey
     ? sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey).filter(matchesSelectedScenario)
     : scenarioSourceItems;
   const items = applyInvestorPreferences(administratorItems, investorState.preferences);
-  const administratorCompositionItems = [];
-  const creditRejectedByTerm = creditItems.filter((item) => (
-    (!selectedAdministratorKey || motor360AdministratorKey(item) === selectedAdministratorKey) && !item.recommendable
-  ));
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
     ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
@@ -4127,10 +4094,8 @@ function renderInvestorAnalysis(result) {
     `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`
   )).join("");
   updateMotor360SelectionSummary();
-  status.textContent = showingCreditStage
-    ? `${items.length} grupos compatíveis por crédito exibidos`
-    : `${items.length} grupos pré-selecionados exibidos`;
-  if (!items.length && !administratorCompositionItems.length) {
+  status.textContent = `${items.length} grupos aprovados no perfil exibidos`;
+  if (!items.length) {
     const profileLabel = { urgent: "Urgente", fast: "Rápido", moderate: "Moderado", conservative: "Conservador", long_term: "Investidor" }[result.perfil_contemplacao] || "selecionado";
     const rejectedHtml = contemplationRejected.length ? `<details class="motor360-credit-excluded" open><summary>${contemplationRejected.length} grupo(s) não atingem o perfil ${profileLabel}</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th></tr></thead><tbody>${contemplationRejected.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>Lance disponível abaixo da faixa do perfil selecionado.</td></tr>`).join("")}</tbody></table></div></details>` : "";
     const diagnosticButton = '<button type="button" class="btn btn-primary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>Ver por que nenhum grupo foi encontrado</button>';
@@ -4161,7 +4126,7 @@ function renderInvestorAnalysis(result) {
   `;
   results.querySelectorAll(".motor360-scenario-card").forEach((card) => {
     const groupId = card.closest(".motor360-group-card")?.querySelector(".motor360-group-select-input")?.dataset.groupId;
-    const groupItem = [...(result.items || []), ...(result.credit_items || []), ...(result.composition_items || [])].find((item) => motor360GroupKey(item) === String(groupId || "") || String(item.grupo || item.grupo_id || "") === String(groupId || ""));
+    const groupItem = motor360FinalItems(result).find((item) => motor360GroupKey(item) === String(groupId || "") || String(item.grupo || item.grupo_id || "") === String(groupId || ""));
     card.querySelector(".motor360-scenario-grid")?.insertAdjacentHTML("beforeend", motor360ScenarioSourceMetrics(groupItem));
     const title = card.querySelector(".motor360-scenario-title strong")?.textContent || "";
     const scenarioId = title.includes("com lance") ? "with_embedded" : "without_embedded";
@@ -4197,7 +4162,7 @@ function renderInvestorAnalysis(result) {
   results.querySelectorAll(".motor360-group-select-input").forEach((input) => input.addEventListener("change", (event) => {
     const groupId = String(event.target.dataset.groupId || "");
     if (event.target.checked) {
-      const selectedItem = [...(investorState.result?.items || []), ...(investorState.result?.credit_items || []), ...(investorState.result?.composition_items || [])]
+      const selectedItem = motor360FinalItems()
         .find((item) => motor360GroupKey(item) === groupId);
       if (motor360AdministratorKey(selectedItem) !== motor360AdministratorKey(investorState.administrator)) {
         event.target.checked = false;
@@ -4222,7 +4187,7 @@ function renderInvestorAnalysis(result) {
     if (!input) return;
     window.setTimeout(() => {
       const groupId = String(input.dataset.groupId || "");
-      const selectedItem = [...(investorState.result?.items || []), ...(investorState.result?.credit_items || []), ...(investorState.result?.composition_items || [])]
+      const selectedItem = motor360FinalItems()
         .find((item) => motor360GroupKey(item) === groupId);
       if (input.checked) {
         investorState.selectedGroupIds.add(groupId);
@@ -4249,7 +4214,7 @@ function renderInvestorAnalysis(result) {
         : Number(control.value);
     const nextQuotaCount = Math.min(50, Math.max(1, Number.isFinite(requested) ? requested : 1));
     investorState.quotaCounts.set(groupId, nextQuotaCount);
-    const selectedItem = [...(investorState.result?.items || []), ...(investorState.result?.credit_items || []), ...(investorState.result?.composition_items || [])]
+    const selectedItem = motor360FinalItems()
       .find((item) => motor360GroupKey(item) === groupId);
     const historicalLimit = Number(motor360QuotaCapacity(selectedItem)?.limite_cotas);
     if (Number.isFinite(historicalLimit) && nextQuotaCount > historicalLimit) {
@@ -4263,7 +4228,7 @@ function renderInvestorAnalysis(result) {
   results.querySelectorAll("[data-motor360-history-group]").forEach((trigger) => {
     const showHistory = () => {
       const groupId = String(trigger.dataset.motor360HistoryGroup || "");
-      const item = [...(investorState.result?.items || []), ...(investorState.result?.credit_items || []), ...(investorState.result?.composition_items || [])]
+      const item = motor360FinalItems()
         .find((entry) => String(entry.grupo || entry.grupo_id || "") === groupId);
       showGroupHistoryHoverModal(trigger, item, motor360QuotaCapacity(item));
     };
@@ -6428,11 +6393,9 @@ function motor360FirstRequiredBid() {
   const profileAliases = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" };
   const profileIds = new Set([profile, profileAliases[profile]].filter(Boolean));
   const auditedEligible = (investorState.audit?.group_results || []).filter((item) => item.stage_results?.credito?.approved && item.stage_results?.prazo?.approved);
-  const source = result.items?.length
-    ? result.items
-    : auditedEligible.length
-      ? auditedEligible
-      : (result.credit_items || []).filter((item) => item.recommendable !== false);
+  const source = result.final_items?.length || result.items?.length
+    ? (result.final_items || result.items)
+    : auditedEligible;
   const required = source.map((item) => {
     const scenarios = item.cenarios || item.scenarios || [];
     const scenario = scenarios.find((entry) => entry.id === "without_embedded") || scenarios[0];

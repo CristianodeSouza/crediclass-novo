@@ -64,7 +64,7 @@ class Motor360RfcTest(unittest.TestCase):
             contemplacao_perfil="moderate",
             filtro_lance_embutido="nao",
         ), [group()])
-        for item in [*without_result["items"], *without_result["credit_items"], *without_result["composition_items"]]:
+        for item in without_result["items"]:
             self.assertTrue(all(scenario["id"] == "without_embedded" for scenario in item.get("cenarios", [])))
         self.assertEqual(without_result["audit"]["parameters"]["filtro_lance_embutido"], "nao")
         self.assertEqual(without_result["audit"]["parameters"]["cenarios_considerados"], ["without_embedded"])
@@ -103,11 +103,11 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(len(result["items"]), 1)
         self.assertTrue(result["items"][0]["requires_composition"])
         self.assertEqual(result["total_grupos_composicao"], 1)
-        item = result["composition_items"][0]
+        item = result["items"][0]
         self.assertEqual(item["cotas_minimas_sem_embutido"], 2)
         self.assertEqual(item["cotas_minimas_com_embutido"], 3)
         self.assertEqual(item["cotas_maximas"], 50)
-        self.assertEqual(item["cenarios"][0]["credito_liquido_projetado"], 300000)
+        self.assertEqual(item["cenarios"][0]["credito_liquido_projetado"], 600000)
         self.assertTrue(item["capacidade_contemplacoes"])
         self.assertEqual(item["historico_12_meses"], history)
 
@@ -198,7 +198,8 @@ class Motor360RfcTest(unittest.TestCase):
         ])
         self.assertEqual([item["grupo"] for item in result["items"]], ["credit-only"])
         self.assertEqual(result["total_grupos_credito_compativeis"], 1)
-        self.assertEqual([item["grupo"] for item in result["credit_items"]], ["credit-only"])
+        scenario = result["items"][0]["cenarios"][0]
+        self.assertFalse(scenario["term_compatible"])
 
     def test_objective_is_priority_not_an_exclusion_rule(self):
         result = analyze_client_consortium_viability(payload(objetivo="Contemplar - urgente - 3 meses"), [
@@ -265,7 +266,7 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(result["total_grupos_preselecionados"], 1)
         self.assertEqual(result["items"][0]["selection_stage"], "matrix")
 
-    def test_golden_preselection_split_keeps_credit_and_term_stages_separate(self):
+    def test_golden_matrix_list_keeps_credit_and_term_as_operator_indicators(self):
         approved = ["40112", "40174", "40105", "40098", "40090", "40086", "1820", "1038", "1031", "1026", "1019"]
         term_rejected = ["1176", "1011", "1770", "1006"]
         groups = [group(identifier, prazo_restante=240, percentual_lance_embutido=None) for identifier in approved]
@@ -348,7 +349,7 @@ class Motor360RfcTest(unittest.TestCase):
     def test_audit_records_rfc_version_calculations_and_group_columns(self):
         result = analyze_client_consortium_viability(payload(), [group()])
         audit = result["audit"]
-        self.assertEqual(audit["metadata"]["engine_version"], "4.0.120")
+        self.assertEqual(audit["metadata"]["engine_version"], "4.0.121")
         self.assertEqual(audit["metadata"]["rules_version"], "RFC-001-architecture-v4.0")
         self.assertIn("Y", [item["column"] for item in audit["columns_used"]])
         self.assertIn("BL", [item["column"] for item in audit["columns_used"]])

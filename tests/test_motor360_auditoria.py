@@ -45,7 +45,7 @@ class Motor360AuditoriaTest(unittest.TestCase):
         self.assertEqual(stored["client_snapshot"]["consolidated_values"]["fgts"], 50000.0)
         markdown = motor360_auditoria.audit_to_markdown(stored)
         self.assertIn("Auditoria da Análise", markdown)
-        self.assertIn("Pré-selecionados", markdown)
+        self.assertIn("Aprovados no perfil", markdown)
         self.assertIn("Ocorrências de campos incompletos", markdown)
         self.assertNotIn("total_incomplete", stored["summary"])
 
