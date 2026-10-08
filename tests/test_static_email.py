@@ -17,12 +17,12 @@ class StaticEmailTest(unittest.TestCase):
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.104", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.105", index_html)
         self.assertIn("fonts.googleapis.com/css2", index_html)
         self.assertIn("family=DM+Sans", index_html)
         self.assertIn("family=Raleway", index_html)
-        self.assertIn("/static/js/app.js?v=4.0.104", index_html)
-        self.assertIn("/static/js/api.js?v=4.0.90", index_html)
+        self.assertIn("/static/js/app.js?v=4.0.105", index_html)
+        self.assertIn("/static/js/api.js?v=4.0.105", index_html)
         self.assertIn('<button class="nav-item active" type="button" data-screen="perfil">', index_html)
         self.assertIn('<section id="screen-perfil" class="screen-panel active">', index_html)
 
@@ -711,7 +711,7 @@ class StaticEmailTest(unittest.TestCase):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
-        self.assertIn("/static/css/style.css?v=4.0.104", index_html)
+        self.assertIn("/static/css/style.css?v=4.0.105", index_html)
         self.assertNotIn('id="configTema"', index_html)
         self.assertIn("function applyTheme(theme)", app_js)
         self.assertIn("document.body.dataset.theme", app_js)
@@ -825,7 +825,8 @@ class StaticEmailTest(unittest.TestCase):
     def test_estudo_itau_formata_taxas_e_totaliza_credito_contratado(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         self.assertIn('formatPercent(item.taxa_adm)', app_js)
-        self.assertIn('formatPercent(item.taxa_adm_ano)', app_js)
+        self.assertIn('const annualAdminRate = (item) => item.taxa_adm_ano ?? item.taxa_ano ?? item.source_values?.taxa_adm_ano ?? item.source_values?.taxa_ano;', app_js)
+        self.assertIn('formatPercent(annualAdminRate(item))', app_js)
         self.assertIn('withEmbedded.credito_contratado ?? without.credito_contratado', app_js)
         self.assertIn('totalCredit = items.reduce', app_js)
         self.assertNotIn('sum + Number(item.credito_maximo || 0) * qty(item)', app_js)

@@ -3471,7 +3471,7 @@ async function downloadRenderedStudyHtml(screen) {
   clone.querySelectorAll(".no-print").forEach((node) => node.remove());
   let css = "";
   try {
-    css = await fetch("/static/css/style.css?v=4.0.104").then((response) => response.ok ? response.text() : "");
+    css = await fetch("/static/css/style.css?v=4.0.105").then((response) => response.ok ? response.text() : "");
   } catch (_) { /* O HTML ainda será exportado mesmo sem conexão. */ }
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Estudo Financeiro - Auditoria</title><style>${css}</style></head><body>${clone.innerHTML}</body></html>`;
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
