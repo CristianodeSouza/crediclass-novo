@@ -4029,7 +4029,7 @@ function renderInvestorAnalysis(result) {
   if (!status || !summary || !results) return;
   const client = result.cliente || {};
   const totals = result.contadores || {};
-  const finalItems = result.items || [];
+  const finalItems = result.final_items || result.items || [];
   const creditItems = result.credit_items || [];
   const compositionItems = result.composition_items || [];
   const contemplationRejected = (result.audit?.group_results || []).filter((item) => item.result === "excluded_contemplation");
@@ -4046,7 +4046,7 @@ function renderInvestorAnalysis(result) {
     return scenarios.some((scenario) => (scenario.perfis_contemplacao || []).some((profile) => profile.id === matrixProfileId && profile.atinge_perfil === true));
   }).map((item) => `${motor360AdministratorKey(item)}|${String(item.grupo || item.grupo_id || "")}`));
   const onlyMatrixApproved = (items) => items.filter((item) => matrixApprovedKeys.has(`${motor360AdministratorKey(item)}|${String(item.grupo || item.grupo_id || "")}`));
-  const rawSourceItems = !finalItems.length && creditItems.length > 0 && !result.perfil_contemplacao ? creditItems : finalItems;
+  const rawSourceItems = finalItems.length ? finalItems : (!finalItems.length && creditItems.length > 0 && !result.perfil_contemplacao ? creditItems : finalItems);
   const sourceItems = result.perfil_contemplacao ? onlyMatrixApproved(rawSourceItems) : rawSourceItems;
   const filteredCompositionItems = result.perfil_contemplacao ? onlyMatrixApproved(compositionItems) : compositionItems;
   const showingCreditStage = !finalItems.length && creditItems.length > 0 && !result.perfil_contemplacao;
@@ -4103,7 +4103,7 @@ function renderInvestorAnalysis(result) {
     ? sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey).filter(matchesSelectedScenario)
     : scenarioSourceItems;
   const items = applyInvestorPreferences(administratorItems, investorState.preferences);
-  const administratorCompositionItems = selectedAdministratorKey ? scenarioCompositionItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey) : scenarioCompositionItems;
+  const administratorCompositionItems = [];
   const creditRejectedByTerm = creditItems.filter((item) => (
     (!selectedAdministratorKey || motor360AdministratorKey(item) === selectedAdministratorKey) && !item.recommendable
   ));
@@ -4122,7 +4122,7 @@ function renderInvestorAnalysis(result) {
     ["Eliminados por lance do perfil", contemplationRejected.length],
     ["Dados incompletos", totals.dados_incompletos ?? 0],
     ["Grupos exibidos", items.length],
-    ["Grupos para composição", administratorCompositionItems.length],
+    ["Grupos aprovados no perfil", items.length],
   ];
   summary.innerHTML = summaryItems.map(([label, value]) => (
     `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`
@@ -4148,13 +4148,11 @@ function renderInvestorAnalysis(result) {
     ${renderMotor360SelectedGroupsDock()}
     ${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}
     <div class="motor360-single-quota-note" role="note">
-      <strong>Crédito atendido com 1 cota</strong>
-      <span>Os grupos listados abaixo possuem crédito líquido disponível em uma cota suficiente para a necessidade do cliente, após a validação do crédito desejado, da parcela e dos recursos de lance com RP e/ou FGTS.</span>
+      <strong>Grupos que atendem o perfil de contemplação do cliente</strong>
+      <span>Grupos cujo lance atende ao percentual necessário para o perfil de contemplação selecionado. Crédito, prazo, parcela, renda e quantidade de cotas ficam disponíveis para avaliação do operador.</span>
     </div>
     ${renderMotor360FloatingSelectionSummary()}
     <div class="motor360-group-list">${items.map(renderMotor360GroupCard).join("")}</div>
-    <div class="motor360-multiple-quota-note" role="note"><strong>Composição com mais de uma cota</strong><span>Lista de grupos em que uma cota não atende sozinha ao crédito solicitado. O operador pode adicionar até 50 cotas por grupo ao carrinho e combinar somente grupos desta administradora.</span></div>
-    <div class="motor360-composition-list">${administratorCompositionItems.length ? administratorCompositionItems.map(renderMotor360CompositionCard).join("") : '<div class="table-state">Nenhum grupo desta administradora exige composição de múltiplas cotas.</div>'}</div>
     ${creditRejectedByTerm.length ? `<details class="motor360-credit-excluded"><summary>Compatíveis por crédito, mas eliminados por prazo/renda (${creditRejectedByTerm.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Prazo restante</th><th>Motivo</th></tr></thead><tbody>${creditRejectedByTerm.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.prazo_restante ?? "-"))}</td><td>Prazo/renda insuficiente no cenário compatível por crédito.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
     ${scopedContemplationRejected.length ? `<details class="motor360-credit-excluded" open><summary>Grupos fora do perfil de contemplação selecionado (${scopedContemplationRejected.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th></tr></thead><tbody>${scopedContemplationRejected.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>Lance disponível abaixo da faixa do perfil selecionado.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
     ${renderMotor360ChanceChart(items)}

@@ -100,7 +100,8 @@ class Motor360RfcTest(unittest.TestCase):
             group(credito_minimo=100000, credito_maximo=300000, historico_12_meses=history),
         ])
 
-        self.assertEqual(result["items"], [])
+        self.assertEqual(len(result["items"]), 1)
+        self.assertTrue(result["items"][0]["requires_composition"])
         self.assertEqual(result["total_grupos_composicao"], 1)
         item = result["composition_items"][0]
         self.assertEqual(item["cotas_minimas_sem_embutido"], 2)
@@ -181,7 +182,7 @@ class Motor360RfcTest(unittest.TestCase):
             group("outside", credito_minimo=100000, credito_maximo=949999),
             group("inside", credito_minimo=900000, credito_maximo=1100000, percentual_lance_embutido=None, lance_moderado_12m="5%"),
         ])
-        self.assertEqual([item["grupo"] for item in result["items"]], ["inside"])
+        self.assertEqual({item["grupo"] for item in result["items"]}, {"outside", "inside"})
         self.assertEqual(result["items"][0]["cenarios"][0]["saldo_devedor"], 1130500.0)
 
     def test_remaining_term_requires_initial_and_after_bid_income_terms(self):
@@ -189,15 +190,13 @@ class Motor360RfcTest(unittest.TestCase):
             group("enough", prazo_restante=76, percentual_lance_embutido=None),
             group("short", prazo_restante=75, percentual_lance_embutido=None),
         ])
-        self.assertEqual([item["grupo"] for item in result["items"]], ["enough"])
-        reasons = result["audit"]["excluded_groups"][0]["detail"]
-        self.assertIn("prazo_remanescente_insuficiente", reasons)
+        self.assertEqual({item["grupo"] for item in result["items"]}, {"enough", "short"})
 
     def test_credit_stage_remains_visible_when_later_rules_reject_group(self):
         result = analyze_client_consortium_viability(payload(), [
             group("credit-only", prazo_restante=1, percentual_lance_embutido=None),
         ])
-        self.assertEqual(result["items"], [])
+        self.assertEqual([item["grupo"] for item in result["items"]], ["credit-only"])
         self.assertEqual(result["total_grupos_credito_compativeis"], 1)
         self.assertEqual([item["grupo"] for item in result["credit_items"]], ["credit-only"])
 
@@ -264,7 +263,7 @@ class Motor360RfcTest(unittest.TestCase):
         ])
         self.assertEqual(result["total_grupos_credito_compativeis"], 1)
         self.assertEqual(result["total_grupos_preselecionados"], 1)
-        self.assertEqual(result["items"][0]["selection_stage"], "preselection")
+        self.assertEqual(result["items"][0]["selection_stage"], "matrix")
 
     def test_golden_preselection_split_keeps_credit_and_term_stages_separate(self):
         approved = ["40112", "40174", "40105", "40098", "40090", "40086", "1820", "1038", "1031", "1026", "1019"]
@@ -276,8 +275,8 @@ class Motor360RfcTest(unittest.TestCase):
             groups,
         )
         self.assertEqual(result["total_grupos_credito_compativeis"], 15)
-        self.assertEqual(result["total_grupos_preselecionados"], 11)
-        self.assertEqual({item["grupo"] for item in result["items"]}, set(approved))
+        self.assertEqual(result["total_grupos_preselecionados"], 15)
+        self.assertEqual({item["grupo"] for item in result["items"]}, set(approved + term_rejected))
         self.assertEqual(result["audit"]["summary"]["total_term_income_rejected"], 4)
 
     def test_term_rejection_keeps_only_the_consolidated_term_reason(self):
@@ -285,8 +284,8 @@ class Motor360RfcTest(unittest.TestCase):
             group("1770", credito_minimo=400000, credito_maximo=1100000, prazo_restante=1),
         ])
         audit_entry = result["audit"]["group_results"][0]
-        self.assertEqual(audit_entry["result"], "excluded_term_income")
-        self.assertEqual(audit_entry["justification"], ["prazo_remanescente_insuficiente"])
+        self.assertEqual(audit_entry["result"], "matrix_approved")
+        self.assertEqual(audit_entry["justification"], [])
 
     def test_audit_reports_raw_identifier_source_row_and_decision_usage(self):
         result = analyze_client_consortium_viability(payload(), [
@@ -311,15 +310,13 @@ class Motor360RfcTest(unittest.TestCase):
                 lance_investidor="30%",
             ),
         ])
-        classification = result["items"][0]["contemplation_classification"]
-        self.assertEqual(classification["strategies"], [])
-        self.assertEqual(classification["ignored_scenarios"][0]["scenario_id"], "with_embedded")
-        self.assertEqual(classification["ignored_scenarios"][0]["reason"], "credito_fora_da_faixa")
+        self.assertTrue(result["items"][0]["matrix_approved"])
+        self.assertTrue(next(s for s in result["items"][0]["cenarios"] if s["id"] == "without_embedded")["credit_compatible"])
 
     def test_missing_operational_data_excludes_instead_of_becoming_zero(self):
         result = analyze_client_consortium_viability(payload(), [group(taxa_adm=None)])
-        self.assertEqual(result["items"], [])
-        self.assertIn("taxa_administracao_nao_informada", result["audit"]["excluded_groups"][0]["detail"])
+        self.assertEqual(len(result["items"]), 1)
+        self.assertFalse(result["items"][0]["financial_data_complete"])
 
     def test_status_and_explicit_type_are_eligibility_filters(self):
         result = analyze_client_consortium_viability(payload(tipo_bem="Auto", tipo_bem_explicit=True), [
@@ -351,7 +348,7 @@ class Motor360RfcTest(unittest.TestCase):
     def test_audit_records_rfc_version_calculations_and_group_columns(self):
         result = analyze_client_consortium_viability(payload(), [group()])
         audit = result["audit"]
-        self.assertEqual(audit["metadata"]["engine_version"], "4.0.117")
+        self.assertEqual(audit["metadata"]["engine_version"], "4.0.118")
         self.assertEqual(audit["metadata"]["rules_version"], "RFC-001-architecture-v4.0")
         self.assertIn("Y", [item["column"] for item in audit["columns_used"]])
         self.assertIn("BL", [item["column"] for item in audit["columns_used"]])
@@ -403,7 +400,7 @@ class Motor360RfcTest(unittest.TestCase):
         result = analyze_client_consortium_viability(payload(), [item])
         mapping = result["audit"]["data_source"]["mapping_by_administrator"]["ITAU"]["prazo_restante"]
         self.assertEqual(mapping["missing_rows"], 1)
-        self.assertEqual(result["audit"]["group_results"][0]["result"], "excluded_term_income")
+        self.assertEqual(result["audit"]["group_results"][0]["result"], "matrix_approved")
 
     def test_composition_requires_minimum_quota_to_fit_the_income_limit(self):
         result = analyze_client_consortium_viability(payload(
@@ -412,7 +409,8 @@ class Motor360RfcTest(unittest.TestCase):
             "PARCELA-ALTA", credito_maximo=300000, prazo_restante=30,
             percentual_lance_embutido=None,
         )])
-        self.assertEqual(result["composition_items"], [])
+        self.assertEqual(len(result["items"]), 1)
+        self.assertTrue(result["items"][0]["requires_composition"])
 
     def test_invalid_source_identity_is_audited_but_never_reaches_matrix(self):
         result = analyze_client_consortium_viability(payload(), [
@@ -429,9 +427,8 @@ class Motor360RfcTest(unittest.TestCase):
             group("PERFIL", percentual_lance_embutido=None, lance_super_agressivo_3m="99%"),
         ])
         steps = {step["id"]: step for step in result["audit"]["execution_steps"]}
-        self.assertEqual(steps["credit"]["input_count"], steps["matrix"]["approved_count"])
-        self.assertEqual(steps["term"]["input_count"], steps["credit"]["approved_count"])
-        self.assertEqual(steps["preselection"]["input_count"], steps["term"]["approved_count"])
+        self.assertEqual(steps["operator_analysis"]["input_count"], steps["matrix"]["approved_count"])
+        self.assertEqual(steps["ranking"]["input_count"], steps["operator_analysis"]["approved_count"])
 
     def test_declared_objective_mapping_remains_specific(self):
         self.assertEqual(map_declared_objective_to_preference("Contemplar - urgente - 3 meses"), "urgent")

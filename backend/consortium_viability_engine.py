@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.115"
+MOTOR_VERSION = "4.0.118"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -768,11 +768,11 @@ def analyze_client_consortium_viability(
         composition_items = [item for item in composition_items if (str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip()) in matrix_approved_keys]
 
     def ordering_key(item: dict[str, Any]) -> tuple[Any, ...]:
-        number = re.search(r"\d+", item["grupo"])
+        number = re.search(r"\d+", str(item.get("grupo") or ""))
         return (
-            -(item["prazo_restante"] or 0),
-            item["taxa_total"] if item["taxa_total"] is not None else math.inf,
-            normalize_text(item["administradora"]),
+            -(item.get("prazo_restante") or 0),
+            item.get("taxa_total") if item.get("taxa_total") is not None else math.inf,
+            normalize_text(item.get("administradora") or ""),
             int(number.group()) if number else math.inf,
         )
 
@@ -964,8 +964,6 @@ def analyze_client_consortium_viability(
         for scenario in entry.get("scenarios", []):
             if scenario.get("id") not in scenario_filter:
                 continue
-            if scenario.get("credit_compatible") is not True or scenario.get("term_compatible") is not True:
-                continue
             if selected_profile and not any(
                 profile.get("id") == selected_profile_row and profile.get("atinge_perfil") is True
                 for profile in scenario.get("perfis_contemplacao", [])
@@ -1010,5 +1008,44 @@ def analyze_client_consortium_viability(
         eligible_items = [item for item in eligible_items if item.get("eligible_scenarios")]
         credit_eligible_items = [item for item in credit_eligible_items if item.get("eligible_scenarios")]
         composition_items = [item for item in composition_items if item.get("selected_composition_scenario") in scenario_filter]
+    detail_items = {}
+    for item in [*eligible_items, *credit_eligible_items, *composition_items]:
+        detail_items[(str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip())] = item
+    final_items = []
+    for matrix_item in matrix_items:
+        key = (str(matrix_item.get("administradora") or "").strip().lower(), str(matrix_item.get("grupo") or "").strip())
+        item = dict(detail_items.get(key) or matrix_item)
+        item["cenarios"] = matrix_item.get("cenarios", item.get("cenarios", []))
+        item["eligible_scenarios"] = matrix_item.get("eligible_scenarios", item.get("eligible_scenarios", []))
+        item["matrix_approved"] = True
+        item["selection_stage"] = "matrix"
+        item["requires_composition"] = any(
+            scenario.get("cotas_minimas") is not None and int(scenario.get("cotas_minimas") or 1) > 1
+            for scenario in item.get("cenarios", [])
+        ) or (parse_decimal(item.get("credito_maximo")) or Decimal("0")) < desired
+        final_items.append(item)
+    final_items.sort(key=ordering_key)
+    for rank, item in enumerate(final_items, 1):
+        item["ranking"] = rank
+    final_keys = {
+        (str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip())
+        for item in final_items
+    }
+    for entry in audit.get("group_results", []):
+        key = (str(entry.get("administradora") or "").strip().lower(), str(entry.get("grupo") or "").strip())
+        if key in final_keys:
+            entry["result"] = "matrix_approved"
+            entry["matrix_approved"] = True
+            entry["justification"] = []
+    audit["parameters"]["post_matrix_selection"] = "matrix_approved_groups_only"
+    audit["summary"]["total_post_matrix_groups"] = len(final_items)
+    audit["summary"]["total_requires_composition"] = sum(1 for item in final_items if item.get("requires_composition"))
+    audit["execution_steps"] = [
+        audit["execution_steps"][0],
+        audit["execution_steps"][1],
+        {"order": 3, "id": "matrix", "name": "Matriz de contemplação", "formula_or_rule": "Lance efetivo atende à faixa do perfil selecionado no cenário permitido.", "input_count": len(groups), "approved_count": len(final_items), "rejected_count": max(0, len(groups) - len(final_items)), "incomplete_count": counters["matrix_incomplete"], "duration_ms": round(durations["contemplation"] * 1000, 3)},
+        {"order": 4, "id": "operator_analysis", "name": "Indicadores para análise do operador", "formula_or_rule": "Crédito, prazo, renda, parcela e composição são informativos e não eliminam grupos aprovados na matriz.", "input_count": len(final_items), "approved_count": len(final_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
+        {"order": 5, "id": "ranking", "name": "Ordem preliminar", "formula_or_rule": "Preferências configuráveis apenas reordenam os grupos aprovados na matriz.", "input_count": len(final_items), "approved_count": len(final_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
+    ]
     administrators_analyzed = sorted({str(group.get("administradora") or "").strip() for group in groups if str(group.get("administradora") or "").strip()}, key=normalize_text)
-    return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "perfil_contemplacao": selected_profile, "administradoras_analisadas": administrators_analyzed, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(eligible_items), "total_grupos_viaveis": len(eligible_items), "total_grupos_composicao": len(composition_items), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Matriz de contemplacao aplicada primeiro pelo lance e perfil em todas as administradoras.", "Refinamento de credito aplicado somente aos grupos aprovados na matriz.", "Refinamento de prazo, renda e dados financeiros aplicado aos candidatos da matriz.", "Candidatos classificados em 1 cota ou composicao.", "Ordem preliminar aplicada sem ranking definitivo."], "items": eligible_items, "credit_items": credit_eligible_items, "matrix_items": matrix_items, "composition_items": composition_items, "audit": audit}
+    return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "perfil_contemplacao": selected_profile, "administradoras_analisadas": administrators_analyzed, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(final_items), "total_grupos_viaveis": len(final_items), "total_grupos_composicao": sum(1 for item in final_items if item.get("requires_composition")), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Matriz de contemplacao aplicada primeiro pelo lance e perfil em todas as administradoras.", "Indicadores de credito, prazo, renda e composicao calculados sem eliminar grupos aprovados na matriz.", "Grupos aprovados na matriz apresentados em lista unica para avaliacao do operador.", "Ordem preliminar aplicada sem ranking definitivo."], "items": final_items, "final_items": final_items, "credit_items": credit_eligible_items, "matrix_items": matrix_items, "composition_items": composition_items, "audit": audit}
