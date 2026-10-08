@@ -844,6 +844,24 @@ def get_field(row: dict[str, Any], field: str) -> Any:
     return ""
 
 
+def get_field_source(row: dict[str, Any], field: str) -> dict[str, str]:
+    """Return the exact header/fallback that supplied a mapped field.
+
+    This is deliberately kept alongside ``get_field`` so the audit describes
+    the same precedence: an explicit fixed-column value first, then a named
+    sheet header alias.  It lets the Motor 360 prove the mapping per
+    administrator instead of merely reporting the expected column name.
+    """
+    canonical = canonical_field_header(field)
+    if canonical in row:
+        return {"source": "coluna_fixa", "header": canonical}
+    aliases = {normalize_header(alias) for alias in FIELD_ALIASES.get(field, [])}
+    for header, value in row.items():
+        if normalize_header(str(header)) in aliases and value not in (None, ""):
+            return {"source": "cabecalho", "header": str(header)}
+    return {"source": "ausente", "header": ""}
+
+
 def get_optional_field(row: dict[str, Any], field: str) -> Any:
     if field not in FIELD_ALIASES:
         return ""
@@ -1012,6 +1030,12 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "seguro_obrigatorio": "planilha",
         "indices_perfil": "planilha",
     }
+    mapping_fields = (
+        "administradora", "grupo", "prazo_restante", "credito_minimo",
+        "credito_maximo", "taxa_adm", "fundo_reserva",
+        "lance_investidor", "lance_conservador_24m", "lance_moderado_12m",
+        "lance_agressivo_6m", "lance_super_agressivo_3m",
+    )
     updated_month = latest_updated_history_month(historico)
     return {
         "source_row": row.get("__source_row"),
@@ -1063,6 +1087,7 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "idade_maxima": parse_int(get_optional_field(row, "idade_maxima")) or parse_int(get_optional_field(row, "idade_maxima_seguro")),
         "dados_incompletos": missing,
         "origens": origins,
+        "mapeamento_origem": {field: get_field_source(row, field) for field in mapping_fields},
     }
 
 

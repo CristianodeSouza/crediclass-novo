@@ -217,6 +217,8 @@ def analyze_client_consortium_viability(
     participants = parse_decimal(getattr(payload, "lance_proprio_participantes", None))
     manual = parse_decimal(getattr(payload, "lance_proprio_manual", None))
     declared_own = parse_decimal(getattr(payload, "lance_proprio", None))
+    declared_bid = parse_decimal(getattr(payload, "lance_proprio_declarado", None))
+    simulated_bid = parse_decimal(getattr(payload, "lance_simulado", None))
     own_source = str(getattr(payload, "own_resources_source", "") or "").strip().lower()
     if own_source == "participants":
         own = participants if participants is not None else (declared_own or parse_decimal(0))
@@ -224,6 +226,12 @@ def analyze_client_consortium_viability(
         own = manual if manual is not None else (declared_own or parse_decimal(0))
     else:
         own = declared_own or participants or manual or parse_decimal(0)
+    if simulated_bid is not None and own == simulated_bid and simulated_bid != declared_bid:
+        effective_bid_source = "simulado"
+    elif own_source == "manual":
+        effective_bid_source = "manual"
+    else:
+        effective_bid_source = "declarado"
     fgts = parse_decimal(getattr(payload, "fgts", None)) or parse_decimal(0)
     income = parse_decimal(getattr(payload, "renda_total", None))
     desired_installment = parse_decimal(getattr(payload, "parcela_desejada", None)) or parse_decimal(getattr(payload, "parcela_ideal", None))
@@ -451,6 +459,7 @@ def analyze_client_consortium_viability(
             "percentual_lance_embutido": money(embedded),
             "faixas_lance": ranges,
             "capacidade_contemplacoes": contemplation_capacities,
+            "mapeamento_origem": group.get("mapeamento_origem") or {},
         }
         if (
             maximum is not None
@@ -467,6 +476,7 @@ def analyze_client_consortium_viability(
                     continue
                 embedded_amount = maximum * (embedded or Decimal("0")) if with_embedded else Decimal("0")
                 liquid_credit = maximum - embedded_amount
+                minimum_quotas = math.ceil(desired / liquid_credit) if liquid_credit > 0 else None
                 fee_amount = maximum * fee
                 fund_amount = maximum * fund
                 balance = maximum + fee_amount + fund_amount
@@ -495,6 +505,7 @@ def analyze_client_consortium_viability(
                     "id": "with_embedded" if with_embedded else "without_embedded",
                     "credito_contratado": money(maximum),
                     "credito_liquido_projetado": money(liquid_credit),
+                    "cotas_minimas": minimum_quotas,
                     "lance_embutido": money(embedded_amount),
                     "saldo_devedor": money(balance),
                     "parcela_inicial": money(initial_installment),
@@ -536,7 +547,8 @@ def analyze_client_consortium_viability(
                     "best_contemplation_strategy": _reference_name(composition_capacity_key),
                     "selection_stage": "composition",
                     "composition_candidate": True,
-                    "cotas_minimas_sem_embutido": math.ceil(desired / maximum),
+                    "cotas_minimas_sem_embutido": next((scenario["cotas_minimas"] for scenario in composition_scenarios if scenario["id"] == "without_embedded"), None),
+                    "cotas_minimas_com_embutido": next((scenario["cotas_minimas"] for scenario in composition_scenarios if scenario["id"] == "with_embedded"), None),
                     "cotas_maximas": 50,
                 })
         missing_fields = [
@@ -746,8 +758,10 @@ def analyze_client_consortium_viability(
         "tipo_bem": requested_type or None,
         "credito_liquido_desejado": money(desired),
         "own_resources_total": money(own),
-        "own_resources_declared": money(parse_decimal(getattr(payload, "lance_proprio_declarado", None)) if getattr(payload, "lance_proprio_declarado", None) is not None else own),
-        "simulated_bid": money(parse_decimal(getattr(payload, "lance_simulado", None)) if getattr(payload, "lance_simulado", None) is not None else own),
+        "own_resources_declared": money(declared_bid if declared_bid is not None else own),
+        "simulated_bid": money(simulated_bid if simulated_bid is not None else own),
+        "effective_bid": money(own),
+        "effective_bid_source": effective_bid_source,
         "fgts": money(fgts),
         "lance_cliente_total": money(own + fgts),
         "renda_total": money(income),
@@ -783,6 +797,22 @@ def analyze_client_consortium_viability(
     source_fingerprint = hashlib.sha256(
         json.dumps(source_snapshot, ensure_ascii=True, sort_keys=True, default=str, separators=(",", ":")).encode("utf-8")
     ).hexdigest()
+    mapping_by_administrator: dict[str, dict[str, dict[str, Any]]] = {}
+    for group in groups:
+        administrator = str(group.get("administradora") or "Não informado")
+        administrator_mapping = mapping_by_administrator.setdefault(administrator, {})
+        for field, mapping in (group.get("mapeamento_origem") or {}).items():
+            entry = administrator_mapping.setdefault(field, {"headers": set(), "sources": set(), "mapped_rows": 0, "missing_rows": 0})
+            if mapping.get("source") == "ausente":
+                entry["missing_rows"] += 1
+            else:
+                entry["mapped_rows"] += 1
+                entry["headers"].add(str(mapping.get("header") or "-"))
+                entry["sources"].add(str(mapping.get("source") or "-"))
+    for administrator_mapping in mapping_by_administrator.values():
+        for entry in administrator_mapping.values():
+            entry["headers"] = sorted(entry["headers"])
+            entry["sources"] = sorted(entry["sources"])
 
     audit = {
         "metadata": {"audit_id": new_audit_id(completed_at), "request_id": request_id, "started_at": started_at.isoformat(), "completed_at": completed_at.isoformat(), "duration_ms": round((time.perf_counter() - started_clock) * 1000, 2), "engine_version": MOTOR_VERSION, "rules_version": RULES_VERSION, "application_version": settings.version, "environment": settings.environment},
@@ -792,12 +822,14 @@ def analyze_client_consortium_viability(
             _audit_field("Recurso proprio", "lance_proprio", money(own), "client_profile", "Consolidado"),
             _audit_field("Recurso proprio declarado", "lance_proprio_declarado", client["own_resources_declared"], "client_profile", "Valor declarado antes da simulação"),
             _audit_field("Lance simulado", "lance_simulado", client["simulated_bid"], "motor360_simulation", "Valor efetivamente usado na execução"),
+            _audit_field("Lance efetivo utilizado", "lance_efetivo", client["effective_bid"], "motor360_simulation" if effective_bid_source == "simulado" else "client_profile", "Valor que determinou os cenários financeiros"),
+            _audit_field("Fonte do lance efetivo", "fonte_lance_efetivo", effective_bid_source, "motor360_simulation" if effective_bid_source == "simulado" else "client_profile", "Declarado, manual ou simulado"),
             _audit_field("FGTS", "fgts", money(fgts), "client_profile", "Consolidado"),
             _audit_field("Renda total", "renda_total", money(income), "client_profile", "Consolidado"),
             _audit_field("Parcela desejada", "parcela_desejada", money(desired_installment), "client_profile", "Decimal"),
             _audit_field("Parcela maxima", "parcela_maxima", money(income_limit), "system_configuration", "Renda x comprometimento"),
         ], "consolidated_values": client, "participants": getattr(payload, "titulares", []) or []},
-        "data_source": {"source_name": "Tabela de Grupos 3.0", "current_or_historical": "historical" if mode == "historical_audit" else "current", "loaded_at": completed_at.isoformat(), "total_rows": len(groups), "base_snapshot": {"row_count": len(groups), "fingerprint_algorithm": "sha256", "fingerprint": source_fingerprint}},
+        "data_source": {"source_name": "Tabela de Grupos 3.0", "current_or_historical": "historical" if mode == "historical_audit" else "current", "loaded_at": completed_at.isoformat(), "total_rows": len(groups), "base_snapshot": {"row_count": len(groups), "fingerprint_algorithm": "sha256", "fingerprint": source_fingerprint}, "mapping_by_administrator": mapping_by_administrator},
         "parameters": {"commitment_percent": float(commitment), "requested_type": requested_type or None, "explicit_type_filter": bool(explicit_type), "base_mode": mode, "embedded_column": "Y", "decision_columns": sorted(decision_columns)},
         "columns_used": [{"column": column, "header": header, "technical_field": field, "purpose": purpose, "loaded": True, "used_in_decision": column in decision_columns, "used": column in decision_columns} for column, header, field, purpose in columns],
         "execution_steps": [

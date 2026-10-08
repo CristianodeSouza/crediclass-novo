@@ -95,6 +95,7 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(result["total_grupos_composicao"], 1)
         item = result["composition_items"][0]
         self.assertEqual(item["cotas_minimas_sem_embutido"], 2)
+        self.assertEqual(item["cotas_minimas_com_embutido"], 3)
         self.assertEqual(item["cotas_maximas"], 50)
         self.assertEqual(item["cenarios"][0]["credito_liquido_projetado"], 300000)
         self.assertTrue(item["capacidade_contemplacoes"])
@@ -346,6 +347,54 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertIn("Y", [item["column"] for item in audit["columns_used"]])
         self.assertIn("BL", [item["column"] for item in audit["columns_used"]])
         self.assertEqual(len(audit["group_results"]), 1)
+
+    def test_regression_real_administrators_duplicate_group_and_effective_bid_audit(self):
+        result = analyze_client_consortium_viability(payload(
+            credito_desejado=600000,
+            lance_proprio=481000,
+            lance_proprio_declarado=470000,
+            lance_simulado=481000,
+            contemplacao_perfil="urgent",
+            fgts=0,
+            parcela_limite=100000,
+        ), [
+            group("40174", administradora="ITAÚ", lance_super_agressivo_3m="70%", percentual_lance_embutido=None),
+            group("1045", administradora="CNP", lance_super_agressivo_3m="70%", percentual_lance_embutido=None),
+            group("1049", administradora="CNP", lance_super_agressivo_3m="90%", percentual_lance_embutido=None),
+            group("1151", administradora="PORTO", lance_super_agressivo_3m="70%", percentual_lance_embutido=None),
+            group("40174", administradora="AUTO-ITAÚ", lance_super_agressivo_3m="70%", percentual_lance_embutido=None),
+        ])
+
+        self.assertEqual(set(result["administradoras_analisadas"]), {"ITAÚ", "CNP", "PORTO", "AUTO-ITAÚ"})
+        self.assertEqual(len([item for item in result["items"] if item["grupo"] == "40174"]), 2)
+        fields = {item["technical_name"]: item["normalized_value"] for item in result["audit"]["client_snapshot"]["raw_fields"]}
+        self.assertEqual(fields["fonte_lance_efetivo"], "simulado")
+        self.assertEqual(fields["lance_efetivo"], 481000.0)
+
+    def test_regression_profile_can_be_approved_only_with_or_only_without_embedded(self):
+        common = dict(
+            credito_desejado=600000, lance_proprio=100000, fgts=0, renda_total=40000,
+            parcela_desejada=6000, parcela_limite=100000, contemplacao_perfil="urgent",
+        )
+        only_embedded = analyze_client_consortium_viability(payload(**common), [group(
+            "EMBUTIDO", lance_super_agressivo_3m="35%", percentual_lance_embutido="30%",
+        )])
+        only_without = analyze_client_consortium_viability(payload(**common), [group(
+            "SEM-EMBUTIDO", lance_super_agressivo_3m="15%", percentual_lance_embutido="30%",
+        )])
+        embedded_scenarios = {entry["id"]: entry for entry in only_embedded["items"][0]["cenarios"]}
+        without_scenarios = {entry["id"]: entry for entry in only_without["items"][0]["cenarios"]}
+        self.assertFalse(next(profile for profile in embedded_scenarios["without_embedded"]["perfis_contemplacao"] if profile["id"] == "super_aggressive")["atinge_perfil"])
+        self.assertTrue(next(profile for profile in embedded_scenarios["with_embedded"]["perfis_contemplacao"] if profile["id"] == "super_aggressive")["atinge_perfil"])
+        self.assertTrue(next(profile for profile in without_scenarios["without_embedded"]["perfis_contemplacao"] if profile["id"] == "super_aggressive")["atinge_perfil"])
+
+    def test_audit_mapping_reports_missing_term_when_payload_lacks_it(self):
+        item = group("SEM-PRAZO", prazo_restante=None, percentual_lance_embutido=None)
+        item["mapeamento_origem"] = {"prazo_restante": {"source": "ausente", "header": ""}}
+        result = analyze_client_consortium_viability(payload(), [item])
+        mapping = result["audit"]["data_source"]["mapping_by_administrator"]["ITAU"]["prazo_restante"]
+        self.assertEqual(mapping["missing_rows"], 1)
+        self.assertEqual(result["audit"]["group_results"][0]["result"], "excluded_term_income")
 
     def test_declared_objective_mapping_remains_specific(self):
         self.assertEqual(map_declared_objective_to_preference("Contemplar - urgente - 3 meses"), "urgent")

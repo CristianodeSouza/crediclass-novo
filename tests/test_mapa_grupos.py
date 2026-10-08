@@ -10,7 +10,7 @@ from backend.models import GrupoCreateRequest, GrupoUpdateRequest, HistoricoBatc
 from backend import sheets_client
 from backend.defasagem import build_defasagem_report, update_defasagem_task
 from backend.sheets_client import get_grupo as sheets_get_grupo
-from backend.sheets_client import build_historico, clean_text, create_grupo, delete_grupo, format_history_value, parse_credit, payload_to_row_values, row_to_grupo, row_to_grupo_detalhe, update_grupo, update_historico_mensal
+from backend.sheets_client import build_historico, clean_text, create_grupo, delete_grupo, format_history_value, parse_credit, parse_percent, payload_to_row_values, row_to_grupo, row_to_grupo_detalhe, update_grupo, update_historico_mensal
 
 
 class MapaGruposTest(unittest.TestCase):
@@ -1125,6 +1125,33 @@ class MapaGruposTest(unittest.TestCase):
 
         update_lote.assert_called_once()
         self.assertTrue(result["success"])
+
+    def test_mapeamento_financeiro_registra_cabecalhos_reais_por_administradora(self):
+        row = {
+            "Administradora": "PORTO",
+            "Grupo": "1151",
+            "Prazo remanescente": "240",
+            "Menor Crédito": "100.000,00",
+            "Maior Crédito": "900.000,00",
+            "Taxa ADM total": "16%",
+            "Fundo reserva total": "3%",
+            "Lance Investidor": "5%",
+            "Lance Conservador 24M": "10%",
+            "Lance Moderado 12M": "20%",
+            "Lance Agressivo 6M": "30%",
+            "Lance Super Agressivo 3M": "40%",
+        }
+        grupo = row_to_grupo(row)
+
+        self.assertEqual(grupo["prazo_restante"], 240)
+        self.assertEqual(grupo["taxa_adm"], 0.16)
+        self.assertEqual(grupo["fundo_reserva"], 0.03)
+        self.assertEqual(grupo["mapeamento_origem"]["prazo_restante"], {"source": "cabecalho", "header": "Prazo remanescente"})
+        self.assertEqual(grupo["mapeamento_origem"]["taxa_adm"]["header"], "Taxa ADM total")
+        self.assertEqual(grupo["mapeamento_origem"]["lance_super_agressivo_3m"]["header"], "Lance Super Agressivo 3M")
+
+    def test_percentual_fora_da_faixa_e_rejeitado_em_vez_de_virar_214_mil_porcento(self):
+        self.assertIsNone(parse_percent("214.000%"))
 
 
 if __name__ == "__main__":
