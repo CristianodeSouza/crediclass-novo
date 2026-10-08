@@ -139,10 +139,10 @@ def _audit_pdf_lines(audit: dict[str, Any]) -> list[tuple[str, int, bool]]:
         for part in textwrap.wrap(_pdf_text(value), width=142, break_long_words=False, break_on_hyphens=False) or [""]:
             lines.append((part, size, False))
 
-    selected_groups = [item for item in audit.get("group_results", []) if item.get("result") == "preselected"]
+    selected_groups = [item for item in audit.get("group_results", []) if item.get("result") == "matrix_approved" or item.get("matrix_approved") is True]
     heading("CREDICLASS | RELATORIO EXECUTIVO DO MOTOR 360")
     line(f"Auditoria {metadata.get('audit_id', '-')} | {metadata.get('completed_at', '-')} | Motor {metadata.get('engine_version', '-')} | Regras {metadata.get('rules_version', '-')} | Ambiente {metadata.get('environment', '-')}")
-    line("Documento destinado a conferencia operacional. Apresenta somente os grupos pre-selecionados para o perfil analisado.", 9)
+    line("Documento destinado a conferencia operacional. Apresenta os grupos aprovados na matriz e seus indicadores financeiros.", 9)
     heading("1. Resumo executivo do cliente")
     for field in client.get("raw_fields", []):
         line(f"{field.get('field_name', '-')}: {field.get('normalized_value', '-')} | Origem: {field.get('source_reference', field.get('source', '-'))}")
@@ -150,7 +150,7 @@ def _audit_pdf_lines(audit: dict[str, Any]) -> list[tuple[str, int, bool]]:
     for key in ("credito_liquido_desejado", "own_resources_total", "fgts", "renda_total", "parcela_desejada", "parcela_maxima"):
         if key in consolidated:
             line(f"{key}: {consolidated[key]}")
-    line(f"Grupos pre-selecionados no documento: {len(selected_groups)}", 9)
+    line(f"Grupos aprovados no perfil no documento: {len(selected_groups)}", 9)
     heading("2. Base e criterios aplicados")
     line(f"Base: {source.get('source_name', '-')} | Linhas analisadas: {source.get('total_rows', 0)} | Hash: {source.get('base_snapshot', {}).get('fingerprint', '-')}")
     line("Filtro aplicado: somente grupos aprovados na matriz; crédito, prazo, renda e composição permanecem como indicadores para análise do operador.")
@@ -161,7 +161,7 @@ def _audit_pdf_lines(audit: dict[str, Any]) -> list[tuple[str, int, bool]]:
     for formula in audit.get("formulas", []):
         line(f"{formula.get('name', '-')}: {formula.get('expression', '-')} | Resultado: {formula.get('result', 'calculado por grupo')}")
     heading("5. Grupos selecionados")
-    line("Os grupos rejeitados, excluidos e com dados incompletos nao sao apresentados nesta exportacao.")
+    line("Credito, prazo, renda e composicao sao indicadores para avaliacao do operador e nao filtros finais.")
     for item in selected_groups:
         heading(f"#{item.get('ranking', '-')} | Grupo {item.get('grupo', '-')} | Administradora {item.get('administradora', '-')}")
         line(f"Linha de origem: {item.get('source_row', '-')} | Identificador original: {item.get('grupo_raw', item.get('grupo', '-'))}")

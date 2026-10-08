@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.124"
+MOTOR_VERSION = "4.0.125"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -751,11 +751,11 @@ def analyze_client_consortium_viability(
             "source_values": source_values,
             "alerts": sorted(set(history_quality_alerts)),
             "selected_scenario": selected["id"],
-            "selection_stage": "preselection",
+            "selection_stage": "matrix",
             "stage_results": stage_results,
         }
         eligible_items.append(item)
-        group_results.append({**group_ref, "result": "preselected", "justification": [], "scenarios": scenarios, "source_values": source_values, "stage_results": stage_results, "missing_fields": missing_fields, "contemplation_classification": contemplation_classification})
+        group_results.append({**group_ref, "result": "matrix_approved", "matrix_approved": True, "justification": [], "scenarios": scenarios, "source_values": source_values, "stage_results": stage_results, "missing_fields": missing_fields, "contemplation_classification": contemplation_classification})
 
     matrix_approved_keys = {
         (str(entry.get("administradora") or "").strip().lower(), str(entry.get("grupo") or "").strip())
