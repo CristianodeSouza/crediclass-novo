@@ -739,6 +739,8 @@ def analyze_client_consortium_viability(
         "tipo_bem": requested_type or None,
         "credito_liquido_desejado": money(desired),
         "own_resources_total": money(own),
+        "own_resources_declared": money(parse_decimal(getattr(payload, "lance_proprio_declarado", None)) if getattr(payload, "lance_proprio_declarado", None) is not None else own),
+        "simulated_bid": money(parse_decimal(getattr(payload, "lance_simulado", None)) if getattr(payload, "lance_simulado", None) is not None else own),
         "fgts": money(fgts),
         "lance_cliente_total": money(own + fgts),
         "renda_total": money(income),
@@ -781,6 +783,8 @@ def analyze_client_consortium_viability(
             _audit_field("Objetivo declarado", "objetivo", objective, "client_profile", "Preferencia de apresentacao"),
             _audit_field("Credito liquido desejado", "credito_desejado", money(desired), "client_profile", "Decimal ROUND_HALF_UP"),
             _audit_field("Recurso proprio", "lance_proprio", money(own), "client_profile", "Consolidado"),
+            _audit_field("Recurso proprio declarado", "lance_proprio_declarado", client["own_resources_declared"], "client_profile", "Valor declarado antes da simulação"),
+            _audit_field("Lance simulado", "lance_simulado", client["simulated_bid"], "motor360_simulation", "Valor efetivamente usado na execução"),
             _audit_field("FGTS", "fgts", money(fgts), "client_profile", "Consolidado"),
             _audit_field("Renda total", "renda_total", money(income), "client_profile", "Consolidado"),
             _audit_field("Parcela desejada", "parcela_desejada", money(desired_installment), "client_profile", "Decimal"),
@@ -828,7 +832,8 @@ def analyze_client_consortium_viability(
         {"order": 6, "id": "preliminary_order", "name": "Refinamento: ordem preliminar", "formula_or_rule": "Maior prazo remanescente, menor taxa administrativa total, administradora e grupo. Nao e ranking final.", "input_count": len(eligible_items) + len(composition_items), "approved_count": len(eligible_items) + len(composition_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["ranking"] * 1000, 3)},
     ]
     audit_steps = audit["execution_steps"]
-    matrix_step = {"order": 3, "id": "matrix", "name": "Matriz de contemplacao", "formula_or_rule": "Lance do cliente ou simulado >= faixa do perfil selecionado; todas as administradoras", "input_count": counters["active"] - counters["type_rejected"], "approved_count": len(matrix_approved_keys), "rejected_count": max(0, counters["active"] - counters["type_rejected"] - len(matrix_approved_keys)), "incomplete_count": 0, "duration_ms": round(durations["contemplation"] * 1000, 3)}
+    matrix_incomplete_count = sum(1 for item in incomplete_groups if item.get("missing_fields"))
+    matrix_step = {"order": 3, "id": "matrix", "name": "Matriz de contemplacao", "formula_or_rule": "Lance do cliente ou simulado >= faixa do perfil selecionado; todas as administradoras", "input_count": counters["active"] - counters["type_rejected"], "approved_count": len(matrix_approved_keys), "rejected_count": max(0, counters["active"] - counters["type_rejected"] - len(matrix_approved_keys) - matrix_incomplete_count), "incomplete_count": matrix_incomplete_count, "duration_ms": round(durations["contemplation"] * 1000, 3)}
     audit["execution_steps"] = [audit_steps[0], audit_steps[1], matrix_step] + [
         {**step, "order": index, "name": f"Refinamento: {step['name']}"}
         for index, step in enumerate(audit_steps[2:], 4)
@@ -837,4 +842,5 @@ def analyze_client_consortium_viability(
         {"grupo": entry.get("grupo"), "administradora": entry.get("administradora"), "cenarios": entry.get("scenarios", []), "stage_results": entry.get("stage_results", {}), "result": entry.get("result"), "missing_fields": entry.get("missing_fields", [])}
         for entry in group_results
     ]
-    return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "perfil_contemplacao": selected_profile, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(eligible_items), "total_grupos_viaveis": len(eligible_items), "total_grupos_composicao": len(composition_items), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Matriz de contemplacao aplicada primeiro pelo lance e perfil em todas as administradoras.", "Refinamento de credito aplicado somente aos grupos aprovados na matriz.", "Refinamento de prazo, renda e dados financeiros aplicado aos candidatos da matriz.", "Candidatos classificados em 1 cota ou composicao.", "Ordem preliminar aplicada sem ranking definitivo."], "items": eligible_items, "credit_items": credit_eligible_items, "matrix_items": matrix_items, "composition_items": composition_items, "audit": audit}
+    administrators_analyzed = sorted({str(group.get("administradora") or "").strip() for group in groups if str(group.get("administradora") or "").strip()}, key=normalize_text)
+    return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "perfil_contemplacao": selected_profile, "administradoras_analisadas": administrators_analyzed, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(eligible_items), "total_grupos_viaveis": len(eligible_items), "total_grupos_composicao": len(composition_items), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Matriz de contemplacao aplicada primeiro pelo lance e perfil em todas as administradoras.", "Refinamento de credito aplicado somente aos grupos aprovados na matriz.", "Refinamento de prazo, renda e dados financeiros aplicado aos candidatos da matriz.", "Candidatos classificados em 1 cota ou composicao.", "Ordem preliminar aplicada sem ranking definitivo."], "items": eligible_items, "credit_items": credit_eligible_items, "matrix_items": matrix_items, "composition_items": composition_items, "audit": audit}

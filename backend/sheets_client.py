@@ -180,9 +180,9 @@ FIELD_ALIASES = {
     "credito_minimo": ["credito minimo", "menor credito", "credito min", "carta minima", "valor minimo"],
     "credito_maximo": ["credito maximo", "maior credito", "credito max", "carta maxima", "valor maximo"],
     "indexador": ["indexador"],
-    "taxa_adm": ["taxa administracao", "taxa adm", "taxa adm original", "taxa de administracao", "taxa administrativa", "tx adm", "tx administracao"],
+    "taxa_adm": ["taxa administracao", "taxa adm", "taxa adm total", "taxa adm original", "taxa de administracao", "taxa administrativa", "tx adm", "tx adm total", "tx administracao"],
     "taxa_adm_ano": ["taxa administracao ao ano", "taxa adm ao ano", "taxa adm ano", "taxa anual administracao"],
-    "fundo_reserva": ["fundo reserva", "fundo de reserva", "fundo rsv"],
+    "fundo_reserva": ["fundo reserva", "fundo de reserva", "fundo reserva total", "fundo rsv"],
     "fundo_reserva_ano": ["fundo reserva ao ano", "fundo rsv ao ano"],
     "modalidades_assembleia": ["assembleias modalidades", "modalidades assembleia", "permite participar do lance fixo fidelidade e livre"],
     "base_calculo_embutido": ["base calculo embutido", "calculo do embutido", "lance embutido calculo"],
@@ -193,7 +193,7 @@ FIELD_ALIASES = {
     "parcela_inicial_grupo": ["parcela inicial"],
     "parcela_apos_lance_grupo": ["parcela apos lance", "parcela apos o lance"],
     "prazo_total": ["prazo total", "prazo do grupo", "prazo grupo"],
-    "prazo_restante": ["prazo restante"],
+    "prazo_restante": ["prazo restante", "prazo remanescente", "prazo rest", "prazo rem", "meses restantes", "meses remanescentes"],
     "primeira_assembleia": ["primeira assembleia", "1 assembleia", "1a assembleia"],
     "ultima_assembleia": ["ultima assembleia"],
     "data_termino": ["data termino", "data de termino", "termino"],
@@ -881,7 +881,8 @@ def parse_percent(value: Any) -> float | None:
     number = parse_number(value)
     if number is None:
         return None
-    return number / 100 if number > 1 else number
+    normalized = number / 100 if number > 1 else number
+    return normalized if 0 <= normalized <= 1 else None
 
 
 def parse_bool(value: Any) -> bool | None:

@@ -3473,7 +3473,7 @@ async function downloadRenderedStudyHtml(screen) {
   clone.querySelectorAll(".no-print").forEach((node) => node.remove());
   let css = "";
   try {
-    css = await fetch("/static/css/style.css?v=4.0.105").then((response) => response.ok ? response.text() : "");
+    css = await fetch("/static/css/style.css?v=4.0.106").then((response) => response.ok ? response.text() : "");
   } catch (_) { /* O HTML ainda será exportado mesmo sem conexão. */ }
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Estudo Financeiro - Auditoria</title><style>${css}</style></head><body>${clone.innerHTML}</body></html>`;
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
@@ -4030,7 +4030,12 @@ function renderInvestorAnalysis(result) {
   const sourceItems = result.perfil_contemplacao ? onlyMatrixApproved(rawSourceItems) : rawSourceItems;
   const filteredCompositionItems = result.perfil_contemplacao ? onlyMatrixApproved(compositionItems) : compositionItems;
   const showingCreditStage = !finalItems.length && creditItems.length > 0 && !result.perfil_contemplacao;
-  const selectedAdministrator = syncMotor360AdministratorFilter([...sourceItems, ...filteredCompositionItems, ...matrixItems]);
+  const selectedAdministrator = syncMotor360AdministratorFilter([
+    ...(result.administradoras_analisadas || []),
+    ...sourceItems,
+    ...filteredCompositionItems,
+    ...matrixItems,
+  ]);
   updateInvestorPreferenceSummary();
   const selectedAdministratorKey = motor360AdministratorKey(selectedAdministrator);
   const administratorItems = selectedAdministratorKey ? sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey) : sourceItems;
@@ -4299,7 +4304,7 @@ async function loadInvestorAnalysis() {
     if (!response.ok) throw new Error(result.error || "Falha ao calcular a viabilidade dos grupos.");
     if (requestId !== investorAnalysisRequestId) return;
     investorState.result = result;
-    investorState.audit = null;
+    investorState.audit = result.audit || null;
     syncMotor360BidExplorer();
     addMotor360ExecutionLog("Análise concluída", `${result.total_grupos_analisados ?? 0} analisados · ${result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0} pré-selecionados.`);
     renderInvestorAnalysis(result);
@@ -4604,6 +4609,8 @@ function collectClientProfile() {
     prazo_desejado: Number(document.getElementById("clientProfilePrazo").value),
     conceito_ia: totals.conceito,
     lance_proprio: simulatedBid,
+    lance_proprio_declarado: declaredBid,
+    lance_simulado: simulatedBid,
     lance_proprio_participantes: simulatedBid,
     lance_proprio_manual: totals.lanceManual,
     own_resources_source: totals.lance > 0 ? "participants" : "manual",

@@ -300,6 +300,8 @@ class ViabilidadeRequest(BaseModel):
     credito_desejado: float = Field(gt=0)
     prazo_desejado: int = Field(gt=0)
     lance_proprio: float = Field(ge=0)
+    lance_proprio_declarado: float | None = Field(default=None, ge=0)
+    lance_simulado: float | None = Field(default=None, ge=0)
     fgts: float = Field(ge=0)
     renda_total: float = Field(gt=0)
     parcela_desejada: float = Field(gt=0)
