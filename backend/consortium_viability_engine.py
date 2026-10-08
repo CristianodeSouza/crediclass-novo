@@ -479,6 +479,8 @@ def analyze_client_consortium_viability(
                     threshold_decimal = Decimal(str(threshold)) if threshold is not None else None
                     ideal_total = maximum * threshold_decimal if threshold_decimal is not None else None
                     ideal_client = max(Decimal("0"), ideal_total - embedded_amount) if ideal_total is not None else None
+                    total_bid = own + fgts + embedded_amount
+                    total_bid_percent = total_bid / maximum if maximum > 0 else None
                     profile_rows.append({
                         "id": profile_id,
                         "label": label,
@@ -486,6 +488,10 @@ def analyze_client_consortium_viability(
                         "lance_ideal": money(ideal_client),
                         "lance_ideal_total": money(ideal_total),
                         "lance_embutido": money(embedded_amount),
+                        "lance_cliente": money(own + fgts),
+                        "percentual_lance_efetivo": float(total_bid_percent) if total_bid_percent is not None else None,
+                        "atinge_perfil": total_bid_percent is not None and threshold_decimal is not None and total_bid_percent >= threshold_decimal,
+                        "falta_para_ideal": money(max(Decimal("0"), ideal_client - (own + fgts))) if ideal_client is not None else None,
                     })
                 composition_scenarios.append({
                     "id": "with_embedded" if with_embedded else "without_embedded",
@@ -499,7 +505,18 @@ def analyze_client_consortium_viability(
                     "term_compatible": None,
                     "composition_candidate": True,
                 })
-            if composition_scenarios and any((parse_decimal(scenario.get("credito_liquido_projetado")) or Decimal("0")) * Decimal("50") >= desired for scenario in composition_scenarios):
+            selected_composition_scenario = next(
+                (
+                    scenario for scenario in composition_scenarios
+                    if not selected_profile
+                    or any(
+                        profile.get("id") == selected_profile_row and profile.get("atinge_perfil") is True
+                        for profile in scenario.get("perfis_contemplacao", [])
+                    )
+                ),
+                None,
+            )
+            if selected_composition_scenario and any((parse_decimal(scenario.get("credito_liquido_projetado")) or Decimal("0")) * Decimal("50") >= desired for scenario in composition_scenarios):
                 composition_capacity_key = preference if preference in contemplation_capacities else next(iter(contemplation_capacities), "")
                 composition_items.append({
                     **group_ref,
@@ -539,15 +556,15 @@ def analyze_client_consortium_viability(
             "credito": {"approved": bool(credit_scenarios), "scenario_ids": [scenario["id"] for scenario in credit_scenarios], "rule": "O <= crédito contratado <= U"},
             "prazo": {"approved": bool(term_scenarios), "scenario_ids": [scenario["id"] for scenario in term_scenarios], "rule": "F >= ceil(saldo após lance / parcela máxima)"},
             "administradora": {"approved": bool(administrator_scenarios), "scenario_ids": [scenario["id"] for scenario in administrator_scenarios], "rule": "Sem regra adicional definida"},
-            "contemplacao": {"approved": bool(contemplation_scenarios), "scenario_ids": [scenario["id"] for scenario in contemplation_scenarios], "perfil_selecionado": selected_profile, "rule": "Lance do cliente >= faixa do perfil selecionado" if selected_profile else "Lance do cliente >= uma faixa BL:BP"},
+            "contemplacao": {"approved": bool(selected_profile_scenarios if selected_profile else contemplation_scenarios), "scenario_ids": [scenario["id"] for scenario in (selected_profile_scenarios if selected_profile else contemplation_scenarios)], "perfil_selecionado": selected_profile, "rule": "Lance do cliente >= faixa do perfil selecionado" if selected_profile else "Lance do cliente >= uma faixa BL:BP"},
         }
         counters["credit_approved"] += int(bool(credit_scenarios))
         counters["credit_rejected"] += int(not credit_scenarios)
         counters["term_approved"] += int(bool(term_scenarios))
         counters["term_rejected"] += int(bool(credit_scenarios) and not term_scenarios)
         counters["administrator_approved"] += int(bool(administrator_scenarios))
-        counters["contemplation_approved"] += int(bool(contemplation_scenarios))
-        counters["contemplation_rejected"] += int(bool(administrator_scenarios) and not contemplation_scenarios)
+        counters["contemplation_approved"] += int(bool(selected_profile_scenarios if selected_profile else contemplation_scenarios))
+        counters["contemplation_rejected"] += int(bool(administrator_scenarios) and not (selected_profile_scenarios if selected_profile else contemplation_scenarios))
         if credit_scenarios:
             credit_matches = [strategy for scenario in credit_scenarios for strategy in scenario["compatible_contemplation_strategies"]]
             credit_distinct_matches = [key for key, _, _, _ in STRATEGY_TARGETS if key in credit_matches]
