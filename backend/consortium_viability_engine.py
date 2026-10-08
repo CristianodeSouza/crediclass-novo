@@ -483,6 +483,9 @@ def analyze_client_consortium_viability(
         ):
             composition_scenarios = []
             for with_embedded in (False, True):
+                scenario_id = "with_embedded" if with_embedded else "without_embedded"
+                if scenario_id not in scenario_filter:
+                    continue
                 if with_embedded and (embedded is None or embedded <= 0 or embedded >= 1):
                     continue
                 embedded_amount = maximum * (embedded or Decimal("0")) if with_embedded else Decimal("0")
@@ -513,7 +516,7 @@ def analyze_client_consortium_viability(
                         "falta_para_ideal": money(max(Decimal("0"), ideal_client - (own + fgts))) if ideal_client is not None else None,
                     })
                 composition_scenarios.append({
-                    "id": "with_embedded" if with_embedded else "without_embedded",
+                    "id": scenario_id,
                     "credito_contratado": money(maximum),
                     "credito_liquido_projetado": money(liquid_credit),
                     "cotas_minimas": minimum_quotas,
