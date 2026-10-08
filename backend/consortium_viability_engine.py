@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.112"
+MOTOR_VERSION = "4.0.113"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -859,6 +859,19 @@ def analyze_client_consortium_viability(
             entry["headers"] = sorted(entry["headers"])
             entry["sources"] = sorted(entry["sources"])
 
+    # Keep the audit contract aligned with the actual request. The analysis
+    # evaluates both financial scenarios internally, but an explicit scenario
+    # filter must not leave the other scenario visible in audit/group output.
+    for entry in group_results:
+        entry["scenarios"] = [
+            scenario for scenario in (entry.get("scenarios") or [])
+            if scenario.get("id") in scenario_filter
+        ]
+        stage_results = entry.get("stage_results") or {}
+        for stage in stage_results.values():
+            if isinstance(stage, dict) and isinstance(stage.get("scenario_ids"), list):
+                stage["scenario_ids"] = [scenario_id for scenario_id in stage["scenario_ids"] if scenario_id in scenario_filter]
+
     audit = {
         "metadata": {"audit_id": new_audit_id(completed_at), "request_id": request_id, "started_at": started_at.isoformat(), "completed_at": completed_at.isoformat(), "duration_ms": round((time.perf_counter() - started_clock) * 1000, 2), "engine_version": MOTOR_VERSION, "rules_version": RULES_VERSION, "application_version": settings.version, "environment": settings.environment},
         "client_snapshot": {"raw_fields": [
@@ -875,7 +888,7 @@ def analyze_client_consortium_viability(
             _audit_field("Parcela maxima", "parcela_maxima", money(income_limit), "system_configuration", "Renda x comprometimento"),
         ], "consolidated_values": client, "participants": getattr(payload, "titulares", []) or []},
         "data_source": {"source_name": "Tabela de Grupos 3.0", "current_or_historical": "historical" if mode == "historical_audit" else "current", "loaded_at": completed_at.isoformat(), "total_rows": len(groups), "base_snapshot": {"row_count": len(groups), "fingerprint_algorithm": "sha256", "fingerprint": source_fingerprint}, "mapping_by_administrator": mapping_by_administrator},
-        "parameters": {"commitment_percent": float(commitment), "requested_type": requested_type or None, "explicit_type_filter": bool(explicit_type), "base_mode": mode, "embedded_column": "Y", "decision_columns": sorted(decision_columns)},
+        "parameters": {"commitment_percent": float(commitment), "requested_type": requested_type or None, "explicit_type_filter": bool(explicit_type), "base_mode": mode, "embedded_column": "Y", "decision_columns": sorted(decision_columns), "filtro_lance_embutido": requested_embedded or None, "cenarios_considerados": sorted(scenario_filter)},
         "columns_used": [{"column": column, "header": header, "technical_field": field, "purpose": purpose, "loaded": True, "used_in_decision": column in decision_columns, "used": column in decision_columns} for column, header, field, purpose in columns],
         "execution_steps": [
             {"order": 1, "id": "status", "name": "Status e identificação", "formula_or_rule": "Somente status Ativo e grupo com administradora/número válidos", "input_count": len(groups), "approved_count": counters["active"], "rejected_count": counters["status_rejected"] + counters["invalid_identity"], "incomplete_count": 0, "duration_ms": round(durations["status"] * 1000, 3)},
@@ -949,5 +962,21 @@ def analyze_client_consortium_viability(
         if str(entry.get("grupo") or "").strip() not in {"", "-"} and str(entry.get("administradora") or "").strip() not in {"", "-"}
         and entry.get("stage_results", {}).get("contemplacao", {}).get("approved") is True
     ]
+    def filter_output_scenarios(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        filtered_items = []
+        for item in items:
+            item["cenarios"] = [scenario for scenario in (item.get("cenarios") or []) if scenario.get("id") in scenario_filter]
+            if isinstance(item.get("eligible_scenarios"), list):
+                item["eligible_scenarios"] = [scenario_id for scenario_id in item["eligible_scenarios"] if scenario_id in scenario_filter]
+            if item.get("selected_scenario") not in scenario_filter:
+                item["selected_scenario"] = next((scenario_id for scenario_id in item.get("eligible_scenarios", []) if scenario_id in scenario_filter), None)
+            if item.get("selected_composition_scenario") not in scenario_filter:
+                item["selected_composition_scenario"] = next((scenario.get("id") for scenario in item.get("cenarios", [])), None)
+            filtered_items.append(item)
+        return filtered_items
+
+    eligible_items = filter_output_scenarios(eligible_items)
+    credit_eligible_items = filter_output_scenarios(credit_eligible_items)
+    composition_items = filter_output_scenarios(composition_items)
     administrators_analyzed = sorted({str(group.get("administradora") or "").strip() for group in groups if str(group.get("administradora") or "").strip()}, key=normalize_text)
     return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "perfil_contemplacao": selected_profile, "administradoras_analisadas": administrators_analyzed, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(eligible_items), "total_grupos_viaveis": len(eligible_items), "total_grupos_composicao": len(composition_items), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Matriz de contemplacao aplicada primeiro pelo lance e perfil em todas as administradoras.", "Refinamento de credito aplicado somente aos grupos aprovados na matriz.", "Refinamento de prazo, renda e dados financeiros aplicado aos candidatos da matriz.", "Candidatos classificados em 1 cota ou composicao.", "Ordem preliminar aplicada sem ranking definitivo."], "items": eligible_items, "credit_items": credit_eligible_items, "matrix_items": matrix_items, "composition_items": composition_items, "audit": audit}

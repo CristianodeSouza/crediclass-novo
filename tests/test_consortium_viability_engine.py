@@ -60,6 +60,15 @@ class Motor360RfcTest(unittest.TestCase):
         ])
         self.assertEqual([item["grupo"] for item in result["items"]], ["G1"])
 
+        without_result = analyze_client_consortium_viability(payload(
+            contemplacao_perfil="moderate",
+            filtro_lance_embutido="nao",
+        ), [group()])
+        for item in [*without_result["items"], *without_result["credit_items"], *without_result["composition_items"]]:
+            self.assertTrue(all(scenario["id"] == "without_embedded" for scenario in item.get("cenarios", [])))
+        self.assertEqual(without_result["audit"]["parameters"]["filtro_lance_embutido"], "nao")
+        self.assertEqual(without_result["audit"]["parameters"]["cenarios_considerados"], ["without_embedded"])
+
     def test_perfil_explicito_filtra_grupo_antes_da_selecao(self):
         result = analyze_client_consortium_viability(payload(
             contemplacao_perfil="urgent",
@@ -342,7 +351,7 @@ class Motor360RfcTest(unittest.TestCase):
     def test_audit_records_rfc_version_calculations_and_group_columns(self):
         result = analyze_client_consortium_viability(payload(), [group()])
         audit = result["audit"]
-        self.assertEqual(audit["metadata"]["engine_version"], "4.0.112")
+        self.assertEqual(audit["metadata"]["engine_version"], "4.0.113")
         self.assertEqual(audit["metadata"]["rules_version"], "RFC-001-architecture-v4.0")
         self.assertIn("Y", [item["column"] for item in audit["columns_used"]])
         self.assertIn("BL", [item["column"] for item in audit["columns_used"]])
