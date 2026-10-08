@@ -674,6 +674,15 @@ def analyze_client_consortium_viability(
         eligible_items.append(item)
         group_results.append({**group_ref, "result": "preselected", "justification": [], "scenarios": scenarios, "source_values": source_values, "stage_results": stage_results, "missing_fields": missing_fields, "contemplation_classification": contemplation_classification})
 
+    matrix_approved_keys = {
+        (str(entry.get("administradora") or "").strip().lower(), str(entry.get("grupo") or "").strip())
+        for entry in group_results
+        if entry.get("stage_results", {}).get("contemplacao", {}).get("approved") is True
+    }
+    if selected_profile:
+        eligible_items = [item for item in eligible_items if (str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip()) in matrix_approved_keys]
+        composition_items = [item for item in composition_items if (str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip()) in matrix_approved_keys]
+
     def ordering_key(item: dict[str, Any]) -> tuple[Any, ...]:
         number = re.search(r"\d+", item["grupo"])
         return (
@@ -801,6 +810,12 @@ def analyze_client_consortium_viability(
         {"order": 5, "id": "preselection", "name": "Pre-selecao", "formula_or_rule": "Mesmo cenario deve atender credito, liquidez e prazo/renda. Contemplacao nao elimina nesta etapa.", "input_count": counters["credit_approved"], "approved_count": len(eligible_items), "rejected_count": counters["term_rejected"], "incomplete_count": 0, "duration_ms": round((durations["term"] + durations["administrator_rules"] + durations["contemplation"]) * 1000, 3)},
         {"order": 6, "id": "contemplation_information", "name": "Filtro de contemplacao", "formula_or_rule": "Perfil selecionado deve atingir a faixa BL:BP; sem perfil explicito a classificacao permanece informativa.", "input_count": counters["administrator_approved"], "evaluated_count": counters["administrator_approved"], "classified_count": contemplation_classified_count, "unclassified_count": contemplation_unclassified_count, "approved_count": len(eligible_items), "rejected_count": max(0, counters["administrator_approved"] - len(eligible_items)), "incomplete_count": 0, "duration_ms": 0},
         {"order": 7, "id": "preliminary_order", "name": "Ordem preliminar", "formula_or_rule": "Maior prazo remanescente, menor taxa administrativa total, administradora e grupo. Nao e ranking final.", "input_count": len(eligible_items), "approved_count": len(eligible_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["ranking"] * 1000, 3)},
+    ]
+    audit_steps = audit["execution_steps"]
+    matrix_step = {"order": 3, "id": "matrix", "name": "Matriz de contemplacao", "formula_or_rule": "Lance do cliente ou simulado >= faixa do perfil selecionado; todas as administradoras", "input_count": counters["active"] - counters["type_rejected"], "approved_count": len(matrix_approved_keys), "rejected_count": max(0, counters["active"] - counters["type_rejected"] - len(matrix_approved_keys)), "incomplete_count": 0, "duration_ms": round(durations["contemplation"] * 1000, 3)}
+    audit["execution_steps"] = [audit_steps[0], audit_steps[1], matrix_step] + [
+        {**step, "order": index, "name": f"Refinamento: {step['name']}"}
+        for index, step in enumerate(audit_steps[2:], 4)
     ]
     matrix_items = [
         {"grupo": entry.get("grupo"), "administradora": entry.get("administradora"), "cenarios": entry.get("scenarios", []), "stage_results": entry.get("stage_results", {}), "result": entry.get("result"), "missing_fields": entry.get("missing_fields", [])}
