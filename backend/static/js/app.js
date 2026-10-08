@@ -4055,10 +4055,32 @@ function renderInvestorAnalysis(result) {
   ]);
   updateInvestorPreferenceSummary();
   const selectedAdministratorKey = motor360AdministratorKey(selectedAdministrator);
+  const withEmbeddedFilter = document.getElementById("investorFilterWithEmbedded")?.checked === true;
+  const withoutEmbeddedFilter = document.getElementById("investorFilterWithoutEmbedded")?.checked === true;
+  const selectedScenarioIds = new Set([
+    ...(withEmbeddedFilter ? ["with_embedded"] : []),
+    ...(withoutEmbeddedFilter ? ["without_embedded"] : []),
+  ]);
+  const matchesSelectedScenario = (item) => {
+    if (!selectedScenarioIds.size) return true;
+    const eligibleScenarioIds = new Set([
+      ...(item.eligible_scenarios || []),
+      item.selected_composition_scenario,
+    ].filter(Boolean));
+    if ([...eligibleScenarioIds].some((id) => selectedScenarioIds.has(id))) return true;
+    return (item.cenarios || item.scenarios || []).some((scenario) => (
+      selectedScenarioIds.has(scenario.id)
+      && (!result.perfil_contemplacao || (scenario.perfis_contemplacao || []).some((profile) => {
+        const aliases = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" };
+        return profile.id === (aliases[result.perfil_contemplacao] || result.perfil_contemplacao) && profile.atinge_perfil === true;
+      }))
+    ));
+  };
   const scoped = (items) => selectedAdministratorKey
     ? items.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey)
     : items;
-  const scopedMatrixItems = scoped(matrixItems);
+  const scenarioFiltered = (items) => items.filter(matchesSelectedScenario);
+  const scopedMatrixItems = scenarioFiltered(scoped(matrixItems));
   const scopedAudit = investorState.audit ? {
     ...investorState.audit,
     group_results: scoped(investorState.audit.group_results || []),
@@ -4066,9 +4088,13 @@ function renderInvestorAnalysis(result) {
     incomplete_groups: scoped(investorState.audit.incomplete_groups || []),
   } : investorState.audit;
   const scopedContemplationRejected = scoped(contemplationRejected);
-  const administratorItems = selectedAdministratorKey ? sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey) : sourceItems;
+  const scenarioSourceItems = scenarioFiltered(sourceItems);
+  const scenarioCompositionItems = scenarioFiltered(filteredCompositionItems);
+  const administratorItems = selectedAdministratorKey
+    ? sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey).filter(matchesSelectedScenario)
+    : scenarioSourceItems;
   const items = applyInvestorPreferences(administratorItems, investorState.preferences);
-  const administratorCompositionItems = selectedAdministratorKey ? filteredCompositionItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey) : filteredCompositionItems;
+  const administratorCompositionItems = selectedAdministratorKey ? scenarioCompositionItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey) : scenarioCompositionItems;
   const creditRejectedByTerm = creditItems.filter((item) => (
     (!selectedAdministratorKey || motor360AdministratorKey(item) === selectedAdministratorKey) && !item.recommendable
   ));
