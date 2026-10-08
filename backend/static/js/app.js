@@ -4074,6 +4074,7 @@ function renderInvestorAnalysis(result) {
     if (eligibleScenarioIds.size) return [...eligibleScenarioIds].some((id) => selectedScenarioIds.has(id));
     return (item.cenarios || item.scenarios || []).some((scenario) => (
       selectedScenarioIds.has(scenario.id)
+      && (scenario.eligible === true || (scenario.credit_compatible === true && scenario.term_compatible === true))
       && (!result.perfil_contemplacao || (scenario.perfis_contemplacao || []).some((profile) => {
         const aliases = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" };
         return profile.id === (aliases[result.perfil_contemplacao] || result.perfil_contemplacao) && profile.atinge_perfil === true;

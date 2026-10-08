@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.113"
+MOTOR_VERSION = "4.0.114"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -956,12 +956,37 @@ def analyze_client_consortium_viability(
         {"order": 6, "id": "preselection", "name": "Refinamento: 1 cota ou composição", "formula_or_rule": "Candidatos aprovados na matriz são classificados em 1 cota ou composição; composição exige crédito e parcela total compatíveis em até 50 cotas.", "input_count": len(lower_list_keys), "approved_count": lower_list_count, "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["administrator_rules"] * 1000, 3)},
         {"order": 7, "id": "preliminary_order", "name": "Ordem preliminar", "formula_or_rule": "Maior prazo remanescente, menor taxa administrativa total, administradora e grupo. Não é ranking final.", "input_count": lower_list_count, "approved_count": lower_list_count, "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["ranking"] * 1000, 3)},
     ]
-    matrix_items = [
-        {"grupo": entry.get("grupo"), "administradora": entry.get("administradora"), "cenarios": entry.get("scenarios", []), "stage_results": entry.get("stage_results", {}), "result": entry.get("result"), "missing_fields": entry.get("missing_fields", [])}
-        for entry in group_results
-        if str(entry.get("grupo") or "").strip() not in {"", "-"} and str(entry.get("administradora") or "").strip() not in {"", "-"}
-        and entry.get("stage_results", {}).get("contemplacao", {}).get("approved") is True
-    ]
+    def matrix_eligible_scenarios(entry: dict[str, Any]) -> list[dict[str, Any]]:
+        eligible = []
+        for scenario in entry.get("scenarios", []):
+            if scenario.get("id") not in scenario_filter:
+                continue
+            if scenario.get("credit_compatible") is not True or scenario.get("term_compatible") is not True:
+                continue
+            if selected_profile and not any(
+                profile.get("id") == selected_profile_row and profile.get("atinge_perfil") is True
+                for profile in scenario.get("perfis_contemplacao", [])
+            ):
+                continue
+            eligible.append(scenario)
+        return eligible
+
+    matrix_items = []
+    for entry in group_results:
+        if str(entry.get("grupo") or "").strip() in {"", "-"} or str(entry.get("administradora") or "").strip() in {"", "-"}:
+            continue
+        eligible_scenarios = matrix_eligible_scenarios(entry)
+        if not eligible_scenarios:
+            continue
+        matrix_items.append({
+            "grupo": entry.get("grupo"),
+            "administradora": entry.get("administradora"),
+            "cenarios": entry.get("scenarios", []),
+            "eligible_scenarios": [scenario.get("id") for scenario in eligible_scenarios],
+            "stage_results": entry.get("stage_results", {}),
+            "result": entry.get("result"),
+            "missing_fields": entry.get("missing_fields", []),
+        })
     def filter_output_scenarios(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         filtered_items = []
         for item in items:
@@ -978,5 +1003,9 @@ def analyze_client_consortium_viability(
     eligible_items = filter_output_scenarios(eligible_items)
     credit_eligible_items = filter_output_scenarios(credit_eligible_items)
     composition_items = filter_output_scenarios(composition_items)
+    if len(scenario_filter) == 1:
+        eligible_items = [item for item in eligible_items if item.get("eligible_scenarios")]
+        credit_eligible_items = [item for item in credit_eligible_items if item.get("eligible_scenarios")]
+        composition_items = [item for item in composition_items if item.get("selected_composition_scenario") in scenario_filter]
     administrators_analyzed = sorted({str(group.get("administradora") or "").strip() for group in groups if str(group.get("administradora") or "").strip()}, key=normalize_text)
     return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "perfil_contemplacao": selected_profile, "administradoras_analisadas": administrators_analyzed, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(eligible_items), "total_grupos_viaveis": len(eligible_items), "total_grupos_composicao": len(composition_items), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Matriz de contemplacao aplicada primeiro pelo lance e perfil em todas as administradoras.", "Refinamento de credito aplicado somente aos grupos aprovados na matriz.", "Refinamento de prazo, renda e dados financeiros aplicado aos candidatos da matriz.", "Candidatos classificados em 1 cota ou composicao.", "Ordem preliminar aplicada sem ranking definitivo."], "items": eligible_items, "credit_items": credit_eligible_items, "matrix_items": matrix_items, "composition_items": composition_items, "audit": audit}
