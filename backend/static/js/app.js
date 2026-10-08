@@ -6418,9 +6418,10 @@ function syncMotor360BidExplorer() {
   const totals = updateClientProfileTotals();
   const declaredBid = Number(totals.lance || 0);
   const desiredCredit = toNumber(document.getElementById("clientProfileCredito")?.value) || 0;
-  // The explorer may vary the client's available bid, but it must never
-  // invent resources above the amount declared in the client profile.
-  const max = Math.max(0, Math.ceil(declaredBid / 1000) * 1000);
+  // The slider scale represents the requested credit. The client's current
+  // bid remains the initial cursor position, while the operator may explore
+  // the full 0..100% credit range dynamically for the selected profile.
+  const max = Math.max(0, Math.ceil(desiredCredit / 1000) * 1000);
   range.max = String(max);
   const currentBid = investorState.simulatedBid == null ? declaredBid : Number(investorState.simulatedBid);
   const boundedBid = Math.max(0, Math.min(max, Number.isFinite(currentBid) ? currentBid : declaredBid));
