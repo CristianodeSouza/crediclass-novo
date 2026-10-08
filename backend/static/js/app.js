@@ -6418,17 +6418,22 @@ function syncMotor360BidExplorer() {
   const totals = updateClientProfileTotals();
   const declaredBid = Number(totals.lance || 0);
   const desiredCredit = toNumber(document.getElementById("clientProfileCredito")?.value) || 0;
-  const max = Math.max(1000000, Math.ceil(Math.max(desiredCredit, declaredBid) * 1.5 / 1000) * 1000);
+  // The explorer may vary the client's available bid, but it must never
+  // invent resources above the amount declared in the client profile.
+  const max = Math.max(0, Math.ceil(declaredBid / 1000) * 1000);
   range.max = String(max);
-  if (investorState.simulatedBid == null) range.value = String(declaredBid);
-  const simulatedBid = Number(range.value || 0);
+  const currentBid = investorState.simulatedBid == null ? declaredBid : Number(investorState.simulatedBid);
+  const boundedBid = Math.max(0, Math.min(max, Number.isFinite(currentBid) ? currentBid : declaredBid));
+  if (investorState.simulatedBid == null || currentBid !== boundedBid) investorState.simulatedBid = investorState.simulatedBid == null ? null : boundedBid;
+  range.value = String(boundedBid);
+  const simulatedBid = boundedBid;
   const bidPercent = desiredCredit > 0 ? simulatedBid / desiredCredit : null;
   const declaredPercent = desiredCredit > 0 ? declaredBid / desiredCredit : null;
   value.textContent = `${formatMoney(simulatedBid)} · ${bidPercent == null ? "-" : formatPercent(bidPercent)}`;
   declared.textContent = `${formatMoney(declaredBid)} · ${declaredPercent == null ? "-" : formatPercent(declaredPercent)}`;
   const firstRequired = motor360FirstRequiredBid();
   if (marker && firstRequired != null) {
-    const position = Math.max(0, Math.min(100, (firstRequired / max) * 100));
+    const position = max > 0 ? Math.max(0, Math.min(100, (firstRequired / max) * 100)) : 0;
     marker.style.left = `${position}%`;
     marker.hidden = false;
     marker.title = `Primeiro grupo compatível a partir de ${formatMoney(firstRequired)}`;
