@@ -188,11 +188,20 @@ def calculate_scenario(data: ScenarioInput, *, with_embedded: bool) -> Calculate
         and data.credito_maximo is not None
         and data.credito_minimo <= credito <= data.credito_maximo
     )
-    income_compatible = (
+    initial_income_compatible = (
+        data.prazo_remanescente is not None
+        and months(inicial_renda) is not None
+        and data.prazo_remanescente >= months(inicial_renda)
+    )
+    after_bid_income_compatible = (
         data.prazo_remanescente is not None
         and months(apos_renda) is not None
         and data.prazo_remanescente >= months(apos_renda)
     )
+    # The customer must be able to pay both before and after contemplation.
+    # Approving only the post-bid installment allowed scenarios whose initial
+    # payment exceeded the contractual income limit.
+    income_compatible = initial_income_compatible and after_bid_income_compatible
     term_compatible = income_compatible
     data_complete = all((
         data.credito_minimo is not None,

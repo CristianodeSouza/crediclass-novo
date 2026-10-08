@@ -175,10 +175,10 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual([item["grupo"] for item in result["items"]], ["inside"])
         self.assertEqual(result["items"][0]["cenarios"][0]["saldo_devedor"], 1130500.0)
 
-    def test_remaining_term_is_compared_to_ceil_after_bid_income_term(self):
+    def test_remaining_term_requires_initial_and_after_bid_income_terms(self):
         result = analyze_client_consortium_viability(payload(), [
-            group("enough", prazo_restante=66, percentual_lance_embutido=None),
-            group("short", prazo_restante=65, percentual_lance_embutido=None),
+            group("enough", prazo_restante=76, percentual_lance_embutido=None),
+            group("short", prazo_restante=75, percentual_lance_embutido=None),
         ])
         self.assertEqual([item["grupo"] for item in result["items"]], ["enough"])
         reasons = result["audit"]["excluded_groups"][0]["detail"]
@@ -342,7 +342,7 @@ class Motor360RfcTest(unittest.TestCase):
     def test_audit_records_rfc_version_calculations_and_group_columns(self):
         result = analyze_client_consortium_viability(payload(), [group()])
         audit = result["audit"]
-        self.assertEqual(audit["metadata"]["engine_version"], "4.0.68")
+        self.assertEqual(audit["metadata"]["engine_version"], "4.0.110")
         self.assertEqual(audit["metadata"]["rules_version"], "RFC-001-architecture-v4.0")
         self.assertIn("Y", [item["column"] for item in audit["columns_used"]])
         self.assertIn("BL", [item["column"] for item in audit["columns_used"]])

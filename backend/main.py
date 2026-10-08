@@ -817,7 +817,16 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest):
         # cacheada pelo cliente da planilha, portanto não há uma nova consulta
         # ao Google Sheets para cada grupo exibido.
         groups = list_grupos(include_history=True)
+        administrators_analyzed = sorted(
+            {str(group.get("administradora") or "").strip() for group in groups if str(group.get("administradora") or "").strip()},
+            key=str.casefold,
+        )
+        selected_administrator = str(payload.administradora or "").strip()
+        if selected_administrator:
+            groups = [group for group in groups if str(group.get("administradora") or "").strip().casefold() == selected_administrator.casefold()]
         result = analyze_client_consortium_viability(payload, groups, mode=payload.base_mode, request_id=request_id)
+        result["administradoras_analisadas"] = administrators_analyzed
+        result["administradora_selecionada"] = selected_administrator or None
         audit = save_motor360_audit(result.pop("audit"))
         result["audit_id"] = audit["metadata"]["audit_id"]
         result["request_id"] = request_id

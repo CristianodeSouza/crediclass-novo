@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.68"
+MOTOR_VERSION = "4.0.110"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -469,6 +469,8 @@ def analyze_client_consortium_viability(
             "capacidade_contemplacoes": contemplation_capacities,
             "mapeamento_origem": group.get("mapeamento_origem") or {},
         }
+        composition_item: dict[str, Any] | None = None
+        composition_rejection_reason: str | None = None
         if (
             maximum is not None
             and maximum > 0
@@ -544,7 +546,7 @@ def analyze_client_consortium_viability(
             selected_composition_scenario = composition_financial_scenarios[0] if composition_financial_scenarios else None
             if selected_composition_scenario:
                 composition_capacity_key = preference if preference in contemplation_capacities else next(iter(contemplation_capacities), "")
-                composition_items.append({
+                composition_item = {
                     **group_ref,
                     "grupo_id": str(group.get("grupo_id") or group_ref["grupo"]),
                     "tipo_bem": str(group.get("tipo_bem") or ""),
@@ -568,14 +570,24 @@ def analyze_client_consortium_viability(
                     "cotas_minimas_sem_embutido": next((scenario["cotas_minimas"] for scenario in composition_scenarios if scenario["id"] == "without_embedded"), None),
                     "cotas_minimas_com_embutido": next((scenario["cotas_minimas"] for scenario in composition_scenarios if scenario["id"] == "with_embedded"), None),
                     "cotas_maximas": 50,
-                })
+                }
+                composition_items.append(composition_item)
+            elif any(
+                scenario.get("cotas_minimas") is not None
+                and 1 <= int(scenario["cotas_minimas"]) <= 50
+                and (parse_decimal(scenario.get("credito_total_minimo")) or Decimal("0")) >= desired
+                for scenario in composition_scenarios
+            ):
+                composition_rejection_reason = "composicao_parcela_maxima_excedida"
+            else:
+                composition_rejection_reason = "composicao_credito_insuficiente_ou_limite_cotas"
         missing_fields = [
             {"field": "Credito minimo", "column": "O", "raw_value": group.get("credito_minimo"), "reason": "Necessario para validar a faixa de credito.", "impact": "group_excluded"} if minimum is None else None,
             {"field": "Credito maximo", "column": "U", "raw_value": group.get("credito_maximo"), "reason": "Necessario para validar a faixa de credito.", "impact": "group_excluded"} if maximum is None else None,
             {"field": "Taxa ADM total", "column": "AC", "raw_value": group.get("taxa_adm"), "reason": "Necessaria para calcular saldo e prazo.", "impact": "scenario_unavailable"} if fee is None else None,
             {"field": "Fundo de reserva total", "column": "AA", "raw_value": group.get("fundo_reserva"), "reason": "Necessario para calcular saldo e prazo.", "impact": "scenario_unavailable"} if fund is None else None,
             {"field": "Prazo remanescente", "column": "F", "raw_value": group.get("prazo_restante", group.get("prazo_remanescente")), "reason": "Necessario para validar prazo/renda.", "impact": "group_excluded"} if remaining_term is None else None,
-            {"field": "Faixas de contemplacao", "column": "BL:BP", "raw_value": raw_ranges, "reason": "Usadas somente na classificacao informativa posterior.", "impact": "informational_only"} if not has_ranges else None,
+            {"field": "Faixas de contemplacao", "column": "BL:BP", "raw_value": json.dumps(raw_ranges, ensure_ascii=False, sort_keys=True), "reason": "Usadas somente na classificacao informativa posterior.", "impact": "informational_only"} if not has_ranges else None,
         ]
         missing_fields = [field for field in missing_fields if field]
         if missing_fields:
@@ -594,6 +606,7 @@ def analyze_client_consortium_viability(
             "prazo": {"approved": bool(term_scenarios), "scenario_ids": [scenario["id"] for scenario in term_scenarios], "rule": "F >= ceil(saldo após lance / parcela máxima)"},
             "administradora": {"approved": bool(administrator_scenarios), "scenario_ids": [scenario["id"] for scenario in administrator_scenarios], "rule": "Sem regra adicional definida"},
             "contemplacao": {"approved": bool(selected_profile_scenarios if selected_profile else contemplation_scenarios), "scenario_ids": [scenario["id"] for scenario in (selected_profile_scenarios if selected_profile else contemplation_scenarios)], "perfil_selecionado": selected_profile, "rule": "Lance do cliente >= faixa do perfil selecionado" if selected_profile else "Lance do cliente >= uma faixa BL:BP"},
+            "composicao": {"approved": bool(composition_item), "scenario_ids": [composition_item["selected_composition_scenario"]] if composition_item else [], "rule": "Crédito e parcela total compatíveis em até 50 cotas"},
         }
         counters["credit_approved"] += int(bool(credit_scenarios))
         counters["credit_rejected"] += int(not credit_scenarios)
@@ -648,12 +661,20 @@ def analyze_client_consortium_viability(
             reasons = sorted({reason for scenario in scenarios for reason in scenario["eligibility_reasons"]})
             for reason in reasons:
                 counters[reason] += 1
-            if selected_profile and term_scenarios and not selected_profile_scenarios:
+            if composition_item:
+                group_results.append({**group_ref, "result": "composition", "justification": [], "scenarios": scenarios, "source_values": source_values, "stage_results": stage_results, "missing_fields": missing_fields})
+                continue
+            if composition_rejection_reason:
+                reason = composition_rejection_reason
+                consolidated_reasons = [composition_rejection_reason]
+            elif selected_profile and term_scenarios and not selected_profile_scenarios:
                 reason = "lance_insuficiente_para_perfil"
                 counters[reason] += 1
             else:
                 reason = "prazo_remanescente_insuficiente" if credit_scenarios and not term_scenarios else (reasons[0] if reasons else "nao_elegivel")
-            if selected_profile and term_scenarios and not selected_profile_scenarios:
+            if composition_rejection_reason:
+                consolidated_reasons = [composition_rejection_reason]
+            elif selected_profile and term_scenarios and not selected_profile_scenarios:
                 consolidated_reasons = ["lance_insuficiente_para_perfil"]
             elif credit_scenarios and not term_scenarios:
                 incomplete_reasons = [reason for reason in reasons if reason.endswith("nao_informada") or reason.endswith("nao_informado")]
@@ -661,7 +682,8 @@ def analyze_client_consortium_viability(
             else:
                 consolidated_reasons = reasons
             excluded.append({**group_ref, "reason": reason, "detail": ", ".join(consolidated_reasons) or "Nenhum cenario aprovado."})
-            group_results.append({**group_ref, "result": "excluded_contemplation" if selected_profile and term_scenarios and not selected_profile_scenarios else ("excluded_term_income" if credit_scenarios else "excluded_credit"), "justification": consolidated_reasons, "scenarios": scenarios, "source_values": source_values, "stage_results": stage_results, "missing_fields": missing_fields})
+            exclusion_result = "excluded_composition" if composition_rejection_reason else ("excluded_contemplation" if selected_profile and term_scenarios and not selected_profile_scenarios else ("excluded_term_income" if credit_scenarios else "excluded_credit"))
+            group_results.append({**group_ref, "result": exclusion_result, "justification": consolidated_reasons, "scenarios": scenarios, "source_values": source_values, "stage_results": stage_results, "missing_fields": missing_fields})
             continue
 
         all_matches = [strategy for scenario in approved_scenarios for strategy in scenario["compatible_contemplation_strategies"]]
@@ -852,7 +874,7 @@ def analyze_client_consortium_viability(
         "parameters": {"commitment_percent": float(commitment), "requested_type": requested_type or None, "explicit_type_filter": bool(explicit_type), "base_mode": mode, "embedded_column": "Y", "decision_columns": sorted(decision_columns)},
         "columns_used": [{"column": column, "header": header, "technical_field": field, "purpose": purpose, "loaded": True, "used_in_decision": column in decision_columns, "used": column in decision_columns} for column, header, field, purpose in columns],
         "execution_steps": [
-            {"order": 1, "id": "status", "name": "Status", "formula_or_rule": "Somente status Ativo", "input_count": len(groups), "approved_count": counters["active"], "rejected_count": counters["status_rejected"], "incomplete_count": 0, "duration_ms": round(durations["status"] * 1000, 3)},
+            {"order": 1, "id": "status", "name": "Status e identificação", "formula_or_rule": "Somente status Ativo e grupo com administradora/número válidos", "input_count": len(groups), "approved_count": counters["active"], "rejected_count": counters["status_rejected"] + counters["invalid_identity"], "incomplete_count": 0, "duration_ms": round(durations["status"] * 1000, 3)},
             {"order": 2, "id": "type", "name": "Tipo de bem", "formula_or_rule": "Aplicado somente quando explicitamente informado", "input_count": counters["active"], "approved_count": counters["active"] - counters["type_rejected"], "rejected_count": counters["type_rejected"], "incomplete_count": 0, "duration_ms": round(durations["type"] * 1000, 3)},
             {"order": 3, "id": "credit", "name": "Faixa de credito", "formula_or_rule": "Cenarios independentes sem e com X; O <= credito contratado <= U", "input_count": counters["active"] - counters["type_rejected"], "approved_count": counters["credit_approved"], "rejected_count": counters["credit_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"O", "U"} for field in item["missing_fields"])), "duration_ms": round((durations["scenario"] + durations["credit_decision"]) * 1000, 3)},
             {"order": 4, "id": "term", "name": "Prazo e renda", "formula_or_rule": "F >= ceil(saldo apos lance / parcela maxima); parcela desejada tambem permanece auditada", "input_count": counters["credit_approved"], "approved_count": counters["term_approved"], "rejected_count": counters["term_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"F", "AA", "AC"} for field in item["missing_fields"])), "duration_ms": round(durations["term"] * 1000, 3)},
@@ -904,7 +926,9 @@ def analyze_client_consortium_viability(
     matrix_input_count = len(matrix_entries)
     matrix_incomplete_count = len(matrix_incomplete_entries)
     matrix_rejected_count = max(0, matrix_input_count - len(matrix_approved_keys) - matrix_incomplete_count)
-    lower_list_count = len(eligible_items) + len(composition_items)
+    composition_keys = {audit_key(item) for item in composition_items}
+    lower_list_keys = matrix_term_keys | composition_keys
+    lower_list_count = len(lower_list_keys)
     initial_steps = audit["execution_steps"]
     audit["execution_steps"] = [
         initial_steps[0],
@@ -912,7 +936,7 @@ def analyze_client_consortium_viability(
         {"order": 3, "id": "matrix", "name": "Matriz de contemplação", "formula_or_rule": "Lance efetivo (declarado ou simulado) >= faixa do perfil; o cenário aprovado é exibido na matriz.", "input_count": matrix_input_count, "approved_count": len(matrix_approved_keys), "rejected_count": matrix_rejected_count, "incomplete_count": matrix_incomplete_count, "duration_ms": round(durations["contemplation"] * 1000, 3)},
         {"order": 4, "id": "credit", "name": "Refinamento: faixa de crédito", "formula_or_rule": "Somente candidatos aprovados na matriz; O <= crédito contratado <= U.", "input_count": len(matrix_approved_keys), "approved_count": len(matrix_credit_keys), "rejected_count": max(0, len(matrix_approved_keys) - len(matrix_credit_keys)), "incomplete_count": 0, "duration_ms": round(durations["credit_decision"] * 1000, 3)},
         {"order": 5, "id": "term", "name": "Refinamento: prazo e renda", "formula_or_rule": "Somente candidatos aprovados em matriz e crédito; parcela e prazo devem respeitar o limite de renda.", "input_count": len(matrix_credit_keys), "approved_count": len(matrix_term_keys), "rejected_count": max(0, len(matrix_credit_keys) - len(matrix_term_keys)), "incomplete_count": 0, "duration_ms": round(durations["term"] * 1000, 3)},
-        {"order": 6, "id": "preselection", "name": "Refinamento: 1 cota ou composição", "formula_or_rule": "Somente candidatos aprovados nas etapas anteriores; composição exige crédito e parcela total compatíveis em até 50 cotas.", "input_count": len(matrix_term_keys), "approved_count": lower_list_count, "rejected_count": max(0, len(matrix_term_keys) - lower_list_count), "incomplete_count": 0, "duration_ms": round(durations["administrator_rules"] * 1000, 3)},
+        {"order": 6, "id": "preselection", "name": "Refinamento: 1 cota ou composição", "formula_or_rule": "Candidatos aprovados na matriz são classificados em 1 cota ou composição; composição exige crédito e parcela total compatíveis em até 50 cotas.", "input_count": len(lower_list_keys), "approved_count": lower_list_count, "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["administrator_rules"] * 1000, 3)},
         {"order": 7, "id": "preliminary_order", "name": "Ordem preliminar", "formula_or_rule": "Maior prazo remanescente, menor taxa administrativa total, administradora e grupo. Não é ranking final.", "input_count": lower_list_count, "approved_count": lower_list_count, "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["ranking"] * 1000, 3)},
     ]
     matrix_items = [
