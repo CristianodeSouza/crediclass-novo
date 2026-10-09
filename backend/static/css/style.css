@@ -2397,6 +2397,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .selected-comparison-column { min-width: 0; overflow: hidden; border: 0; border-right: 1px solid #d9e0e2; border-radius: 0; background: #fff; box-shadow: none; }
 .selected-comparison-column > header { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 9px; min-height: 54px; padding: 9px 11px; border-bottom: 1px solid #d5dde0; background: #f5f8f8; }
 .selected-comparison-column h3 { margin: 0; color: var(--brand-navy); font-size: 1rem; }
+.selected-group-jump { margin-top:4px; padding:3px 7px; border:1px solid #d7e1e4; border-radius:5px; background:#fff; color:var(--brand-navy); font-size:.62rem; cursor:pointer; }
+.selected-group-jump:hover,.selected-group-jump:focus-visible { border-color:var(--brand-orange); outline:none; }
 .selected-comparison-column header p { margin: 2px 0 0; color: #52656d; font-size: 0.76rem; }
 .selected-comparison-key-metrics { display: grid; grid-template-columns: 1fr; gap: 0; padding: 0; border-bottom: 0; background: #fff; }
 .selected-comparison-key-metrics span { display: grid; gap: 3px; min-width: 0; padding: 9px 12px; border-bottom: 1px solid #e6ebed; }

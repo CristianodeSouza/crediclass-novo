@@ -3131,6 +3131,17 @@ function renderSelectedGroupsScreen() {
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
   results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}${renderSelectedGroupsCartSummary(items)}` : "";
+  results.querySelectorAll(".selected-comparison-column").forEach((column) => {
+    const title = column.querySelector("h3");
+    const groupId = title?.textContent?.replace(/[^0-9A-Za-z_-]/g, "").trim();
+    if (!groupId || column.querySelector("[data-selected-group-anchor]")) return;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "selected-group-jump";
+    button.textContent = "Ir para o grupo";
+    button.addEventListener("click", () => { closeSelectedGroupsWorkspace(); focusMotor360Group(motor360GroupAnchorId(groupId)); });
+    title?.parentElement?.appendChild(button);
+  });
   const scenarioFact = results.querySelector(".sg-fact-strip span:nth-child(2) b");
   if (scenarioFact) scenarioFact.textContent = "Por grupo";
   renderSelectedGroupsECharts(items);
