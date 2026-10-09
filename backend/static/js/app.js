@@ -2776,8 +2776,14 @@ function renderSelectedGroupsAdvancedFilters() {
   panel.insertBefore(analysisControls, panel.firstChild);
   dashboard.insertBefore(panel, dashboard.children[1] || null);
   panel.querySelectorAll("[data-sg-advanced]").forEach((input) => input.addEventListener("change", () => {
+    const selectedProfile = investorState.selectedGroupProfile;
+    const selectedSort = investorState.selectedGroupSort;
+    const selectedScenario = investorState.selectedGroupScenario;
     const key = input.dataset.sgAdvanced;
     filters[key] = input.type === "checkbox" ? input.checked : input.value;
+    investorState.selectedGroupProfile = selectedProfile;
+    investorState.selectedGroupSort = selectedSort;
+    investorState.selectedGroupScenario = selectedScenario;
     renderSelectedGroupsScreen();
   }));
   panel.querySelector("[data-sg-clear-filters]")?.addEventListener("click", () => { investorState.selectedGroupFilters = { minCredit: "", maxInstallment: "", maxBid: "", minHistory: "", maxCommitment: "", maxAdmin: "", maxReserve: "", maxTerm: "", administrator: "", compatibleOnly: false }; investorState.selectedGroupProfile = "all"; investorState.selectedGroupSort = "original"; investorState.selectedGroupScenario = "per_group"; renderSelectedGroupsScreen(); });
@@ -3036,9 +3042,23 @@ function renderSelectedGroupsScreen() {
   const sort = investorState.selectedGroupSort || "original";
   if (sort === "score") items = [...items].sort((a, b) => selectedGroupAnalytics(b).score - selectedGroupAnalytics(a).score);
   if (sort === "credit") items = [...items].sort((a, b) => selectedGroupAnalytics(b).credit - selectedGroupAnalytics(a).credit);
-  if (sort === "installment") items = [...items].sort((a, b) => Number((a.cenarios || [])[0]?.parcela_inicial || 0) - Number((b.cenarios || [])[0]?.parcela_inicial || 0));
+  if (sort === "installment") {
+    const installmentForSort = (item) => {
+      const selectedIds = selectedScenarioIdsForGroup(motor360GroupKey(item));
+      const scenarioId = investorState.selectedGroupScenario !== "per_group" && investorState.selectedGroupScenario ? investorState.selectedGroupScenario : [...selectedIds][0];
+      return Number((item.cenarios || []).find((scenario) => scenario.id === scenarioId)?.parcela_inicial || (item.cenarios || [])[0]?.parcela_inicial || 0);
+    };
+    items = [...items].sort((a, b) => installmentForSort(a) - installmentForSort(b));
+  }
   if (sort === "bid") items = [...items].sort((a, b) => selectedGroupAnalytics(a).idealBid - selectedGroupAnalytics(b).idealBid);
   if (sort === "history") items = [...items].sort((a, b) => Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0));
+  if (!items.length && investorState.selectedGroupIds.size) {
+    empty.classList.add("d-none");
+    results.classList.remove("d-none");
+    results.innerHTML = '<section class="sg-dashboard sg-filter-empty-dashboard" data-sg-dashboard><div class="sg-filter-empty"><strong>Nenhum grupo atende aos filtros atuais.</strong><span>A seleção continua preservada. Ajuste os filtros ou use “Limpar filtros” para voltar a visualizar os grupos.</span></div></section>';
+    renderSelectedGroupsAdvancedFilters();
+    return;
+  }
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
   results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}${renderSelectedGroupsCartSummary(items)}` : "";
