@@ -2295,7 +2295,7 @@ function selectedMotor360Items() {
   return [...investorState.selectedGroupIds].map((id) => {
     const item = currentItems.get(id) || investorState.selectedGroupData.get(id);
     return item ? { ...item, cenarios: selectedScenariosForItem(item) } : null;
-  }).filter((item) => item && item.cenarios.length);
+  }).filter(Boolean);
 }
 
 function motor360FinalItems(result = investorState.result) {
@@ -2307,11 +2307,11 @@ function renderMotor360SelectedGroupsDock() {
   if (!items.length) return "";
   const totalQuotas = items.reduce((total, item) => {
     const groupId = String(item.grupo || item.grupo_id || "");
-    return total + Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+    return total + quotaCountFor(item);
   }, 0);
   const groups = items.map((item) => {
     const groupId = String(item.grupo || item.grupo_id || "-");
-    const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+    const quotas = quotaCountFor(item);
     const anchorId = motor360GroupAnchorId(groupId);
     return `<button type="button" class="motor360-selected-dock-item" data-group-anchor="${escapeHtml(anchorId)}" aria-label="Ir para o grupo ${escapeHtml(groupId)}"><b>Grupo ${escapeHtml(groupId)}</b><small>${escapeHtml(item.administradora || "-")} · ${quotas} ${quotas === 1 ? "cota" : "cotas"}</small></button>`;
   }).join("");
@@ -2331,7 +2331,7 @@ function renderMotor360FloatingSelectionSummary() {
   const maximumInstallment = Number(client.parcela_maxima || 0);
   const entries = items.map((item) => {
     const groupId = String(item.grupo || item.grupo_id || "-");
-    const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+    const quotas = quotaCountFor(item);
     return { item, quotas };
   });
   const totalQuotas = entries.reduce((sum, entry) => sum + entry.quotas, 0);
@@ -2356,7 +2356,7 @@ function renderMotor360FloatingSelectionSummary() {
 
 function renderSelectedGroupComparisonColumn(item, index) {
   const groupId = String(item.grupo || item.grupo_id || "-");
-  const quotaCount = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+  const quotaCount = quotaCountFor(item);
   const scale = (value) => value === null || value === undefined ? value : Number(value) * quotaCount;
   const scenarios = Array.isArray(item.cenarios) ? item.cenarios : [];
   const byScenario = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
@@ -2411,12 +2411,12 @@ async function downloadStudyAuditLog() {
 function selectedMotor360SnapshotItems() {
   const currentItems = new Map([
     ...(investorState.result?.final_items || investorState.result?.items || []),
-  ].map((item) => [String(item.grupo || item.grupo_id || ""), item]));
+  ].map((item) => [motor360GroupKey(item), item]));
   return [...investorState.selectedGroupIds].map((id) => {
     const item = currentItems.get(id) || investorState.selectedGroupData.get(id);
     if (!item) return null;
-    return { ...item, cenarios: Array.isArray(item.cenarios) ? item.cenarios : [] };
-  }).filter((item) => item && item.cenarios.length);
+    return { ...item, cenarios: selectedScenariosForItem(item) };
+  }).filter(Boolean);
 }
 
 function invalidateInvestorAnalysisForProfileChange() {
@@ -2467,7 +2467,7 @@ function selectedGroupAnalytics(item) {
   const profile = (id) => profiles.find((entry) => entry.id === id) || {};
   const historical = item.capacidade_contemplacoes || {};
   const history = (key) => Number(historical[key]?.media_contemplacoes ?? historical[key]?.media ?? 0);
-  const quotaCount = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+  const quotaCount = quotaCountFor(item);
   const scale = (value) => Number(value || 0) * quotaCount;
   const { client, availableBid, income } = selectedGroupsClientFinancials();
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
@@ -2625,7 +2625,7 @@ function renderSelectedGroupsCartSummary(items) {
   const scenarioSummary = (scenarioId, label) => {
     const entries = items.map((item) => {
       const groupId = String(item.grupo || item.grupo_id || "-");
-      const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+      const quotas = quotaCountFor(item);
       const scenario = (item.cenarios || []).find((entry) => entry.id === scenarioId);
       return { item, groupId, quotas, scenario };
     }).filter((entry) => entry.scenario);
@@ -2651,7 +2651,7 @@ function renderSelectedGroupsCartSummary(items) {
     });
     return `<article class="motor360-cart-scenario"><header><strong>${label}</strong><span class="${creditOk && incomeOk ? "is-ok" : "is-warning"}">${creditOk && incomeOk ? "Composição viável" : "Requer ajuste"}</span></header><div class="motor360-cart-metrics"><div><small>Crédito líquido composto</small><b>${formatMoney(credit)}</b><em>${creditOk ? "Atende" : `Faltam ${formatMoney(desiredCredit - credit)}`}</em></div><div><small>Parcela total</small><b>${formatMoney(installment)}</b><em>${desiredOk ? "Dentro da desejada" : "Acima da desejada"} · ${incomeOk ? "Dentro de 30% da renda" : "Acima de 30% da renda"}</em></div><div><small>Saldo devedor total</small><b>${formatMoney(balance)}</b></div></div><div class="motor360-cart-profiles">${profiles.map((profile) => `<div><strong>${profileLabels[profile.profileId]}</strong><span>Lance ideal: ${formatMoney(profile.requiredTotal)}</span><b class="${profile.gap ? "is-gap" : "is-hit"}">${profile.gap ? `Faltam ${formatMoney(profile.gap)}` : "Lance suficiente"}</b><small>${profile.allocations.map((allocation) => `Grupo ${escapeHtml(allocation.groupId)}: ${formatMoney(allocation.value)}`).join(" · ") || "Sem referência de lance"}</small></div>`).join("")}</div></article>`;
   };
-  const totalQuotas = items.reduce((sum, item) => sum + Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1))), 0);
+  const totalQuotas = items.reduce((sum, item) => sum + quotaCountFor(item), 0);
   return `<section class="motor360-cart-summary"><div class="motor360-cart-heading"><div><span>Composição selecionada</span><h3>${items.length} grupo(s) · ${totalQuotas} cota(s)</h3></div><p>O lance disponível é distribuído proporcionalmente ao lance ideal de cada grupo em cada perfil.</p></div><div class="motor360-cart-scenarios">${scenarioSummary("without_embedded", "Sem lance embutido")}${scenarioSummary("with_embedded", "Com lance embutido")}</div></section>`;
 }
 
@@ -2896,7 +2896,7 @@ function renderSelectedGroupsAuditButton(items) {
   button.textContent = "Baixar log de auditoria";
   button.title = "Exporta o perfil, grupos, cenários, filtros e métricas usados nos gráficos";
   button.addEventListener("click", () => {
-    const audit = { generated_at: new Date().toISOString(), scenario: investorState.selectedGroupScenario || "without_embedded", profile: investorState.selectedGroupProfile || "all", sort: investorState.selectedGroupSort || "original", filters: investorState.selectedGroupFilters || {}, client: investorState.result?.cliente || {}, groups: items.map((item) => ({ group_id: item.grupo || item.grupo_id, administrator: item.administradora, quotas: investorState.quotaCounts.get(String(item.grupo || item.grupo_id)) || 1, raw_group: item, analytics: selectedGroupAnalytics(item) })) };
+    const audit = { generated_at: new Date().toISOString(), scenario: investorState.selectedGroupScenario || "per_group", profile: investorState.selectedGroupProfile || "all", sort: investorState.selectedGroupSort || "original", filters: investorState.selectedGroupFilters || {}, client: investorState.result?.cliente || {}, groups: items.map((item) => ({ group_id: item.grupo || item.grupo_id, administrator: item.administradora, quotas: quotaCountFor(item), selected_scenario_ids: [...selectedScenarioIdsForGroup(motor360GroupKey(item))], raw_group: item, analytics: selectedGroupAnalytics(item) })) };
     const blob = new Blob([JSON.stringify(audit, null, 2)], { type: "application/json;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -3009,7 +3009,7 @@ function financialStudyScenario(item, scenarioId) {
 
 function financialStudyGroupRow(item) {
   const groupId = String(item.grupo || item.grupo_id || "-");
-  const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+  const quotas = quotaCountFor(item);
   const scale = (value) => value === null || value === undefined ? null : Number(value) * quotas;
   const without = financialStudyScenario(item, "without_embedded");
   const withEmbedded = financialStudyScenario(item, "with_embedded");
@@ -3165,7 +3165,7 @@ function renderFinancialStudyProjectionCharts(items) {
 
 function financialStudyGroupCard(item, assemblyData, generatedAt, assemblyError = "") {
   const groupId = String(item.grupo || item.grupo_id || "-");
-  const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+  const quotas = quotaCountFor(item);
   const scale = (value) => value === null || value === undefined ? null : Number(value) * quotas;
   const without = financialStudyScenario(item, "without_embedded");
   const withEmbedded = financialStudyScenario(item, "with_embedded");
@@ -3202,7 +3202,7 @@ function financialStudyPortfolioSummary(items) {
   const totals = { quotas: 0, maxCredit: 0, withoutCredit: 0, withoutInstallment: 0, withCredit: 0, withInstallment: 0 };
   items.forEach((item) => {
     const groupId = String(item.grupo || item.grupo_id || "-");
-    const quotas = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
+    const quotas = quotaCountFor(item);
     const without = financialStudyScenario(item, "without_embedded");
     const withEmbedded = financialStudyScenario(item, "with_embedded");
     totals.quotas += quotas;
@@ -3364,7 +3364,7 @@ function renderItauReplicaStudy({ screen, items, profile, clientName, issueDate,
     const match = String(value || "").match(/^(\d{4})[-\/]?(\d{1,2})$/);
     return match ? `${String(Number(match[2])).padStart(2, "0")}/${match[1]}` : String(value || "Não informado");
   };
-  const qty = (item) => Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1)));
+  const qty = (item) => quotaCountFor(item);
   const scenario = (item, id) => {
     const raw = financialStudyScenario(item, id);
     const embedded = raw.lance_embutido ?? raw.valor_lance_embutido;
@@ -3521,7 +3521,7 @@ async function renderFinancialStudyScreen() {
     }
   }
   const administrators = [...new Set(items.map((item) => item.administradora).filter(Boolean))];
-  const totalQuotas = items.reduce((total, item) => total + Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1))), 0);
+  const totalQuotas = items.reduce((total, item) => total + quotaCountFor(item), 0);
   const holders = profile.titulares?.pessoas || profile.titulares?.titulares || [];
   const holderNames = Array.isArray(holders) ? holders.map((holder) => holder.nome).filter(Boolean) : [];
   const clientName = profile.nome || holderNames.join(", ") || "Cliente não informado";
@@ -3600,6 +3600,11 @@ function persistMotor360Selection() {
 function selectedScenarioIdsForGroup(groupId) {
   const value = investorState.selectedScenarioIds.get(String(groupId));
   return new Set(Array.isArray(value) ? value : []);
+}
+
+function quotaCountFor(itemOrGroup) {
+  const key = typeof itemOrGroup === "string" ? itemOrGroup : motor360GroupKey(itemOrGroup);
+  return Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(key) || 1)));
 }
 
 function selectedScenariosForItem(item) {
@@ -3931,8 +3936,10 @@ function motor360GroupKey(itemOrAdministrator, groupId = null) {
 
 function clearMotor360GroupSelection() {
   investorState.selectedGroupIds.clear();
+  investorState.selectedScenarioIds.clear();
   investorState.quotaCounts.clear();
   investorState.selectedGroupData.clear();
+  persistMotor360Selection();
 }
 
 function syncMotor360AdministratorFilter(sourceItems) {
@@ -4145,18 +4152,26 @@ function renderInvestorAnalysis(result) {
     card.querySelector(".motor360-scenario-grid")?.insertAdjacentHTML("beforeend", motor360ScenarioSourceMetrics(groupItem));
     const title = card.querySelector(".motor360-scenario-title strong")?.textContent || "";
     const scenarioId = title.includes("com lance") ? "with_embedded" : "without_embedded";
-    const scenario = (groupItem?.scenarios || []).find((item) => item.id === scenarioId) || {};
-    const action = `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""}> Escolher para análise</label>`;
+    const scenario = (groupItem?.cenarios || []).find((item) => item.id === scenarioId) || {};
+    const groupSelected = investorState.selectedGroupIds.has(String(groupId));
+    const action = `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""} ${groupSelected ? "" : "disabled"}> Escolher para análise</label>`;
     card.querySelector(".motor360-scenario-title")?.insertAdjacentHTML("beforeend", action);
   });
   results.querySelectorAll("[data-screen-jump]").forEach((button) => button.addEventListener("click", () => activateScreen(button.dataset.screenJump)));
   results.querySelectorAll("[data-motor360-blocking-diagnostics]").forEach((button) => button.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit)));
   results.querySelectorAll(".motor360-scenario-select-input").forEach((input) => input.addEventListener("change", (event) => {
     const groupId = String(event.target.dataset.groupId || "");
+    if (!investorState.selectedGroupIds.has(groupId)) {
+      event.target.checked = false;
+      showToast("Selecione o grupo antes de escolher o cenário.", "warning");
+      return;
+    }
     const ids = selectedScenarioIdsForGroup(groupId);
     event.target.checked ? ids.add(event.target.dataset.scenarioId) : ids.delete(event.target.dataset.scenarioId);
-    investorState.selectedScenarioIds.set(groupId, [...ids]);
+    if (ids.size) investorState.selectedScenarioIds.set(groupId, [...ids]);
+    else investorState.selectedScenarioIds.delete(groupId);
     persistMotor360Selection();
+    renderInvestorAnalysis(investorState.result);
     renderSelectedGroupsScreen();
   }));
   results.querySelectorAll("[data-group-anchor]").forEach((button) => button.addEventListener("click", () => focusMotor360Group(button.dataset.groupAnchor)));
@@ -4191,28 +4206,6 @@ function renderInvestorAnalysis(result) {
     renderInvestorAnalysis(investorState.result);
     renderSelectedGroupsScreen();
   }));
-  results.addEventListener("click", (event) => {
-    const input = event.target.closest(".motor360-group-select-input");
-    if (!input) return;
-    window.setTimeout(() => {
-      const groupId = String(input.dataset.groupId || "");
-      const selectedItem = motor360FinalItems()
-        .find((item) => motor360GroupKey(item) === groupId);
-      if (input.checked) {
-        investorState.selectedGroupIds.add(groupId);
-        if (selectedItem) investorState.selectedGroupData.set(groupId, selectedItem);
-        if (!investorState.quotaCounts.has(groupId)) investorState.quotaCounts.set(groupId, 1);
-      } else {
-        investorState.selectedGroupIds.delete(groupId);
-        investorState.selectedScenarioIds.delete(groupId);
-        investorState.quotaCounts.delete(groupId);
-        investorState.selectedGroupData.delete(groupId);
-      }
-      persistMotor360Selection();
-      updateMotor360SelectionSummary();
-      if (investorState.result) renderInvestorAnalysis(investorState.result);
-    }, 0);
-  }, { once: true });
   results.querySelectorAll("[data-quota-action]").forEach((control) => control.addEventListener(control.dataset.quotaAction === "input" ? "change" : "click", (event) => {
     const groupId = String(control.dataset.groupId || "");
     const current = Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupId) || 1)));
@@ -5228,6 +5221,12 @@ async function saveCurrentStudy(options = {}) {
       already_exists: true,
     };
   }
+  const selectedItems = selectedMotor360SnapshotItems();
+  const groupsWithoutScenario = [...investorState.selectedGroupIds].filter((groupKey) => !selectedScenarioIdsForGroup(groupKey).size);
+  if (!selectedItems.length || groupsWithoutScenario.length) {
+    showToast("Escolha pelo menos um cenário em cada grupo selecionado antes de gerar o estudo.", "warning");
+    return null;
+  }
   const payload = {
     cliente: {
       nome: currentStudy.payload.nome || "Cliente em estudo",
@@ -5252,10 +5251,11 @@ async function saveCurrentStudy(options = {}) {
     grupo_id: currentStudy.groupId,
     cenario: currentStudy.cenario,
     template_campos: collectStudyOperatorFields(),
-    grupos_selecionados: selectedMotor360SnapshotItems().map((item) => ({
+    grupos_selecionados: selectedItems.map((item) => ({
       ...item,
-      quota_count: Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(String(item.grupo || item.grupo_id || "")) || 1))),
-      selected_scenario_id: investorState.selectedGroupScenario || "without_embedded",
+      quota_count: quotaCountFor(item),
+      selected_scenario_ids: [...selectedScenarioIdsForGroup(motor360GroupKey(item))],
+      selected_scenario_id: [...selectedScenarioIdsForGroup(motor360GroupKey(item))][0] || null,
     })),
   };
   payload.study_snapshot = { schema: "motor360-selection/v2", capturedAt: new Date().toISOString(), perfil_contemplacao: currentStudy.payload.contemplacao_perfil || null, matriz_contemplacao: investorState.result?.items || [], grupos_rejeitados: investorState.result?.audit?.group_results?.filter((entry) => entry.result === "excluded_contemplation") || [], groups: payload.grupos_selecionados };
