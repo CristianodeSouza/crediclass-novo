@@ -2277,6 +2277,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .selected-groups-workspace .sg-comparison-table .sg-matrix thead th { height: auto; }
 .motor360-blocking-diagnostics-trigger { position: static; }
 @media (max-width: 700px) { .selected-groups-workspace-header-actions { width: 100%; justify-content: stretch; }.selected-groups-workspace-header-actions .btn { flex: 1 1 100%; }.selected-groups-workspace .sg-comparison-table .sg-matrix { min-width: 980px; } }
+.sg-toolbar .sg-controls { display: flex; }
+.sg-comparison-table .sg-table-wrap { overflow-x: auto; overflow-y: visible; max-width: 100%; }
+.sg-comparison-table .sg-matrix { min-width: 980px; table-layout: auto; }
+.sg-comparison-table .sg-matrix th { white-space: nowrap; overflow-wrap: normal; word-break: keep-all; }
+.motor360-blocking-diagnostics-trigger { position: static !important; top: auto !important; z-index: auto !important; }
+.selected-groups-workspace-body { overflow-x: hidden; overflow-y: auto; }
+@media (max-width: 700px) { .selected-groups-workspace-header { position: static; flex: 0 0 auto; }.selected-groups-workspace-header h2 { font-size: 1rem; }.selected-groups-workspace-body { overflow-x: auto; } .selected-groups-workspace .motor360-client-profile-summary > div { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .motor360-single-quota-note, .motor360-multiple-quota-note { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 5px; min-height: 78px; margin: 16px 0 12px; padding: 14px 22px; border: 1px solid #efb477; border-left: 5px solid var(--brand-orange); border-radius: 6px; background: #fff8f2; color: var(--brand-navy); text-align: center; }
 .motor360-multiple-quota-note { margin-top: 22px; background: #fff4e9; }
 .motor360-single-quota-note strong, .motor360-multiple-quota-note strong { color: var(--brand-bronze-dark); font-size: 1rem; line-height: 1.2; }

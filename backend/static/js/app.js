@@ -2317,6 +2317,23 @@ function motor360FinalItems(result = investorState.result) {
   return result?.final_items || result?.items || [];
 }
 
+function motor360ClientProfile() {
+  const resultClient = investorState.result?.cliente || {};
+  const profile = collectClientProfile?.() || {};
+  const merged = { ...profile, ...resultClient };
+  return {
+    ...merged,
+    objetivo: merged.objetivo || profile.objetivo || "Não informado",
+    credito_liquido_desejado: merged.credito_liquido_desejado ?? merged.credito_desejado ?? profile.credito_desejado,
+    renda_total: merged.renda_total ?? profile.renda_total,
+    parcela_maxima: merged.parcela_maxima ?? merged.parcela_limite ?? profile.parcela_limite,
+    parcela_desejada: merged.parcela_desejada ?? merged.parcela_ideal ?? profile.parcela_desejada,
+    fgts_total: merged.fgts_total ?? merged.fgts ?? profile.fgts_total ?? profile.fgts,
+    lance_recursos_proprios: merged.lance_recursos_proprios ?? merged.lance_proprio ?? profile.lance_recursos_proprios ?? profile.lance_proprio,
+    lance_cliente_total: merged.lance_cliente_total ?? merged.lance_total ?? profile.lance_cliente_total,
+  };
+}
+
 function renderMotor360ClientProfileSummary(client = {}) {
   const ownResources = Number(client.lance_recursos_proprios ?? client.lance_proprio ?? 0);
   const fgts = Number(client.fgts_total ?? client.fgts ?? 0);
@@ -2343,7 +2360,7 @@ function renderMotor360FloatingSelectionSummary() {
   if (!items.length) {
     return `<aside class="motor360-floating-summary is-empty${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>Nenhum grupo selecionado</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">0</span>${minimizeButton}</div></div><p>Adicione grupos e cotas para acompanhar o atendimento ao crédito e à parcela do cliente.</p></aside>`;
   }
-  const client = investorState.result?.cliente || {};
+  const client = motor360ClientProfile();
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
   const desiredInstallment = Number(client.parcela_desejada || 0);
   const maximumInstallment = Number(client.parcela_maxima || 0);
@@ -2393,7 +2410,7 @@ function openSelectedGroupsWorkspace() {
     return;
   }
   const profileSummary = document.getElementById("selectedGroupsWorkspaceProfileSummary");
-  if (profileSummary) profileSummary.innerHTML = renderMotor360ClientProfileSummary(investorState.result?.cliente || collectClientProfile());
+  if (profileSummary) profileSummary.innerHTML = renderMotor360ClientProfileSummary(motor360ClientProfile());
   const compositionSummary = document.getElementById("selectedGroupsWorkspaceCompositionSummary");
   if (compositionSummary) compositionSummary.textContent = `${investorState.selectedGroupIds.size} grupo(s) · ${[...investorState.selectedGroupIds].reduce((sum, id) => sum + quotaCountFor(id), 0)} cota(s)`;
   workspace.classList.remove("d-none");
@@ -4259,6 +4276,7 @@ function renderInvestorAnalysis(result) {
     results.innerHTML = `${explicitMessage}${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}${rejectedHtml}${renderMotor360Audit(scopedAudit)}`;
     results.querySelector("[data-motor360-blocking-diagnostics]")?.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit));
     setInvestorAnalysisState("results");
+    if (!document.getElementById("selectedGroupsWorkspace")?.classList.contains("d-none")) renderSelectedGroupsScreen();
     return;
   }
   results.innerHTML = `
@@ -4394,6 +4412,7 @@ function renderInvestorAnalysis(result) {
     trigger.addEventListener("blur", () => scheduleHistoryHoverHide());
   });
   setInvestorAnalysisState("results");
+  if (!document.getElementById("selectedGroupsWorkspace")?.classList.contains("d-none")) renderSelectedGroupsScreen();
 }
 
 function renderInvestorPreferenceOptions() {
