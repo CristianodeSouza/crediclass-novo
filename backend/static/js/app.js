@@ -2632,6 +2632,7 @@ function renderSelectedGroupsCartSummary(items) {
       const scenario = (item.cenarios || []).find((entry) => entry.id === scenarioId);
       return { item, groupId, quotas, scenario };
     }).filter((entry) => entry.scenario);
+    if (!entries.length) return "";
     const total = (field, fallback) => entries.reduce((sum, entry) => sum + Number(entry.scenario[field] ?? entry.scenario[fallback] ?? 0) * entry.quotas, 0);
     const credit = total("credito_liquido_projetado", "credito_contratado");
     const installment = total("parcela_inicial");
@@ -2712,6 +2713,9 @@ function renderSelectedGroupsScoreBreakdown(items) {
       const values = ((entry.item.cenarios || []).find((scenario) => scenario.id === scenarioId)?.perfis_contemplacao || []);
       return values.find((profile) => profileAliases[profileId].includes(String(profile.id).toLowerCase()) || profileAliases[profileId].includes(String(profile.label || "").toLowerCase())) || {};
     };
+    const selectedScenarioIds = [...selectedScenarioIdsForGroup(motor360GroupKey(entry.item))];
+    const selectedScenarios = (entry.item.cenarios || []).filter((scenario) => selectedScenarioIds.includes(scenario.id));
+    const scenariosForDisplay = selectedScenarios.length ? selectedScenarios : [];
     const allProfiles = (entry.item.cenarios || []).flatMap((scenario) => scenario.perfis_contemplacao || []);
     const profiles = profileOrder.filter((profileId) => profileId === "investor" || allProfiles.some((profile) => profileAliases[profileId].includes(String(profile.id).toLowerCase()) || profileAliases[profileId].includes(String(profile.label || "").toLowerCase())));
     return profiles.map((profileId) => {
@@ -2720,14 +2724,22 @@ function renderSelectedGroupsScoreBreakdown(items) {
       if (!Object.keys(withoutProfile).length && !Object.keys(withProfile).length) {
         return `<section class="sg-profile-check is-unavailable"><h4>${profileLabels[profileId]}</h4><div class="sg-profile-scenarios"><span>Sem embutido: Dados não informados</span><span>Com embutido: Dados não informados</span></div></section>`;
       }
-      const profile = Object.keys(withoutProfile).length ? withoutProfile : withProfile;
+      const selectedProfiles = scenariosForDisplay.map((scenario) => ({ scenario, profile: findProfile(scenario.id, profileId) })).filter((value) => Object.keys(value.profile).length);
+      const profile = selectedProfiles[0]?.profile || {};
+      const requiredBids = selectedProfiles.map((value) => ({
+        label: value.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido",
+        value: Number(value.profile.lance_ideal || 0) * entry.quotaCount,
+      }));
+      const bidPasses = requiredBids.some((required) => required.value > 0 && entry.availableBid >= required.value);
+      const requiredBidLabel = requiredBids.map((required) => `${required.label}: ${formatMoney(required.value)}`).join(" · ");
       const checks = [
-        ["Lance para contemplação", entry.availableBid >= Number(profile.lance_ideal || 0), `Disponível ${formatMoney(entry.availableBid)} · ideal ${formatMoney(profile.lance_ideal || 0)}`],
+        ["Lance para contemplação", bidPasses, `Disponível ${formatMoney(entry.availableBid)} · ideal total por cenário: ${requiredBidLabel || "não informado"}`],
         ["Parcela desejada x parcela inicial", desiredInstallment > 0 && entry.installment <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · inicial ${formatMoney(entry.installment)}`],
         ["Parcela desejada x pós-contemplação", desiredInstallment > 0 && entry.installmentAfter > 0 && entry.installmentAfter <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · pós-contemplação ${formatMoney(entry.installmentAfter)}`],
         ["Crédito contratado x crédito desejado", entry.contractedCredit >= entry.desiredCredit, `Contratado ${formatMoney(entry.contractedCredit)} · desejado líquido ${formatMoney(entry.desiredCredit)}`],
       ];
-      return `<section class="sg-profile-check"><h4>${profileLabels[profileId]}</h4><div class="sg-profile-scenarios"><span>Sem embutido: ${withoutProfile.atinge_perfil ? "Atende" : "Não atende"} · ideal ${formatMoney(withoutProfile.lance_ideal || 0)}</span><span>Com embutido: ${withProfile.atinge_perfil ? "Atende" : "Não atende"} · ideal ${formatMoney(withProfile.lance_ideal || 0)}</span></div>${checks.map(([label, passes, detail]) => `<div class="sg-check-item ${passes ? "is-ok" : "is-fail"}"><span><b aria-hidden="true">${passes ? "✓" : "×"}</b>${label}</span><strong>${passes ? "Atende" : "Não atende"}</strong><small>${detail}</small></div>`).join("")}</section>`;
+      const scenarioSummary = scenariosForDisplay.map((scenario) => { const value = findProfile(scenario.id, profileId); return `<span>${scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}: ${value.atinge_perfil ? "Atende" : "Não atende"} · ideal total ${formatMoney(Number(value.lance_ideal || 0) * entry.quotaCount)}</span>`; }).join("");
+      return `<section class="sg-profile-check"><h4>${profileLabels[profileId]}</h4><div class="sg-profile-scenarios">${scenarioSummary || "<span>Nenhum cenário escolhido</span>"}</div>${checks.map(([label, passes, detail]) => `<div class="sg-check-item ${passes ? "is-ok" : "is-fail"}"><span><b aria-hidden="true">${passes ? "✓" : "×"}</b>${label}</span><strong>${passes ? "Atende" : "Não atende"}</strong><small>${detail}</small></div>`).join("")}</section>`;
     }).join("");
   };
   const factors = [
@@ -2938,6 +2950,7 @@ function renderSelectedGroupsScreen() {
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
   results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}${renderSelectedGroupsCartSummary(items)}` : "";
+  results.querySelectorAll("[data-sg-scenario]").forEach((select) => select.closest("label")?.remove());
   renderSelectedGroupsECharts(items);
   renderSelectedGroupsSafely("extra-visuals", renderSelectedGroupsExtraVisuals, items);
   if (items.length) renderSelectedGroupsAdvancedFilters();
@@ -4166,7 +4179,16 @@ function renderInvestorAnalysis(result) {
     const scenarioCards = [...(card.closest(".motor360-group-card")?.querySelectorAll(".motor360-scenario-card") || [])];
     const scenarioId = groupItem?.cenarios?.[scenarioCards.indexOf(card)]?.id || "";
     if (!scenarioId) return;
+    card.dataset.scenarioId = scenarioId;
     const scenario = (groupItem?.cenarios || []).find((item) => item.id === scenarioId) || {};
+    const totalCredit = Number(scenario.credito_contratado || 0) * quotaCountFor(groupItem);
+    const totalBid = scenarioTotalBidFor(groupItem, scenario);
+    const scenarioGrid = card.querySelector(".motor360-scenario-grid");
+    if (scenarioGrid) {
+      const cells = scenarioGrid.children;
+      if (cells[1]) cells[1].innerHTML = `<small>Lance total do cliente</small><b>${formatMoney(clientResourceTotal())} <em>(${formatPercent(totalCredit > 0 ? clientResourceTotal() / totalCredit : 0)})</em></b>`;
+      if (cells[3]) cells[3].innerHTML = `<small>Lance total do cenário</small><b>${formatMoney(totalBid)} <em>(${formatPercent(totalCredit > 0 ? totalBid / totalCredit : 0)})</em></b>`;
+    }
     const groupSelected = investorState.selectedGroupIds.has(String(groupId));
     const action = `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""} ${groupSelected ? "" : "disabled"}> Escolher para análise</label>`;
     card.querySelector(".motor360-scenario-title")?.insertAdjacentHTML("beforeend", action);
@@ -4222,6 +4244,13 @@ function renderInvestorAnalysis(result) {
       investorState.selectedScenarioIds.delete(groupId);
       investorState.quotaCounts.delete(groupId);
       investorState.selectedGroupData.delete(groupId);
+      if (!investorState.selectedGroupIds.size) {
+        investorState.administrator = "";
+        const administratorSelect = document.getElementById("investorAdministratorFilter");
+        if (administratorSelect) administratorSelect.value = "";
+        persistMotor360Selection();
+        updateInvestorPreferenceSummary();
+      }
     }
     persistMotor360Selection();
     renderInvestorAnalysis(investorState.result);
