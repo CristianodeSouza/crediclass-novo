@@ -4626,7 +4626,16 @@ function evaluatePjCapacityScenarios({
 }
 
 function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
-  const objetivo = document.getElementById("clientProfileObjetivo").value;
+  const objectiveByContemplationProfile = {
+    urgent: "Contemplar - urgente - 3 meses",
+    fast: "Contemplar - rapido - 6 meses",
+    moderate: "Contemplar - moderado - 12 meses",
+    conservative: "Contemplar - conservador - 24 meses",
+    long_term: "Contemplar - investidor - 36 meses",
+  };
+  const selectedContemplationProfile = document.getElementById("clientProfileContemplacaoPerfil")?.value;
+  const objetivo = objectiveByContemplationProfile[selectedContemplationProfile]
+    || document.getElementById("clientProfileObjetivo").value;
   const credito = toNumber(document.getElementById("clientProfileCredito").value);
   const parcelaDesejada = toNumber(document.getElementById("clientProfileParcelaIdeal").value);
   const lanceManual = toNumber(document.getElementById("clientProfileLanceProprio").value);
