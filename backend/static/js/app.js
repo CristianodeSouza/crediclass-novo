@@ -2767,12 +2767,19 @@ function selectedGroupsFilterValues() {
 
 function applySelectedGroupsFiltersAndSort(items) {
   const filters = selectedGroupsFilterValues();
+  const scenarioFor = (item) => {
+    if (investorState.selectedGroupScenario && investorState.selectedGroupScenario !== "per_group") return investorState.selectedGroupScenario;
+    return [...selectedScenarioIdsForGroup(motor360GroupKey(item))][0] || "without_embedded";
+  };
   const filtered = items.filter((item) => {
-    const entry = selectedGroupAnalytics(item);
+    const entry = selectedGroupAnalytics(item, scenarioFor(item));
     const history = entry.history("moderate");
-    const compatible = entry.scenario.credit_compatible !== false;
-    const commitment = (entry.incomeCommitment || 0) * 100;
-    return (!filters.administrator || String(item.administradora || "").toLowerCase().includes(String(filters.administrator).toLowerCase())) && (!filters.minCredit || entry.credit >= Number(filters.minCredit)) && (!filters.maxInstallment || entry.installment <= Number(filters.maxInstallment)) && (!filters.maxBid || entry.idealBid <= Number(filters.maxBid)) && (!filters.minHistory || history >= Number(filters.minHistory)) && (!filters.maxCommitment || commitment <= Number(filters.maxCommitment)) && (!filters.maxAdmin || entry.adminRate * 100 <= Number(filters.maxAdmin)) && (!filters.maxReserve || entry.reserveRate * 100 <= Number(filters.maxReserve)) && (!filters.maxTerm || Number(item.prazo_restante || 0) <= Number(filters.maxTerm)) && (!filters.compatibleOnly || compatible);
+    const compatible = entry.scenario.credit_compatible === true;
+    const commitment = entry.incomeCommitment == null ? null : entry.incomeCommitment * 100;
+    const adminValue = item.taxa_adm ?? item.taxa_total;
+    const reserveValue = item.fundo_reserva;
+    const numericMax = (value, limit) => !limit || (value != null && Number.isFinite(Number(value)) && Number(value) <= Number(limit));
+    return (!filters.administrator || String(item.administradora || "").toLowerCase().includes(String(filters.administrator).toLowerCase())) && (!filters.minCredit || (entry.groupMaxCredit != null && entry.groupMaxCredit >= Number(filters.minCredit))) && numericMax(entry.installment, filters.maxInstallment) && numericMax(entry.idealBid, filters.maxBid) && (!filters.minHistory || (history > 0 && history >= Number(filters.minHistory))) && (!filters.maxCommitment || (commitment != null && commitment <= Number(filters.maxCommitment))) && (!filters.maxAdmin || (adminValue != null && adminValue !== "" && Number(entry.adminRate) * 100 <= Number(filters.maxAdmin))) && (!filters.maxReserve || (reserveValue != null && reserveValue !== "" && Number(entry.reserveRate) * 100 <= Number(filters.maxReserve))) && (!filters.maxTerm || (item.prazo_restante != null && item.prazo_restante !== "" && Number(item.prazo_restante) <= Number(filters.maxTerm))) && (!filters.compatibleOnly || compatible);
   });
   const sort = investorState.selectedGroupSort || "original";
   const valueFor = (item) => {
@@ -2784,7 +2791,7 @@ function applySelectedGroupsFiltersAndSort(items) {
   };
   return [...filtered].sort((a, b) => {
     if (sort === "score") return selectedGroupAnalytics(b).score - selectedGroupAnalytics(a).score;
-    if (sort === "credit") return selectedGroupAnalytics(b).credit - selectedGroupAnalytics(a).credit;
+    if (sort === "credit") return selectedGroupAnalytics(b, scenarioFor(b)).groupMaxCredit - selectedGroupAnalytics(a, scenarioFor(a)).groupMaxCredit;
     if (sort === "installment") return valueFor(a) - valueFor(b);
     if (sort === "bid") return selectedGroupAnalytics(a).idealBid - selectedGroupAnalytics(b).idealBid;
     if (sort === "history") return Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0);
@@ -2801,6 +2808,12 @@ function renderMotor360SelectionFilters() {
     const sortSelect = existing.querySelector('[data-motor360-filter="sort"]');
     if (profileSelect) profileSelect.value = investorState.selectedGroupProfile || "all";
     if (sortSelect) sortSelect.value = investorState.selectedGroupSort || "original";
+    const filters = selectedGroupsFilterValues();
+    existing.querySelectorAll("[data-motor360-advanced]").forEach((input) => {
+      const value = filters[input.dataset.motor360Advanced];
+      if (input.type === "checkbox") input.checked = Boolean(value);
+      else input.value = value ?? "";
+    });
     return;
   }
   const filters = selectedGroupsFilterValues();
@@ -2812,9 +2825,14 @@ function renderMotor360SelectionFilters() {
   host.appendChild(panel);
   panel.querySelector('[data-motor360-filter="profile"]').value = investorState.selectedGroupProfile || "all";
   panel.querySelector('[data-motor360-filter="sort"]').value = investorState.selectedGroupSort || "original";
-  const refresh = () => renderInvestorAnalysis(investorState.result);
+  let refreshTimer = null;
+  const refresh = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => renderInvestorAnalysis(investorState.result), 120); };
   panel.querySelectorAll("[data-motor360-filter]").forEach((input) => input.addEventListener("change", () => { if (input.dataset.motor360Filter === "profile") investorState.selectedGroupProfile = input.value; if (input.dataset.motor360Filter === "sort") investorState.selectedGroupSort = input.value; refresh(); }));
-  panel.querySelectorAll("[data-motor360-advanced]").forEach((input) => input.addEventListener("change", () => { filters[input.dataset.motor360Advanced] = input.type === "checkbox" ? input.checked : input.value; refresh(); }));
+  panel.querySelectorAll("[data-motor360-advanced]").forEach((input) => {
+    const update = () => { const currentFilters = selectedGroupsFilterValues(); currentFilters[input.dataset.motor360Advanced] = input.type === "checkbox" ? input.checked : input.value; refresh(); };
+    input.addEventListener(input.type === "checkbox" ? "change" : "input", update);
+    if (input.type !== "checkbox") input.addEventListener("change", update);
+  });
   panel.querySelector("[data-motor360-clear-filters]")?.addEventListener("click", () => { investorState.selectedGroupFilters = { minCredit: "", maxInstallment: "", maxBid: "", minHistory: "", maxCommitment: "", maxAdmin: "", maxReserve: "", maxTerm: "", administrator: "", compatibleOnly: false }; investorState.selectedGroupProfile = "all"; investorState.selectedGroupSort = "original"; investorState.selectedGroupScenario = "per_group"; refresh(); });
 }
 
@@ -4241,8 +4259,8 @@ function renderInvestorAnalysis(result) {
   const scenarioState = investorState.selectedGroupScenario || "per_group";
   const withScenario = document.getElementById("investorFilterWithEmbedded");
   const withoutScenario = document.getElementById("investorFilterWithoutEmbedded");
-  if (withScenario) withScenario.checked = scenarioState === "with_embedded";
-  if (withoutScenario) withoutScenario.checked = scenarioState === "without_embedded";
+  if (withScenario) withScenario.checked = scenarioState === "with_embedded" || scenarioState === "all";
+  if (withoutScenario) withoutScenario.checked = scenarioState === "without_embedded" || scenarioState === "all";
   const status = document.getElementById("investorAnalysisStatus");
   const summary = document.getElementById("investorAnalysisSummary");
   const results = document.getElementById("investorAnalysisResults");
@@ -4273,8 +4291,8 @@ function renderInvestorAnalysis(result) {
   ]);
   updateInvestorPreferenceSummary();
   const selectedAdministratorKey = motor360AdministratorKey(selectedAdministrator);
-  const withEmbeddedFilter = investorState.selectedGroupScenario === "with_embedded" || document.getElementById("investorFilterWithEmbedded")?.checked === true;
-  const withoutEmbeddedFilter = investorState.selectedGroupScenario === "without_embedded" || document.getElementById("investorFilterWithoutEmbedded")?.checked === true;
+  const withEmbeddedFilter = investorState.selectedGroupScenario === "with_embedded" || investorState.selectedGroupScenario === "all" || document.getElementById("investorFilterWithEmbedded")?.checked === true;
+  const withoutEmbeddedFilter = investorState.selectedGroupScenario === "without_embedded" || investorState.selectedGroupScenario === "all" || document.getElementById("investorFilterWithoutEmbedded")?.checked === true;
   const selectedScenarioIds = new Set([
     ...(withEmbeddedFilter ? ["with_embedded"] : []),
     ...(withoutEmbeddedFilter ? ["without_embedded"] : []),
@@ -4342,7 +4360,10 @@ function renderInvestorAnalysis(result) {
     const profileLabel = { urgent: "Urgente", fast: "Rápido", moderate: "Moderado", conservative: "Conservador", long_term: "Investidor" }[result.perfil_contemplacao] || "selecionado";
     const rejectedHtml = contemplationRejected.length ? `<details class="motor360-credit-excluded" open><summary>${contemplationRejected.length} grupo(s) não atingem o perfil ${profileLabel}</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th></tr></thead><tbody>${contemplationRejected.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>Lance disponível abaixo da faixa do perfil selecionado.</td></tr>`).join("")}</tbody></table></div></details>` : "";
     const diagnosticButton = '<button type="button" class="btn btn-primary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>Ver por que nenhum grupo foi encontrado</button>';
-    const explicitMessage = result.perfil_contemplacao
+    const hasActiveSelectionFilters = Object.values(selectedGroupsFilterValues()).some((value) => value !== "" && value !== false);
+    const explicitMessage = hasActiveSelectionFilters
+      ? `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo atende aos filtros atuais.</strong><span>Ajuste os filtros ou use “Limpar filtros” para voltar a visualizar os grupos.</span></div>`
+      : result.perfil_contemplacao
       ? `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado para o perfil ${profileLabel}</strong><span>O lance do cliente (${formatMoney(client.lance_cliente_total)}) não atende ao percentual mínimo de contemplação dos grupos compatíveis. Ajuste o lance ou selecione um perfil com prazo maior.</span>${diagnosticButton}</div>`
       : `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado</strong><span>Nenhum grupo passou por todas as validações do Motor 360.</span>${diagnosticButton}</div>`;
     results.innerHTML = `${explicitMessage}${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}${rejectedHtml}${renderMotor360Audit(scopedAudit)}`;
@@ -6818,7 +6839,7 @@ document.getElementById("investorPreferencesOptions")?.addEventListener("change"
   document.getElementById(id)?.addEventListener("change", () => {
     const withEmbedded = document.getElementById("investorFilterWithEmbedded")?.checked === true;
     const withoutEmbedded = document.getElementById("investorFilterWithoutEmbedded")?.checked === true;
-    investorState.selectedGroupScenario = withEmbedded && !withoutEmbedded ? "with_embedded" : withoutEmbedded && !withEmbedded ? "without_embedded" : "per_group";
+    investorState.selectedGroupScenario = withEmbedded && withoutEmbedded ? "all" : withEmbedded ? "with_embedded" : withoutEmbedded ? "without_embedded" : "per_group";
     if (investorState.result) renderInvestorAnalysis(investorState.result);
   });
 });
