@@ -2255,8 +2255,7 @@ function renderMotor360GroupCardUncached(item) {
   const profiles = byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [];
   const requestedPreference = investorState.result?.preferencia_declarada;
   const objectiveCompatible = !requestedPreference || (item.compatible_contemplation_strategies || []).includes(requestedPreference);
-  const eligibleScenarioIds = new Set(item.eligible_scenarios || []);
-  const hasCompleteScenario = scenarios.some((scenario) => (scenario.eligible === true || eligibleScenarioIds.has(scenario.id) || (scenario.credit_compatible === true && scenario.term_compatible === true && scenario.income_compatible !== false)) && scenario.credito_contratado != null && scenario.parcela_inicial != null && item.prazo_restante != null && item.prazo_restante !== "");
+  const hasCompleteScenario = scenarios.some((scenario) => (scenario.eligible === true || (scenario.credit_compatible === true && scenario.term_compatible === true && scenario.income_compatible !== false)) && scenario.credito_contratado != null && scenario.parcela_inicial != null && item.prazo_restante != null && item.prazo_restante !== "");
   const status = item.matrix_approved && hasCompleteScenario ? "Aprovado no perfil de contemplação" : item.alerts?.length ? formatMotor360Reason(item.alerts[0]) : objectiveCompatible ? "Indicador compatível" : "Requer análise";
   const groupId = String(item.grupo || item.grupo_id || "");
   const groupKey = motor360GroupKey(item);
@@ -2778,12 +2777,15 @@ function selectedGroupsFilterValues() {
 
 function applySelectedGroupsFiltersAndSort(items) {
   const filters = selectedGroupsFilterValues();
+  const metrics = new Map();
   const scenarioFor = (item) => {
     if (investorState.selectedGroupScenario && investorState.selectedGroupScenario !== "per_group") return investorState.selectedGroupScenario;
     return [...selectedScenarioIdsForGroup(motor360GroupKey(item))][0] || "without_embedded";
   };
   const filtered = items.filter((item) => {
-    const entry = selectedGroupAnalytics(item, scenarioFor(item));
+    const metricKey = `${motor360GroupKey(item)}|${scenarioFor(item)}|${investorState.selectedGroupProfile || "all"}`;
+    const entry = metrics.get(metricKey) || selectedGroupAnalytics(item, scenarioFor(item));
+    metrics.set(metricKey, entry);
     const scenario = (item.cenarios || []).find((candidate) => candidate.id === scenarioFor(item)) || {};
     const rawInstallment = scenario.parcela_inicial;
     const installmentValue = rawInstallment === null || rawInstallment === undefined || rawInstallment === "" ? null : (typeof rawInstallment === "number" ? rawInstallment : Number(parseNumberInput(rawInstallment)));
@@ -2804,7 +2806,7 @@ function applySelectedGroupsFiltersAndSort(items) {
     if (raw === null || raw === undefined || raw === "") return null;
     return typeof raw === "number" ? raw : Number(parseNumberInput(raw));
   };
-  const analyticsFor = (item) => selectedGroupAnalytics(item, scenarioFor(item));
+  const analyticsFor = (item) => { const key = `${motor360GroupKey(item)}|${scenarioFor(item)}|${investorState.selectedGroupProfile || "all"}`; if (!metrics.has(key)) metrics.set(key, selectedGroupAnalytics(item, scenarioFor(item))); return metrics.get(key); };
   const bidValueFor = (item) => { const entry = analyticsFor(item); return entry.idealBid > 0 && entry.groupMaxCredit > 0 ? entry.idealBid : null; };
   return [...filtered].sort((a, b) => {
     if (sort === "score") return analyticsFor(b).score - analyticsFor(a).score;
@@ -4299,19 +4301,9 @@ function renderInvestorAnalysis(result) {
   ]);
   const matchesSelectedScenario = (item) => {
     if (!selectedScenarioIds.size) return true;
-    const hasEligibleScenarioList = Array.isArray(item.eligible_scenarios);
-    const eligibleScenarioIds = new Set([
-      ...(item.eligible_scenarios || []),
-      ...(hasEligibleScenarioList ? [] : [item.selected_composition_scenario]),
-    ].filter(Boolean));
-    // When the backend already identified the scenarios that passed all
-    // gates, this is authoritative. Do not fall back to a profile-only
-    // match, otherwise a group approved only with embedded lance leaks into
-    // the "without embedded" list (and vice versa).
-    if (hasEligibleScenarioList) return [...eligibleScenarioIds].some((id) => selectedScenarioIds.has(id));
     return (item.cenarios || item.scenarios || []).some((scenario) => (
       selectedScenarioIds.has(scenario.id)
-      && (scenario.eligible === true || (scenario.credit_compatible === true && scenario.term_compatible === true))
+      && (scenario.eligible === true || (scenario.credit_compatible === true && scenario.term_compatible === true && scenario.income_compatible !== false))
       && (!result.perfil_contemplacao || (scenario.perfis_contemplacao || []).some((profile) => {
         const aliases = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" };
         return profile.id === (aliases[result.perfil_contemplacao] || result.perfil_contemplacao) && profile.atinge_perfil === true;
