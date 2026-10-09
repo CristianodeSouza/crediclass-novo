@@ -2756,10 +2756,10 @@ function renderSelectedGroupsScoreBreakdown(items) {
         label: value.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido",
         value: Number(value.profile.lance_ideal || 0) * entry.quotaCount,
       }));
-      const bidPasses = requiredBids.some((required) => required.value > 0 && entry.availableBid >= required.value);
+      const bidPasses = selectedProfiles.length > 0 && selectedProfiles.every((value) => profileMeetsBid(entry.item, value.scenario, value.profile));
       const requiredBidLabel = requiredBids.map((required) => `${required.label}: ${formatMoney(required.value)}`).join(" · ");
       const checks = [
-        ["Lance para contemplação", bidPasses, `Disponível ${formatMoney(entry.availableBid)} · ideal total por cenário: ${requiredBidLabel || "não informado"}`],
+        ["Lance para contemplação", bidPasses, `${selectedProfiles.map((value) => `${value.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}: disponível ${formatMoney(allocatedClientBidFor(entry.item, value.scenario, profileId))}`).join(" · ")} · ideal total por cenário: ${requiredBidLabel || "não informado"}`],
         ["Parcela desejada x parcela inicial", desiredInstallment > 0 && entry.installment <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · inicial ${formatMoney(entry.installment)}`],
         ["Parcela desejada x pós-contemplação", desiredInstallment > 0 && entry.installmentAfter > 0 && entry.installmentAfter <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · pós-contemplação ${formatMoney(entry.installmentAfter)}`],
         ["Crédito contratado x crédito desejado", entry.contractedCredit >= entry.desiredCredit, `Contratado ${formatMoney(entry.contractedCredit)} · desejado líquido ${formatMoney(entry.desiredCredit)}`],
@@ -2955,6 +2955,16 @@ function renderSelectedGroupsSafely(label, renderer, items) {
 }
 
 function renderSelectedGroupsScreen() {
+  const empty = document.getElementById("selectedGroupsEmpty");
+  const results = document.getElementById("selectedGroupsResults");
+  if (!empty || !results) return;
+  if (investorState.selectedGroupIds.size && !investorState.result) {
+    empty.classList.remove("d-none");
+    empty.querySelector("p").textContent = "A análise do Motor 360 está sendo recalculada. Os grupos selecionados serão exibidos quando os dados estiverem prontos.";
+    results.classList.add("d-none");
+    results.innerHTML = "";
+    return;
+  }
   let items = selectedMotor360Items();
   const filters = selectedGroupsFilterValues();
   items = items.filter((item) => {
@@ -2970,9 +2980,6 @@ function renderSelectedGroupsScreen() {
   if (sort === "installment") items = [...items].sort((a, b) => Number((a.cenarios || [])[0]?.parcela_inicial || 0) - Number((b.cenarios || [])[0]?.parcela_inicial || 0));
   if (sort === "bid") items = [...items].sort((a, b) => selectedGroupAnalytics(a).idealBid - selectedGroupAnalytics(b).idealBid);
   if (sort === "history") items = [...items].sort((a, b) => Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0));
-  const empty = document.getElementById("selectedGroupsEmpty");
-  const results = document.getElementById("selectedGroupsResults");
-  if (!empty || !results) return;
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
   results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}${renderSelectedGroupsCartSummary(items)}` : "";
