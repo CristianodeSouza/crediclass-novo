@@ -7252,6 +7252,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .itau-replica-table td:first-child::before{content:none}
 }
 .motor360-selection-filters { margin-top:12px; border:1px solid #d8e2e5; border-radius:10px; background:#fff; }
+.motor360-filter-notice { display:flex; flex-wrap:wrap; gap:5px 12px; margin:0 0 12px; padding:10px 12px; border-left:3px solid var(--brand-orange); border-radius:6px; background:#fff7ef; color:var(--brand-navy); font-size:.72rem; }
+.motor360-filter-notice strong { color:var(--brand-orange); }
 .motor360-selection-filters > summary { padding:10px 14px; cursor:pointer; color:var(--brand-navy); font-size:.78rem; font-weight:800; }
 .motor360-selection-filter-grid { display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:10px; padding:0 14px 14px; }
 .motor360-selection-filter-grid label { display:flex; flex-direction:column; gap:4px; color:var(--brand-navy); font-size:.66rem; font-weight:700; }

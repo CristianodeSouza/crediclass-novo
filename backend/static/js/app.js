@@ -2818,6 +2818,17 @@ function renderMotor360SelectionFilters() {
   panel.querySelector("[data-motor360-clear-filters]")?.addEventListener("click", () => { investorState.selectedGroupFilters = { minCredit: "", maxInstallment: "", maxBid: "", minHistory: "", maxCommitment: "", maxAdmin: "", maxReserve: "", maxTerm: "", administrator: "", compatibleOnly: false }; investorState.selectedGroupProfile = "all"; investorState.selectedGroupSort = "original"; investorState.selectedGroupScenario = "per_group"; refresh(); });
 }
 
+function renderMotor360FilterNotice(sourceItems, visibleItems) {
+  const visibleKeys = new Set(visibleItems.map((item) => motor360GroupKey(item)));
+  const hiddenSelected = selectedMotor360Items().filter((item) => !visibleKeys.has(motor360GroupKey(item)));
+  const filteredCount = Math.max(0, sourceItems.length - visibleItems.length);
+  if (!filteredCount && !hiddenSelected.length) return "";
+  const preserved = hiddenSelected.length
+    ? `${hiddenSelected.length} grupo(s) selecionado(s) continuam preservados, mas estão ocultos. Limpe ou ajuste os filtros para visualizá-los.`
+    : "A seleção permanece preservada enquanto os filtros estiverem ativos.";
+  return `<div class="motor360-filter-notice" role="status"><strong>${filteredCount} grupo(s) fora da lista atual pelos filtros.</strong><span>${preserved}</span></div>`;
+}
+
 function renderSelectedGroupsAdvancedFilters() {
   const dashboard = document.querySelector("[data-sg-dashboard]");
   if (!dashboard || dashboard.querySelector("[data-sg-advanced-filters]")) return;
@@ -4261,8 +4272,8 @@ function renderInvestorAnalysis(result) {
   ]);
   updateInvestorPreferenceSummary();
   const selectedAdministratorKey = motor360AdministratorKey(selectedAdministrator);
-  const withEmbeddedFilter = document.getElementById("investorFilterWithEmbedded")?.checked === true;
-  const withoutEmbeddedFilter = document.getElementById("investorFilterWithoutEmbedded")?.checked === true;
+  const withEmbeddedFilter = investorState.selectedGroupScenario === "with_embedded" || document.getElementById("investorFilterWithEmbedded")?.checked === true;
+  const withoutEmbeddedFilter = investorState.selectedGroupScenario === "without_embedded" || document.getElementById("investorFilterWithoutEmbedded")?.checked === true;
   const selectedScenarioIds = new Set([
     ...(withEmbeddedFilter ? ["with_embedded"] : []),
     ...(withoutEmbeddedFilter ? ["without_embedded"] : []),
@@ -4334,6 +4345,7 @@ function renderInvestorAnalysis(result) {
       ? `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado para o perfil ${profileLabel}</strong><span>O lance do cliente (${formatMoney(client.lance_cliente_total)}) não atende ao percentual mínimo de contemplação dos grupos compatíveis. Ajuste o lance ou selecione um perfil com prazo maior.</span>${diagnosticButton}</div>`
       : `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado</strong><span>Nenhum grupo passou por todas as validações do Motor 360.</span>${diagnosticButton}</div>`;
     results.innerHTML = `${explicitMessage}${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}${rejectedHtml}${renderMotor360Audit(scopedAudit)}`;
+    results.insertAdjacentHTML("afterbegin", renderMotor360FilterNotice(administratorItems, items));
     results.querySelector("[data-motor360-blocking-diagnostics]")?.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit));
     setInvestorAnalysisState("results");
     if (!document.getElementById("selectedGroupsWorkspace")?.classList.contains("d-none")) renderSelectedGroupsScreen();
@@ -4353,6 +4365,7 @@ function renderInvestorAnalysis(result) {
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
     ${renderMotor360Audit(scopedAudit)}
   `;
+  results.insertAdjacentHTML("afterbegin", renderMotor360FilterNotice(administratorItems, items));
   results.querySelectorAll(".motor360-scenario-card").forEach((card) => {
     const groupId = card.closest(".motor360-group-card")?.querySelector(".motor360-group-select-input")?.dataset.groupId;
     const groupItem = motor360FinalItems(result).find((item) => motor360GroupKey(item) === String(groupId || "") || String(item.grupo || item.grupo_id || "") === String(groupId || ""));
@@ -6802,7 +6815,10 @@ updateInvestorPreferenceSummary();
 document.getElementById("investorPreferencesOptions")?.addEventListener("change", syncInvestorPreferencesFromInputs);
 ["investorFilterWithEmbedded", "investorFilterWithoutEmbedded"].forEach((id) => {
   document.getElementById(id)?.addEventListener("change", () => {
-    if (investorState.result) loadInvestorAnalysis();
+    const withEmbedded = document.getElementById("investorFilterWithEmbedded")?.checked === true;
+    const withoutEmbedded = document.getElementById("investorFilterWithoutEmbedded")?.checked === true;
+    investorState.selectedGroupScenario = withEmbedded && !withoutEmbedded ? "with_embedded" : withoutEmbedded && !withEmbedded ? "without_embedded" : "per_group";
+    if (investorState.result) renderInvestorAnalysis(investorState.result);
   });
 });
 document.getElementById("investorAdministratorFilter")?.addEventListener("change", (event) => {
