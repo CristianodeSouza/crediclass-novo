@@ -2128,6 +2128,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 /* Vertical group cards keep the Motor 360 readable at normal desktop widths. */
 .motor360-group-list { display: grid; gap: 14px; }
+.motor360-group-list .motor360-group-card { content-visibility: auto; contain-intrinsic-size: 420px; }
 .motor360-execution-panel { margin: 12px 0 14px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfc; }
 .motor360-execution-panel summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; color: var(--brand-navy); cursor: pointer; font-size: 0.78rem; font-weight: 800; list-style-position: inside; }
 .motor360-execution-panel summary span:last-child { color: var(--muted); font-size: 0.68rem; font-weight: 600; }
