@@ -369,6 +369,16 @@ function withTimeout(promise, timeoutMs, message) {
 function activateScreen(screenName) {
   const meta = screens[screenName];
   if (!meta) return;
+  if (screenName === "grupos-selecionados") {
+    const selectedGroups = [...investorState.selectedGroupIds];
+    const groupsWithoutScenario = selectedGroups.filter((groupId) => !selectedScenarioIdsForGroup(groupId).size);
+    if (selectedGroups.length && groupsWithoutScenario.length) {
+      showToast("Para avançar, escolha pelo menos um cenário financeiro em cada grupo selecionado.", "warning");
+      const firstMissing = groupsWithoutScenario[0];
+      window.setTimeout(() => focusMotor360Group(motor360GroupAnchorId(firstMissing.split("|").pop() || firstMissing)), 0);
+      return;
+    }
+  }
 
   document.querySelectorAll(".nav-item").forEach((item) => {
     item.classList.toggle("active", item.dataset.screen === screenName);
