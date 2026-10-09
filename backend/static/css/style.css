@@ -2253,6 +2253,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-client-profile-summary article { display: grid; gap: 2px; padding: 8px; border-radius: 5px; background: #fff; }
 .motor360-client-profile-summary small { color: var(--muted); font-size: .58rem; }
 .motor360-client-profile-summary b { color: var(--brand-navy); font-size: .72rem; }
+.motor360-selected-group-labels { display: flex; flex-wrap: wrap; gap: 6px; margin: 9px 0 0; }
+.motor360-selected-group-label { display: inline-flex; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid #f0d7bd; border-radius: 5px; background: #fffaf5; color: var(--brand-navy); cursor: pointer; text-align: left; }
+.motor360-selected-group-label:hover, .motor360-selected-group-label:focus-visible { border-color: var(--brand-orange); box-shadow: 0 0 0 2px rgb(232 121 27 / 14%); outline: none; }
+.motor360-selected-group-label strong { font-size: .66rem; }
+.motor360-selected-group-label small { color: var(--muted); font-size: .58rem; }
 .motor360-floating-summary.is-minimized .motor360-client-profile-summary { display: none; }
 @media (max-width: 760px) { .motor360-client-profile-summary > div { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .selected-groups-workspace { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 24px; background: rgb(20 35 41 / 62%); }

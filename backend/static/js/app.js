@@ -2387,7 +2387,13 @@ function renderMotor360FloatingSelectionSummary() {
     const progress = desiredCredit > 0 ? Math.min(100, Math.max(0, credit / desiredCredit * 100)) : 0;
     return `<section class="motor360-floating-scenario ${viable ? "is-ok" : "is-pending"}"><header><strong>${label}</strong><span>${viable ? "Atende" : "Em composição"}</span></header><div class="motor360-floating-progress" aria-label="${progress.toFixed(0)}% do crédito desejado"><i style="width:${progress.toFixed(2)}%"></i></div><dl><div><dt>Crédito</dt><dd>${formatMoney(credit)} <small>de ${formatMoney(desiredCredit)}</small></dd></div><div><dt>Parcela</dt><dd>${formatMoney(installment)} <small>limite ${formatMoney(maximumInstallment)}</small></dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(balance)}</dd></div></dl><p>${creditOk ? "Crédito atendido" : `Faltam ${formatMoney(Math.max(0, desiredCredit - credit))}`} · ${incomeOk ? "Dentro de 30% da renda" : "Acima de 30% da renda"}${desiredOk ? "" : " · Acima da parcela desejada"}</p></section>`;
   };
-  return `<aside class="motor360-floating-summary${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">${totalQuotas}</span>${minimizeButton}</div></div>${renderMotor360ClientProfileSummary(client)}<div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-open-selected-groups-workspace>Analisar grupos selecionados</button></aside>`;
+  const selectedGroupLabels = items.map((item) => {
+    const groupId = String(item.grupo || item.grupo_id || "-");
+    const anchorId = motor360GroupAnchorId(groupId);
+    const quotas = quotaCountFor(item);
+    return `<button type="button" class="motor360-selected-group-label" data-selected-group-anchor="${escapeHtml(anchorId)}" title="Ir para o Grupo ${escapeHtml(groupId)}"><strong>Grupo ${escapeHtml(groupId)}</strong><small>${quotas} ${quotas === 1 ? "cota" : "cotas"}</small></button>`;
+  }).join("");
+  return `<aside class="motor360-floating-summary${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">${totalQuotas}</span>${minimizeButton}</div></div><div class="motor360-selected-group-labels" aria-label="Grupos selecionados">${selectedGroupLabels}</div>${renderMotor360ClientProfileSummary(client)}<div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-open-selected-groups-workspace>Analisar grupos selecionados</button></aside>`;
 }
 
 function renderMotor360FloatingSelectionSummaryIntoFold() {
@@ -2396,6 +2402,7 @@ function renderMotor360FloatingSelectionSummaryIntoFold() {
   host.innerHTML = renderMotor360FloatingSelectionSummary();
   host.querySelector("[data-floating-summary-toggle]")?.addEventListener("click", openSelectedGroupsWorkspace);
   host.querySelector("[data-open-selected-groups-workspace]")?.addEventListener("click", openSelectedGroupsWorkspace);
+  host.querySelectorAll("[data-selected-group-anchor]").forEach((button) => button.addEventListener("click", () => focusMotor360Group(button.dataset.selectedGroupAnchor)));
 }
 
 function openSelectedGroupsWorkspace() {
