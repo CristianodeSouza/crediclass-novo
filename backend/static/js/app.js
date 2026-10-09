@@ -402,9 +402,7 @@ function activateScreen(screenName) {
   document.getElementById("reloadMapDataBtn").classList.toggle("d-none", screenName !== "mapa");
 
   if (screenName === "motor360") {
-    const profile = collectClientProfile();
-    const key = investorAnalysisCacheKey(profile);
-    if (investorState.result && investorState.analysisKey === key) {
+    if (investorState.result) {
       renderInvestorAnalysis(investorState.result);
     } else {
       loadInvestorAnalysis();
@@ -2320,15 +2318,18 @@ function motor360FinalItems(result = investorState.result) {
 }
 
 function renderMotor360ClientProfileSummary(client = {}) {
+  const ownResources = Number(client.lance_recursos_proprios ?? client.lance_proprio ?? 0);
+  const fgts = Number(client.fgts_total ?? client.fgts ?? 0);
+  const objective = client.objetivo || client.preferencia_declarada || "Não informado";
   const items = [
-    ["Objetivo", client.objetivo || "Não informado"],
+    ["Objetivo", objective],
     ["Crédito desejado", formatMoney(client.credito_liquido_desejado)],
     ["Renda total", formatMoney(client.renda_total)],
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
     ["Parcela desejada", formatMoney(client.parcela_desejada)],
-    ["Lance FGTS", formatMoney(client.fgts_total ?? client.fgts)],
-    ["Lance recursos próprios", formatMoney(client.lance_recursos_proprios ?? client.lance_proprio)],
-    ["Lance total", formatMoney(client.lance_cliente_total)],
+    ["Lance FGTS", formatMoney(fgts)],
+    ["Lance recursos próprios", formatMoney(ownResources)],
+    ["Lance total", formatMoney(client.lance_cliente_total ?? ownResources + fgts)],
   ];
   const hasData = items.some(([, value]) => value && value !== "R$ 0,00" && value !== "Não informado");
   if (!hasData) return "";
@@ -2376,10 +2377,7 @@ function renderMotor360FloatingSelectionSummaryIntoFold() {
   const host = document.getElementById("motor360FloatingSummary");
   if (!host) return;
   host.innerHTML = renderMotor360FloatingSelectionSummary();
-  host.querySelector("[data-floating-summary-toggle]")?.addEventListener("click", () => {
-    investorState.floatingSummaryMinimized = !investorState.floatingSummaryMinimized;
-    renderMotor360FloatingSelectionSummaryIntoFold();
-  });
+  host.querySelector("[data-floating-summary-toggle]")?.addEventListener("click", openSelectedGroupsWorkspace);
   host.querySelector("[data-open-selected-groups-workspace]")?.addEventListener("click", openSelectedGroupsWorkspace);
 }
 
@@ -2388,6 +2386,16 @@ function openSelectedGroupsWorkspace() {
   const body = document.getElementById("selectedGroupsWorkspaceBody");
   const results = document.getElementById("selectedGroupsResults");
   if (!workspace || !body || !results) return;
+  const groupsWithoutScenario = [...investorState.selectedGroupIds].filter((groupId) => !selectedScenarioIdsForGroup(groupId).size);
+  if (groupsWithoutScenario.length) {
+    showToast("Para analisar, escolha pelo menos um cenário financeiro em cada grupo selecionado.", "warning");
+    focusMotor360Group(motor360GroupAnchorId(groupsWithoutScenario[0].split("|").pop() || groupsWithoutScenario[0]));
+    return;
+  }
+  const profileSummary = document.getElementById("selectedGroupsWorkspaceProfileSummary");
+  if (profileSummary) profileSummary.innerHTML = renderMotor360ClientProfileSummary(investorState.result?.cliente || collectClientProfile());
+  const compositionSummary = document.getElementById("selectedGroupsWorkspaceCompositionSummary");
+  if (compositionSummary) compositionSummary.textContent = `${investorState.selectedGroupIds.size} grupo(s) · ${[...investorState.selectedGroupIds].reduce((sum, id) => sum + quotaCountFor(id), 0)} cota(s)`;
   workspace.classList.remove("d-none");
   document.body.classList.add("selected-groups-workspace-open");
   renderSelectedGroupsScreen();
@@ -2813,7 +2821,7 @@ function renderSelectedGroupsScoreBreakdown(items) {
   const compactProfiles = ["conservative", "moderate", "aggressive", "super_aggressive"];
   const compactLabels = { conservative: "Conservador · 24m", moderate: "Moderado · 12m", aggressive: "Rápido · 6m", super_aggressive: "Urgente · 3m" };
   const compactTable = analytics.map((entry) => `<tr><th>Grupo ${escapeHtml(entry.groupId)}<small>${escapeHtml(entry.item.administradora || "-")} · ${entry.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}</small></th>${compactProfiles.map((profileId) => { const profile = entry.profile(profileId); const bidGap = profileBidGap(entry.item, entry.scenario, profile); const ok = bidGap.gap === 0 && bidGap.ideal > 0; return `<td class="${ok ? "is-ok" : "is-fail"}"><b>${ok ? "✓" : "×"}</b><span>${bidGap.ideal ? formatMoney(bidGap.ideal) : "Sem dado"}</span>${!ok && bidGap.ideal ? `<button type="button" class="sg-info sg-compact-info" aria-label="Ver valor faltante" data-tooltip="Faltam ${formatMoney(bidGap.gap)} para atingir o lance ideal total. Disponível: ${formatMoney(bidGap.available)} · Ideal: ${formatMoney(bidGap.ideal)}">i</button>` : ""}</td>`; }).join("")}<td><strong>${formatMoney(entry.installment)}</strong><small>Pós ${formatMoney(entry.installmentAfter)}</small></td><td><strong>${entry.contractedCredit >= entry.desiredCredit ? "✓" : "×"}</strong><small>${formatMoney(entry.contractedCredit)}</small></td></tr>`).join("");
-  const compactView = `<div class="sg-compact-summary"><p>Visão resumida para ${analytics.length} grupo(s). O valor em cada perfil é o lance ideal; ✓ indica que o lance disponível atende.</p><div class="sg-compact-table-wrap"><table class="sg-compact-table"><thead><tr><th>Grupo</th>${compactProfiles.map((id) => `<th>${compactLabels[id]}</th>`).join("")}<th>Parcelas</th><th>Crédito contratado</th></tr></thead><tbody>${compactTable}</tbody></table></div><details><summary>Ver checklist detalhado por grupo</summary><div class="sg-check-grid">${analytics.map((entry) => `<div class="sg-check-column"><strong>Grupo ${escapeHtml(entry.groupId)}</strong>${checklist(entry)}</div>`).join("")}</div></details></div>`;
+  const compactView = `<div class="sg-compact-summary"><p>Visão resumida dos ${analytics.length} grupo(s) selecionado(s). O valor em cada perfil é o lance ideal; ✓ indica que o lance disponível atende.</p><div class="sg-compact-table-wrap"><table class="sg-compact-table"><thead><tr><th>Grupo</th>${compactProfiles.map((id) => `<th>${compactLabels[id]}</th>`).join("")}<th>Parcelas</th><th>Crédito contratado</th></tr></thead><tbody>${compactTable}</tbody></table></div><details><summary>Ver checklist detalhado por grupo</summary><div class="sg-check-grid">${analytics.map((entry) => `<div class="sg-check-column"><strong>Grupo ${escapeHtml(entry.groupId)}</strong>${checklist(entry)}</div>`).join("")}</div></details></div>`;
   panel.innerHTML = `<header><div><span>Transparência</span><h3>Checklist de conformidade e assertividade</h3></div><small>Comparativo dos cenários financeiros em todos os perfis</small></header>${compactView}`;
   dashboard.appendChild(panel);
 }
@@ -6852,6 +6860,13 @@ document.getElementById("clearMotor360ExecutionLogsBtn")?.addEventListener("clic
   renderMotor360ExecutionLogs();
 });
 document.getElementById("closeSelectedGroupsWorkspace")?.addEventListener("click", closeSelectedGroupsWorkspace);
+document.getElementById("selectedGroupsWorkspaceStudy")?.addEventListener("click", () => {
+  closeSelectedGroupsWorkspace();
+  activateScreen("estudo");
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !document.getElementById("selectedGroupsWorkspace")?.classList.contains("d-none")) closeSelectedGroupsWorkspace();
+});
 renderMotor360FloatingSelectionSummaryIntoFold();
 
 document.getElementById("reindexSystemBtn").addEventListener("click", () => {
