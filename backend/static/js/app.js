@@ -3133,13 +3133,15 @@ function financialStudyGroupProfileSection(item) {
   const labels = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super Agressivo" };
   const scenarios = Object.fromEntries((item.cenarios || []).map((scenario) => [scenario.id, scenario]));
   const valueFor = (scenarioId, profileId) => (scenarios[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profileId);
-  const renderValue = (value, scenarioLabel) => {
+  const renderValue = (value, scenario, scenarioLabel) => {
     if (value?.percentual_referencia == null) return `<span class="financial-study-profile-empty"><small>${scenarioLabel}</small><em>Sem referência</em></span>`;
-    const state = value.atinge_perfil ? "is-positive" : "is-warning";
-    const result = value.atinge_perfil ? "Lance atinge o perfil" : `Faltam ${formatMoney(value.falta_para_ideal)}`;
+    const meetsBid = profileMeetsBid(item, scenario, value);
+    const gap = Math.max(0, Number(value.lance_ideal || 0) * quotaCountFor(item) - clientResourceTotal());
+    const state = meetsBid ? "is-positive" : "is-warning";
+    const result = meetsBid ? "Lance atinge o perfil" : `Faltam ${formatMoney(gap)}`;
     return `<span class="financial-study-profile-result ${state}"><small>${scenarioLabel}</small><b>${formatPercent(value.percentual_referencia)}</b><em>${result}</em></span>`;
   };
-  return `<section class="financial-study-group-profile"><div class="financial-study-group-section-title"><strong>Perfil de contemplação</strong><span>Leitura do grupo por cenário financeiro</span></div><div class="financial-study-profile-list"><article class="financial-study-profile-group"><header><strong>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</strong><span>${escapeHtml(item.administradora || "-")}</span></header><div>${profileIds.map((profileId) => `<section><h4>${labels[profileId]}</h4>${renderValue(valueFor("without_embedded", profileId), "Sem embutido")}${renderValue(valueFor("with_embedded", profileId), "Com embutido")}</section>`).join("")}</div></article></div></section>`;
+  return `<section class="financial-study-group-profile"><div class="financial-study-group-section-title"><strong>Perfil de contemplação</strong><span>Leitura do grupo por cenário financeiro</span></div><div class="financial-study-profile-list"><article class="financial-study-profile-group"><header><strong>Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</strong><span>${escapeHtml(item.administradora || "-")}</span></header><div>${profileIds.map((profileId) => `<section><h4>${labels[profileId]}</h4>${renderValue(valueFor("without_embedded", profileId), scenarios.without_embedded, "Sem embutido")}${renderValue(valueFor("with_embedded", profileId), scenarios.with_embedded, "Com embutido")}</section>`).join("")}</div></article></div></section>`;
 }
 
 function financialStudyProjectionDataset(item) {
@@ -3370,13 +3372,15 @@ function financialStudyProfileMatrix(items) {
     return `<article class="financial-study-profile-group"><header><strong>Grupo ${escapeHtml(groupId)}</strong><span>${escapeHtml(item.administradora || "-")}</span></header><div>${profileIds.map((profileId) => {
       const without = valueFor("without_embedded", profileId);
       const withEmbedded = valueFor("with_embedded", profileId);
-      const renderValue = (value, scenarioLabel) => {
+      const renderValue = (value, scenario, scenarioLabel) => {
         if (value?.percentual_referencia == null) return `<span class="financial-study-profile-empty"><small>${scenarioLabel}</small><em>Sem referência</em></span>`;
-        const state = value.atinge_perfil ? "is-positive" : "is-warning";
-        const result = value.atinge_perfil ? "Lance atinge o perfil" : `Faltam ${formatMoney(value.falta_para_ideal)}`;
+        const meetsBid = profileMeetsBid(item, scenario, value);
+        const gap = Math.max(0, Number(value.lance_ideal || 0) * quotaCountFor(item) - clientResourceTotal());
+        const state = meetsBid ? "is-positive" : "is-warning";
+        const result = meetsBid ? "Lance atinge o perfil" : `Faltam ${formatMoney(gap)}`;
         return `<span class="financial-study-profile-result ${state}"><small>${scenarioLabel}</small><b>${formatPercent(value.percentual_referencia)}</b><em>${result}</em></span>`;
       };
-      return `<section><h4>${labels[profileId]}</h4>${renderValue(without, "Sem embutido")}${renderValue(withEmbedded, "Com embutido")}</section>`;
+      return `<section><h4>${labels[profileId]}</h4>${renderValue(without, scenarios.without_embedded, "Sem embutido")}${renderValue(withEmbedded, scenarios.with_embedded, "Com embutido")}</section>`;
     }).join("")}</div></article>`;
   }).join("")}</div>`;
 }
