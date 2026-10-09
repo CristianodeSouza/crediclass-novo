@@ -9,8 +9,8 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <meta name="crediclass-build" content="4.0.136">
-    <link href="/static/css/style.css?v=4.0.136" rel="stylesheet">
+    <meta name="crediclass-build" content="4.0.137">
+    <link href="/static/css/style.css?v=4.0.137" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -431,10 +431,6 @@
               </div>
               <span id="investorAnalysisStatus" class="state-badge">Aguardando perfil</span>
             </div>
-            <div class="investor-preferences-toolbar">
-              <strong>Filtro</strong>
-              <span id="investorPreferencesSummary" class="text-muted">Nenhuma preferência selecionada</span>
-            </div>
             <section class="motor360-bid-explorer" aria-label="Simulador de lance">
               <div><strong>Explorar lance para encontrar grupos</strong><p>O lance declarado permanece como referência. Ajuste abaixo apenas para simular cenários e descobrir o menor valor necessário.</p></div>
               <label for="motor360BidRange">Lance considerado <output id="motor360BidValue">R$ 0,00</output></label>
@@ -442,9 +438,6 @@
               <small>Declarado pelo cliente: <strong id="motor360DeclaredBid">R$ 0,00</strong> · O resultado será recalculado automaticamente.</small>
             </section>
             <aside id="investorPreferencesPanel" class="investor-preferences-panel" aria-label="Filtro">
-              <div class="investor-preferences-heading">
-                <strong>Critérios de ordenação</strong>
-              </div>
               <div class="investor-administrator-filter">
                 <label for="investorAdministratorFilter">Administradora</label>
                 <select id="investorAdministratorFilter" class="form-select" aria-label="Selecionar administradora">
@@ -457,13 +450,6 @@
                 <label><input id="investorFilterWithEmbedded" type="checkbox"> Com lance embutido</label>
                 <label><input id="investorFilterWithoutEmbedded" type="checkbox"> Sem lance embutido</label>
                 <small>Sem seleção: exibe grupos aprovados em qualquer cenário.</small>
-              </div>
-              <div id="investorPreferencesOptions" class="investor-preferences-options"></div>
-              <div class="investor-preferences-footer">
-                <span>Marque ou desmarque os critérios para reordenar os grupos compatíveis.</span>
-                <div>
-                  <button id="clearInvestorPreferencesBtn" class="btn btn-outline-secondary btn-sm" type="button">Limpar seleção</button>
-                </div>
               </div>
             </aside>
             <details class="motor360-execution-panel">
@@ -958,8 +944,8 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.136"></script>
-    <script src="/static/js/app.js?v=4.0.136"></script>
+    <script src="/static/js/api.js?v=4.0.137"></script>
+    <script src="/static/js/app.js?v=4.0.137"></script>
   </body>
 </html>
 

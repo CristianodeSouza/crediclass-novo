@@ -103,14 +103,7 @@ const motor360ExecutionLogs = [];
 const clientDiagnosticErrors = [];
 window.addEventListener("error", (event) => clientDiagnosticErrors.push({ type: "error", message: event.message, source: event.filename, line: event.lineno, time: new Date().toISOString() }));
 window.addEventListener("unhandledrejection", (event) => clientDiagnosticErrors.push({ type: "unhandledrejection", message: String(event.reason?.stack || event.reason || ""), time: new Date().toISOString() }));
-const investorPreferenceFlags = [
-  { id: "menor_taxa_total", label: "Menor Taxa Total" },
-  { id: "menor_taxa_ano", label: "Menor Taxa Ano" },
-  { id: "maior_parcela_reduzida", label: "Maior Parcela Reduzida" },
-  { id: "maior_prazo_remanescente", label: "Maior Prazo Remanescente" },
-  { id: "maior_lance_embutido", label: "Maior Lance Embutido" },
-  { id: "maior_media_contemplacoes", label: "Maior Média de Contemplações" },
-];
+const investorPreferenceFlags = [];
 const savedMotor360SelectedGroups = (() => {
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedGroups") || "[]"); } catch { return []; }
 })();
@@ -2110,7 +2103,7 @@ function formatInvestorPreferenceValue(flag, value) {
 }
 
 function applyInvestorPreferences(items, selectedFlags) {
-  if (!selectedFlags.length) return items;
+  return items;
   const definitions = {
     menor_taxa_total: { field: "taxa_total", direction: "min", label: "Menor Taxa Total" },
     menor_taxa_ano: { field: "taxa_ano", direction: "min", label: "Menor Taxa Ano" },
