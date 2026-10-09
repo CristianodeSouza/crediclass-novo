@@ -4010,20 +4010,17 @@ function syncMotor360AdministratorFilter(sourceItems) {
     .map(motor360AdministratorName)
     .find(Boolean);
 
-  if (!investorState.administrator || !availableKeys.has(motor360AdministratorKey(investorState.administrator))) {
+  // A persisted selection is authoritative while the analysis is being
+  // re-rendered. Do not silently discard selected groups because an old
+  // administrator filter was empty or stale; explicit filter changes are
+  // handled by the change listener below and show a warning to the operator.
+  if (selectedAdministrator) {
+    investorState.administrator = selectedAdministrator;
+  } else if (!investorState.administrator || !availableKeys.has(motor360AdministratorKey(investorState.administrator))) {
     investorState.administrator = "";
   } else {
     investorState.administrator = administratorByKey.get(motor360AdministratorKey(investorState.administrator));
   }
-
-  [...investorState.selectedGroupIds].forEach((id) => {
-    const selectedItem = investorState.selectedGroupData.get(id);
-    if (!investorState.administrator) return;
-    if (motor360AdministratorKey(selectedItem) === motor360AdministratorKey(investorState.administrator)) return;
-    investorState.selectedGroupIds.delete(id);
-    investorState.quotaCounts.delete(id);
-    investorState.selectedGroupData.delete(id);
-  });
 
   if (select) {
     select.innerHTML = administrators.length
