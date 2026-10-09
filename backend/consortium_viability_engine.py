@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.127"
+MOTOR_VERSION = "4.0.128"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -769,11 +769,21 @@ def analyze_client_consortium_viability(
 
     def ordering_key(item: dict[str, Any]) -> tuple[Any, ...]:
         number = re.search(r"\d+", str(item.get("grupo") or ""))
+        scenarios = item.get("cenarios") or []
+        profile_percentages = [
+            profile.get("percentual_referencia")
+            for scenario in scenarios
+            if scenario.get("id") in scenario_filter
+            for profile in scenario.get("perfis_contemplacao", [])
+            if (not selected_profile_row or profile.get("id") == selected_profile_row)
+            and profile.get("atinge_perfil") is True
+            and profile.get("percentual_referencia") is not None
+        ]
+        contemplation_percentage = max(profile_percentages, default=Decimal("-1"))
         return (
-            -(item.get("prazo_restante") or 0),
-            item.get("taxa_total") if item.get("taxa_total") is not None else math.inf,
             normalize_text(item.get("administradora") or ""),
             int(number.group()) if number else math.inf,
+            -contemplation_percentage,
         )
 
     step_started = time.perf_counter()
@@ -919,7 +929,7 @@ def analyze_client_consortium_viability(
         "group_results": group_results,
         "incomplete_groups": incomplete_groups,
         "excluded_groups": excluded,
-        "final_ordering": {"rules": ["Maior prazo remanescente", "Menor taxa administrativa total", "Administradora", "Numero do grupo"], "selected_preferences": [], "execution_summary": "Esta e uma ordem preliminar da pre-selecao; ranking definitivo sera aplicado em etapa posterior."},
+        "final_ordering": {"rules": ["Nome da administradora (ordem crescente)", "Número do grupo (ordem crescente)", "Percentual de contemplação atendido pelo lance e perfil do cliente (ordem decrescente)"], "selected_preferences": [], "execution_summary": "Os grupos são ordenados exclusivamente por administradora, número do grupo e percentual de contemplação atendido."},
         "summary": {"total_loaded": len(groups), "total_analyzed": len(groups), "total_matrix_candidates": len(matrix_approved_keys), "total_matrix_evaluated": counters["matrix_evaluated"], "total_matrix_incomplete": counters["matrix_incomplete"], "total_matrix_rejected": counters["selected_profile_rejected"] if selected_profile else counters["contemplation_rejected"], "total_preselected": len(eligible_items), "total_composition_candidates": len(composition_items), "total_credit_compatible": len(credit_eligible_items), "total_credit_rejected": counters["credit_rejected"], "total_term_income_rejected": counters["term_rejected"], "total_selected_profile_rejected": counters["selected_profile_rejected"] if selected_profile else 0, "groups_with_incomplete_data": len(incomplete_groups), "incomplete_field_occurrences": incomplete_field_occurrences, "total_rejected": len(excluded)},
         "schema_notes": {"columns_used": {"official_decision_field": "used_in_decision", "compatibility_field": "used", "compatibility_note": "The used field mirrors used_in_decision for compatibility with prior consumers."}},
         "warnings": [
@@ -1010,7 +1020,7 @@ def analyze_client_consortium_viability(
     audit["summary"]["total_requires_composition"] = sum(1 for item in final_items if item.get("requires_composition"))
     audit["summary"]["total_preselected"] = len(final_items)
     audit["summary"]["total_composition_candidates"] = sum(1 for item in final_items if item.get("requires_composition"))
-    audit["final_ordering"]["execution_summary"] = "Os grupos foram ordenados após a matriz; crédito, prazo, renda e composição permanecem como indicadores para decisão do operador."
+    audit["final_ordering"]["execution_summary"] = "Os grupos são ordenados exclusivamente por administradora, número do grupo e percentual de contemplação atendido pelo lance e perfil do cliente."
     audit["execution_steps"] = [
         audit["execution_steps"][0],
         audit["execution_steps"][1],
