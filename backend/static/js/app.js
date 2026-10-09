@@ -2495,7 +2495,7 @@ function selectedGroupAnalytics(item, forcedScenarioId = null) {
   const history = (key) => Number(historical[key]?.media_contemplacoes ?? historical[key]?.media ?? 0);
   const quotaCount = quotaCountFor(item);
   const scale = (value) => Number(value || 0) * quotaCount;
-  const { client, availableBid, income } = selectedGroupsClientFinancials();
+  const { client, income } = selectedGroupsClientFinancials();
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
   const maxInstallment = Number(client.parcela_maxima || client.parcela_desejada || 0);
   const credit = scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? item.credito_maximo);
@@ -2505,6 +2505,7 @@ function selectedGroupAnalytics(item, forcedScenarioId = null) {
   const focusProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : "moderate";
   const focusedProfile = profile(focusProfile);
   const idealBid = scale(focusedProfile.lance_ideal);
+  const availableBid = allocatedClientBidFor(item, scenario, focusProfile);
   const creditFit = desiredCredit > 0 ? Math.min(1, credit / desiredCredit) : 1;
   const installmentFit = maxInstallment > 0 ? Math.min(1, maxInstallment / Math.max(installment, 1)) : 1;
   const bidFit = idealBid > 0 ? Math.min(1, availableBid / idealBid) : 1;
@@ -3661,12 +3662,31 @@ function clientResourceTotal() {
 }
 
 function scenarioTotalBidFor(item, scenario) {
-  return clientResourceTotal() + Number(scenario?.lance_embutido || 0) * quotaCountFor(item);
+  return allocatedClientBidFor(item, scenario) + Number(scenario?.lance_embutido || 0) * quotaCountFor(item);
+}
+
+function allocationProfileId() {
+  const aliases = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" };
+  return aliases[investorState.result?.perfil_contemplacao] || investorState.result?.perfil_contemplacao || "moderate";
+}
+
+function allocatedClientBidFor(item, scenario, profileId = allocationProfileId()) {
+  const selectedItems = selectedMotor360Items();
+  if (!selectedItems.some((entry) => motor360GroupKey(entry) === motor360GroupKey(item))) return clientResourceTotal();
+  const requirements = selectedItems.map((entry) => {
+    const selectedScenario = (entry.cenarios || []).find((candidate) => candidate.id === scenario?.id);
+    const profile = (selectedScenario?.perfis_contemplacao || []).find((candidate) => candidate.id === profileId);
+    return { entry, required: Number(profile?.lance_ideal || 0) * quotaCountFor(entry) };
+  }).filter((entry) => entry.required > 0);
+  const totalRequired = requirements.reduce((total, entry) => total + entry.required, 0);
+  const current = requirements.find((entry) => motor360GroupKey(entry.entry) === motor360GroupKey(item));
+  if (!current || totalRequired <= 0) return clientResourceTotal();
+  return clientResourceTotal() * current.required / totalRequired;
 }
 
 function profileMeetsBid(item, scenario, profile) {
   const ideal = Number(profile?.lance_ideal || 0) * quotaCountFor(item);
-  return ideal > 0 && clientResourceTotal() >= ideal;
+  return ideal > 0 && allocatedClientBidFor(item, scenario, profile?.id) >= ideal;
 }
 
 function selectedScenariosForItem(item) {
