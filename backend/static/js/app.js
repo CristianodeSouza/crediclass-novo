@@ -2288,7 +2288,8 @@ function renderMotor360GroupCard(item) {
       const embeddedNote = scenario.id === "with_embedded" ? `<small>Embutido considerado: ${formatMoney(scaleMoney(value.lance_embutido))}</small>` : "";
       const meetsBid = profileMeetsBid(item, scenario, value);
       const totalIdeal = Number(value.lance_ideal || 0) * quotaCount;
-      return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"}"><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(Math.max(0, totalIdeal - clientResourceTotal()))}`}</span><em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
+      const bidGap = profileBidGap(item, scenario, value);
+      return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"}"><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(bidGap.gap)}`}</span><em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
     }).join("");
     const scenarioLabel = scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
     return `<section class="motor360-scenario-profiles"><div class="motor360-profile-section-title"><h4>Perfis · ${scenarioLabel}</h4><small>Referência: ${formatMoney(scenario.lance_cliente_total)}</small></div><div class="motor360-profile-card-values">${values || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section>`;
@@ -2392,7 +2393,7 @@ function renderSelectedGroupComparisonColumn(item, index) {
       if (!value) return "";
       const meetsBid = profileMeetsBid(item, byScenario[scenarioId], value);
       const totalIdeal = Number(value.lance_ideal || 0) * quotaCount;
-      const resultLabel = item.composition_candidate ? `Lance ideal ${formatMoney(totalIdeal)}` : meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(Math.max(0, totalIdeal - clientResourceTotal()))}`;
+      const resultLabel = item.composition_candidate ? `Lance ideal ${formatMoney(totalIdeal)}` : meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(profileBidGap(item, byScenario[scenarioId], value).gap)}`;
       return `<div class="selected-comparison-profile-value ${item.composition_candidate ? "" : meetsBid ? "is-hit" : "is-gap"}"><small>${scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${resultLabel}</span></div>`;
     }).join("");
     return `<article class="selected-comparison-profile"><strong>${escapeHtml(profile.label)}</strong>${values}</article>`;
@@ -2580,7 +2581,7 @@ function renderSelectedGroupsAnalyticalPanel(items) {
     ["Fundo reserva", (entry) => formatPercent(entry.reserveRate)],
     ["Índice de aderência", (entry) => `${entry.score}/100 · ${entry.scoreLabel}`],
   ];
-  const profileRows = Object.entries(profileNames).map(([id, label]) => `<tr class="${profileFilter === id ? "is-focus" : ""}"><th>${label}</th>${analytics.map((entry) => { const value = entry.profile(id); const required = Number(value.lance_ideal || 0) * entry.quotaCount; const passes = required > 0 && entry.availableBid >= required; const gap = Math.max(0, required - entry.availableBid); const state = passes ? "is-positive" : gap ? "is-negative" : "is-warning"; return `<td class="${state}"><strong>${formatPercent(value.percentual_referencia)}</strong><small>${passes ? "Lance suficiente" : gap ? `Faltam ${formatMoney(gap)}` : "Sem referência"}</small></td>`; }).join("")}</tr>`).join("");
+  const profileRows = Object.entries(profileNames).map(([id, label]) => `<tr class="${profileFilter === id ? "is-focus" : ""}"><th>${label}</th>${analytics.map((entry) => { const value = entry.profile(id); const bidGap = profileBidGap(entry.item, entry.scenario, value); const passes = bidGap.ideal > 0 && bidGap.gap === 0; const state = passes ? "is-positive" : bidGap.ideal > 0 ? "is-negative" : "is-warning"; return `<td class="${state}"><strong>${formatPercent(value.percentual_referencia)}</strong><small>${passes ? "Lance suficiente" : bidGap.ideal > 0 ? `Faltam ${formatMoney(bidGap.gap)}` : "Sem referência"}</small></td>`; }).join("")}</tr>`).join("");
   const comparativeEntries = analytics.flatMap((entry) => [...selectedScenarioIdsForGroup(motor360GroupKey(entry.item))].map((scenarioId) => selectedGroupAnalytics(entry.item, scenarioId)));
   const comparativeRows = comparativeEntries.map((entry) => `<tr><th>Grupo ${escapeHtml(entry.groupId)}<small>${escapeHtml(entry.item.administradora || "-")} · ${entry.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}</small></th>${metricRows.map(([, formatter]) => `<td>${formatter(entry)}</td>`).join("")}</tr>`).join("");
   const comparativeHeaders = metricRows.map(([label]) => `<th>${label.replace(" ", "<br>")}</th>`).join("");
@@ -2689,7 +2690,7 @@ function renderSelectedGroupsDecisionVisuals(items) {
   const best = [...analytics].sort((a, b) => b.score - a.score)[0];
   const { availableBid: available } = selectedGroupsClientFinancials();
   const profileNames = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super agressivo" };
-  const cards = Object.entries(profileNames).map(([id, label]) => { const ideal = Number(best?.profile(id)?.lance_ideal || 0) * (best?.quotaCount || 1); const gap = Math.max(0, ideal - available); const covered = ideal ? Math.min(100, available / ideal * 100) : 0; return `<article class="sg-gap-card ${gap ? "is-alert" : "is-ok"}"><span>${label}</span><strong>${gap ? `Faltam ${formatMoney(gap)}` : "Perfil atingido"}</strong><small>Disponível ${formatMoney(available)} · Ideal total ${formatMoney(ideal)}</small><div><i style="width:${covered}%"></i></div><em>${covered.toFixed(1).replace(".", ",")}% coberto</em></article>`; }).join("");
+  const cards = Object.entries(profileNames).map(([id, label]) => { const bidGap = best ? profileBidGap(best.item, best.scenario, best.profile(id)) : { ideal: 0, available: 0, gap: 0 }; const covered = bidGap.ideal ? Math.min(100, bidGap.available / bidGap.ideal * 100) : 0; return `<article class="sg-gap-card ${bidGap.gap ? "is-alert" : "is-ok"}"><span>${label}</span><strong>${bidGap.gap ? `Faltam ${formatMoney(bidGap.gap)}` : "Perfil atingido"}</strong><small>Disponível ${formatMoney(bidGap.available)} · Ideal total ${formatMoney(bidGap.ideal)}</small><div><i style="width:${covered}%"></i></div><em>${covered.toFixed(1).replace(".", ",")}% coberto</em></article>`; }).join("");
   const score = best?.score || 0;
   const confidence = score >= 80 ? "Alta" : score >= 60 ? "Média" : "Baixa";
   const bestModerateMeetsBid = best ? profileMeetsBid(best.item, best.scenario, best.profile("moderate")) : false;
@@ -2756,10 +2757,11 @@ function renderSelectedGroupsScoreBreakdown(items) {
         label: value.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido",
         value: Number(value.profile.lance_ideal || 0) * entry.quotaCount,
       }));
-      const bidPasses = selectedProfiles.length > 0 && selectedProfiles.every((value) => profileMeetsBid(entry.item, value.scenario, value.profile));
+      const passingScenarioCount = selectedProfiles.filter((value) => profileMeetsBid(entry.item, value.scenario, value.profile)).length;
+      const bidPasses = selectedProfiles.length > 0 && passingScenarioCount === selectedProfiles.length;
       const requiredBidLabel = requiredBids.map((required) => `${required.label}: ${formatMoney(required.value)}`).join(" · ");
       const checks = [
-        ["Lance para contemplação", bidPasses, `${selectedProfiles.map((value) => `${value.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}: disponível ${formatMoney(allocatedClientBidFor(entry.item, value.scenario, profileId))}`).join(" · ")} · ideal total por cenário: ${requiredBidLabel || "não informado"}`],
+        ["Lance para contemplação", bidPasses, `${selectedProfiles.length > 1 ? `${passingScenarioCount} de ${selectedProfiles.length} cenários atendem. ` : ""}${selectedProfiles.map((value) => `${value.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}: disponível ${formatMoney(allocatedClientBidFor(entry.item, value.scenario, profileId))}`).join(" · ")} · ideal total por cenário: ${requiredBidLabel || "não informado"}`],
         ["Parcela desejada x parcela inicial", desiredInstallment > 0 && entry.installment <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · inicial ${formatMoney(entry.installment)}`],
         ["Parcela desejada x pós-contemplação", desiredInstallment > 0 && entry.installmentAfter > 0 && entry.installmentAfter <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · pós-contemplação ${formatMoney(entry.installmentAfter)}`],
         ["Crédito contratado x crédito desejado", entry.contractedCredit >= entry.desiredCredit, `Contratado ${formatMoney(entry.contractedCredit)} · desejado líquido ${formatMoney(entry.desiredCredit)}`],
@@ -2781,7 +2783,7 @@ function renderSelectedGroupsScoreBreakdown(items) {
   panel.className = "sg-panel sg-score-breakdown";
   const compactProfiles = ["conservative", "moderate", "aggressive", "super_aggressive"];
   const compactLabels = { conservative: "Conservador · 24m", moderate: "Moderado · 12m", aggressive: "Rápido · 6m", super_aggressive: "Urgente · 3m" };
-  const compactTable = analytics.map((entry) => `<tr><th>Grupo ${escapeHtml(entry.groupId)}<small>${escapeHtml(entry.item.administradora || "-")} · ${entry.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}</small></th>${compactProfiles.map((profileId) => { const profile = entry.profile(profileId); const ideal = Number(profile.lance_ideal || 0) * entry.quotaCount; const gap = Math.max(0, ideal - entry.availableBid); const ok = gap === 0 && ideal > 0; return `<td class="${ok ? "is-ok" : "is-fail"}"><b>${ok ? "✓" : "×"}</b><span>${ideal ? formatMoney(ideal) : "Sem dado"}</span>${!ok && ideal ? `<button type="button" class="sg-info sg-compact-info" aria-label="Ver valor faltante" data-tooltip="Faltam ${formatMoney(gap)} para atingir o lance ideal total. Disponível: ${formatMoney(entry.availableBid)} · Ideal: ${formatMoney(ideal)}">i</button>` : ""}</td>`; }).join("")}<td><strong>${formatMoney(entry.installment)}</strong><small>Pós ${formatMoney(entry.installmentAfter)}</small></td><td><strong>${entry.contractedCredit >= entry.desiredCredit ? "✓" : "×"}</strong><small>${formatMoney(entry.contractedCredit)}</small></td></tr>`).join("");
+  const compactTable = analytics.map((entry) => `<tr><th>Grupo ${escapeHtml(entry.groupId)}<small>${escapeHtml(entry.item.administradora || "-")} · ${entry.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}</small></th>${compactProfiles.map((profileId) => { const profile = entry.profile(profileId); const bidGap = profileBidGap(entry.item, entry.scenario, profile); const ok = bidGap.gap === 0 && bidGap.ideal > 0; return `<td class="${ok ? "is-ok" : "is-fail"}"><b>${ok ? "✓" : "×"}</b><span>${bidGap.ideal ? formatMoney(bidGap.ideal) : "Sem dado"}</span>${!ok && bidGap.ideal ? `<button type="button" class="sg-info sg-compact-info" aria-label="Ver valor faltante" data-tooltip="Faltam ${formatMoney(bidGap.gap)} para atingir o lance ideal total. Disponível: ${formatMoney(bidGap.available)} · Ideal: ${formatMoney(bidGap.ideal)}">i</button>` : ""}</td>`; }).join("")}<td><strong>${formatMoney(entry.installment)}</strong><small>Pós ${formatMoney(entry.installmentAfter)}</small></td><td><strong>${entry.contractedCredit >= entry.desiredCredit ? "✓" : "×"}</strong><small>${formatMoney(entry.contractedCredit)}</small></td></tr>`).join("");
   const compactView = `<div class="sg-compact-summary"><p>Visão resumida para ${analytics.length} grupo(s). O valor em cada perfil é o lance ideal; ✓ indica que o lance disponível atende.</p><div class="sg-compact-table-wrap"><table class="sg-compact-table"><thead><tr><th>Grupo</th>${compactProfiles.map((id) => `<th>${compactLabels[id]}</th>`).join("")}<th>Parcelas</th><th>Crédito contratado</th></tr></thead><tbody>${compactTable}</tbody></table></div><details><summary>Ver checklist detalhado por grupo</summary><div class="sg-check-grid">${analytics.map((entry) => `<div class="sg-check-column"><strong>Grupo ${escapeHtml(entry.groupId)}</strong>${checklist(entry)}</div>`).join("")}</div></details></div>`;
   panel.innerHTML = `<header><div><span>Transparência</span><h3>Checklist de conformidade e assertividade</h3></div><small>Comparativo dos cenários financeiros em todos os perfis</small></header>${compactView}`;
   dashboard.appendChild(panel);
@@ -3164,7 +3166,7 @@ function financialStudyGroupProfileSection(item) {
   const renderValue = (value, scenario, scenarioLabel) => {
     if (value?.percentual_referencia == null) return `<span class="financial-study-profile-empty"><small>${scenarioLabel}</small><em>Sem referência</em></span>`;
     const meetsBid = profileMeetsBid(item, scenario, value);
-    const gap = Math.max(0, Number(value.lance_ideal || 0) * quotaCountFor(item) - clientResourceTotal());
+    const gap = profileBidGap(item, scenario, value).gap;
     const state = meetsBid ? "is-positive" : "is-warning";
     const result = meetsBid ? "Lance atinge o perfil" : `Faltam ${formatMoney(gap)}`;
     return `<span class="financial-study-profile-result ${state}"><small>${scenarioLabel}</small><b>${formatPercent(value.percentual_referencia)}</b><em>${result}</em></span>`;
@@ -3403,7 +3405,7 @@ function financialStudyProfileMatrix(items) {
       const renderValue = (value, scenario, scenarioLabel) => {
         if (value?.percentual_referencia == null) return `<span class="financial-study-profile-empty"><small>${scenarioLabel}</small><em>Sem referência</em></span>`;
         const meetsBid = profileMeetsBid(item, scenario, value);
-        const gap = Math.max(0, Number(value.lance_ideal || 0) * quotaCountFor(item) - clientResourceTotal());
+        const gap = profileBidGap(item, scenario, value).gap;
         const state = meetsBid ? "is-positive" : "is-warning";
         const result = meetsBid ? "Lance atinge o perfil" : `Faltam ${formatMoney(gap)}`;
         return `<span class="financial-study-profile-result ${state}"><small>${scenarioLabel}</small><b>${formatPercent(value.percentual_referencia)}</b><em>${result}</em></span>`;
@@ -3694,6 +3696,12 @@ function allocatedClientBidFor(item, scenario, profileId = allocationProfileId()
 function profileMeetsBid(item, scenario, profile) {
   const ideal = Number(profile?.lance_ideal || 0) * quotaCountFor(item);
   return ideal > 0 && allocatedClientBidFor(item, scenario, profile?.id) >= ideal;
+}
+
+function profileBidGap(item, scenario, profile) {
+  const ideal = Number(profile?.lance_ideal || 0) * quotaCountFor(item);
+  const available = allocatedClientBidFor(item, scenario, profile?.id);
+  return { ideal, available, gap: Math.max(0, ideal - available) };
 }
 
 function selectedScenariosForItem(item) {
