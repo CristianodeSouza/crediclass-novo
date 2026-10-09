@@ -127,7 +127,7 @@ const investorState = {
   selectedScenarioIds: new Map(Object.entries(JSON.parse(localStorage.getItem("crediclass.motor360.selectedScenarios") || "{}"))),
   quotaCounts: new Map(Object.entries(savedMotor360QuotaCounts).map(([id, value]) => [String(id), Math.min(50, Math.max(1, Number(value) || 1))])),
   selectedGroupData: new Map(Object.entries(savedMotor360SelectedData)),
-  floatingSummaryMinimized: false,
+  floatingSummaryMinimized: true,
 };
 let investorAnalysisController = null;
 let investorAnalysisRequestId = 0;
@@ -2371,6 +2371,16 @@ function renderMotor360FloatingSelectionSummary() {
   return `<aside class="motor360-floating-summary${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">${totalQuotas}</span>${minimizeButton}</div></div><div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-screen-jump="grupos-selecionados">Analisar grupos selecionados</button></aside>`;
 }
 
+function renderMotor360FloatingSelectionSummaryIntoFold() {
+  const host = document.getElementById("motor360FloatingSummary");
+  if (!host) return;
+  host.innerHTML = renderMotor360FloatingSelectionSummary();
+  host.querySelector("[data-floating-summary-toggle]")?.addEventListener("click", () => {
+    investorState.floatingSummaryMinimized = !investorState.floatingSummaryMinimized;
+    renderMotor360FloatingSelectionSummaryIntoFold();
+  });
+}
+
 function renderSelectedGroupComparisonColumn(item, index) {
   const groupId = String(item.grupo || item.grupo_id || "-");
   const quotaCount = quotaCountFor(item);
@@ -4121,6 +4131,7 @@ function renderInvestorAnalysis(result) {
   const summary = document.getElementById("investorAnalysisSummary");
   const results = document.getElementById("investorAnalysisResults");
   if (!status || !summary || !results) return;
+  renderMotor360FloatingSelectionSummaryIntoFold();
   const client = result.cliente || {};
   const totals = result.contadores || {};
   const finalItems = result.final_items || result.items || [];
@@ -4231,7 +4242,6 @@ function renderInvestorAnalysis(result) {
       <strong>Grupos que atendem o perfil de contemplação do cliente</strong>
       <span>Grupos cujo lance atende ao percentual necessário para o perfil de contemplação selecionado. Crédito, prazo, parcela, renda e quantidade de cotas ficam disponíveis para avaliação do operador.</span>
     </div>
-    ${renderMotor360FloatingSelectionSummary()}
     <div class="motor360-group-list">${items.map(renderMotor360GroupCard).join("")}</div>
 
     ${scopedContemplationRejected.length ? `<details class="motor360-credit-excluded" open><summary>Grupos fora do perfil de contemplação selecionado (${scopedContemplationRejected.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th></tr></thead><tbody>${scopedContemplationRejected.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>Lance disponível abaixo da faixa do perfil selecionado.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
@@ -6823,6 +6833,7 @@ document.getElementById("clearMotor360ExecutionLogsBtn")?.addEventListener("clic
   motor360ExecutionLogs.length = 0;
   renderMotor360ExecutionLogs();
 });
+renderMotor360FloatingSelectionSummaryIntoFold();
 
 document.getElementById("reindexSystemBtn").addEventListener("click", () => {
   reindexSystemData().catch(() => showToast("Nao foi possivel reindexar os dados.", "danger"));

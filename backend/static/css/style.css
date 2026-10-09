@@ -2236,6 +2236,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-floating-summary.is-minimized .motor360-floating-scenarios,
 .motor360-floating-summary.is-minimized .motor360-floating-action,
 .motor360-floating-summary.is-minimized > p { display: none; }
+.motor360-composition-fold { margin: 12px 0 14px; }
+.motor360-composition-fold > div { min-height: 54px; }
+.motor360-composition-fold .motor360-floating-summary { width: 100%; margin: 0; padding: 9px 12px; box-shadow: none; }
+.motor360-composition-fold .motor360-floating-summary.is-minimized { width: 100%; }
+.motor360-composition-fold .motor360-floating-summary:not(.is-minimized) { position: fixed; inset: 24px; z-index: 1100; width: auto; max-height: calc(100vh - 48px); margin: 0; padding: 22px; overflow: auto; background: #fff; box-shadow: 0 20px 70px rgb(21 44 52 / 35%); }
+.motor360-composition-fold .motor360-floating-summary:not(.is-minimized)::before { content: "Composição dos grupos selecionados"; display: block; margin-bottom: 14px; color: var(--brand-navy); font-size: 1.15rem; font-weight: 800; }
+.motor360-composition-fold .motor360-floating-summary:not(.is-minimized) .motor360-floating-summary-heading strong { font-size: 1rem; }
+.motor360-composition-fold .motor360-floating-summary:not(.is-minimized) .motor360-floating-scenario { padding: 14px; }
+.motor360-composition-fold .motor360-floating-summary:not(.is-minimized) .motor360-floating-scenario dd { font-size: .85rem; }
 .motor360-single-quota-note, .motor360-multiple-quota-note { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 5px; min-height: 78px; margin: 16px 0 12px; padding: 14px 22px; border: 1px solid #efb477; border-left: 5px solid var(--brand-orange); border-radius: 6px; background: #fff8f2; color: var(--brand-navy); text-align: center; }
 .motor360-multiple-quota-note { margin-top: 22px; background: #fff4e9; }
 .motor360-single-quota-note strong, .motor360-multiple-quota-note strong { color: var(--brand-bronze-dark); font-size: 1rem; line-height: 1.2; }
