@@ -3082,7 +3082,6 @@ function renderSelectedGroupsScreen() {
   if (items.length) renderSelectedGroupsRiskProbability(items);
   if (items.length) renderSelectedGroupsSafely("coverage-charts", renderSelectedGroupsCoverageCharts, items);
   if (items.length) renderSelectedGroupsSafely("final-matrix", renderSelectedGroupsFinalMatrix, items);
-  if (items.length) renderSelectedGroupsExecutiveAudit(items);
   if (items.length) renderSelectedGroupsAuditButton(items);
   results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
