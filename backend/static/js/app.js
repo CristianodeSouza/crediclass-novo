@@ -2649,7 +2649,7 @@ function renderSelectedGroupsAnalyticalPanel(items) {
   });
   const comparativeRows = comparativeEntries.map((entry) => `<tr><th>Grupo ${escapeHtml(entry.groupId)}<small>${escapeHtml(entry.item.administradora || "-")} · ${entry.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}</small></th>${metricRows.map(([, formatter]) => `<td>${formatter(entry)}</td>`).join("")}</tr>`).join("");
   const comparativeHeaders = metricRows.map(([label]) => `<th>${label.replace(" ", "<br>")}</th>`).join("");
-  const controls = `<div class="sg-toolbar"><div><span>Visão analítica</span><h2>Comparação de grupos</h2><p>Leitura factual das condições, histórico e perfis de contemplação.</p></div><div class="sg-controls"><label>Cenário<select data-sg-scenario><option value="without_embedded" ${currentScenario === "without_embedded" ? "selected" : ""}>Sem lance embutido</option><option value="with_embedded" ${currentScenario === "with_embedded" ? "selected" : ""}>Com lance embutido</option></select></label><label>Perfil em foco<select data-sg-filter="profile"><option value="all" ${profileFilter === "all" ? "selected" : ""}>Todos os perfis</option>${Object.entries(profileNames).map(([id, label]) => `<option value="${id}" ${profileFilter === id ? "selected" : ""}>${label}</option>`).join("")}</select></label><label>Ordenar grupos<select data-sg-sort><option value="original" ${currentSort === "original" ? "selected" : ""}>Ordem original</option><option value="score" ${currentSort === "score" ? "selected" : ""}>Melhor aderência</option><option value="credit" ${currentSort === "credit" ? "selected" : ""}>Maior crédito</option><option value="installment" ${currentSort === "installment" ? "selected" : ""}>Menor parcela</option><option value="bid" ${currentSort === "bid" ? "selected" : ""}>Menor lance ideal</option><option value="history" ${currentSort === "history" ? "selected" : ""}>Maior histórico</option></select></label></div></div>`;
+  const controls = `<div class="sg-toolbar"><div><span>Visão final</span><h2>Comparação de grupos</h2><p>Confira a composição final da carteira selecionada.</p></div></div>`;
   return `<section class="sg-dashboard" data-sg-dashboard>${controls}<div class="sg-fact-strip"><span><b>${analytics.length}</b> grupos comparados</span><span><b>${currentScenario === "with_embedded" ? "Com" : "Sem"}</b> lance embutido</span><span>Os gráficos exibem valores por grupo e cota selecionada.</span></div><div class="sg-chart-grid"><article class="sg-panel sg-panel-financial"><header><div><span>Financeiro</span><h3>Valores por grupo</h3></div><div class="sg-metric-switch" role="group" aria-label="Métrica financeira"><button type="button" data-sg-metric="credit" aria-pressed="true">Crédito</button><button type="button" data-sg-metric="installment">Parcela</button><button type="button" data-sg-metric="bid">Lance</button><button type="button" data-sg-metric="balance">Saldo</button></div></header><div class="sg-chart" id="sgFinancialChart" role="img" aria-label="Gráfico financeiro comparativo"></div></article><article class="sg-panel"><header><div><span>Histórico</span><h3>Contemplações por janela</h3></div><small>Médias informadas do grupo</small></header><div class="sg-chart" id="sgHistoryChart" role="img" aria-label="Gráfico de histórico de contemplações"></div></article></div><div class="sg-chart-grid sg-chart-grid-secondary"><article class="sg-panel"><header><div><span>Perfis</span><h3>Distribuição percentual</h3></div><small>Percentual de referência por perfil</small></header><div class="sg-chart" id="sgProfilesChart" role="img" aria-label="Gráfico radar de perfis de contemplação"></div></article><article class="sg-panel sg-table-panel"><header><div><span>Perfis</span><h3>Percentual e diferença de lance</h3></div><small>Valores não são recomendação</small></header><div class="sg-table-wrap"><table class="sg-matrix sg-profile-matrix"><thead><tr><th>Perfil</th>${analytics.map((entry) => `<th>Grupo ${escapeHtml(entry.groupId)}</th>`).join("")}</tr></thead><tbody>${profileRows}</tbody></table></div></article></div><article class="sg-panel sg-comparison-table"><header><div><span>Detalhamento comparativo</span><h3>Condições financeiras e operacionais</h3></div></header><div class="sg-table-wrap"><table class="sg-matrix"><thead><tr><th>Grupo</th>${comparativeHeaders}</tr></thead><tbody>${comparativeRows}</tbody></table></div></article></section>`;
 }
 
@@ -3111,7 +3111,6 @@ function renderSelectedGroupsScreen() {
   empty.classList.toggle("d-none", items.length > 0);
   results.classList.toggle("d-none", items.length === 0);
   results.innerHTML = items.length ? `${renderSelectedGroupsAnalyticalPanel(items)}${renderSelectedGroupsCartSummary(items)}` : "";
-  results.querySelectorAll("[data-sg-scenario]").forEach((select) => select.closest("label")?.remove());
   const scenarioFact = results.querySelector(".sg-fact-strip span:nth-child(2) b");
   if (scenarioFact) scenarioFact.textContent = "Por grupo";
   renderSelectedGroupsECharts(items);
@@ -3122,9 +3121,6 @@ function renderSelectedGroupsScreen() {
   if (items.length) renderSelectedGroupsSafely("coverage-charts", renderSelectedGroupsCoverageCharts, items);
   if (items.length) renderSelectedGroupsSafely("final-matrix", renderSelectedGroupsFinalMatrix, items);
   if (items.length) renderSelectedGroupsAuditButton(items);
-  results.querySelector("[data-sg-sort]")?.addEventListener("change", (event) => { investorState.selectedGroupSort = event.target.value; renderSelectedGroupsScreen(); });
-  results.querySelector("[data-sg-filter]")?.addEventListener("change", (event) => { investorState.selectedGroupProfile = event.target.value; renderSelectedGroupsScreen(); });
-  results.querySelector("[data-sg-scenario]")?.addEventListener("change", (event) => { investorState.selectedGroupScenario = event.target.value; renderSelectedGroupsScreen(); });
   results.querySelectorAll("[data-sg-metric]").forEach((button) => button.addEventListener("click", () => {
     investorState.selectedGroupMetric = button.dataset.sgMetric || "credit";
     results.querySelectorAll("[data-sg-metric]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
@@ -4242,6 +4238,11 @@ function renderMotor360ContemplationMatrix(items, selectedProfile, rejectedItems
 
 function renderInvestorAnalysis(result) {
   renderMotor360SelectionFilters();
+  const scenarioState = investorState.selectedGroupScenario || "per_group";
+  const withScenario = document.getElementById("investorFilterWithEmbedded");
+  const withoutScenario = document.getElementById("investorFilterWithoutEmbedded");
+  if (withScenario) withScenario.checked = scenarioState === "with_embedded";
+  if (withoutScenario) withoutScenario.checked = scenarioState === "without_embedded";
   const status = document.getElementById("investorAnalysisStatus");
   const summary = document.getElementById("investorAnalysisSummary");
   const results = document.getElementById("investorAnalysisResults");
