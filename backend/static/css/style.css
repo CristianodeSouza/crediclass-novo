@@ -2202,7 +2202,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   from { box-shadow: 0 0 0 3px rgb(232 121 27 / 46%), 0 8px 20px rgb(23 43 51 / 12%); }
   to { box-shadow: 0 0 0 0 rgb(232 121 27 / 0%), 0 2px 8px rgb(23 43 51 / 8%); }
 }
-.motor360-floating-summary { position: fixed; right: 20px; bottom: 18px; z-index: 35; width: min(390px, calc(100vw - 32px)); padding: 12px; border: 1px solid #efb477; border-radius: 7px; background: rgb(255 255 255 / 97%); box-shadow: 0 14px 36px rgb(21 44 52 / 22%); backdrop-filter: blur(8px); }
+.motor360-floating-summary { position: relative; z-index: 2; width: min(390px, calc(100% - 24px)); margin: 12px 12px 12px auto; padding: 12px; border: 1px solid #efb477; border-radius: 7px; background: rgb(255 255 255 / 97%); box-shadow: 0 14px 36px rgb(21 44 52 / 22%); backdrop-filter: blur(8px); }
 .motor360-floating-summary-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
 .motor360-floating-summary-heading > div { display: grid; gap: 2px; }
 .motor360-floating-summary-heading span { color: var(--brand-bronze-dark); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; }

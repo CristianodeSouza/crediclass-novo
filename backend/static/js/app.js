@@ -2364,7 +2364,7 @@ function renderSelectedGroupComparisonColumn(item, index) {
     const scenario = byScenario[scenarioId];
     if (!scenario) return "";
     const embedded = scenarioId === "with_embedded";
-    return `<article class="selected-comparison-scenario"><div class="selected-comparison-scenario-title"><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><span>${scenario.credit_compatible ? "Crédito OK" : "Fora da faixa"}</span></div><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado))}</dd></div><div><dt>Lance total</dt><dd>${item.composition_candidate ? "Rateado no resumo" : formatMoney(scale(scenario.lance_total_cenario))}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>${item.composition_candidate || scenario.parcela_pos_contemplacao == null ? "Pendente da distribuição do lance" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</dd></div></dl><small>Prazo após lance: ${item.composition_candidate ? "validado na composição" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
+    return `<article class="selected-comparison-scenario"><div class="selected-comparison-scenario-title"><strong>${embedded ? "Com lance embutido" : "Sem lance embutido"}</strong><span>${scenario.credit_compatible ? "Crédito OK" : "Fora da faixa"}</span></div><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado))}</dd></div><div><dt>Lance total</dt><dd>${item.composition_candidate ? "Rateado no resumo" : formatMoney(scenarioTotalBidFor(item, scenario))}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(scale(scenario.saldo_devedor))}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(scale(scenario.parcela_inicial))}</dd></div><div><dt>Parcela pós-contemplação</dt><dd>${item.composition_candidate || scenario.parcela_pos_contemplacao == null ? "Pendente da distribuição do lance" : formatMoney(scale(scenario.parcela_pos_contemplacao))}</dd></div></dl><small>Prazo após lance: ${item.composition_candidate ? "validado na composição" : scenario.term_compatible ? "compatível" : "não compatível"}</small></article>`;
   }).join("");
   scenarioRows = scenarioRows.replace(/<div><dt>Crédito líquido<\/dt><dd>.*?<\/dd><\/div>/g, "");
   const profiles = byScenario.without_embedded?.perfis_contemplacao || byScenario.with_embedded?.perfis_contemplacao || [];
@@ -2461,7 +2461,10 @@ function formatAverageForOverview(item, strategy) {
 
 function selectedGroupAnalytics(item) {
   const groupId = String(item.grupo || item.grupo_id || "-");
-  const scenarioId = investorState.selectedGroupScenario || "without_embedded";
+  const selectedIds = [...selectedScenarioIdsForGroup(motor360GroupKey(item))];
+  const scenarioId = selectedIds.includes(investorState.selectedGroupScenario)
+    ? investorState.selectedGroupScenario
+    : selectedIds[0] || "";
   const scenario = (item.cenarios || []).find((entry) => entry.id === scenarioId) || (item.cenarios || []).find((entry) => entry.id === "without_embedded") || (item.cenarios || [])[0] || {};
   const profiles = scenario.perfis_contemplacao || [];
   const profile = (id) => profiles.find((entry) => entry.id === id) || {};
@@ -2504,7 +2507,7 @@ function selectedGroupAnalytics(item) {
     credit, desiredCredit, contractedCredit, groupMaxCredit,
     installment,
     installmentAfter: scale(scenario.parcela_pos_contemplacao),
-    bid: scale(scenario.lance_total_cenario),
+    bid: scenarioTotalBidFor(item, scenario),
     balance: scale(scenario.saldo_devedor),
     idealBid, availableBid, score, scoreLabel, focusProfile, adminRate, reserveRate, totalPaid, embedded, creditLossRate, creditFit, installmentFit, bidFit, historyFit, costFit, termFit,
     incomeCommitment: commitment, probability, probabilityLabel, riskLabel,
@@ -2534,7 +2537,7 @@ function renderSelectedGroupsAnalyticalPanel(items) {
   const analytics = items.map(selectedGroupAnalytics);
   const profileFilter = investorState.selectedGroupProfile || "all";
   const currentSort = investorState.selectedGroupSort || "original";
-  const currentScenario = investorState.selectedGroupScenario || "without_embedded";
+  const currentScenario = investorState.selectedGroupScenario || "per_group";
   const profileNames = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super agressivo" };
   const { client } = selectedGroupsClientFinancials();
   const parcelaDesejada = Number(client.parcela_desejada ?? client.parcela_ideal ?? 0);
@@ -2680,10 +2683,11 @@ function renderSelectedGroupsAdvancedFilters() {
   panel.innerHTML = `<div><span>Filtros de elegibilidade</span><strong>Restringir grupos comparados</strong></div><label>Administradora<input type="search" data-sg-advanced="administrator" value="${filters.administrator}" placeholder="Todas"></label><label>Crédito mínimo<input type="number" min="0" step="1000" data-sg-advanced="minCredit" value="${filters.minCredit}" placeholder="R$ 0"></label><label>Parcela máxima<input type="number" min="0" step="100" data-sg-advanced="maxInstallment" value="${filters.maxInstallment}" placeholder="Sem limite"></label><label>Lance ideal máximo<input type="number" min="0" step="1000" data-sg-advanced="maxBid" value="${filters.maxBid}" placeholder="Sem limite"></label><label>Histórico moderado mínimo<input type="number" min="0" step="0.1" data-sg-advanced="minHistory" value="${filters.minHistory}" placeholder="0"></label><label>Comprometimento máximo (%)<input type="number" min="0" max="100" step="1" data-sg-advanced="maxCommitment" value="${filters.maxCommitment}" placeholder="100"></label><label>Taxa adm. máxima (%)<input type="number" min="0" max="100" step="1" data-sg-advanced="maxAdmin" value="${filters.maxAdmin}" placeholder="Sem limite"></label><label>Fundo reserva máx. (%)<input type="number" min="0" max="100" step="1" data-sg-advanced="maxReserve" value="${filters.maxReserve}" placeholder="Sem limite"></label><label>Prazo máximo (meses)<input type="number" min="0" step="1" data-sg-advanced="maxTerm" value="${filters.maxTerm}" placeholder="Sem limite"></label><label class="sg-filter-check"><input type="checkbox" data-sg-advanced="compatibleOnly" ${filters.compatibleOnly ? "checked" : ""}> Apenas crédito compatível</label><button type="button" class="btn btn-outline-secondary btn-sm" data-sg-clear-filters>Limpar filtros</button>`;
   const analysisControls = document.createElement("div");
   analysisControls.className = "sg-inline-analysis-controls";
-  const currentScenario = investorState.selectedGroupScenario || "without_embedded";
+  const currentScenario = investorState.selectedGroupScenario || "per_group";
   const currentProfile = investorState.selectedGroupProfile || "all";
   const currentSort = investorState.selectedGroupSort || "original";
   analysisControls.innerHTML = `<label>Cenário<select data-sg-scenario><option value="without_embedded" ${currentScenario === "without_embedded" ? "selected" : ""}>Sem lance embutido</option><option value="with_embedded" ${currentScenario === "with_embedded" ? "selected" : ""}>Com lance embutido</option></select></label><label>Perfil em foco<select data-sg-filter="profile"><option value="all" ${currentProfile === "all" ? "selected" : ""}>Todos os perfis</option><option value="conservative" ${currentProfile === "conservative" ? "selected" : ""}>Conservador</option><option value="moderate" ${currentProfile === "moderate" ? "selected" : ""}>Moderado</option><option value="aggressive" ${currentProfile === "aggressive" ? "selected" : ""}>Agressivo</option><option value="super_aggressive" ${currentProfile === "super_aggressive" ? "selected" : ""}>Superagressivo</option></select></label><label>Ordenar grupos<select data-sg-sort><option value="original" ${currentSort === "original" ? "selected" : ""}>Ordem original</option><option value="score" ${currentSort === "score" ? "selected" : ""}>Melhor aderência</option><option value="credit" ${currentSort === "credit" ? "selected" : ""}>Maior crédito</option><option value="installment" ${currentSort === "installment" ? "selected" : ""}>Menor parcela</option><option value="bid" ${currentSort === "bid" ? "selected" : ""}>Menor lance ideal</option><option value="history" ${currentSort === "history" ? "selected" : ""}>Maior histórico</option></select></label>`;
+  analysisControls.querySelector("[data-sg-scenario]")?.insertAdjacentHTML("afterbegin", `<option value="per_group" ${currentScenario === "per_group" ? "selected" : ""}>Cenário escolhido por grupo</option>`);
   panel.insertBefore(analysisControls, panel.firstChild);
   dashboard.insertBefore(panel, dashboard.children[1] || null);
   panel.querySelectorAll("[data-sg-advanced]").forEach((input) => input.addEventListener("change", () => {
@@ -3607,6 +3611,15 @@ function quotaCountFor(itemOrGroup) {
   return Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(key) || 1)));
 }
 
+function clientResourceTotal() {
+  const client = investorState.result?.cliente || {};
+  return Number(client.lance_cliente_total ?? client.lance_total ?? client.own_resources_total ?? 0) || 0;
+}
+
+function scenarioTotalBidFor(item, scenario) {
+  return clientResourceTotal() + Number(scenario?.lance_embutido || 0) * quotaCountFor(item);
+}
+
 function selectedScenariosForItem(item) {
   const ids = selectedScenarioIdsForGroup(motor360GroupKey(item));
   return (item?.cenarios || []).filter((scenario) => ids.has(scenario.id));
@@ -4150,8 +4163,9 @@ function renderInvestorAnalysis(result) {
     const groupId = card.closest(".motor360-group-card")?.querySelector(".motor360-group-select-input")?.dataset.groupId;
     const groupItem = motor360FinalItems(result).find((item) => motor360GroupKey(item) === String(groupId || "") || String(item.grupo || item.grupo_id || "") === String(groupId || ""));
     card.querySelector(".motor360-scenario-grid")?.insertAdjacentHTML("beforeend", motor360ScenarioSourceMetrics(groupItem));
-    const title = card.querySelector(".motor360-scenario-title strong")?.textContent || "";
-    const scenarioId = title.includes("com lance") ? "with_embedded" : "without_embedded";
+    const scenarioCards = [...(card.closest(".motor360-group-card")?.querySelectorAll(".motor360-scenario-card") || [])];
+    const scenarioId = groupItem?.cenarios?.[scenarioCards.indexOf(card)]?.id || "";
+    if (!scenarioId) return;
     const scenario = (groupItem?.cenarios || []).find((item) => item.id === scenarioId) || {};
     const groupSelected = investorState.selectedGroupIds.has(String(groupId));
     const action = `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""} ${groupSelected ? "" : "disabled"}> Escolher para análise</label>`;
@@ -4188,7 +4202,14 @@ function renderInvestorAnalysis(result) {
     if (event.target.checked) {
       const selectedItem = motor360FinalItems()
         .find((item) => motor360GroupKey(item) === groupId);
-      if (motor360AdministratorKey(selectedItem) !== motor360AdministratorKey(investorState.administrator)) {
+      if (!investorState.administrator && selectedItem?.administradora) {
+        investorState.administrator = selectedItem.administradora;
+        const administratorSelect = document.getElementById("investorAdministratorFilter");
+        if (administratorSelect) administratorSelect.value = selectedItem.administradora;
+        persistMotor360Selection();
+        updateInvestorPreferenceSummary();
+      }
+      if (investorState.administrator && motor360AdministratorKey(selectedItem) !== motor360AdministratorKey(investorState.administrator)) {
         event.target.checked = false;
         showToast("Selecione grupos de apenas uma administradora por estudo.", "warning");
         return;
