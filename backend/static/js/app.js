@@ -2256,7 +2256,7 @@ function renderMotor360GroupCard(item) {
   const quotaControl = selected ? `<div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}"><div class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="50" value="${quotaCount}" data-quota-action="input" data-group-id="${auditId}" aria-label="Quantidade de cotas do grupo ${auditId}"></div>${quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : ""}</div>` : "";
   const selectedProfileId = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" }[investorState.result?.perfil_contemplacao] || investorState.result?.perfil_contemplacao;
   const scenarioRequirementStatus = (scenario) => {
-    const profileOk = !selectedProfileId || (scenario.perfis_contemplacao || []).some((profile) => profile.id === selectedProfileId && profile.atinge_perfil === true);
+    const profileOk = !selectedProfileId || (scenario.perfis_contemplacao || []).some((profile) => profile.id === selectedProfileId && profileMeetsBid(item, scenario, profile));
     const requirements = [
       ["Crédito", scenario.credit_compatible === true],
       ["Prazo/renda", scenario.term_compatible !== false && scenario.income_compatible !== false],
@@ -2273,7 +2273,9 @@ function renderMotor360GroupCard(item) {
       if (!value || value.percentual_referencia === null || value.percentual_referencia === undefined) return `<div class="motor360-profile-card-value is-empty"><small>Não informado</small></div>`;
       const idealLabel = scenario.id === "with_embedded" ? "Lance ideal em recursos do cliente" : "Lance ideal";
       const embeddedNote = scenario.id === "with_embedded" ? `<small>Embutido considerado: ${formatMoney(scaleMoney(value.lance_embutido))}</small>` : "";
-      return `<div class="motor360-profile-card-value ${value.atinge_perfil ? "is-hit" : "is-gap"}"><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${value.atinge_perfil ? "Atinge o perfil" : `Faltam ${formatMoney(scaleMoney(value.falta_para_ideal))}`}</span><em>${idealLabel}: ${formatMoney(scaleMoney(value.lance_ideal))}</em>${embeddedNote}</div>`;
+      const meetsBid = profileMeetsBid(item, scenario, value);
+      const totalIdeal = Number(value.lance_ideal || 0) * quotaCount;
+      return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"}"><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(Math.max(0, totalIdeal - clientResourceTotal()))}`}</span><em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
     }).join("");
     const scenarioLabel = scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
     return `<section class="motor360-scenario-profiles"><div class="motor360-profile-section-title"><h4>Perfis · ${scenarioLabel}</h4><small>Referência: ${formatMoney(scenario.lance_cliente_total)}</small></div><div class="motor360-profile-card-values">${values || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section>`;
@@ -2375,8 +2377,10 @@ function renderSelectedGroupComparisonColumn(item, index) {
     const values = ["without_embedded", "with_embedded"].map((scenarioId) => {
       const value = (byScenario[scenarioId]?.perfis_contemplacao || []).find((entry) => entry.id === profile.id);
       if (!value) return "";
-      const resultLabel = item.composition_candidate ? `Lance ideal ${formatMoney(scale(value.lance_ideal))}` : value.atinge_perfil ? "Atinge o perfil" : `Faltam ${formatMoney(scale(value.falta_para_ideal))}`;
-      return `<div class="selected-comparison-profile-value ${item.composition_candidate ? "" : value.atinge_perfil ? "is-hit" : "is-gap"}"><small>${scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${resultLabel}</span></div>`;
+      const meetsBid = profileMeetsBid(item, byScenario[scenarioId], value);
+      const totalIdeal = Number(value.lance_ideal || 0) * quotaCount;
+      const resultLabel = item.composition_candidate ? `Lance ideal ${formatMoney(totalIdeal)}` : meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(Math.max(0, totalIdeal - clientResourceTotal()))}`;
+      return `<div class="selected-comparison-profile-value ${item.composition_candidate ? "" : meetsBid ? "is-hit" : "is-gap"}"><small>${scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${resultLabel}</span></div>`;
     }).join("");
     return `<article class="selected-comparison-profile"><strong>${escapeHtml(profile.label)}</strong>${values}</article>`;
   }).join("");
@@ -2446,7 +2450,9 @@ function renderSelectedGroupsOverview(items) {
     const profiles = scenario.perfis_contemplacao || [];
     const profileValue = (id) => {
       const value = profiles.find((profile) => profile.id === id);
-      return value ? `<b class="${value.atinge_perfil ? "is-hit" : "is-gap"}">${formatPercent(value.percentual_referencia)}</b>` : "-";
+      const scenario = (item.cenarios || []).find((entry) => entry.id === "without_embedded") || (item.cenarios || [])[0];
+      const meetsBid = value && profileMeetsBid(item, scenario, value);
+      return value ? `<b class="${meetsBid ? "is-hit" : "is-gap"}">${formatPercent(value.percentual_referencia)}</b>` : "-";
     };
     return `<tr><th><span>${index + 1}</span> Grupo ${escapeHtml(groupId)}<small>${escapeHtml(item.administradora || "-")}</small></th><td>${formatMoney(item.credito_maximo)}</td><td>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</td><td>${formatAverageForOverview(item, "urgent")}</td><td>${formatAverageForOverview(item, "moderate")}</td><td>${profileValue("conservative")}</td><td>${profileValue("moderate")}</td></tr>`;
   }).join("");
@@ -2666,9 +2672,10 @@ function renderSelectedGroupsDecisionVisuals(items) {
   const best = [...analytics].sort((a, b) => b.score - a.score)[0];
   const { availableBid: available } = selectedGroupsClientFinancials();
   const profileNames = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super agressivo" };
-  const cards = Object.entries(profileNames).map(([id, label]) => { const ideal = Number(best?.profile(id)?.lance_ideal || 0); const gap = Math.max(0, ideal - available); const covered = ideal ? Math.min(100, available / ideal * 100) : 0; return `<article class="sg-gap-card ${gap ? "is-alert" : "is-ok"}"><span>${label}</span><strong>${gap ? `Faltam ${formatMoney(gap)}` : "Perfil atingido"}</strong><small>Disponível ${formatMoney(available)} · Ideal ${formatMoney(ideal)}</small><div><i style="width:${covered}%"></i></div><em>${covered.toFixed(1).replace(".", ",")}% coberto</em></article>`; }).join("");
+  const cards = Object.entries(profileNames).map(([id, label]) => { const ideal = Number(best?.profile(id)?.lance_ideal || 0) * (best?.quotaCount || 1); const gap = Math.max(0, ideal - available); const covered = ideal ? Math.min(100, available / ideal * 100) : 0; return `<article class="sg-gap-card ${gap ? "is-alert" : "is-ok"}"><span>${label}</span><strong>${gap ? `Faltam ${formatMoney(gap)}` : "Perfil atingido"}</strong><small>Disponível ${formatMoney(available)} · Ideal total ${formatMoney(ideal)}</small><div><i style="width:${covered}%"></i></div><em>${covered.toFixed(1).replace(".", ",")}% coberto</em></article>`; }).join("");
   const score = best?.score || 0;
   const confidence = score >= 80 ? "Alta" : score >= 60 ? "Média" : "Baixa";
+  const bestModerateMeetsBid = best ? profileMeetsBid(best.item, best.scenario, best.profile("moderate")) : false;
   return `<div class="sg-decision-visuals"><div class="sg-alert-banner ${best?.profile("moderate")?.atinge_perfil ? "is-ok" : "is-alert"}"><strong>${best?.profile("moderate")?.atinge_perfil ? "Perfil compatível" : "Nenhum grupo atinge integralmente o perfil"}</strong><span>${best ? `A recomendação do Grupo ${escapeHtml(best.groupId)} é relativa entre os grupos selecionados.` : "Sem dados para recomendar."}</span></div><div class="sg-decision-grid"><article class="sg-panel"><header><div><span>Lance comparativo</span><h3>Disponível x ideal</h3></div></header><div class="sg-gap-cards">${cards}</div></article><article class="sg-panel"><header><div><span>Transparência</span><h3>Nota e confiança</h3></div><small>${confidence}</small></header><div class="sg-score-detail"><strong>${score}/100</strong><span>Confiança ${confidence}</span><div><i style="width:${score}%"></i></div><p>Crédito, histórico e aderência combinados. A nota não representa aprovação financeira.</p></div></article></div></div>`;
 }
 
@@ -2740,7 +2747,7 @@ function renderSelectedGroupsScoreBreakdown(items) {
         ["Parcela desejada x pós-contemplação", desiredInstallment > 0 && entry.installmentAfter > 0 && entry.installmentAfter <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · pós-contemplação ${formatMoney(entry.installmentAfter)}`],
         ["Crédito contratado x crédito desejado", entry.contractedCredit >= entry.desiredCredit, `Contratado ${formatMoney(entry.contractedCredit)} · desejado líquido ${formatMoney(entry.desiredCredit)}`],
       ];
-      const scenarioSummary = scenariosForDisplay.map((scenario) => { const value = findProfile(scenario.id, profileId); return `<span>${scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}: ${value.atinge_perfil ? "Atende" : "Não atende"} · ideal total ${formatMoney(Number(value.lance_ideal || 0) * entry.quotaCount)}</span>`; }).join("");
+      const scenarioSummary = scenariosForDisplay.map((scenario) => { const value = findProfile(scenario.id, profileId); const meetsBid = profileMeetsBid(entry.item, scenario, value); return `<span>${scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}: ${meetsBid ? "Atende" : "Não atende"} · ideal total ${formatMoney(Number(value.lance_ideal || 0) * entry.quotaCount)}</span>`; }).join("");
       return `<section class="sg-profile-check"><h4>${profileLabels[profileId]}</h4><div class="sg-profile-scenarios">${scenarioSummary || "<span>Nenhum cenário escolhido</span>"}</div>${checks.map(([label, passes, detail]) => `<div class="sg-check-item ${passes ? "is-ok" : "is-fail"}"><span><b aria-hidden="true">${passes ? "✓" : "×"}</b>${label}</span><strong>${passes ? "Atende" : "Não atende"}</strong><small>${detail}</small></div>`).join("")}</section>`;
     }).join("");
   };
@@ -3635,6 +3642,11 @@ function clientResourceTotal() {
 
 function scenarioTotalBidFor(item, scenario) {
   return clientResourceTotal() + Number(scenario?.lance_embutido || 0) * quotaCountFor(item);
+}
+
+function profileMeetsBid(item, scenario, profile) {
+  const ideal = Number(profile?.lance_ideal || 0) * quotaCountFor(item);
+  return ideal > 0 && clientResourceTotal() >= ideal;
 }
 
 function selectedScenariosForItem(item) {
