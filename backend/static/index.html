@@ -58,10 +58,6 @@
               <span class="nav-icon">MI</span>
               <span>Motor 360 de Viabilidade</span>
             </button>
-            <button class="nav-item" type="button" data-screen="grupos-selecionados">
-              <span class="nav-icon">GS</span>
-              <span>Grupos Selecionados</span>
-            </button>
             <button class="nav-item" type="button" data-screen="estudo">
               <span class="nav-icon">EF</span>
               <span>Estudo Financeiro</span>
@@ -474,25 +470,9 @@
             <div id="selectedGroupsWorkspace" class="selected-groups-workspace d-none" role="dialog" aria-modal="true" aria-labelledby="selectedGroupsWorkspaceTitle">
               <div class="selected-groups-workspace-dialog">
                 <header class="selected-groups-workspace-header"><div><span>Análise da seleção</span><h2 id="selectedGroupsWorkspaceTitle">Grupos selecionados</h2><p>Compare os grupos escolhidos sem sair do Motor 360.</p></div><button id="closeSelectedGroupsWorkspace" class="btn btn-outline-secondary" type="button">Fechar</button></header>
-                <div id="selectedGroupsWorkspaceBody" class="selected-groups-workspace-body"></div>
+                <div id="selectedGroupsWorkspaceBody" class="selected-groups-workspace-body"><div id="selectedGroupsEmpty" class="placeholder-card compact-placeholder"><p>Nenhum grupo selecionado.</p></div><div id="selectedGroupsResults" class="selected-groups-list d-none"></div></div>
               </div>
             </div>
-          </div>
-        </section>
-
-        <section id="screen-grupos-selecionados" class="screen-panel">
-          <div class="content-card selected-groups-card">
-            <div class="selected-groups-header">
-              <div>
-                <h2>Grupos Selecionados</h2>
-                <p>Comparativo dos grupos escolhidos pelo consultor para a próxima etapa do estudo.</p>
-              </div>
-            </div>
-            <div id="selectedGroupsEmpty" class="placeholder-card compact-placeholder">
-              <p>Nenhum grupo selecionado. Volte ao Motor 360 e marque os grupos que deseja comparar.</p>
-              <button class="btn btn-primary" type="button" data-screen-jump="motor360">Voltar ao Motor 360</button>
-            </div>
-            <div id="selectedGroupsResults" class="selected-groups-list d-none"></div>
           </div>
         </section>
 

@@ -380,6 +380,8 @@ function activateScreen(screenName) {
       window.setTimeout(() => focusMotor360Group(motor360GroupAnchorId(firstMissing.split("|").pop() || firstMissing)), 0);
       return;
     }
+    openSelectedGroupsWorkspace();
+    return;
   }
 
   document.querySelectorAll(".nav-item").forEach((item) => {
@@ -409,7 +411,6 @@ function activateScreen(screenName) {
     }
   }
   if (screenName === "mapa-assembleia") loadAssemblyMap();
-  if (screenName === "grupos-selecionados") renderSelectedGroupsScreen();
   if (screenName === "estudo") renderFinancialStudyScreen();
   if (screenName === "historico") loadHistoryStudies();
   if (screenName === "configuracoes") {
@@ -2334,22 +2335,6 @@ function renderMotor360ClientProfileSummary(client = {}) {
   return `<section class="motor360-client-profile-summary" aria-label="Resumo do perfil do cliente"><header><span>Referência do cliente</span><strong>Resumo do perfil</strong></header><div>${items.map(([label, value]) => `<article><small>${escapeHtml(label)}</small><b>${escapeHtml(String(value || "-"))}</b></article>`).join("")}</div></section>`;
 }
 
-function renderMotor360SelectedGroupsDock() {
-  const items = selectedMotor360Items();
-  if (!items.length) return "";
-  const totalQuotas = items.reduce((total, item) => {
-    const groupId = String(item.grupo || item.grupo_id || "");
-    return total + quotaCountFor(item);
-  }, 0);
-  const groups = items.map((item) => {
-    const groupId = String(item.grupo || item.grupo_id || "-");
-    const quotas = quotaCountFor(item);
-    const anchorId = motor360GroupAnchorId(groupId);
-    return `<button type="button" class="motor360-selected-dock-item" data-group-anchor="${escapeHtml(anchorId)}" aria-label="Ir para o grupo ${escapeHtml(groupId)}"><b>Grupo ${escapeHtml(groupId)}</b><small>${escapeHtml(item.administradora || "-")} · ${quotas} ${quotas === 1 ? "cota" : "cotas"}</small></button>`;
-  }).join("");
-  return `<section class="motor360-selected-dock" aria-label="Grupos selecionados"><div class="motor360-selected-dock-heading"><span>Grupos selecionados</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-selected-dock-list">${groups}</div><button class="btn btn-primary btn-sm" type="button" data-open-selected-groups-workspace>Comparar</button></section>`;
-}
-
 function renderMotor360FloatingSelectionSummary() {
   const items = selectedMotor360Items();
   const minimizedClass = investorState.floatingSummaryMinimized ? " is-minimized" : "";
@@ -2403,7 +2388,6 @@ function openSelectedGroupsWorkspace() {
   const body = document.getElementById("selectedGroupsWorkspaceBody");
   const results = document.getElementById("selectedGroupsResults");
   if (!workspace || !body || !results) return;
-  body.appendChild(results);
   workspace.classList.remove("d-none");
   document.body.classList.add("selected-groups-workspace-open");
   renderSelectedGroupsScreen();
@@ -2411,11 +2395,7 @@ function openSelectedGroupsWorkspace() {
 
 function closeSelectedGroupsWorkspace() {
   const workspace = document.getElementById("selectedGroupsWorkspace");
-  const body = document.getElementById("selectedGroupsWorkspaceBody");
-  const results = document.getElementById("selectedGroupsResults");
-  const legacyCard = document.querySelector("#screen-grupos-selecionados .selected-groups-card");
-  if (!workspace || !body || !results || !legacyCard) return;
-  legacyCard.appendChild(results);
+  if (!workspace) return;
   workspace.classList.add("d-none");
   document.body.classList.remove("selected-groups-workspace-open");
 }
@@ -4275,7 +4255,6 @@ function renderInvestorAnalysis(result) {
   }
   results.innerHTML = `
     <button type="button" class="btn btn-outline-secondary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>Ver impedimentos e orientações</button>
-    ${renderMotor360SelectedGroupsDock()}
     ${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}
     <div class="motor360-single-quota-note" role="note">
       <strong>Grupos que atendem o perfil de contemplação do cliente</strong>
@@ -4287,7 +4266,6 @@ function renderInvestorAnalysis(result) {
     ${renderMotor360ChanceChart(items)}
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
     ${renderMotor360Audit(scopedAudit)}
-    <div class="motor360-selection-toolbar motor360-selection-toolbar-final"><strong>Próxima etapa</strong><span id="motor360SelectionSummary">${investorState.selectedGroupIds.size} grupo(s) selecionado(s) para a próxima etapa</span><button class="btn btn-primary btn-sm" type="button" data-screen-jump="grupos-selecionados">Ver grupos selecionados</button></div>
   `;
   results.querySelectorAll(".motor360-scenario-card").forEach((card) => {
     const groupId = card.closest(".motor360-group-card")?.querySelector(".motor360-group-select-input")?.dataset.groupId;
