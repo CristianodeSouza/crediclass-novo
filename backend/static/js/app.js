@@ -2783,9 +2783,9 @@ function renderSelectedGroupsAdvancedFilters() {
   panel.insertBefore(analysisControls, panel.firstChild);
   dashboard.insertBefore(panel, dashboard.children[1] || null);
   panel.querySelectorAll("[data-sg-advanced]").forEach((input) => input.addEventListener("change", () => {
-    const selectedProfile = investorState.selectedGroupProfile;
-    const selectedSort = investorState.selectedGroupSort;
-    const selectedScenario = investorState.selectedGroupScenario;
+    const selectedProfile = investorState.selectedGroupProfile || "all";
+    const selectedSort = investorState.selectedGroupSort || "original";
+    const selectedScenario = investorState.selectedGroupScenario || "per_group";
     const key = input.dataset.sgAdvanced;
     filters[key] = input.type === "checkbox" ? input.checked : input.value;
     investorState.selectedGroupProfile = selectedProfile;
@@ -3053,9 +3053,11 @@ function renderSelectedGroupsScreen() {
     const installmentForSort = (item) => {
       const selectedIds = selectedScenarioIdsForGroup(motor360GroupKey(item));
       const scenarioId = investorState.selectedGroupScenario !== "per_group" && investorState.selectedGroupScenario ? investorState.selectedGroupScenario : [...selectedIds][0];
-      return Number((item.cenarios || []).find((scenario) => scenario.id === scenarioId)?.parcela_inicial || (item.cenarios || [])[0]?.parcela_inicial || 0);
+      const rawInstallment = (item.cenarios || []).find((scenario) => scenario.id === scenarioId)?.parcela_inicial || (item.cenarios || [])[0]?.parcela_inicial || 0;
+      const normalizedInstallment = typeof rawInstallment === "number" ? rawInstallment : parseNumberInput(rawInstallment);
+      return Number(normalizedInstallment) || 0;
     };
-    items = [...items].sort((a, b) => installmentForSort(a) - installmentForSort(b));
+    items = [...items].sort((a, b) => installmentForSort(a) - installmentForSort(b) || String(a.grupo || a.grupo_id || "").localeCompare(String(b.grupo || b.grupo_id || ""), "pt-BR"));
   }
   if (sort === "bid") items = [...items].sort((a, b) => selectedGroupAnalytics(a).idealBid - selectedGroupAnalytics(b).idealBid);
   if (sort === "history") items = [...items].sort((a, b) => Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0));
