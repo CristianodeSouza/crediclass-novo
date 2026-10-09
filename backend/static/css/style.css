@@ -2245,6 +2245,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-composition-fold .motor360-floating-summary:not(.is-minimized) .motor360-floating-summary-heading strong { font-size: 1rem; }
 .motor360-composition-fold .motor360-floating-summary:not(.is-minimized) .motor360-floating-scenario { padding: 14px; }
 .motor360-composition-fold .motor360-floating-summary:not(.is-minimized) .motor360-floating-scenario dd { font-size: .85rem; }
+.motor360-client-profile-summary { margin: 14px 0 12px; padding: 12px; border: 1px solid #d8e4e7; border-radius: 8px; background: #f5f9fa; }
+.motor360-client-profile-summary header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
+.motor360-client-profile-summary header span { color: var(--brand-bronze-dark); font-size: .62rem; font-weight: 800; text-transform: uppercase; }
+.motor360-client-profile-summary header strong { color: var(--brand-navy); font-size: .82rem; }
+.motor360-client-profile-summary > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.motor360-client-profile-summary article { display: grid; gap: 2px; padding: 8px; border-radius: 5px; background: #fff; }
+.motor360-client-profile-summary small { color: var(--muted); font-size: .58rem; }
+.motor360-client-profile-summary b { color: var(--brand-navy); font-size: .72rem; }
+.motor360-floating-summary.is-minimized .motor360-client-profile-summary { display: none; }
+@media (max-width: 760px) { .motor360-client-profile-summary > div { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .motor360-single-quota-note, .motor360-multiple-quota-note { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 5px; min-height: 78px; margin: 16px 0 12px; padding: 14px 22px; border: 1px solid #efb477; border-left: 5px solid var(--brand-orange); border-radius: 6px; background: #fff8f2; color: var(--brand-navy); text-align: center; }
 .motor360-multiple-quota-note { margin-top: 22px; background: #fff4e9; }
 .motor360-single-quota-note strong, .motor360-multiple-quota-note strong { color: var(--brand-bronze-dark); font-size: 1rem; line-height: 1.2; }

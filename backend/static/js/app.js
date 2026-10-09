@@ -2318,6 +2318,22 @@ function motor360FinalItems(result = investorState.result) {
   return result?.final_items || result?.items || [];
 }
 
+function renderMotor360ClientProfileSummary(client = {}) {
+  const items = [
+    ["Objetivo", client.objetivo || "Não informado"],
+    ["Crédito desejado", formatMoney(client.credito_liquido_desejado)],
+    ["Renda total", formatMoney(client.renda_total)],
+    ["Parcela máxima", formatMoney(client.parcela_maxima)],
+    ["Parcela desejada", formatMoney(client.parcela_desejada)],
+    ["Lance FGTS", formatMoney(client.fgts_total ?? client.fgts)],
+    ["Lance recursos próprios", formatMoney(client.lance_recursos_proprios ?? client.lance_proprio)],
+    ["Lance total", formatMoney(client.lance_cliente_total)],
+  ];
+  const hasData = items.some(([, value]) => value && value !== "R$ 0,00" && value !== "Não informado");
+  if (!hasData) return "";
+  return `<section class="motor360-client-profile-summary" aria-label="Resumo do perfil do cliente"><header><span>Referência do cliente</span><strong>Resumo do perfil</strong></header><div>${items.map(([label, value]) => `<article><small>${escapeHtml(label)}</small><b>${escapeHtml(String(value || "-"))}</b></article>`).join("")}</div></section>`;
+}
+
 function renderMotor360SelectedGroupsDock() {
   const items = selectedMotor360Items();
   if (!items.length) return "";
@@ -2368,7 +2384,7 @@ function renderMotor360FloatingSelectionSummary() {
     const progress = desiredCredit > 0 ? Math.min(100, Math.max(0, credit / desiredCredit * 100)) : 0;
     return `<section class="motor360-floating-scenario ${viable ? "is-ok" : "is-pending"}"><header><strong>${label}</strong><span>${viable ? "Atende" : "Em composição"}</span></header><div class="motor360-floating-progress" aria-label="${progress.toFixed(0)}% do crédito desejado"><i style="width:${progress.toFixed(2)}%"></i></div><dl><div><dt>Crédito</dt><dd>${formatMoney(credit)} <small>de ${formatMoney(desiredCredit)}</small></dd></div><div><dt>Parcela</dt><dd>${formatMoney(installment)} <small>limite ${formatMoney(maximumInstallment)}</small></dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(balance)}</dd></div></dl><p>${creditOk ? "Crédito atendido" : `Faltam ${formatMoney(Math.max(0, desiredCredit - credit))}`} · ${incomeOk ? "Dentro de 30% da renda" : "Acima de 30% da renda"}${desiredOk ? "" : " · Acima da parcela desejada"}</p></section>`;
   };
-  return `<aside class="motor360-floating-summary${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">${totalQuotas}</span>${minimizeButton}</div></div><div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-screen-jump="grupos-selecionados">Analisar grupos selecionados</button></aside>`;
+  return `<aside class="motor360-floating-summary${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">${totalQuotas}</span>${minimizeButton}</div></div>${renderMotor360ClientProfileSummary(client)}<div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-screen-jump="grupos-selecionados">Analisar grupos selecionados</button></aside>`;
 }
 
 function renderMotor360FloatingSelectionSummaryIntoFold() {
