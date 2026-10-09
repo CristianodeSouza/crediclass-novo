@@ -4032,7 +4032,7 @@ function renderMotor360ContemplationMatrix(items, selectedProfile, rejectedItems
     return `<tr><th>${escapeHtml(groupLabel || "-")}${rejected}</th>${cells}</tr>`;
   }).join("");
   if (!rows) return "";
-  return `<details class="motor360-profile-matrix" open><summary>Matriz de contemplação por grupo · perfil aplicado: ${escapeHtml(selectedProfile || "não informado")}</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th>${profiles.map(([, label]) => `<th>${label}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
+  return `<details class="motor360-profile-matrix"><summary>Matriz de contemplação por grupo · perfil aplicado: ${escapeHtml(selectedProfile || "não informado")}</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th>${profiles.map(([, label]) => `<th>${label}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
 }
 
 function renderInvestorAnalysis(result) {
