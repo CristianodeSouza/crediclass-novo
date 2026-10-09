@@ -2765,6 +2765,59 @@ function selectedGroupsFilterValues() {
   return investorState.selectedGroupFilters || (investorState.selectedGroupFilters = { minCredit: "", maxInstallment: "", maxBid: "", minHistory: "", maxCommitment: "", maxAdmin: "", maxReserve: "", maxTerm: "", administrator: "", compatibleOnly: false });
 }
 
+function applySelectedGroupsFiltersAndSort(items) {
+  const filters = selectedGroupsFilterValues();
+  const filtered = items.filter((item) => {
+    const entry = selectedGroupAnalytics(item);
+    const history = entry.history("moderate");
+    const compatible = entry.scenario.credit_compatible !== false;
+    const commitment = (entry.incomeCommitment || 0) * 100;
+    return (!filters.administrator || String(item.administradora || "").toLowerCase().includes(String(filters.administrator).toLowerCase())) && (!filters.minCredit || entry.credit >= Number(filters.minCredit)) && (!filters.maxInstallment || entry.installment <= Number(filters.maxInstallment)) && (!filters.maxBid || entry.idealBid <= Number(filters.maxBid)) && (!filters.minHistory || history >= Number(filters.minHistory)) && (!filters.maxCommitment || commitment <= Number(filters.maxCommitment)) && (!filters.maxAdmin || entry.adminRate * 100 <= Number(filters.maxAdmin)) && (!filters.maxReserve || entry.reserveRate * 100 <= Number(filters.maxReserve)) && (!filters.maxTerm || Number(item.prazo_restante || 0) <= Number(filters.maxTerm)) && (!filters.compatibleOnly || compatible);
+  });
+  const sort = investorState.selectedGroupSort || "original";
+  const valueFor = (item) => {
+    const selectedIds = selectedScenarioIdsForGroup(motor360GroupKey(item));
+    const scenarioId = investorState.selectedGroupScenario !== "per_group" && investorState.selectedGroupScenario ? investorState.selectedGroupScenario : [...selectedIds][0];
+    const scenario = (item.cenarios || []).find((candidate) => candidate.id === scenarioId) || (item.cenarios || [])[0] || {};
+    const raw = scenario.parcela_inicial;
+    return typeof raw === "number" ? raw : Number(parseNumberInput(raw)) || 0;
+  };
+  return [...filtered].sort((a, b) => {
+    if (sort === "score") return selectedGroupAnalytics(b).score - selectedGroupAnalytics(a).score;
+    if (sort === "credit") return selectedGroupAnalytics(b).credit - selectedGroupAnalytics(a).credit;
+    if (sort === "installment") return valueFor(a) - valueFor(b);
+    if (sort === "bid") return selectedGroupAnalytics(a).idealBid - selectedGroupAnalytics(b).idealBid;
+    if (sort === "history") return Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0);
+    return 0;
+  });
+}
+
+function renderMotor360SelectionFilters() {
+  const host = document.getElementById("investorPreferencesPanel");
+  if (!host) return;
+  const existing = host.querySelector("[data-motor360-selection-filters]");
+  if (existing) {
+    const profileSelect = existing.querySelector('[data-motor360-filter="profile"]');
+    const sortSelect = existing.querySelector('[data-motor360-filter="sort"]');
+    if (profileSelect) profileSelect.value = investorState.selectedGroupProfile || "all";
+    if (sortSelect) sortSelect.value = investorState.selectedGroupSort || "original";
+    return;
+  }
+  const filters = selectedGroupsFilterValues();
+  const panel = document.createElement("details");
+  panel.open = true;
+  panel.dataset.motor360SelectionFilters = "true";
+  panel.className = "motor360-selection-filters";
+  panel.innerHTML = `<summary>Filtros para escolha dos grupos</summary><div class="motor360-selection-filter-grid"><label>Perfil em foco<select data-motor360-filter="profile"><option value="all">Todos os perfis</option><option value="conservative">Conservador</option><option value="moderate">Moderado</option><option value="aggressive">Agressivo</option><option value="super_aggressive">Superagressivo</option></select></label><label>Ordenar grupos<select data-motor360-filter="sort"><option value="original">Ordem original</option><option value="score">Melhor aderência</option><option value="credit">Maior crédito</option><option value="installment">Menor parcela</option><option value="bid">Menor lance ideal</option><option value="history">Maior histórico</option></select></label><label>Crédito mínimo<input type="number" data-motor360-advanced="minCredit" value="${filters.minCredit}" min="0" step="1000"></label><label>Parcela máxima<input type="number" data-motor360-advanced="maxInstallment" value="${filters.maxInstallment}" min="0" step="100"></label><label>Lance ideal máximo<input type="number" data-motor360-advanced="maxBid" value="${filters.maxBid}" min="0" step="1000"></label><label>Histórico moderado mínimo<input type="number" data-motor360-advanced="minHistory" value="${filters.minHistory}" min="0" step="0.1"></label><label>Comprometimento máximo (%)<input type="number" data-motor360-advanced="maxCommitment" value="${filters.maxCommitment}" min="0" max="100"></label><label>Taxa adm. máxima (%)<input type="number" data-motor360-advanced="maxAdmin" value="${filters.maxAdmin}" min="0" max="100"></label><label>Fundo reserva máx. (%)<input type="number" data-motor360-advanced="maxReserve" value="${filters.maxReserve}" min="0" max="100"></label><label>Prazo máximo (meses)<input type="number" data-motor360-advanced="maxTerm" value="${filters.maxTerm}" min="0"></label><label class="motor360-filter-check"><input type="checkbox" data-motor360-advanced="compatibleOnly" ${filters.compatibleOnly ? "checked" : ""}> Apenas crédito compatível</label><button type="button" class="btn btn-outline-secondary btn-sm" data-motor360-clear-filters>Limpar filtros</button></div>`;
+  host.appendChild(panel);
+  panel.querySelector('[data-motor360-filter="profile"]').value = investorState.selectedGroupProfile || "all";
+  panel.querySelector('[data-motor360-filter="sort"]').value = investorState.selectedGroupSort || "original";
+  const refresh = () => renderInvestorAnalysis(investorState.result);
+  panel.querySelectorAll("[data-motor360-filter]").forEach((input) => input.addEventListener("change", () => { if (input.dataset.motor360Filter === "profile") investorState.selectedGroupProfile = input.value; if (input.dataset.motor360Filter === "sort") investorState.selectedGroupSort = input.value; refresh(); }));
+  panel.querySelectorAll("[data-motor360-advanced]").forEach((input) => input.addEventListener("change", () => { filters[input.dataset.motor360Advanced] = input.type === "checkbox" ? input.checked : input.value; refresh(); }));
+  panel.querySelector("[data-motor360-clear-filters]")?.addEventListener("click", () => { investorState.selectedGroupFilters = { minCredit: "", maxInstallment: "", maxBid: "", minHistory: "", maxCommitment: "", maxAdmin: "", maxReserve: "", maxTerm: "", administrator: "", compatibleOnly: false }; investorState.selectedGroupProfile = "all"; investorState.selectedGroupSort = "original"; investorState.selectedGroupScenario = "per_group"; refresh(); });
+}
+
 function renderSelectedGroupsAdvancedFilters() {
   const dashboard = document.querySelector("[data-sg-dashboard]");
   if (!dashboard || dashboard.querySelector("[data-sg-advanced-filters]")) return;
@@ -3037,35 +3090,11 @@ function renderSelectedGroupsScreen() {
     results.innerHTML = "";
     return;
   }
-  let items = selectedMotor360Items();
-  const filters = selectedGroupsFilterValues();
-  items = items.filter((item) => {
-    const entry = selectedGroupAnalytics(item);
-    const history = entry.history("moderate");
-    const compatible = entry.scenario.credit_compatible !== false;
-    const commitment = (entry.incomeCommitment || 0) * 100;
-    return (!filters.administrator || String(item.administradora || "").toLowerCase().includes(String(filters.administrator).toLowerCase())) && (!filters.minCredit || entry.credit >= Number(filters.minCredit)) && (!filters.maxInstallment || entry.installment <= Number(filters.maxInstallment)) && (!filters.maxBid || entry.idealBid <= Number(filters.maxBid)) && (!filters.minHistory || history >= Number(filters.minHistory)) && (!filters.maxCommitment || commitment <= Number(filters.maxCommitment)) && (!filters.maxAdmin || entry.adminRate * 100 <= Number(filters.maxAdmin)) && (!filters.maxReserve || entry.reserveRate * 100 <= Number(filters.maxReserve)) && (!filters.maxTerm || Number(item.prazo_restante || 0) <= Number(filters.maxTerm)) && (!filters.compatibleOnly || compatible);
-  });
-  const sort = investorState.selectedGroupSort || "original";
-  if (sort === "score") items = [...items].sort((a, b) => selectedGroupAnalytics(b).score - selectedGroupAnalytics(a).score);
-  if (sort === "credit") items = [...items].sort((a, b) => selectedGroupAnalytics(b).credit - selectedGroupAnalytics(a).credit);
-  if (sort === "installment") {
-    const installmentForSort = (item) => {
-      const selectedIds = selectedScenarioIdsForGroup(motor360GroupKey(item));
-      const scenarioId = investorState.selectedGroupScenario !== "per_group" && investorState.selectedGroupScenario ? investorState.selectedGroupScenario : [...selectedIds][0];
-      const rawInstallment = (item.cenarios || []).find((scenario) => scenario.id === scenarioId)?.parcela_inicial || (item.cenarios || [])[0]?.parcela_inicial || 0;
-      const normalizedInstallment = typeof rawInstallment === "number" ? rawInstallment : parseNumberInput(rawInstallment);
-      return Number(normalizedInstallment) || 0;
-    };
-    items = [...items].sort((a, b) => installmentForSort(a) - installmentForSort(b) || String(a.grupo || a.grupo_id || "").localeCompare(String(b.grupo || b.grupo_id || ""), "pt-BR"));
-  }
-  if (sort === "bid") items = [...items].sort((a, b) => selectedGroupAnalytics(a).idealBid - selectedGroupAnalytics(b).idealBid);
-  if (sort === "history") items = [...items].sort((a, b) => Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0));
+  const items = selectedMotor360Items();
   if (!items.length && investorState.selectedGroupIds.size) {
     empty.classList.add("d-none");
     results.classList.remove("d-none");
     results.innerHTML = '<section class="sg-dashboard sg-filter-empty-dashboard" data-sg-dashboard><div class="sg-filter-empty"><strong>Nenhum grupo atende aos filtros atuais.</strong><span>A seleção continua preservada. Ajuste os filtros ou use “Limpar filtros” para voltar a visualizar os grupos.</span></div></section>';
-    renderSelectedGroupsAdvancedFilters();
     return;
   }
   empty.classList.toggle("d-none", items.length > 0);
@@ -3076,7 +3105,6 @@ function renderSelectedGroupsScreen() {
   if (scenarioFact) scenarioFact.textContent = "Por grupo";
   renderSelectedGroupsECharts(items);
   renderSelectedGroupsSafely("extra-visuals", renderSelectedGroupsExtraVisuals, items);
-  if (items.length) renderSelectedGroupsAdvancedFilters();
   if (items.length) renderSelectedGroupsScoreBreakdown(items);
   if (items.length) renderSelectedGroupsBidScenarios(items);
   if (items.length) renderSelectedGroupsRiskProbability(items);
@@ -4202,6 +4230,7 @@ function renderMotor360ContemplationMatrix(items, selectedProfile, rejectedItems
 }
 
 function renderInvestorAnalysis(result) {
+  renderMotor360SelectionFilters();
   const status = document.getElementById("investorAnalysisStatus");
   const summary = document.getElementById("investorAnalysisSummary");
   const results = document.getElementById("investorAnalysisResults");
@@ -4275,7 +4304,7 @@ function renderInvestorAnalysis(result) {
   const administratorItems = selectedAdministratorKey
     ? sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey).filter(matchesSelectedScenario)
     : scenarioSourceItems;
-  const items = applyInvestorPreferences(administratorItems, investorState.preferences);
+  const items = applySelectedGroupsFiltersAndSort(applyInvestorPreferences(administratorItems, investorState.preferences));
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
     ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
