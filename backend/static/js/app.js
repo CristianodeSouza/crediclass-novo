@@ -2254,7 +2254,8 @@ function renderMotor360GroupCard(item) {
   const profiles = byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [];
   const requestedPreference = investorState.result?.preferencia_declarada;
   const objectiveCompatible = !requestedPreference || (item.compatible_contemplation_strategies || []).includes(requestedPreference);
-  const status = item.matrix_approved ? "Aprovado no perfil de contemplação" : item.alerts?.length ? formatMotor360Reason(item.alerts[0]) : objectiveCompatible ? "Indicador compatível" : "Requer análise";
+  const hasCompleteScenario = scenarios.some((scenario) => scenario.credito_contratado != null && scenario.parcela_inicial != null && scenario.prazo_restante != null && scenario.credit_compatible !== false);
+  const status = item.matrix_approved && hasCompleteScenario ? "Aprovado no perfil de contemplação" : item.alerts?.length ? formatMotor360Reason(item.alerts[0]) : objectiveCompatible ? "Indicador compatível" : "Requer análise";
   const groupId = String(item.grupo || item.grupo_id || "");
   const groupKey = motor360GroupKey(item);
   const auditId = escapeHtml(groupKey);
@@ -2775,13 +2776,16 @@ function applySelectedGroupsFiltersAndSort(items) {
   };
   const filtered = items.filter((item) => {
     const entry = selectedGroupAnalytics(item, scenarioFor(item));
+    const scenario = (item.cenarios || []).find((candidate) => candidate.id === scenarioFor(item)) || {};
+    const rawInstallment = scenario.parcela_inicial;
+    const installmentValue = rawInstallment === null || rawInstallment === undefined || rawInstallment === "" ? null : (typeof rawInstallment === "number" ? rawInstallment : Number(parseNumberInput(rawInstallment)));
     const history = entry.history("moderate");
     const compatible = entry.scenario.credit_compatible === true;
-    const commitment = entry.incomeCommitment == null ? null : entry.incomeCommitment * 100;
+    const commitment = installmentValue == null || !selectedGroupsClientFinancials().income ? null : installmentValue / selectedGroupsClientFinancials().income * 100;
     const adminValue = item.taxa_adm ?? item.taxa_total;
     const reserveValue = item.fundo_reserva;
     const numericMax = (value, limit) => !limit || (value != null && Number.isFinite(Number(value)) && Number(value) <= Number(limit));
-    return (!filters.administrator || String(item.administradora || "").toLowerCase().includes(String(filters.administrator).toLowerCase())) && (!filters.minCredit || (entry.groupMaxCredit != null && entry.groupMaxCredit >= Number(filters.minCredit))) && numericMax(entry.installment, filters.maxInstallment) && numericMax(entry.idealBid, filters.maxBid) && (!filters.minHistory || (history > 0 && history >= Number(filters.minHistory))) && (!filters.maxCommitment || (commitment != null && commitment <= Number(filters.maxCommitment))) && (!filters.maxAdmin || (adminValue != null && adminValue !== "" && Number(entry.adminRate) * 100 <= Number(filters.maxAdmin))) && (!filters.maxReserve || (reserveValue != null && reserveValue !== "" && Number(entry.reserveRate) * 100 <= Number(filters.maxReserve))) && (!filters.maxTerm || (item.prazo_restante != null && item.prazo_restante !== "" && Number(item.prazo_restante) <= Number(filters.maxTerm))) && (!filters.compatibleOnly || compatible);
+    return (!filters.administrator || String(item.administradora || "").toLowerCase().includes(String(filters.administrator).toLowerCase())) && (!filters.minCredit || (entry.groupMaxCredit != null && entry.groupMaxCredit >= Number(filters.minCredit))) && numericMax(installmentValue, filters.maxInstallment) && numericMax(entry.idealBid, filters.maxBid) && (!filters.minHistory || (history > 0 && history >= Number(filters.minHistory))) && (!filters.maxCommitment || (commitment != null && commitment <= Number(filters.maxCommitment))) && (!filters.maxAdmin || (adminValue != null && adminValue !== "" && Number(entry.adminRate) * 100 <= Number(filters.maxAdmin))) && (!filters.maxReserve || (reserveValue != null && reserveValue !== "" && Number(entry.reserveRate) * 100 <= Number(filters.maxReserve))) && (!filters.maxTerm || (item.prazo_restante != null && item.prazo_restante !== "" && Number(item.prazo_restante) <= Number(filters.maxTerm))) && (!filters.compatibleOnly || compatible);
   });
   const sort = investorState.selectedGroupSort || "original";
   const valueFor = (item) => {
@@ -2789,13 +2793,15 @@ function applySelectedGroupsFiltersAndSort(items) {
     const scenarioId = investorState.selectedGroupScenario !== "per_group" && investorState.selectedGroupScenario ? investorState.selectedGroupScenario : [...selectedIds][0];
     const scenario = (item.cenarios || []).find((candidate) => candidate.id === scenarioId) || (item.cenarios || [])[0] || {};
     const raw = scenario.parcela_inicial;
-    return typeof raw === "number" ? raw : Number(parseNumberInput(raw)) || 0;
+    if (raw === null || raw === undefined || raw === "") return null;
+    return typeof raw === "number" ? raw : Number(parseNumberInput(raw));
   };
+  const analyticsFor = (item) => selectedGroupAnalytics(item, scenarioFor(item));
   return [...filtered].sort((a, b) => {
-    if (sort === "score") return selectedGroupAnalytics(b).score - selectedGroupAnalytics(a).score;
+    if (sort === "score") return analyticsFor(b).score - analyticsFor(a).score;
     if (sort === "credit") return selectedGroupAnalytics(b, scenarioFor(b)).groupMaxCredit - selectedGroupAnalytics(a, scenarioFor(a)).groupMaxCredit;
-    if (sort === "installment") return valueFor(a) - valueFor(b);
-    if (sort === "bid") return selectedGroupAnalytics(a).idealBid - selectedGroupAnalytics(b).idealBid;
+    if (sort === "installment") return (valueFor(a) == null ? 1 : 0) - (valueFor(b) == null ? 1 : 0) || (valueFor(a) ?? Infinity) - (valueFor(b) ?? Infinity);
+    if (sort === "bid") return analyticsFor(a).idealBid - analyticsFor(b).idealBid;
     if (sort === "history") return Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0);
     return 0;
   });
@@ -2828,7 +2834,7 @@ function renderMotor360SelectionFilters() {
   panel.querySelector('[data-motor360-filter="profile"]').value = investorState.selectedGroupProfile || "all";
   panel.querySelector('[data-motor360-filter="sort"]').value = investorState.selectedGroupSort || "original";
   let refreshTimer = null;
-  const refresh = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => renderInvestorAnalysis(investorState.result), 120); };
+  const refresh = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(() => renderInvestorAnalysis(investorState.result), 700); };
   panel.querySelectorAll("[data-motor360-filter]").forEach((input) => input.addEventListener("change", () => { if (input.dataset.motor360Filter === "profile") investorState.selectedGroupProfile = input.value; if (input.dataset.motor360Filter === "sort") investorState.selectedGroupSort = input.value; refresh(); }));
   panel.querySelectorAll("[data-motor360-advanced]").forEach((input) => {
     const update = () => { const currentFilters = selectedGroupsFilterValues(); currentFilters[input.dataset.motor360Advanced] = input.type === "checkbox" ? input.checked : input.value; refresh(); };
