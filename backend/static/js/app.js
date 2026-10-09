@@ -116,6 +116,7 @@ const savedMotor360SelectedData = (() => {
 const savedMotor360Administrator = localStorage.getItem("crediclass.motor360.administrator") || "";
 const investorState = {
   result: null,
+  analysisKey: null,
   simulatedBid: null,
   lastDeclaredBid: null,
   lastDesiredCredit: null,
@@ -130,6 +131,7 @@ const investorState = {
 };
 let investorAnalysisController = null;
 let investorAnalysisRequestId = 0;
+const INVESTOR_ANALYSIS_CACHE_KEY = "crediclass.motor360.analysisCache.v1";
 const HISTORY_START_MONTH = "2024-01";
 const CLIENT_PROFILE_STORAGE_KEY = "crediclass.clientProfile.v1";
 const CLIENT_OBJECTIVE_RULES = {
@@ -397,7 +399,15 @@ function activateScreen(screenName) {
   primaryAction.classList.toggle("d-none", ["motor360", "estudo", "mapa-assembleia"].includes(screenName));
   document.getElementById("reloadMapDataBtn").classList.toggle("d-none", screenName !== "mapa");
 
-  if (screenName === "motor360") loadInvestorAnalysis();
+  if (screenName === "motor360") {
+    const profile = collectClientProfile();
+    const key = investorAnalysisCacheKey(profile);
+    if (investorState.result && investorState.analysisKey === key) {
+      renderInvestorAnalysis(investorState.result);
+    } else {
+      loadInvestorAnalysis();
+    }
+  }
   if (screenName === "mapa-assembleia") loadAssemblyMap();
   if (screenName === "grupos-selecionados") renderSelectedGroupsScreen();
   if (screenName === "estudo") renderFinancialStudyScreen();
@@ -4379,6 +4389,24 @@ async function loadInvestorAnalysis() {
   investorAnalysisController = controller;
   addMotor360ExecutionLog("Execução do Motor 360 iniciada", `Requisição ${requestId}.`);
   const profile = collectClientProfile();
+  const analysisKey = investorAnalysisCacheKey(profile);
+  if (investorState.result && investorState.analysisKey === analysisKey) {
+    renderInvestorAnalysis(investorState.result);
+    return;
+  }
+  if (!investorState.result) {
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(INVESTOR_ANALYSIS_CACHE_KEY) || "null");
+      if (cached?.key === analysisKey && cached.result) {
+        investorState.result = cached.result;
+        investorState.analysisKey = cached.key;
+        investorState.audit = cached.result.audit || null;
+        syncMotor360BidExplorer();
+        renderInvestorAnalysis(cached.result);
+        return;
+      }
+    } catch (_) { /* cache inválido: recalcular */ }
+  }
   if (!(Number(profile.credito_desejado) > 0)) {
     addMotor360ExecutionLog("Perfil não disponível para análise", "Crédito desejado ausente ou igual a zero.", "warning");
     status.textContent = "Aguardando perfil do cliente";
@@ -4412,7 +4440,9 @@ async function loadInvestorAnalysis() {
     if (!response.ok) throw new Error(result.error || "Falha ao calcular a viabilidade dos grupos.");
     if (requestId !== investorAnalysisRequestId) return;
     investorState.result = result;
+    investorState.analysisKey = analysisKey;
     investorState.audit = result.audit || null;
+    try { sessionStorage.setItem(INVESTOR_ANALYSIS_CACHE_KEY, JSON.stringify({ key: analysisKey, result })); } catch (_) { /* cache cheio */ }
     syncMotor360BidExplorer();
     const oneQuotaCount = Number(result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0);
     const compositionCount = Number(result.total_grupos_composicao ?? 0);
@@ -4428,6 +4458,17 @@ async function loadInvestorAnalysis() {
   } finally {
     if (requestId === investorAnalysisRequestId) investorAnalysisController = null;
   }
+}
+
+function investorAnalysisCacheKey(profile) {
+  const payload = {
+    profile,
+    administrator: investorState.administrator || "",
+    simulatedBid: investorState.simulatedBid,
+    withEmbedded: document.getElementById("investorFilterWithEmbedded")?.checked === true,
+    withoutEmbedded: document.getElementById("investorFilterWithoutEmbedded")?.checked === true,
+  };
+  return JSON.stringify(payload);
 }
 
 function evaluatePjCapacityScenarios({
@@ -6616,6 +6657,12 @@ document.getElementById("investorAdministratorFilter")?.addEventListener("change
   if (hadSelectedGroups) showToast("A seleção anterior foi limpa para manter apenas uma administradora no estudo.", "warning");
   if (investorState.result) loadInvestorAnalysis();
   renderSelectedGroupsScreen();
+});
+document.getElementById("recalculateInvestorAnalysisBtn")?.addEventListener("click", () => {
+  investorState.result = null;
+  investorState.analysisKey = null;
+  try { sessionStorage.removeItem(INVESTOR_ANALYSIS_CACHE_KEY); } catch (_) { /* sem cache */ }
+  loadInvestorAnalysis();
 });
 document.getElementById("clearInvestorPreferencesBtn")?.addEventListener("click", () => {
   investorState.preferences = [];
