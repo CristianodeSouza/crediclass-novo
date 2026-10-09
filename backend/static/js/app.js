@@ -2474,7 +2474,10 @@ function selectedGroupAnalytics(item, forcedScenarioId = null) {
     : selectedIds[0] || "");
   const scenario = (item.cenarios || []).find((entry) => entry.id === scenarioId) || (item.cenarios || []).find((entry) => entry.id === "without_embedded") || (item.cenarios || [])[0] || {};
   const profiles = scenario.perfis_contemplacao || [];
-  const profile = (id) => profiles.find((entry) => entry.id === id) || {};
+  const profile = (id) => {
+    const value = profiles.find((entry) => entry.id === id);
+    return value ? { ...value, atinge_perfil: profileMeetsBid(item, scenario, value) } : {};
+  };
   const historical = item.capacidade_contemplacoes || {};
   const history = (key) => Number(historical[key]?.media_contemplacoes ?? historical[key]?.media ?? 0);
   const quotaCount = quotaCountFor(item);
