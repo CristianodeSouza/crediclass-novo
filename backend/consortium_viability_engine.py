@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.128"
+MOTOR_VERSION = "4.0.129"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
@@ -770,6 +770,21 @@ def analyze_client_consortium_viability(
     def ordering_key(item: dict[str, Any]) -> tuple[Any, ...]:
         number = re.search(r"\d+", str(item.get("grupo") or ""))
         scenarios = item.get("cenarios") or []
+        compatible_scenarios = [
+            scenario for scenario in scenarios
+            if scenario.get("id") in scenario_filter
+            and scenario.get("credit_compatible") is True
+            and scenario.get("term_compatible") is True
+            and scenario.get("income_compatible") is not False
+            and (scenario.get("cotas_minimas") in (None, 0, 1))
+            and not item.get("requires_composition")
+        ]
+        if any(scenario.get("id") == "without_embedded" for scenario in compatible_scenarios):
+            scenario_priority = 0
+        elif any(scenario.get("id") == "with_embedded" for scenario in compatible_scenarios):
+            scenario_priority = 1
+        else:
+            scenario_priority = 2
         profile_percentages = [
             profile.get("percentual_referencia")
             for scenario in scenarios
@@ -781,6 +796,7 @@ def analyze_client_consortium_viability(
         ]
         contemplation_percentage = max(profile_percentages, default=Decimal("-1"))
         return (
+            scenario_priority,
             normalize_text(item.get("administradora") or ""),
             int(number.group()) if number else math.inf,
             -contemplation_percentage,
@@ -929,7 +945,7 @@ def analyze_client_consortium_viability(
         "group_results": group_results,
         "incomplete_groups": incomplete_groups,
         "excluded_groups": excluded,
-        "final_ordering": {"rules": ["Nome da administradora (ordem crescente)", "Número do grupo (ordem crescente)", "Percentual de contemplação atendido pelo lance e perfil do cliente (ordem decrescente)"], "selected_preferences": [], "execution_summary": "Os grupos são ordenados exclusivamente por administradora, número do grupo e percentual de contemplação atendido."},
+        "final_ordering": {"rules": ["Cenário sem lance embutido com crédito, prazo/renda e contemplação compatíveis", "Cenário com lance embutido com crédito, prazo/renda e contemplação compatíveis", "Demais grupos aprovados na matriz para análise do operador", "Nome da administradora (ordem crescente)", "Número do grupo (ordem crescente)", "Percentual de contemplação atendido pelo lance e perfil do cliente (ordem decrescente)"], "selected_preferences": [], "execution_summary": "Os grupos são ordenados primeiro por cenário financeiro compatível, depois por administradora, número do grupo e percentual de contemplação."},
         "summary": {"total_loaded": len(groups), "total_analyzed": len(groups), "total_matrix_candidates": len(matrix_approved_keys), "total_matrix_evaluated": counters["matrix_evaluated"], "total_matrix_incomplete": counters["matrix_incomplete"], "total_matrix_rejected": counters["selected_profile_rejected"] if selected_profile else counters["contemplation_rejected"], "total_preselected": len(eligible_items), "total_composition_candidates": len(composition_items), "total_credit_compatible": len(credit_eligible_items), "total_credit_rejected": counters["credit_rejected"], "total_term_income_rejected": counters["term_rejected"], "total_selected_profile_rejected": counters["selected_profile_rejected"] if selected_profile else 0, "groups_with_incomplete_data": len(incomplete_groups), "incomplete_field_occurrences": incomplete_field_occurrences, "total_rejected": len(excluded)},
         "schema_notes": {"columns_used": {"official_decision_field": "used_in_decision", "compatibility_field": "used", "compatibility_note": "The used field mirrors used_in_decision for compatibility with prior consumers."}},
         "warnings": [
@@ -1020,7 +1036,7 @@ def analyze_client_consortium_viability(
     audit["summary"]["total_requires_composition"] = sum(1 for item in final_items if item.get("requires_composition"))
     audit["summary"]["total_preselected"] = len(final_items)
     audit["summary"]["total_composition_candidates"] = sum(1 for item in final_items if item.get("requires_composition"))
-    audit["final_ordering"]["execution_summary"] = "Os grupos são ordenados exclusivamente por administradora, número do grupo e percentual de contemplação atendido pelo lance e perfil do cliente."
+    audit["final_ordering"]["execution_summary"] = "Os grupos são ordenados primeiro por cenário sem embutido compatível, depois com embutido compatível e, por fim, pelos demais grupos aprovados na matriz; dentro de cada bloco, administradora, grupo e percentual de contemplação."
     audit["execution_steps"] = [
         audit["execution_steps"][0],
         audit["execution_steps"][1],

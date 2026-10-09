@@ -327,6 +327,27 @@ class Motor360RfcTest(unittest.TestCase):
         ])
         self.assertEqual([item["grupo"] for item in result["items"]], ["auto"])
 
+    def test_orders_matrix_groups_by_compatible_scenario_before_admin(self):
+        result = analyze_client_consortium_viability(payload(
+            credito_desejado=600000,
+            lance_proprio=460000,
+            fgts=0,
+            parcela_desejada=4500,
+            parcela_limite=12000,
+            renda_total=40000,
+            contemplacao_perfil="urgent",
+        ), [
+            group("900", administradora="ZETA", credito_maximo=900000, lance_super_agressivo_3m="70%"),
+            group("100", administradora="ALFA", credito_maximo=300000, lance_super_agressivo_3m="70%"),
+        ])
+
+        self.assertEqual([item["grupo"] for item in result["items"]], ["900", "100"])
+        self.assertEqual(result["audit"]["final_ordering"]["rules"][:3], [
+            "Cenário sem lance embutido com crédito, prazo/renda e contemplação compatíveis",
+            "Cenário com lance embutido com crédito, prazo/renda e contemplação compatíveis",
+            "Demais grupos aprovados na matriz para análise do operador",
+        ])
+
     def test_participant_resources_are_used_when_manual_field_is_zero(self):
         result = analyze_client_consortium_viability(
             payload(
@@ -349,7 +370,7 @@ class Motor360RfcTest(unittest.TestCase):
     def test_audit_records_rfc_version_calculations_and_group_columns(self):
         result = analyze_client_consortium_viability(payload(), [group()])
         audit = result["audit"]
-        self.assertEqual(audit["metadata"]["engine_version"], "4.0.128")
+        self.assertEqual(audit["metadata"]["engine_version"], "4.0.129")
         self.assertEqual(audit["metadata"]["rules_version"], "RFC-001-architecture-v4.0")
         self.assertIn("Y", [item["column"] for item in audit["columns_used"]])
         self.assertIn("BL", [item["column"] for item in audit["columns_used"]])
