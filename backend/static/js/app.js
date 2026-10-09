@@ -2254,7 +2254,7 @@ function renderMotor360GroupCard(item) {
   const profiles = byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [];
   const requestedPreference = investorState.result?.preferencia_declarada;
   const objectiveCompatible = !requestedPreference || (item.compatible_contemplation_strategies || []).includes(requestedPreference);
-  const hasCompleteScenario = scenarios.some((scenario) => scenario.credito_contratado != null && scenario.parcela_inicial != null && scenario.prazo_restante != null && scenario.credit_compatible !== false);
+  const hasCompleteScenario = scenarios.some((scenario) => scenario.credito_contratado != null && scenario.parcela_inicial != null && item.prazo_restante != null && item.prazo_restante !== "" && scenario.credit_compatible !== false);
   const status = item.matrix_approved && hasCompleteScenario ? "Aprovado no perfil de contemplação" : item.alerts?.length ? formatMotor360Reason(item.alerts[0]) : objectiveCompatible ? "Indicador compatível" : "Requer análise";
   const groupId = String(item.grupo || item.grupo_id || "");
   const groupKey = motor360GroupKey(item);
@@ -2797,11 +2797,12 @@ function applySelectedGroupsFiltersAndSort(items) {
     return typeof raw === "number" ? raw : Number(parseNumberInput(raw));
   };
   const analyticsFor = (item) => selectedGroupAnalytics(item, scenarioFor(item));
+  const bidValueFor = (item) => { const entry = analyticsFor(item); return entry.idealBid > 0 && entry.groupMaxCredit > 0 ? entry.idealBid : null; };
   return [...filtered].sort((a, b) => {
     if (sort === "score") return analyticsFor(b).score - analyticsFor(a).score;
     if (sort === "credit") return selectedGroupAnalytics(b, scenarioFor(b)).groupMaxCredit - selectedGroupAnalytics(a, scenarioFor(a)).groupMaxCredit;
     if (sort === "installment") return (valueFor(a) == null ? 1 : 0) - (valueFor(b) == null ? 1 : 0) || (valueFor(a) ?? Infinity) - (valueFor(b) ?? Infinity);
-    if (sort === "bid") return analyticsFor(a).idealBid - analyticsFor(b).idealBid;
+    if (sort === "bid") return (bidValueFor(a) == null ? 1 : 0) - (bidValueFor(b) == null ? 1 : 0) || (bidValueFor(a) ?? Infinity) - (bidValueFor(b) ?? Infinity);
     if (sort === "history") return Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0);
     return 0;
   });
@@ -4135,7 +4136,10 @@ async function loadMotor360Audit(auditId) {
       addMotor360ExecutionLog(`Etapa ${step.order}: ${step.name}`, `Entrada ${step.input_count ?? 0} · aprovados ${step.approved_count ?? step.evaluated_count ?? 0} · eliminados ${step.rejected_count ?? 0} · ${step.duration_ms ?? 0} ms.`);
     });
     addMotor360ExecutionLog("Auditoria por grupo disponível", `${(audit.group_results || []).length} grupos com decisão, cenários, colunas e motivos registrados.`);
-    if (investorState.result) renderInvestorAnalysis(investorState.result);
+    if (investorState.result) {
+      const auditBlock = document.querySelector("[data-motor360-audit]");
+      if (auditBlock) auditBlock.outerHTML = renderMotor360Audit(investorState.audit);
+    }
   } catch (error) {
     showToast(error.message || "Não foi possível carregar a auditoria.", "warning");
   }
