@@ -2347,7 +2347,7 @@ function renderMotor360SelectedGroupsDock() {
     const anchorId = motor360GroupAnchorId(groupId);
     return `<button type="button" class="motor360-selected-dock-item" data-group-anchor="${escapeHtml(anchorId)}" aria-label="Ir para o grupo ${escapeHtml(groupId)}"><b>Grupo ${escapeHtml(groupId)}</b><small>${escapeHtml(item.administradora || "-")} · ${quotas} ${quotas === 1 ? "cota" : "cotas"}</small></button>`;
   }).join("");
-  return `<section class="motor360-selected-dock" aria-label="Grupos selecionados"><div class="motor360-selected-dock-heading"><span>Grupos selecionados</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-selected-dock-list">${groups}</div><button class="btn btn-primary btn-sm" type="button" data-screen-jump="grupos-selecionados">Comparar</button></section>`;
+  return `<section class="motor360-selected-dock" aria-label="Grupos selecionados"><div class="motor360-selected-dock-heading"><span>Grupos selecionados</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-selected-dock-list">${groups}</div><button class="btn btn-primary btn-sm" type="button" data-open-selected-groups-workspace>Comparar</button></section>`;
 }
 
 function renderMotor360FloatingSelectionSummary() {
@@ -2384,7 +2384,7 @@ function renderMotor360FloatingSelectionSummary() {
     const progress = desiredCredit > 0 ? Math.min(100, Math.max(0, credit / desiredCredit * 100)) : 0;
     return `<section class="motor360-floating-scenario ${viable ? "is-ok" : "is-pending"}"><header><strong>${label}</strong><span>${viable ? "Atende" : "Em composição"}</span></header><div class="motor360-floating-progress" aria-label="${progress.toFixed(0)}% do crédito desejado"><i style="width:${progress.toFixed(2)}%"></i></div><dl><div><dt>Crédito</dt><dd>${formatMoney(credit)} <small>de ${formatMoney(desiredCredit)}</small></dd></div><div><dt>Parcela</dt><dd>${formatMoney(installment)} <small>limite ${formatMoney(maximumInstallment)}</small></dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(balance)}</dd></div></dl><p>${creditOk ? "Crédito atendido" : `Faltam ${formatMoney(Math.max(0, desiredCredit - credit))}`} · ${incomeOk ? "Dentro de 30% da renda" : "Acima de 30% da renda"}${desiredOk ? "" : " · Acima da parcela desejada"}</p></section>`;
   };
-  return `<aside class="motor360-floating-summary${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">${totalQuotas}</span>${minimizeButton}</div></div>${renderMotor360ClientProfileSummary(client)}<div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-screen-jump="grupos-selecionados">Analisar grupos selecionados</button></aside>`;
+  return `<aside class="motor360-floating-summary${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">${totalQuotas}</span>${minimizeButton}</div></div>${renderMotor360ClientProfileSummary(client)}<div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-open-selected-groups-workspace>Analisar grupos selecionados</button></aside>`;
 }
 
 function renderMotor360FloatingSelectionSummaryIntoFold() {
@@ -2395,6 +2395,29 @@ function renderMotor360FloatingSelectionSummaryIntoFold() {
     investorState.floatingSummaryMinimized = !investorState.floatingSummaryMinimized;
     renderMotor360FloatingSelectionSummaryIntoFold();
   });
+  host.querySelector("[data-open-selected-groups-workspace]")?.addEventListener("click", openSelectedGroupsWorkspace);
+}
+
+function openSelectedGroupsWorkspace() {
+  const workspace = document.getElementById("selectedGroupsWorkspace");
+  const body = document.getElementById("selectedGroupsWorkspaceBody");
+  const results = document.getElementById("selectedGroupsResults");
+  if (!workspace || !body || !results) return;
+  body.appendChild(results);
+  workspace.classList.remove("d-none");
+  document.body.classList.add("selected-groups-workspace-open");
+  renderSelectedGroupsScreen();
+}
+
+function closeSelectedGroupsWorkspace() {
+  const workspace = document.getElementById("selectedGroupsWorkspace");
+  const body = document.getElementById("selectedGroupsWorkspaceBody");
+  const results = document.getElementById("selectedGroupsResults");
+  const legacyCard = document.querySelector("#screen-grupos-selecionados .selected-groups-card");
+  if (!workspace || !body || !results || !legacyCard) return;
+  legacyCard.appendChild(results);
+  workspace.classList.add("d-none");
+  document.body.classList.remove("selected-groups-workspace-open");
 }
 
 function renderSelectedGroupComparisonColumn(item, index) {
@@ -4288,6 +4311,7 @@ function renderInvestorAnalysis(result) {
     card.querySelector(".motor360-scenario-title")?.insertAdjacentHTML("beforeend", action);
   });
   results.querySelectorAll("[data-screen-jump]").forEach((button) => button.addEventListener("click", () => activateScreen(button.dataset.screenJump)));
+  results.querySelectorAll("[data-open-selected-groups-workspace]").forEach((button) => button.addEventListener("click", openSelectedGroupsWorkspace));
   results.querySelectorAll("[data-motor360-blocking-diagnostics]").forEach((button) => button.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit)));
   results.querySelectorAll(".motor360-scenario-select-input").forEach((input) => input.addEventListener("change", (event) => {
     const groupId = String(event.target.dataset.groupId || "");
@@ -6379,7 +6403,7 @@ document.querySelectorAll(".nav-item").forEach((item) => {
 });
 
 document.querySelectorAll("[data-screen-jump]").forEach((button) => {
-  button.addEventListener("click", () => activateScreen(button.dataset.screenJump));
+  button.addEventListener("click", () => button.dataset.screenJump === "grupos-selecionados" ? openSelectedGroupsWorkspace() : activateScreen(button.dataset.screenJump));
 });
 
 document.getElementById("primaryAction").addEventListener("click", () => {
@@ -6849,6 +6873,7 @@ document.getElementById("clearMotor360ExecutionLogsBtn")?.addEventListener("clic
   motor360ExecutionLogs.length = 0;
   renderMotor360ExecutionLogs();
 });
+document.getElementById("closeSelectedGroupsWorkspace")?.addEventListener("click", closeSelectedGroupsWorkspace);
 renderMotor360FloatingSelectionSummaryIntoFold();
 
 document.getElementById("reindexSystemBtn").addEventListener("click", () => {

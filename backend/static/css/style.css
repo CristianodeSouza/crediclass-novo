@@ -2255,6 +2255,17 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-client-profile-summary b { color: var(--brand-navy); font-size: .72rem; }
 .motor360-floating-summary.is-minimized .motor360-client-profile-summary { display: none; }
 @media (max-width: 760px) { .motor360-client-profile-summary > div { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.selected-groups-workspace { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 24px; background: rgb(20 35 41 / 62%); }
+.selected-groups-workspace-dialog { display: flex; flex-direction: column; width: min(1440px, 96vw); max-height: 94vh; overflow: hidden; border: 1px solid #e8a15c; border-radius: 12px; background: #f8fafb; box-shadow: 0 24px 80px rgb(10 27 34 / 35%); }
+.selected-groups-workspace-header { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 22px; border-bottom: 1px solid #dce5e8; background: #fff; }
+.selected-groups-workspace-header span { color: var(--brand-orange); font-size: .66rem; font-weight: 800; text-transform: uppercase; }
+.selected-groups-workspace-header h2 { margin: 3px 0; color: var(--brand-navy); font-size: 1.2rem; }
+.selected-groups-workspace-header p { margin: 0; color: var(--muted); font-size: .76rem; }
+.selected-groups-workspace-body { min-height: 0; overflow: auto; padding: 18px 22px 26px; }
+.selected-groups-workspace-body > #selectedGroupsResults { display: block !important; }
+.selected-groups-workspace-body .selected-groups-overview { margin-top: 0; }
+.selected-groups-workspace-open { overflow: hidden; }
+@media (max-width: 700px) { .selected-groups-workspace { padding: 8px; }.selected-groups-workspace-dialog { width: 100%; max-height: 98vh; }.selected-groups-workspace-header { align-items: flex-start; padding: 14px; }.selected-groups-workspace-body { padding: 12px; } }
 .motor360-single-quota-note, .motor360-multiple-quota-note { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 5px; min-height: 78px; margin: 16px 0 12px; padding: 14px 22px; border: 1px solid #efb477; border-left: 5px solid var(--brand-orange); border-radius: 6px; background: #fff8f2; color: var(--brand-navy); text-align: center; }
 .motor360-multiple-quota-note { margin-top: 22px; background: #fff4e9; }
 .motor360-single-quota-note strong, .motor360-multiple-quota-note strong { color: var(--brand-bronze-dark); font-size: 1rem; line-height: 1.2; }
