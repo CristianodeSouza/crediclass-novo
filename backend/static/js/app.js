@@ -2267,6 +2267,8 @@ function renderMotor360GroupCard(item) {
   const scaleMoney = (value) => value === null || value === undefined ? value : Number(value) * quotaCount;
   const quotaControl = selected ? `<div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}"><div class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="50" value="${quotaCount}" data-quota-action="input" data-group-id="${auditId}" aria-label="Quantidade de cotas do grupo ${auditId}"></div>${quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : ""}</div>` : "";
   const selectedProfileId = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" }[investorState.result?.perfil_contemplacao] || investorState.result?.perfil_contemplacao;
+  const focusProfileId = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : selectedProfileId;
+  const focusProfileLabel = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Superagressivo", investor: "Investidor" }[focusProfileId] || "Todos os perfis";
   const scenarioRequirementStatus = (scenario) => {
     const profileOk = !selectedProfileId || (scenario.perfis_contemplacao || []).some((profile) => profile.id === selectedProfileId && profileMeetsBid(item, scenario, profile));
     const requirements = [
@@ -2291,7 +2293,7 @@ function renderMotor360GroupCard(item) {
       return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"}"><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(bidGap.gap)}`}</span><em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
     }).join("");
     const scenarioLabel = scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
-    return `<section class="motor360-scenario-profiles"><div class="motor360-profile-section-title"><h4>Perfis · ${scenarioLabel}</h4><small>Referência: ${formatMoney(scenario.lance_cliente_total)}</small></div><div class="motor360-profile-card-values">${values || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section>`;
+    return `<section class="motor360-scenario-profiles"><div class="motor360-profile-section-title"><h4>Perfis · ${scenarioLabel}</h4><small>Foco: ${escapeHtml(focusProfileLabel)} · Referência: ${formatMoney(scenario.lance_cliente_total)}</small></div><div class="motor360-profile-card-values">${values || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section>`;
   };
   const scaledScenarioCards = scenarios.map((scenario) => {
     const title = scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido";
@@ -6852,7 +6854,7 @@ document.getElementById("investorAdministratorFilter")?.addEventListener("change
   persistMotor360Selection();
   updateInvestorPreferenceSummary();
   if (hadSelectedGroups) showToast("A seleção anterior foi limpa para manter apenas uma administradora no estudo.", "warning");
-  if (investorState.result) loadInvestorAnalysis();
+  if (investorState.result) renderInvestorAnalysis(investorState.result);
   renderSelectedGroupsScreen();
 });
 document.getElementById("recalculateInvestorAnalysisBtn")?.addEventListener("click", () => {
