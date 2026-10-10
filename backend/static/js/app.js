@@ -2325,14 +2325,14 @@ function renderMotor360GroupCardUncached(item) {
     const cardAfter = metric("installmentAfter") ?? scaleMoney(scenario.parcela_pos_contemplacao);
     const cardBalance = metric("balance") ?? scaleMoney(scenario.saldo_devedor);
     const metricEntry = metrics?.entries.find((entry) => motor360GroupKey(entry.item) === groupKey);
-    const cardClientBid = metricEntry?.profiles[focusProfileId]?.available ?? Number(scenario.lance_cliente_total || 0);
-    const cardEmbedded = metricEntry?.embedded ?? scaleMoney(scenario.lance_embutido);
-    const cardScenarioBid = metricEntry ? cardClientBid + cardEmbedded : scaleMoney(scenario.lance_total_cenario);
+    const cardClientBid = metrics ? clientResourceTotal() : Number(scenario.lance_cliente_total || 0);
+    const cardEmbedded = metrics?.embedded ?? scaleMoney(scenario.lance_embutido);
+    const cardScenarioBid = metrics ? cardClientBid + cardEmbedded : scaleMoney(scenario.lance_total_cenario);
     const cardLabel = metrics ? `<small class="motor360-scenario-note">Crédito acumulado: ${formatMoney(metrics.credit)} de ${formatMoney(desiredCompositionCredit)} · ${metrics.shortfall > 0 ? `Faltam ${formatMoney(metrics.shortfall)}` : "Crédito atendido"}</small>` : "";
-    const clientBidPercent = metrics?.credit > 0 ? cardClientBid / desiredCompositionCredit : Number(scenario.percentual_lance_cliente || 0);
-    const scenarioBidPercent = desiredCompositionCredit > 0 && metrics ? cardScenarioBid / desiredCompositionCredit : Number(scenario.percentual_lance_efetivo || 0);
+    const clientBidPercent = metrics?.contractedCredit > 0 ? cardClientBid / metrics.contractedCredit : Number(scenario.percentual_lance_cliente || 0);
+    const scenarioBidPercent = metrics?.contractedCredit > 0 ? cardScenarioBid / metrics.contractedCredit : Number(scenario.percentual_lance_efetivo || 0);
     const visibleFailure = !requirement.ok ? `<p class="motor360-scenario-failure" role="status">${escapeHtml(requirement.failed.join(" · ") || requirement.title)}</p>` : "";
-    return `<article class="motor360-scenario-card ${requirement.ok ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusLabel} ${info}</span></div>${visibleFailure}<div class="motor360-scenario-grid"><div><small>Crédito contratado${selected ? " (composição do grupo)" : ""}</small><b>${formatMoney(cardCredit)}</b></div><div><small>${selected ? "Lance do cliente alocado" : "Lance do cliente"}</small><b>${formatMoney(cardClientBid)} <em>(${formatPercent(clientBidPercent)})</em></b></div><div><small>Lance embutido</small><b>${formatMoney(cardEmbedded)}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(cardScenarioBid)} <em>(${formatPercent(scenarioBidPercent)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(cardBalance)}</b></div><div><small>Parcela inicial</small><b>${formatMoney(cardInstallment)}</b></div><div><small>Parcela pós-contemplação</small><b>${cardAfter == null ? "Não calculada" : formatMoney(cardAfter)}</b></div></div>${cardLabel}<small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small>${renderScenarioProfiles(scenario)}</article>`;
+    return `<article class="motor360-scenario-card ${requirement.ok ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusLabel} ${info}</span></div>${visibleFailure}<div class="motor360-scenario-grid"><div><small>Crédito contratado${selected ? " (composição do grupo)" : ""}</small><b>${formatMoney(cardCredit)}</b></div><div><small>${selected ? "Lance do cliente na composição" : "Lance do cliente"}</small><b>${formatMoney(cardClientBid)} <em>(${formatPercent(clientBidPercent)})</em></b></div><div><small>${selected ? "Lance embutido na composição" : "Lance embutido"}</small><b>${formatMoney(cardEmbedded)}</b></div><div><small>${selected ? "Lance total da composição" : "Lance total do cenário"}</small><b>${formatMoney(cardScenarioBid)} <em>(${formatPercent(scenarioBidPercent)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(cardBalance)}</b></div><div><small>Parcela inicial</small><b>${formatMoney(cardInstallment)}</b></div><div><small>Parcela pós-contemplação</small><b>${cardAfter == null ? "Não calculada" : formatMoney(cardAfter)}</b></div></div>${cardLabel}<small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small>${renderScenarioProfiles(scenario)}</article>`;
   }).join("");
   const selectedScenarioIds = selectedScenarioIdsForGroup(groupKey);
   const compositionViable = selected && [...selectedScenarioIds].some((id) => { const scenario = scenarios.find((entry) => entry.id === id); return scenario && scenarioRequirementStatus(scenario).ok; });
@@ -2635,7 +2635,7 @@ function selectedCompositionScenarioMetrics(items, scenarioId, desiredCreditOver
   }
   const creditCapacityOk = entries.length === items.length && entries.every((entry) => entry.creditCompatible);
   const creditCapacityIssues = entries.filter((entry) => !entry.creditCompatible).map((entry) => ({ groupId: String(entry.item.grupo || entry.item.grupo_id || "-"), contractedPerQuota: entry.grossCreditPerQuota, maximumPerQuota: Number(entry.item.credito_maximo || 0) }));
-  return { entries, totalQuotas, desiredCredit, targetPerQuota, credit, shortfall, creditCapacityOk, creditCapacityIssues, profileRequirements, installment: entries.reduce((sum, entry) => sum + entry.installment, 0), installmentAfter: entries.some((entry) => entry.installmentAfter != null) ? entries.reduce((sum, entry) => sum + Number(entry.installmentAfter || 0), 0) : null, balance: entries.reduce((sum, entry) => sum + entry.balance, 0) };
+  return { entries, totalQuotas, desiredCredit, targetPerQuota, credit, contractedCredit: entries.reduce((sum, entry) => sum + entry.contractedCredit, 0), embedded: entries.reduce((sum, entry) => sum + entry.embedded, 0), shortfall, creditCapacityOk, creditCapacityIssues, profileRequirements, installment: entries.reduce((sum, entry) => sum + entry.installment, 0), installmentAfter: entries.some((entry) => entry.installmentAfter != null) ? entries.reduce((sum, entry) => sum + Number(entry.installmentAfter || 0), 0) : null, balance: entries.reduce((sum, entry) => sum + entry.balance, 0) };
 }
 
 function selectedCompositionAssessment(metrics, client = motor360ClientProfile(), profileId = allocationProfileId()) {
@@ -4530,14 +4530,6 @@ function renderInvestorAnalysis(result) {
     if (!scenarioId) return;
     card.dataset.scenarioId = scenarioId;
     const scenario = (groupItem?.cenarios || []).find((item) => item.id === scenarioId) || {};
-    const totalCredit = Number(scenario.credito_contratado || 0) * quotaCountFor(groupItem);
-    const totalBid = scenarioTotalBidFor(groupItem, scenario);
-    const scenarioGrid = card.querySelector(".motor360-scenario-grid");
-    if (scenarioGrid) {
-      const cells = scenarioGrid.children;
-      if (cells[1]) cells[1].innerHTML = `<small>Lance total do cliente</small><b>${formatMoney(clientResourceTotal())} <em>(${formatPercent(totalCredit > 0 ? clientResourceTotal() / totalCredit : 0)})</em></b>`;
-      if (cells[3]) cells[3].innerHTML = `<small>Lance total do cenário</small><b>${formatMoney(totalBid)} <em>(${formatPercent(totalCredit > 0 ? totalBid / totalCredit : 0)})</em></b>`;
-    }
     const groupSelected = investorState.selectedGroupIds.has(String(groupId));
     const action = `<label><input type="checkbox" class="motor360-scenario-select-input" data-group-id="${groupId}" data-scenario-id="${scenarioId}" ${selectedScenarioIdsForGroup(groupId).has(scenarioId) ? "checked" : ""} ${groupSelected ? "" : "disabled"}> Escolher para análise</label>`;
     card.querySelector(".motor360-scenario-title")?.insertAdjacentHTML("beforeend", action);

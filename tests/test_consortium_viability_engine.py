@@ -1,7 +1,7 @@
 import unittest
 from types import SimpleNamespace
 
-from backend.consortium_viability_engine import analyze_client_consortium_viability, map_declared_objective_to_preference
+from backend.consortium_viability_engine import MOTOR_VERSION, analyze_client_consortium_viability, map_declared_objective_to_preference
 from backend.motor360_math import normalize_percent
 
 
@@ -370,7 +370,7 @@ class Motor360RfcTest(unittest.TestCase):
     def test_audit_records_rfc_version_calculations_and_group_columns(self):
         result = analyze_client_consortium_viability(payload(), [group()])
         audit = result["audit"]
-        self.assertEqual(audit["metadata"]["engine_version"], "4.0.144")
+        self.assertEqual(audit["metadata"]["engine_version"], MOTOR_VERSION)
         self.assertEqual(audit["metadata"]["rules_version"], "RFC-001-architecture-v4.0")
         self.assertIn("Y", [item["column"] for item in audit["columns_used"]])
         self.assertIn("BL", [item["column"] for item in audit["columns_used"]])
