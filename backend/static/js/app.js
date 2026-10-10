@@ -2299,6 +2299,7 @@ function renderMotor360GroupCardUncached(item) {
   };
   const scaledScenarioCards = scenarios.map((scenario) => {
     const title = scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido";
+    const compositionHint = minimumQuotasFor(item, scenario.id) > 1 ? ` · Composição: mínimo de ${minimumQuotasFor(item, scenario.id)} cotas` : "";
     const requirement = scenarioRequirementStatus(scenario);
     const statusLabel = requirement.ok ? "Requisitos atendidos" : "Requisitos não atendidos";
     const info = `<span class="motor360-requirement-info" title="${escapeHtml(requirement.title)}" aria-label="${escapeHtml(requirement.title)}" tabindex="0">i</span>`;
@@ -2382,11 +2383,16 @@ function renderMotor360FloatingSelectionSummary() {
   const totalQuotas = entries.reduce((sum, entry) => sum + entry.quotas, 0);
   const scenario = (scenarioId, label) => {
     const values = entries.map((entry) => ({
+      item: entry.item,
       quotas: entry.quotas,
       scenario: (entry.item.cenarios || []).find((value) => value.id === scenarioId),
     })).filter((entry) => entry.scenario);
     if (!values.length) return "";
-    const sum = (field, fallback) => values.reduce((total, entry) => total + Number(entry.scenario[field] ?? entry.scenario[fallback] ?? 0) * entry.quotas, 0);
+    const sum = (field, fallback) => values.reduce((total, entry) => {
+      const raw = Number(entry.scenario[field] ?? entry.scenario[fallback] ?? 0);
+      const value = field === "credito_contratado" ? Math.min(raw || Infinity, Number(entry.item.credito_maximo || raw)) : raw;
+      return total + (Number.isFinite(value) ? value : 0) * entry.quotas;
+    }, 0);
     const credit = sum("credito_contratado", "credito_liquido_projetado");
     const installment = sum("parcela_inicial");
     const balance = sum("saldo_devedor");
@@ -2570,8 +2576,11 @@ function selectedGroupAnalytics(item, forcedScenarioId = null) {
   const { client, income } = selectedGroupsClientFinancials();
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
   const maxInstallment = Number(client.parcela_maxima || client.parcela_desejada || 0);
-  const credit = scale(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? item.credito_maximo);
-  const contractedCredit = scale(scenario.credito_contratado ?? 0);
+  const scenarioCredit = Number(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? 0);
+  const groupCredit = Number(item.credito_maximo ?? 0);
+  const perQuotaCredit = scenarioCredit > 0 && groupCredit > 0 ? Math.min(scenarioCredit, groupCredit) : scenarioCredit || groupCredit;
+  const credit = scale(perQuotaCredit);
+  const contractedCredit = scale(perQuotaCredit);
   const groupMaxCredit = scale(item.credito_maximo ?? 0);
   const installment = scale(scenario.parcela_inicial);
   const focusProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : "moderate";
@@ -3802,6 +3811,12 @@ function quotaCountFor(itemOrGroup) {
   return Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(key) || 1)));
 }
 
+function minimumQuotasFor(item, scenarioId = null) {
+  const scenario = scenarioId === "with_embedded" ? "cotas_minimas_com_embutido" : "cotas_minimas_sem_embutido";
+  const value = Number(item?.[scenario] ?? 1);
+  return Number.isFinite(value) && value > 0 ? Math.ceil(value) : 1;
+}
+
 function clientResourceTotal() {
   const client = investorState.result?.cliente || {};
   return Number(client.lance_cliente_total ?? client.lance_total ?? client.own_resources_total ?? 0) || 0;
@@ -4443,7 +4458,7 @@ function renderInvestorAnalysis(result) {
       }
       investorState.selectedGroupIds.add(groupId);
       if (selectedItem) investorState.selectedGroupData.set(groupId, selectedItem);
-      if (!investorState.quotaCounts.has(groupId)) investorState.quotaCounts.set(groupId, 1);
+      if (!investorState.quotaCounts.has(groupId)) investorState.quotaCounts.set(groupId, minimumQuotasFor(selectedItem, investorState.selectedGroupScenario === "with_embedded" ? "with_embedded" : "without_embedded"));
     } else {
       investorState.selectedGroupIds.delete(groupId);
       investorState.selectedScenarioIds.delete(groupId);
