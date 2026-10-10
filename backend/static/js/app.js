@@ -2277,6 +2277,29 @@ function renderMotor360GroupCardUncached(item) {
   const selectedProfileId = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" }[investorState.result?.perfil_contemplacao] || investorState.result?.perfil_contemplacao;
   const focusProfileId = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : selectedProfileId;
   const focusProfileLabel = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Superagressivo", investor: "Investidor" }[focusProfileId] || "Todos os perfis";
+  const compositionMinimums = scenarios
+    .map((scenario) => ({ id: scenario.id, quotas: minimumQuotasFor(item, scenario.id) }))
+    .filter((entry) => entry.quotas > 1);
+  const compositionDataComplete = scenarios.some((scenario) =>
+    scenario.creation_status === "created"
+    && scenario.data_complete === true
+    && scenario.credito_contratado != null
+    && scenario.parcela_inicial != null
+    && item.prazo_restante != null
+  );
+  const possibleComposition = !selected
+    && item.requires_composition === true
+    && compositionDataComplete
+    && compositionMinimums.length > 0;
+  const configuredScenario = investorState.selectedGroupScenario;
+  const visibleMinimum = (configuredScenario === "with_embedded"
+    ? compositionMinimums.find((entry) => entry.id === "with_embedded")?.quotas
+    : configuredScenario === "without_embedded"
+      ? compositionMinimums.find((entry) => entry.id === "without_embedded")?.quotas
+      : null) ?? Math.min(...compositionMinimums.map((entry) => entry.quotas));
+  const minimumDetails = compositionMinimums
+    .map((entry) => `${entry.quotas} cotas ${entry.id === "with_embedded" ? "com" : "sem"} embutido`)
+    .join("; ");
   const scenarioRequirementStatus = (scenario) => {
     const composed = compositionMetrics(scenario);
     if (composed) {
@@ -2306,9 +2329,10 @@ function renderMotor360GroupCardUncached(item) {
       const embeddedNote = scenario.id === "with_embedded" ? `<small>Embutido considerado: ${formatMoney(metricEntry?.embedded ?? scaleMoney(value.lance_embutido))}</small>` : "";
       const totalIdeal = metrics ? metricEntry?.profiles[value.id]?.ideal || 0 : Number(value.lance_ideal || 0) * quotaCount;
       const available = metrics ? metricEntry?.profiles[value.id]?.available || 0 : allocatedClientBidFor(item, scenario, value.id);
-      const meetsBid = totalIdeal > 0 && available >= totalIdeal;
+      const meetsBid = totalIdeal <= 0 || available >= totalIdeal;
       const bidGap = { gap: Math.max(0, totalIdeal - available) };
-      return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"}"><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(bidGap.gap)}`}</span><em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
+      const bidStatusLabel = totalIdeal <= 0 ? "Sem lance próprio necessário" : meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(bidGap.gap)}`;
+      return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"}"><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${bidStatusLabel}</span><em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
     }).join("");
     const scenarioLabel = scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
     return `<section class="motor360-scenario-profiles"><div class="motor360-profile-section-title"><h4>Perfis · ${scenarioLabel}</h4><small>Foco: ${escapeHtml(focusProfileLabel)} · Referência: ${formatMoney(scenario.lance_cliente_total)}</small></div><div class="motor360-profile-card-values">${values || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section>`;
@@ -2332,34 +2356,17 @@ function renderMotor360GroupCardUncached(item) {
     const clientBidPercent = metrics?.contractedCredit > 0 ? cardClientBid / metrics.contractedCredit : Number(scenario.percentual_lance_cliente || 0);
     const scenarioBidPercent = metrics?.contractedCredit > 0 ? cardScenarioBid / metrics.contractedCredit : Number(scenario.percentual_lance_efetivo || 0);
     const showPortfolioLabels = Boolean(metrics && metrics.totalQuotas > 1);
-    const visibleFailure = !requirement.ok ? `<p class="motor360-scenario-failure" role="status">${escapeHtml(requirement.failed.join(" · ") || requirement.title)}</p>` : "";
+    const compositionCreditGuidance = possibleComposition
+      && minimumQuotasFor(item, scenario.id) > 1
+      && requirement.failed.includes("Crédito")
+      ? `1 cota não cobre o crédito desejado · mínimo de ${minimumQuotasFor(item, scenario.id)} cotas`
+      : "";
+    const failureMessage = compositionCreditGuidance || requirement.failed.join(" · ") || requirement.title;
+    const visibleFailure = !requirement.ok ? `<p class="motor360-scenario-failure" role="status">${escapeHtml(failureMessage)}</p>` : "";
     return `<article class="motor360-scenario-card ${requirement.ok ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusLabel} ${info}</span></div>${visibleFailure}<div class="motor360-scenario-grid"><div><small>Crédito contratado${showPortfolioLabels ? " (composição do grupo)" : ""}</small><b>${formatMoney(cardCredit)}</b></div><div><small>${showPortfolioLabels ? "Lance do cliente na composição" : "Lance do cliente"}</small><b>${formatMoney(cardClientBid)} <em>(${formatPercent(clientBidPercent)})</em></b></div><div><small>${showPortfolioLabels ? "Lance embutido na composição" : "Lance embutido"}</small><b>${formatMoney(cardEmbedded)}</b></div><div><small>${showPortfolioLabels ? "Lance total da composição" : "Lance total do cenário"}</small><b>${formatMoney(cardScenarioBid)} <em>(${formatPercent(scenarioBidPercent)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(cardBalance)}</b></div><div><small>Parcela inicial</small><b>${formatMoney(cardInstallment)}</b></div><div><small>Parcela pós-contemplação</small><b>${cardAfter == null ? "Não calculada" : formatMoney(cardAfter)}</b></div></div>${cardLabel}<small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small>${renderScenarioProfiles(scenario)}</article>`;
   }).join("");
   const selectedScenarioIds = selectedScenarioIdsForGroup(groupKey);
   const compositionViable = selected && [...selectedScenarioIds].some((id) => { const scenario = scenarios.find((entry) => entry.id === id); return scenario && scenarioRequirementStatus(scenario).ok; });
-  const compositionMinimums = scenarios
-    .map((scenario) => ({ id: scenario.id, quotas: minimumQuotasFor(item, scenario.id) }))
-    .filter((entry) => entry.quotas > 1);
-  const compositionDataComplete = scenarios.some((scenario) =>
-    scenario.creation_status === "created"
-    && scenario.data_complete === true
-    && scenario.credito_contratado != null
-    && scenario.parcela_inicial != null
-    && item.prazo_restante != null
-  );
-  const possibleComposition = !selected
-    && item.requires_composition === true
-    && compositionDataComplete
-    && compositionMinimums.length > 0;
-  const configuredScenario = investorState.selectedGroupScenario;
-  const visibleMinimum = (configuredScenario === "with_embedded"
-    ? compositionMinimums.find((entry) => entry.id === "with_embedded")?.quotas
-    : configuredScenario === "without_embedded"
-      ? compositionMinimums.find((entry) => entry.id === "without_embedded")?.quotas
-      : null) ?? Math.min(...compositionMinimums.map((entry) => entry.quotas));
-  const minimumDetails = compositionMinimums
-    .map((entry) => `${entry.quotas} cotas ${entry.id === "with_embedded" ? "com" : "sem"} embutido`)
-    .join("; ");
   const displayStatus = selected
     ? selectedScenarioIds.size
       ? compositionViable

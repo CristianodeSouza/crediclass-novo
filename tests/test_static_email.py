@@ -92,6 +92,14 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn(".motor360-group-status.is-warning", style_css)
         self.assertIn(".motor360-group-status.is-approved", style_css)
 
+    def test_motor360_explica_credito_por_cota_e_nao_marca_lance_zero_como_falta(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        card_renderer = app_js.split("function renderMotor360GroupCardUncached", 1)[1].split("function renderMotor360GroupCard(", 1)[0]
+
+        self.assertIn('`1 cota não cobre o crédito desejado · mínimo de ${minimumQuotasFor(item, scenario.id)} cotas`', card_renderer)
+        self.assertIn("const meetsBid = totalIdeal <= 0 || available >= totalIdeal", card_renderer)
+        self.assertIn('"Sem lance próprio necessário"', card_renderer)
+
     def test_motor360_mantem_selecionados_visiveis_e_ordena_por_contemplacoes(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
