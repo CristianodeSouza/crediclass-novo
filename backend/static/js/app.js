@@ -2280,12 +2280,10 @@ function renderMotor360GroupCardUncached(item) {
   const scenarioRequirementStatus = (scenario) => {
     const composed = compositionMetrics(scenario);
     if (composed) {
-      const focused = composed.entries.reduce((sum, entry) => sum + Number(entry.profiles[focusProfileId]?.ideal || 0), 0);
-      const available = Number(selectedGroupsClientFinancials().availableBid || 0);
       const client = motor360ClientProfile();
-      const maxInstallment = Number(client.parcela_maxima || client.parcela_desejada || 0);
-      const failures = [composed.credit < desiredCompositionCredit && "Crédito", maxInstallment > 0 && composed.installment > maxInstallment && "Parcela", focused > available && "Lance"].filter(Boolean);
-      return { ok: failures.length === 0, failed: failures, title: failures.length ? `Composição requer ajuste: ${failures.join(", ")}.` : "Composição atende ao crédito, à parcela e ao lance do perfil." };
+      const assessment = selectedCompositionAssessment(composed, client, focusProfileId || allocationProfileId());
+      const parcelWarning = assessment.parcelWarning ? `${assessment.parcelWarning} (alerta)` : "";
+      return { ok: assessment.ok, failed: assessment.failures, parcelWarning, title: `${assessment.failures.length ? `Composição requer ajuste: ${assessment.failures.join("; ")}.` : "Composição atende aos critérios de crédito, parcela máxima e lance."}${parcelWarning ? ` ${parcelWarning}.` : ""}` };
     }
     const profileOk = !selectedProfileId || (scenario.perfis_contemplacao || []).some((profile) => profile.id === selectedProfileId && profileMeetsBid(item, scenario, profile));
     const requirements = [
@@ -2303,10 +2301,11 @@ function renderMotor360GroupCardUncached(item) {
       const value = (scenario.perfis_contemplacao || []).find((entry) => entry.id === profile.id);
       if (!value || value.percentual_referencia === null || value.percentual_referencia === undefined) return `<div class="motor360-profile-card-value is-empty"><small>Não informado</small></div>`;
       const idealLabel = scenario.id === "with_embedded" ? "Lance ideal em recursos do cliente" : "Lance ideal";
-      const embeddedNote = scenario.id === "with_embedded" ? `<small>Embutido considerado: ${formatMoney(scaleMoney(value.lance_embutido))}</small>` : "";
       const metrics = compositionMetrics(scenario);
-      const totalIdeal = metrics ? metrics.entries.find((entry) => motor360GroupKey(entry.item) === groupKey)?.profiles[value.id]?.ideal || 0 : Number(value.lance_ideal || 0) * quotaCount;
-      const available = metrics ? metrics.entries.find((entry) => motor360GroupKey(entry.item) === groupKey)?.profiles[value.id]?.available || 0 : allocatedClientBidFor(item, scenario, value.id);
+      const metricEntry = metrics?.entries.find((entry) => motor360GroupKey(entry.item) === groupKey);
+      const embeddedNote = scenario.id === "with_embedded" ? `<small>Embutido considerado: ${formatMoney(metricEntry?.embedded ?? scaleMoney(value.lance_embutido))}</small>` : "";
+      const totalIdeal = metrics ? metricEntry?.profiles[value.id]?.ideal || 0 : Number(value.lance_ideal || 0) * quotaCount;
+      const available = metrics ? metricEntry?.profiles[value.id]?.available || 0 : allocatedClientBidFor(item, scenario, value.id);
       const meetsBid = totalIdeal > 0 && available >= totalIdeal;
       const bidGap = { gap: Math.max(0, totalIdeal - available) };
       return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"}"><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(bidGap.gap)}`}</span><em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
@@ -2317,11 +2316,11 @@ function renderMotor360GroupCardUncached(item) {
   const scaledScenarioCards = scenarios.map((scenario) => {
     const title = (scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido") + (minimumQuotasFor(item, scenario.id) > 1 ? ` · Composição: mínimo de ${minimumQuotasFor(item, scenario.id)} cotas` : "");
     const requirement = scenarioRequirementStatus(scenario);
-    const statusLabel = requirement.ok ? "Requisitos atendidos" : "Requisitos não atendidos";
+    const statusLabel = requirement.ok ? `Requisitos atendidos${requirement.parcelWarning ? ` · ${requirement.parcelWarning}` : ""}` : "Requisitos não atendidos";
     const info = `<span class="motor360-requirement-info" title="${escapeHtml(requirement.title)}" aria-label="${escapeHtml(requirement.title)}" tabindex="0">i</span>`;
     const metrics = compositionMetrics(scenario);
     const metric = (field) => metrics ? metrics.entries.find((entry) => motor360GroupKey(entry.item) === groupKey)?.[field] : null;
-    const cardCredit = metric("credit") ?? scaleMoney(scenario.credito_contratado);
+    const cardCredit = metric("contractedCredit") ?? scaleMoney(scenario.credito_contratado);
     const cardInstallment = metric("installment") ?? scaleMoney(scenario.parcela_inicial);
     const cardAfter = metric("installmentAfter") ?? scaleMoney(scenario.parcela_pos_contemplacao);
     const cardBalance = metric("balance") ?? scaleMoney(scenario.saldo_devedor);
@@ -2330,7 +2329,8 @@ function renderMotor360GroupCardUncached(item) {
     const cardEmbedded = metricEntry?.embedded ?? scaleMoney(scenario.lance_embutido);
     const cardScenarioBid = metricEntry?.totalBid ?? scaleMoney(scenario.lance_total_cenario);
     const cardLabel = metrics ? `<small class="motor360-scenario-note">Crédito acumulado: ${formatMoney(metrics.credit)} de ${formatMoney(desiredCompositionCredit)} · ${metrics.shortfall > 0 ? `Faltam ${formatMoney(metrics.shortfall)}` : "Crédito atendido"}</small>` : "";
-    return `<article class="motor360-scenario-card ${requirement.ok ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusLabel} ${info}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado${selected ? " (composição do grupo)" : ""}</small><b>${formatMoney(cardCredit)}</b></div><div><small>${selected ? "Lance do cliente alocado" : "Lance do cliente"}</small><b>${formatMoney(cardClientBid)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Lance embutido</small><b>${formatMoney(cardEmbedded)}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(cardScenarioBid)} <em>(${formatPercent(scenario.percentual_lance_efetivo)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(cardBalance)}</b></div><div><small>Parcela inicial</small><b>${formatMoney(cardInstallment)}</b></div><div><small>Parcela pós-contemplação</small><b>${cardAfter == null ? "Não calculada" : formatMoney(cardAfter)}</b></div></div>${cardLabel}<small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small>${renderScenarioProfiles(scenario)}</article>`;
+    const clientBidPercent = metrics?.credit > 0 ? cardClientBid / metrics.credit : Number(scenario.percentual_lance_cliente || 0);
+    return `<article class="motor360-scenario-card ${requirement.ok ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusLabel} ${info}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado${selected ? " (composição do grupo)" : ""}</small><b>${formatMoney(cardCredit)}</b></div><div><small>${selected ? "Lance do cliente alocado" : "Lance do cliente"}</small><b>${formatMoney(cardClientBid)} <em>(${formatPercent(clientBidPercent)})</em></b></div><div><small>Lance embutido</small><b>${formatMoney(cardEmbedded)}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(cardScenarioBid)} <em>(${formatPercent(scenario.percentual_lance_efetivo)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(cardBalance)}</b></div><div><small>Parcela inicial</small><b>${formatMoney(cardInstallment)}</b></div><div><small>Parcela pós-contemplação</small><b>${cardAfter == null ? "Não calculada" : formatMoney(cardAfter)}</b></div></div>${cardLabel}<small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small>${renderScenarioProfiles(scenario)}</article>`;
   }).join("");
   const selectedScenarioIds = selectedScenarioIdsForGroup(groupKey);
   const compositionViable = selected && [...selectedScenarioIds].some((id) => { const scenario = scenarios.find((entry) => entry.id === id); return scenario && scenarioRequirementStatus(scenario).ok; });
@@ -2405,7 +2405,6 @@ function renderMotor360FloatingSelectionSummary() {
   }
   const client = motor360ClientProfile();
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
-  const desiredInstallment = Number(client.parcela_desejada || 0);
   const maximumInstallment = Number(client.parcela_maxima || 0);
   const entries = items.map((item) => {
     const groupId = String(item.grupo || item.grupo_id || "-");
@@ -2419,12 +2418,13 @@ function renderMotor360FloatingSelectionSummary() {
     const credit = metrics.credit;
     const installment = metrics.installment;
     const balance = metrics.balance;
-    const creditOk = desiredCredit > 0 && credit >= desiredCredit;
-    const incomeOk = maximumInstallment <= 0 || installment <= maximumInstallment;
-    const desiredOk = desiredInstallment <= 0 || installment <= desiredInstallment;
-    const viable = creditOk && incomeOk;
+    const activeCompositionProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : allocationProfileId();
+    const assessment = selectedCompositionAssessment(metrics, client, activeCompositionProfile);
+    const creditOk = desiredCredit > 0 && credit >= desiredCredit && metrics.creditCapacityOk;
+    const viable = assessment.ok;
     const progress = desiredCredit > 0 ? Math.min(100, Math.max(0, credit / desiredCredit * 100)) : 0;
-    return `<section class="motor360-floating-scenario ${viable ? "is-ok" : "is-pending"}"><header><strong>${label}</strong><span>${viable ? "Atende" : "Em composição"}</span></header><div class="motor360-floating-progress" aria-label="${progress.toFixed(0)}% do crédito desejado"><i style="width:${progress.toFixed(2)}%"></i></div><dl><div><dt>Crédito</dt><dd>${formatMoney(credit)} <small>de ${formatMoney(desiredCredit)}</small></dd></div><div><dt>Parcela</dt><dd>${formatMoney(installment)} <small>limite ${formatMoney(maximumInstallment)}</small></dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(balance)}</dd></div></dl><p>${creditOk ? "Crédito atendido" : `Faltam ${formatMoney(Math.max(0, desiredCredit - credit))}`} · ${incomeOk ? "Dentro de 30% da renda" : "Acima de 30% da renda"}${desiredOk ? "" : " · Acima da parcela desejada"}</p></section>`;
+    const parcelNotice = assessment.parcelWarning ? ` · ${assessment.parcelWarning} (alerta)` : "";
+    return `<section class="motor360-floating-scenario ${viable ? "is-ok" : "is-pending"}"><header><strong>${label}</strong><span>${viable ? "Viável" : "Requer ajuste"}</span></header><div class="motor360-floating-progress" aria-label="${progress.toFixed(0)}% do crédito desejado"><i style="width:${progress.toFixed(2)}%"></i></div><dl><div><dt>Crédito</dt><dd>${formatMoney(credit)} <small>de ${formatMoney(desiredCredit)}</small></dd></div><div><dt>Parcela</dt><dd>${formatMoney(installment)} <small>limite ${formatMoney(maximumInstallment)}</small></dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(balance)}</dd></div></dl><p>${assessment.failures.join(" · ") || "Crédito, parcela máxima e lance atendidos"}${parcelNotice}</p></section>`;
   };
   const selectedGroupLabels = items.map((item) => {
     const groupId = String(item.grupo || item.grupo_id || "-");
@@ -2594,8 +2594,10 @@ function selectedCompositionScenarioMetrics(items, scenarioId, desiredCreditOver
     if (!scenario) return null;
     const rawCredit = Number(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? 0);
     const cap = Number(sourceItem.credito_maximo || item.credito_maximo || 0);
+    const rawContractedCredit = Number(scenario.credito_contratado ?? rawCredit);
     const perQuotaCredit = targetPerQuota != null ? Math.min(cap > 0 ? cap : targetPerQuota, targetPerQuota) : Math.min(cap > 0 ? cap : rawCredit, rawCredit);
     const ratio = rawCredit > 0 ? perQuotaCredit / rawCredit : 0;
+    const contractedCreditPerQuota = rawContractedCredit * ratio;
     const total = (field) => Number(scenario[field] ?? 0) * ratio * quotas;
     const profiles = Object.fromEntries((scenario.perfis_contemplacao || []).map((profile) => [profile.id, {
       ...profile,
@@ -2604,6 +2606,9 @@ function selectedCompositionScenarioMetrics(items, scenarioId, desiredCreditOver
     return {
       item, scenario, quotas, ratio, perQuotaCredit,
       credit: perQuotaCredit * quotas,
+      contractedCredit: contractedCreditPerQuota * quotas,
+      grossCreditPerQuota: contractedCreditPerQuota,
+      creditCompatible: cap <= 0 || contractedCreditPerQuota <= cap + 0.01,
       targetCredit: (targetPerQuota ?? perQuotaCredit) * quotas,
       installment: total("parcela_inicial"),
       installmentAfter: scenario.parcela_pos_contemplacao == null ? null : total("parcela_pos_contemplacao"),
@@ -2615,8 +2620,10 @@ function selectedCompositionScenarioMetrics(items, scenarioId, desiredCreditOver
   }).filter(Boolean);
   const credit = entries.reduce((sum, entry) => sum + entry.credit, 0);
   const shortfall = desiredCredit > 0 ? Math.max(0, desiredCredit - credit) : 0;
+  const profileRequirements = {};
   for (const profileId of ["investor", "conservative", "moderate", "aggressive", "super_aggressive"]) {
     const required = entries.reduce((sum, entry) => sum + Number(entry.profiles[profileId]?.ideal || 0), 0);
+    profileRequirements[profileId] = required;
     for (const entry of entries) {
       const profile = entry.profiles[profileId];
       if (!profile) continue;
@@ -2624,7 +2631,30 @@ function selectedCompositionScenarioMetrics(items, scenarioId, desiredCreditOver
       profile.meets = profile.ideal > 0 && profile.available >= profile.ideal;
     }
   }
-  return { entries, totalQuotas, desiredCredit, targetPerQuota, credit, shortfall, installment: entries.reduce((sum, entry) => sum + entry.installment, 0), installmentAfter: entries.some((entry) => entry.installmentAfter != null) ? entries.reduce((sum, entry) => sum + Number(entry.installmentAfter || 0), 0) : null, balance: entries.reduce((sum, entry) => sum + entry.balance, 0) };
+  const creditCapacityOk = entries.length === items.length && entries.every((entry) => entry.creditCompatible);
+  const creditCapacityIssues = entries.filter((entry) => !entry.creditCompatible).map((entry) => ({ groupId: String(entry.item.grupo || entry.item.grupo_id || "-"), contractedPerQuota: entry.grossCreditPerQuota, maximumPerQuota: Number(entry.item.credito_maximo || 0) }));
+  return { entries, totalQuotas, desiredCredit, targetPerQuota, credit, shortfall, creditCapacityOk, creditCapacityIssues, profileRequirements, installment: entries.reduce((sum, entry) => sum + entry.installment, 0), installmentAfter: entries.some((entry) => entry.installmentAfter != null) ? entries.reduce((sum, entry) => sum + Number(entry.installmentAfter || 0), 0) : null, balance: entries.reduce((sum, entry) => sum + entry.balance, 0) };
+}
+
+function selectedCompositionAssessment(metrics, client = motor360ClientProfile(), profileId = allocationProfileId()) {
+  const desiredCredit = Number(client.credito_liquido_desejado || 0);
+  const maximumInstallment = Number(client.parcela_maxima || 0);
+  const income = Number(client.renda_total ?? client.renda ?? selectedGroupsClientFinancials().income ?? 0);
+  const commitmentLimit = selectedGroupsPercentValue(client.comprometimento_maximo ?? client.comprometimento_maximo_percentual ?? 30);
+  const incomeLimit = income > 0 ? income * commitmentLimit / 100 : 0;
+  const availableBid = Number(selectedGroupsClientFinancials().availableBid || 0);
+  const requiredBid = Number(metrics.profileRequirements?.[profileId] || 0);
+  const failures = [];
+  if (desiredCredit > 0 && metrics.credit < desiredCredit) failures.push(`Faltam ${formatMoney(desiredCredit - metrics.credit)} de crédito`);
+  if (!metrics.creditCapacityOk) failures.push(...(metrics.creditCapacityIssues || []).map((issue) => `Grupo ${issue.groupId}: ${formatMoney(issue.contractedPerQuota)} por cota excede o teto de ${formatMoney(issue.maximumPerQuota)}`));
+  const installmentLimitOk = maximumInstallment <= 0 || metrics.installment <= maximumInstallment;
+  const incomeOk = incomeLimit <= 0 || metrics.installment <= incomeLimit;
+  if (!installmentLimitOk) failures.push(`Parcela ${formatMoney(metrics.installment)} acima do máximo de ${formatMoney(maximumInstallment)}`);
+  if (!incomeOk) failures.push(`Parcela ${formatMoney(metrics.installment)} compromete mais que ${formatPercent(commitmentLimit / 100)} da renda (${formatMoney(incomeLimit)})`);
+  if (requiredBid > availableBid) failures.push(`Faltam ${formatMoney(requiredBid - availableBid)} de lance para o perfil`);
+  const desiredInstallment = Number(client.parcela_desejada || 0);
+  const parcelWarning = desiredInstallment > 0 && metrics.installment > desiredInstallment ? `Parcela ${formatMoney(metrics.installment - desiredInstallment)} acima da desejada` : "";
+  return { ok: failures.length === 0, failures, parcelWarning, requiredBid, availableBid, maximumInstallment, incomeLimit, installmentLimitOk, incomeOk };
 }
 
 function selectedGroupAnalytics(item, forcedScenarioId = null) {
@@ -2650,7 +2680,8 @@ function selectedGroupAnalytics(item, forcedScenarioId = null) {
   const desiredCredit = compositionEntry?.targetCredit ?? Number(client.credito_liquido_desejado || 0);
   const maxInstallment = Number(client.parcela_maxima || client.parcela_desejada || 0);
   const credit = compositionEntry?.credit ?? Number(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? item.credito_maximo ?? 0) * quotaCount;
-  const contractedCredit = credit;
+  const contractedCredit = compositionEntry?.credit ?? credit;
+  const grossContractedCredit = compositionEntry?.contractedCredit ?? contractedCredit;
   const groupMaxCredit = Number(item.credito_maximo ?? 0) * quotaCount;
   const installment = compositionEntry?.installment ?? Number(scenario.parcela_inicial || 0) * quotaCount;
   const focusProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : "moderate";
@@ -2800,7 +2831,6 @@ function renderSelectedGroupsCartSummary(items) {
   const client = investorState.result?.cliente || {};
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
   const desiredInstallment = Number(client.parcela_desejada || 0);
-  const incomeInstallment = Number(client.parcela_maxima || 0);
   const { availableBid } = selectedGroupsClientFinancials();
   const profileIds = ["investor", "conservative", "moderate", "aggressive", "super_aggressive"];
   const profileLabels = { investor: "Investidor", conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super Agressivo" };
@@ -2810,9 +2840,7 @@ function renderSelectedGroupsCartSummary(items) {
     const credit = metrics.credit;
     const installment = metrics.installment;
     const balance = metrics.balance;
-    const creditOk = credit >= desiredCredit;
-    const desiredOk = !desiredInstallment || installment <= desiredInstallment;
-    const incomeOk = !incomeInstallment || installment <= incomeInstallment;
+    const creditOk = credit >= desiredCredit && metrics.creditCapacityOk;
     const profiles = profileIds.map((profileId) => {
       const requirements = metrics.entries.map((entry) => ({ ...entry, groupId: String(entry.item.grupo || entry.item.grupo_id || "-"), required: Number(entry.profiles[profileId]?.ideal || 0) }));
       const requiredTotal = requirements.reduce((sum, entry) => sum + entry.required, 0);
@@ -2822,12 +2850,16 @@ function renderSelectedGroupsCartSummary(items) {
         value: requiredTotal > 0 ? pool * entry.required / requiredTotal : 0,
       }));
       return { profileId, requiredTotal, gap: Math.max(0, requiredTotal - availableBid), allocations };
-    });
+    }).filter((profile) => profile.requiredTotal > 0);
     const activeProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : allocationProfileId();
-    const activeProfileMetrics = profiles.find((profile) => profile.profileId === activeProfile);
-    const bidOk = !activeProfileMetrics || activeProfileMetrics.gap <= 0;
-    const viable = creditOk && incomeOk && desiredOk && bidOk;
-    return `<article class="motor360-cart-scenario"><header><strong>${label}</strong><span class="${viable ? "is-ok" : "is-warning"}">${viable ? "Composição viável" : "Requer ajuste"}</span></header><div class="motor360-cart-metrics"><div><small>Crédito acumulado</small><b>${formatMoney(credit)} de ${formatMoney(desiredCredit)}</b><em>${creditOk ? "Crédito atendido" : `Faltam ${formatMoney(desiredCredit - credit)}`}</em></div><div><small>Parcela total</small><b>${formatMoney(installment)}</b><em>${desiredOk ? "Dentro da desejada" : "Acima da desejada"} · ${incomeOk ? "Dentro do limite de renda" : "Acima do limite de renda"}</em></div><div><small>Saldo devedor total</small><b>${formatMoney(balance)}</b></div></div><div class="motor360-cart-profiles">${profiles.map((profile) => `<div><strong>${profileLabels[profile.profileId]}</strong><span>Lance ideal: ${formatMoney(profile.requiredTotal)}</span><b class="${profile.gap ? "is-gap" : "is-hit"}">${profile.gap ? `Faltam ${formatMoney(profile.gap)}` : "Lance suficiente"}</b><small>${profile.allocations.map((allocation) => `Grupo ${escapeHtml(allocation.groupId)}: ${formatMoney(allocation.value)}`).join(" · ") || "Sem referência de lance"}</small></div>`).join("")}</div></article>`;
+    const assessment = selectedCompositionAssessment(metrics, client, activeProfile);
+    const viable = assessment.ok;
+    const parcelText = assessment.parcelWarning ? `${assessment.parcelWarning} (alerta)` : "Dentro da parcela desejada";
+    const installmentChecks = [
+      assessment.installmentLimitOk ? "Dentro da parcela máxima" : "Acima da parcela máxima",
+      assessment.incomeOk ? "Dentro do limite de renda" : "Acima do limite de renda",
+    ].join(" · ");
+    return `<article class="motor360-cart-scenario"><header><strong>${label}</strong><span class="${viable ? "is-ok" : "is-warning"}">${viable ? "Viável" : "Requer ajuste"}</span></header><div class="motor360-cart-metrics"><div><small>Crédito acumulado</small><b>${formatMoney(credit)} de ${formatMoney(desiredCredit)}</b><em>${creditOk ? "Crédito atendido" : metrics.creditCapacityOk ? `Faltam ${formatMoney(Math.max(0, desiredCredit - credit))}` : assessment.failures.filter((reason) => reason.includes("teto")).join(" · ")}</em></div><div><small>Parcela total</small><b>${formatMoney(installment)}</b><em>${parcelText} · ${installmentChecks}</em></div><div><small>Saldo devedor total</small><b>${formatMoney(balance)}</b></div></div>${assessment.failures.length ? `<p class="motor360-composition-adjustment-reason" role="status">${assessment.failures.join(" · ")}</p>` : ""}<div class="motor360-cart-profiles">${profiles.map((profile) => `<div><strong>${profileLabels[profile.profileId]}</strong><span>Lance ideal: ${formatMoney(profile.requiredTotal)}</span><b class="${profile.gap ? "is-gap" : "is-hit"}">${profile.gap ? `Faltam ${formatMoney(profile.gap)}` : "Lance suficiente"}</b><small>${profile.allocations.map((allocation) => `Grupo ${escapeHtml(allocation.groupId)}: ${formatMoney(allocation.value)}`).join(" · ") || "Sem referência de lance"}</small></div>`).join("")}</div></article>`;
   };
   const totalQuotas = items.reduce((sum, item) => sum + quotaCountFor(item), 0);
   const composition = selectedCompositionScenarioMetrics(items, "without_embedded", desiredCredit);
@@ -2982,8 +3014,8 @@ function renderSelectedGroupsScoreBreakdown(items) {
       const requiredBidLabel = requiredBids.map((required) => `${required.label}: ${formatMoney(required.value)}`).join(" · ");
       const checks = [
         ["Lance para contemplação", bidPasses, `${selectedProfiles.length > 1 ? `${passingScenarioCount} de ${selectedProfiles.length} cenários atendem. ` : ""}${selectedProfiles.map((value) => `${value.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}: disponível ${formatMoney(allocatedClientBidFor(entry.item, value.scenario, profileId))}`).join(" · ")} · ideal total por cenário: ${requiredBidLabel || "não informado"}`],
-        ["Parcela desejada x parcela inicial", desiredInstallment > 0 && entry.installment <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · inicial ${formatMoney(entry.installment)}`],
-        ["Parcela desejada x pós-contemplação", desiredInstallment > 0 && entry.installmentAfter > 0 && entry.installmentAfter <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · pós-contemplação ${formatMoney(entry.installmentAfter)}`],
+        ["Parcela desejada (referência; não reprova)", true, desiredInstallment > 0 ? `Desejada ${formatMoney(desiredInstallment)} · inicial ${formatMoney(entry.installment)}${entry.installment > desiredInstallment ? ` · alerta: ${formatMoney(entry.installment - desiredInstallment)} acima da desejada` : " · dentro da desejada"}` : "Parcela desejada não informada."],
+        ["Parcela pós-contemplação (referência)", true, desiredInstallment > 0 && entry.installmentAfter != null ? `Desejada ${formatMoney(desiredInstallment)} · pós-contemplação ${formatMoney(entry.installmentAfter)}${entry.installmentAfter > desiredInstallment ? ` · alerta: ${formatMoney(entry.installmentAfter - desiredInstallment)} acima da desejada` : " · dentro da desejada"}` : "Valor pós-contemplação ou parcela desejada não informado."],
         ["Crédito contratado x crédito desejado", entry.contractedCredit >= entry.desiredCredit, `Contratado ${formatMoney(entry.contractedCredit)} · desejado líquido ${formatMoney(entry.desiredCredit)}`],
       ];
       const scenarioSummary = selectedProfiles.map(({ scenario, profile: value }) => { const meetsBid = profileMeetsBid(entry.item, scenario, value); return `<span>${scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}: ${meetsBid ? "Atende" : "Não atende"} · ideal total ${formatMoney(Number(value.lance_ideal || 0))}</span>`; }).join("");
