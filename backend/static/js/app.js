@@ -2337,13 +2337,53 @@ function renderMotor360GroupCardUncached(item) {
   }).join("");
   const selectedScenarioIds = selectedScenarioIdsForGroup(groupKey);
   const compositionViable = selected && [...selectedScenarioIds].some((id) => { const scenario = scenarios.find((entry) => entry.id === id); return scenario && scenarioRequirementStatus(scenario).ok; });
-  const displayStatus = selected && selectedScenarioIds.size
-    ? (compositionViable ? "Viável em composição" : "Requer ajuste")
-    : status === "Aprovado no perfil de contemplação" || status === "Indicador compatível" ? status : "Requer ajuste";
-  const displayStatusDetail = selected && selectedScenarioIds.size
+  const compositionMinimums = scenarios
+    .map((scenario) => ({ id: scenario.id, quotas: minimumQuotasFor(item, scenario.id) }))
+    .filter((entry) => entry.quotas > 1);
+  const compositionDataComplete = scenarios.some((scenario) =>
+    scenario.creation_status === "created"
+    && scenario.data_complete === true
+    && scenario.credito_contratado != null
+    && scenario.parcela_inicial != null
+    && item.prazo_restante != null
+  );
+  const possibleComposition = !selected
+    && item.requires_composition === true
+    && compositionDataComplete
+    && compositionMinimums.length > 0;
+  const configuredScenario = investorState.selectedGroupScenario;
+  const visibleMinimum = (configuredScenario === "with_embedded"
+    ? compositionMinimums.find((entry) => entry.id === "with_embedded")?.quotas
+    : configuredScenario === "without_embedded"
+      ? compositionMinimums.find((entry) => entry.id === "without_embedded")?.quotas
+      : null) ?? Math.min(...compositionMinimums.map((entry) => entry.quotas));
+  const minimumDetails = compositionMinimums
+    .map((entry) => `${entry.quotas} cotas ${entry.id === "with_embedded" ? "com" : "sem"} embutido`)
+    .join("; ");
+  const displayStatus = selected
+    ? selectedScenarioIds.size
+      ? compositionViable
+        ? compositionQuotas > 1 ? "Viável em composição" : "Aprovado"
+        : "Requer ajuste"
+      : "Escolha um cenário"
+    : possibleComposition
+      ? `Possível em composição · mín. ${visibleMinimum} cotas`
+      : status;
+  const displayStatusTone = selected
+    ? selectedScenarioIds.size
+      ? compositionViable ? "approved" : "warning"
+      : "neutral"
+    : possibleComposition || status === "Indicador compatível" || status === "Requer análise"
+      ? "neutral"
+      : status === "Aprovado no perfil de contemplação" ? "approved" : "warning";
+  const displayStatusDetail = selected && !selectedScenarioIds.size
+    ? "Escolha um cenário para avaliar esta composição."
+    : selected && selectedScenarioIds.size
     ? [...selectedScenarioIds].map((id) => { const scenario = scenarios.find((entry) => entry.id === id); return scenario ? scenarioRequirementStatus(scenario).title : ""; }).filter(Boolean).join(" · ")
-    : status;
-  return `<article id="${anchorId}" class="motor360-group-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo${selected && quotaCount > 1 ? " total" : ""}</small><b>${formatMoney(scaleMoney(item.credito_maximo))}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status" title="${escapeHtml(displayStatusDetail)}" aria-label="${escapeHtml(`${displayStatus}. ${displayStatusDetail}`)}">${escapeHtml(displayStatus)}</span><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${auditId}" ${selected ? "checked" : ""}><span>Selecionar grupo</span></label>${quotaControl}<button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros${selected && quotaCount > 1 ? ` · ${quotaCount} cotas` : ""}</h4><div class="motor360-scenario-list">${scaledScenarioCards}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div></article>`;
+    : possibleComposition
+      ? `Mínimos calculados por cenário: ${minimumDetails}.`
+      : status;
+  return `<article id="${anchorId}" class="motor360-group-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo${selected && quotaCount > 1 ? " total" : ""}</small><b>${formatMoney(scaleMoney(item.credito_maximo))}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status is-${displayStatusTone}" title="${escapeHtml(displayStatusDetail)}" aria-label="${escapeHtml(`${displayStatus}. ${displayStatusDetail}`)}">${escapeHtml(displayStatus)}</span><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${auditId}" ${selected ? "checked" : ""}><span>Selecionar grupo</span></label>${quotaControl}<button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros${selected && quotaCount > 1 ? ` · ${quotaCount} cotas` : ""}</h4><div class="motor360-scenario-list">${scaledScenarioCards}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div></article>`;
 }
 
 function renderMotor360GroupCard(item) {

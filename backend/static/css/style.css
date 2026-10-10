@@ -2168,6 +2168,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-scenario-source-metrics small { color: var(--muted); font-size: 0.66rem; }
 .motor360-scenario-source-metrics b { color: var(--brand-navy); font-size: 0.76rem; }
 .motor360-group-status { padding: 5px 9px; border-radius: 999px; background: #e9f8ef; color: #147a48; font-size: 0.7rem; font-weight: 800; }
+.motor360-group-status.is-neutral { border: 1px solid #c7d9e8; background: #edf5fb; color: #315c79; }
+.motor360-group-status.is-warning { border: 1px solid #f0b4a8; background: #fff0ed; color: #a52e2e; }
+.motor360-group-status.is-approved { border: 1px solid #b7dfc8; background: #e9f8ef; color: #147a48; }
 .motor360-group-select { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--brand-navy); cursor: pointer; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
 .motor360-group-select:hover { border-color: var(--brand-orange); background: #fff8f2; }
 .motor360-group-select-input { width: 15px; height: 15px; accent-color: var(--brand-orange); }

@@ -76,13 +76,21 @@ class StaticEmailTest(unittest.TestCase):
 
     def test_motor360_rotulos_e_selo_de_status_coerentes_com_a_composicao(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
         card_renderer = app_js.split("function renderMotor360GroupCardUncached", 1)[1].split("function renderMotor360GroupCard(", 1)[0]
 
         self.assertIn("const showPortfolioLabels = Boolean(metrics && metrics.totalQuotas > 1)", card_renderer)
         self.assertIn('showPortfolioLabels ? "Lance do cliente na composição" : "Lance do cliente"', card_renderer)
         self.assertIn('showPortfolioLabels ? "Lance total da composição" : "Lance total do cenário"', card_renderer)
-        self.assertIn('(compositionViable ? "Viável em composição" : "Requer ajuste")', card_renderer)
+        self.assertIn('item.requires_composition === true', card_renderer)
+        self.assertIn('`Possível em composição · mín. ${visibleMinimum} cotas`', card_renderer)
+        self.assertIn(': "Escolha um cenário"', card_renderer)
+        self.assertIn(': "Requer ajuste"', card_renderer)
+        self.assertIn('class="motor360-group-status is-${displayStatusTone}"', card_renderer)
         self.assertIn('title="${escapeHtml(displayStatusDetail)}"', card_renderer)
+        self.assertIn(".motor360-group-status.is-neutral", style_css)
+        self.assertIn(".motor360-group-status.is-warning", style_css)
+        self.assertIn(".motor360-group-status.is-approved", style_css)
 
     def test_motor360_mantem_selecionados_visiveis_e_ordena_por_contemplacoes(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
