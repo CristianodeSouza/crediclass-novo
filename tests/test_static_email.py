@@ -100,6 +100,34 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("const meetsBid = totalIdeal <= 0 || available >= totalIdeal", card_renderer)
         self.assertIn('"Sem lance próprio necessário"', card_renderer)
 
+    def test_motor360_perfil_em_foco_tem_destaque_visual_nos_cards(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn('const focused = profile.id === focusProfileId', app_js)
+        self.assertIn('class="motor360-profile-focus-tag">Em foco', app_js)
+        self.assertIn(".motor360-profile-card-value.is-focused", style_css)
+
+    def test_motor360_troca_administradora_e_cenario_sem_refazer_analise_e_local(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        request_loader = app_js.split("async function loadInvestorAnalysis()", 1)[1].split("function investorAnalysisCacheKey", 1)[0]
+        administrator_listener = app_js.split('document.getElementById("investorAdministratorFilter")?.addEventListener("change"', 1)[1].split('document.getElementById("recalculateInvestorAnalysisBtn")', 1)[0]
+
+        self.assertIn("administradora: null, filtro_lance_embutido: null", request_loader)
+        self.assertIn("renderInvestorAnalysis(investorState.result)", administrator_listener)
+        self.assertNotIn("loadInvestorAnalysis(", administrator_listener)
+        self.assertIn("return JSON.stringify(profile)", app_js)
+
+    def test_motor360_reaproveita_metricas_e_cards_ao_ordenar(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        sort_function = app_js.split("function applySelectedGroupsFiltersAndSort", 1)[1].split("function renderMotor360SelectionFilters", 1)[0]
+        card_renderer = app_js.split("function renderMotor360GroupCard(item)", 1)[1].split("function selectedMotor360Items", 1)[0]
+
+        self.assertIn("const motor360GroupAnalyticsCache = new Map()", app_js)
+        self.assertIn("const cached = motor360GroupAnalyticsCache.get(cacheKey)", app_js)
+        self.assertIn("if (sort === \"credit\") return analyticsFor(b).groupMaxCredit", sort_function)
+        self.assertNotIn("selectedGroupSort", card_renderer)
+
     def test_motor360_mantem_selecionados_visiveis_e_ordena_por_contemplacoes(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")

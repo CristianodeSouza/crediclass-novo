@@ -2383,6 +2383,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-profile-card-value.is-gap b,
 .motor360-profile-card-value.is-gap span,
 .motor360-profile-card-value.is-gap em { color:#b42318; font-weight:800; }
+.motor360-profile-card-value.is-focused { outline: 2px solid #e97822; outline-offset: 1px; box-shadow: 0 0 0 3px rgba(233, 120, 34, .12); }
+.motor360-profile-focus-tag { display: inline-flex; margin-left: 5px; padding: 2px 5px; border-radius: 999px; background: #e97822; color: #fff !important; font-size: .58rem !important; font-weight: 800; line-height: 1.2; text-transform: uppercase; }
 .motor360-profile-card-value.is-empty { color: var(--muted); }
 .motor360-group-classification { margin: 12px 16px 14px; padding-top: 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.72rem; }
 .motor360-group-classification strong { color: var(--brand-navy); }
