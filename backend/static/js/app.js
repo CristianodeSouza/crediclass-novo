@@ -2298,8 +2298,7 @@ function renderMotor360GroupCardUncached(item) {
     return `<section class="motor360-scenario-profiles"><div class="motor360-profile-section-title"><h4>Perfis · ${scenarioLabel}</h4><small>Foco: ${escapeHtml(focusProfileLabel)} · Referência: ${formatMoney(scenario.lance_cliente_total)}</small></div><div class="motor360-profile-card-values">${values || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section>`;
   };
   const scaledScenarioCards = scenarios.map((scenario) => {
-    const title = scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido";
-    const compositionHint = minimumQuotasFor(item, scenario.id) > 1 ? ` · Composição: mínimo de ${minimumQuotasFor(item, scenario.id)} cotas` : "";
+    const title = (scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido") + (minimumQuotasFor(item, scenario.id) > 1 ? ` · Composição: mínimo de ${minimumQuotasFor(item, scenario.id)} cotas` : "");
     const requirement = scenarioRequirementStatus(scenario);
     const statusLabel = requirement.ok ? "Requisitos atendidos" : "Requisitos não atendidos";
     const info = `<span class="motor360-requirement-info" title="${escapeHtml(requirement.title)}" aria-label="${escapeHtml(requirement.title)}" tabindex="0">i</span>`;
@@ -2390,7 +2389,10 @@ function renderMotor360FloatingSelectionSummary() {
     if (!values.length) return "";
     const sum = (field, fallback) => values.reduce((total, entry) => {
       const raw = Number(entry.scenario[field] ?? entry.scenario[fallback] ?? 0);
-      const value = field === "credito_contratado" ? Math.min(raw || Infinity, Number(entry.item.credito_maximo || raw)) : raw;
+      const rawCredit = Number(entry.scenario.credito_liquido_projetado ?? entry.scenario.credito_contratado ?? 0);
+      const targetPerQuota = desiredCredit > 0 && totalQuotas > 0 ? desiredCredit / totalQuotas : null;
+      const ratio = targetPerQuota != null && rawCredit > 0 ? targetPerQuota / rawCredit : 1;
+      const value = field === "credito_contratado" ? Math.min(Number(entry.item.credito_maximo || raw), targetPerQuota ?? raw) : raw * ratio;
       return total + (Number.isFinite(value) ? value : 0) * entry.quotas;
     }, 0);
     const credit = sum("credito_contratado", "credito_liquido_projetado");
@@ -2575,17 +2577,22 @@ function selectedGroupAnalytics(item, forcedScenarioId = null) {
   const scale = (value) => Number(value || 0) * quotaCount;
   const { client, income } = selectedGroupsClientFinancials();
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
+  const selectedTotalQuotas = [...investorState.selectedGroupIds].reduce((total, id) => total + quotaCountFor(id), 0);
+  const isSelectedComposition = investorState.selectedGroupIds.has(motor360GroupKey(item));
+  const compositionCreditPerQuota = isSelectedComposition && desiredCredit > 0 && selectedTotalQuotas > 0 ? desiredCredit / selectedTotalQuotas : null;
   const maxInstallment = Number(client.parcela_maxima || client.parcela_desejada || 0);
   const scenarioCredit = Number(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? 0);
   const groupCredit = Number(item.credito_maximo ?? 0);
-  const perQuotaCredit = scenarioCredit > 0 && groupCredit > 0 ? Math.min(scenarioCredit, groupCredit) : scenarioCredit || groupCredit;
+  const perQuotaCredit = compositionCreditPerQuota != null ? Math.min(groupCredit || compositionCreditPerQuota, compositionCreditPerQuota) : scenarioCredit > 0 && groupCredit > 0 ? Math.min(scenarioCredit, groupCredit) : scenarioCredit || groupCredit;
+  const compositionRatio = compositionCreditPerQuota != null && scenarioCredit > 0 ? compositionCreditPerQuota / scenarioCredit : 1;
+  const compositionScale = (value) => Number(value || 0) * compositionRatio * quotaCount;
   const credit = scale(perQuotaCredit);
   const contractedCredit = scale(perQuotaCredit);
   const groupMaxCredit = scale(item.credito_maximo ?? 0);
-  const installment = scale(scenario.parcela_inicial);
+  const installment = compositionScale(scenario.parcela_inicial);
   const focusProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : "moderate";
   const focusedProfile = profile(focusProfile);
-  const idealBid = scale(focusedProfile.lance_ideal);
+  const idealBid = compositionScale(focusedProfile.lance_ideal);
   const availableBid = allocatedClientBidFor(item, scenario, focusProfile);
   const creditFit = desiredCredit > 0 ? Math.min(1, credit / desiredCredit) : 1;
   const installmentFit = maxInstallment > 0 ? Math.min(1, maxInstallment / Math.max(installment, 1)) : 1;
@@ -2597,8 +2604,8 @@ function selectedGroupAnalytics(item, forcedScenarioId = null) {
   const termFit = term > 0 ? Math.min(1, term / 240) : .5;
   const adminRate = Number(item.taxa_adm ?? item.taxa_total ?? 0);
   const reserveRate = Number(item.fundo_reserva || 0);
-  const totalPaid = scale(scenario.saldo_devedor ?? scenario.credito_contratado) * (1 + adminRate + reserveRate);
-  const embedded = scale(scenario.lance_embutido);
+  const totalPaid = compositionScale(scenario.saldo_devedor ?? scenario.credito_contratado) * (1 + adminRate + reserveRate);
+  const embedded = compositionScale(scenario.lance_embutido);
   const creditLossRate = credit > 0 ? Math.min(1, embedded / Math.max(credit + embedded, 1)) : 0;
   const probability = Math.round(Math.min(100, Math.max(0, bidFit * 65 + historyFit * 35)));
   const probabilityLabel = probability >= 80 ? "Alta" : probability >= 60 ? "Moderada" : probability >= 40 ? "Baixa" : "Muito baixa";
@@ -2611,9 +2618,9 @@ function selectedGroupAnalytics(item, forcedScenarioId = null) {
     item, groupId, scenario, profile, history, quotaCount,
     credit, desiredCredit, contractedCredit, groupMaxCredit,
     installment,
-    installmentAfter: scale(scenario.parcela_pos_contemplacao),
+    installmentAfter: compositionScale(scenario.parcela_pos_contemplacao),
     bid: scenarioTotalBidFor(item, scenario),
-    balance: scale(scenario.saldo_devedor),
+    balance: compositionScale(scenario.saldo_devedor),
     idealBid, availableBid, score, scoreLabel, focusProfile, adminRate, reserveRate, totalPaid, embedded, creditLossRate, creditFit, installmentFit, bidFit, historyFit, costFit, termFit,
     incomeCommitment: commitment, probability, probabilityLabel, riskLabel,
   };
