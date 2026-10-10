@@ -2263,15 +2263,30 @@ function renderMotor360GroupCardUncached(item) {
   const anchorId = motor360GroupAnchorId(groupId);
   const selected = investorState.selectedGroupIds.has(groupKey);
   const quotaCount = selected ? Math.min(50, Math.max(1, Number(investorState.quotaCounts.get(groupKey) || 1))) : 1;
+  const selectedCompositionItems = selected ? selectedMotor360Items() : [];
+  const compositionQuotas = selectedCompositionItems.reduce((total, entry) => total + quotaCountFor(entry), 0);
+  const desiredCompositionCredit = Number(motor360ClientProfile().credito_liquido_desejado || 0);
   const quotaCapacity = motor360QuotaCapacity(item);
   const quotaLimit = Number.isFinite(Number(quotaCapacity?.limite_cotas)) ? Number(quotaCapacity.limite_cotas) : null;
   const quotaExceeded = selected && quotaLimit !== null && quotaCount > quotaLimit;
   const scaleMoney = (value) => value === null || value === undefined ? value : Number(value) * quotaCount;
+  const compositionMetrics = (scenario) => selected && scenario && compositionQuotas > 0 && desiredCompositionCredit > 0
+    ? selectedCompositionScenarioMetrics(selectedCompositionItems, scenario.id, desiredCompositionCredit)
+    : null;
   const quotaControl = selected ? `<div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}"><div class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="50" value="${quotaCount}" data-quota-action="input" data-group-id="${auditId}" aria-label="Quantidade de cotas do grupo ${auditId}"></div>${quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : ""}</div>` : "";
   const selectedProfileId = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" }[investorState.result?.perfil_contemplacao] || investorState.result?.perfil_contemplacao;
   const focusProfileId = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : selectedProfileId;
   const focusProfileLabel = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Superagressivo", investor: "Investidor" }[focusProfileId] || "Todos os perfis";
   const scenarioRequirementStatus = (scenario) => {
+    const composed = compositionMetrics(scenario);
+    if (composed) {
+      const focused = composed.entries.reduce((sum, entry) => sum + Number(entry.profiles[focusProfileId]?.ideal || 0), 0);
+      const available = Number(selectedGroupsClientFinancials().availableBid || 0);
+      const client = motor360ClientProfile();
+      const maxInstallment = Number(client.parcela_maxima || client.parcela_desejada || 0);
+      const failures = [composed.credit < desiredCompositionCredit && "Crédito", maxInstallment > 0 && composed.installment > maxInstallment && "Parcela", focused > available && "Lance"].filter(Boolean);
+      return { ok: failures.length === 0, failed: failures, title: failures.length ? `Composição requer ajuste: ${failures.join(", ")}.` : "Composição atende ao crédito, à parcela e ao lance do perfil." };
+    }
     const profileOk = !selectedProfileId || (scenario.perfis_contemplacao || []).some((profile) => profile.id === selectedProfileId && profileMeetsBid(item, scenario, profile));
     const requirements = [
       ["Crédito", scenario.credit_compatible === true],
@@ -2289,9 +2304,11 @@ function renderMotor360GroupCardUncached(item) {
       if (!value || value.percentual_referencia === null || value.percentual_referencia === undefined) return `<div class="motor360-profile-card-value is-empty"><small>Não informado</small></div>`;
       const idealLabel = scenario.id === "with_embedded" ? "Lance ideal em recursos do cliente" : "Lance ideal";
       const embeddedNote = scenario.id === "with_embedded" ? `<small>Embutido considerado: ${formatMoney(scaleMoney(value.lance_embutido))}</small>` : "";
-      const meetsBid = profileMeetsBid(item, scenario, value);
-      const totalIdeal = Number(value.lance_ideal || 0) * quotaCount;
-      const bidGap = profileBidGap(item, scenario, value);
+      const metrics = compositionMetrics(scenario);
+      const totalIdeal = metrics ? metrics.entries.find((entry) => motor360GroupKey(entry.item) === groupKey)?.profiles[value.id]?.ideal || 0 : Number(value.lance_ideal || 0) * quotaCount;
+      const available = metrics ? metrics.entries.find((entry) => motor360GroupKey(entry.item) === groupKey)?.profiles[value.id]?.available || 0 : allocatedClientBidFor(item, scenario, value.id);
+      const meetsBid = totalIdeal > 0 && available >= totalIdeal;
+      const bidGap = { gap: Math.max(0, totalIdeal - available) };
       return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"}"><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(bidGap.gap)}`}</span><em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
     }).join("");
     const scenarioLabel = scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
@@ -2302,13 +2319,29 @@ function renderMotor360GroupCardUncached(item) {
     const requirement = scenarioRequirementStatus(scenario);
     const statusLabel = requirement.ok ? "Requisitos atendidos" : "Requisitos não atendidos";
     const info = `<span class="motor360-requirement-info" title="${escapeHtml(requirement.title)}" aria-label="${escapeHtml(requirement.title)}" tabindex="0">i</span>`;
-    return `<article class="motor360-scenario-card ${requirement.ok ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusLabel} ${info}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado</small><b>${formatMoney(scaleMoney(scenario.credito_contratado))}</b></div><div><small>Lance do cliente</small><b>${formatMoney(scenario.lance_cliente_total)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Lance embutido</small><b>${formatMoney(scaleMoney(scenario.lance_embutido))}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(scaleMoney(scenario.lance_total_cenario))} <em>(${formatPercent(scenario.percentual_lance_efetivo)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(scaleMoney(scenario.saldo_devedor))}</b></div><div><small>Parcela inicial</small><b>${formatMoney(scaleMoney(scenario.parcela_inicial))}</b></div><div><small>Parcela pós-contemplação</small><b>${scenario.parcela_pos_contemplacao == null ? "Não calculada" : formatMoney(scaleMoney(scenario.parcela_pos_contemplacao))}</b></div></div><small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small>${renderScenarioProfiles(scenario)}</article>`;
+    const metrics = compositionMetrics(scenario);
+    const metric = (field) => metrics ? metrics.entries.find((entry) => motor360GroupKey(entry.item) === groupKey)?.[field] : null;
+    const cardCredit = metric("credit") ?? scaleMoney(scenario.credito_contratado);
+    const cardInstallment = metric("installment") ?? scaleMoney(scenario.parcela_inicial);
+    const cardAfter = metric("installmentAfter") ?? scaleMoney(scenario.parcela_pos_contemplacao);
+    const cardBalance = metric("balance") ?? scaleMoney(scenario.saldo_devedor);
+    const metricEntry = metrics?.entries.find((entry) => motor360GroupKey(entry.item) === groupKey);
+    const cardClientBid = metricEntry?.profiles[focusProfileId]?.available ?? Number(scenario.lance_cliente_total || 0);
+    const cardEmbedded = metricEntry?.embedded ?? scaleMoney(scenario.lance_embutido);
+    const cardScenarioBid = metricEntry?.totalBid ?? scaleMoney(scenario.lance_total_cenario);
+    const cardLabel = metrics ? `<small class="motor360-scenario-note">Crédito acumulado: ${formatMoney(metrics.credit)} de ${formatMoney(desiredCompositionCredit)} · ${metrics.shortfall > 0 ? `Faltam ${formatMoney(metrics.shortfall)}` : "Crédito atendido"}</small>` : "";
+    return `<article class="motor360-scenario-card ${requirement.ok ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusLabel} ${info}</span></div><div class="motor360-scenario-grid"><div><small>Crédito contratado${selected ? " (composição do grupo)" : ""}</small><b>${formatMoney(cardCredit)}</b></div><div><small>${selected ? "Lance do cliente alocado" : "Lance do cliente"}</small><b>${formatMoney(cardClientBid)} <em>(${formatPercent(scenario.percentual_lance_cliente)})</em></b></div><div><small>Lance embutido</small><b>${formatMoney(cardEmbedded)}</b></div><div><small>Lance total do cenário</small><b>${formatMoney(cardScenarioBid)} <em>(${formatPercent(scenario.percentual_lance_efetivo)})</em></b></div><div><small>Saldo devedor</small><b>${formatMoney(cardBalance)}</b></div><div><small>Parcela inicial</small><b>${formatMoney(cardInstallment)}</b></div><div><small>Parcela pós-contemplação</small><b>${cardAfter == null ? "Não calculada" : formatMoney(cardAfter)}</b></div></div>${cardLabel}<small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small>${renderScenarioProfiles(scenario)}</article>`;
   }).join("");
-  return `<article id="${anchorId}" class="motor360-group-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo${selected && quotaCount > 1 ? " total" : ""}</small><b>${formatMoney(scaleMoney(item.credito_maximo))}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status">${escapeHtml(status)}</span><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${auditId}" ${selected ? "checked" : ""}><span>Selecionar grupo</span></label>${quotaControl}<button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros${selected && quotaCount > 1 ? ` · ${quotaCount} cotas` : ""}</h4><div class="motor360-scenario-list">${scaledScenarioCards}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div></article>`;
+  const selectedScenarioIds = selectedScenarioIdsForGroup(groupKey);
+  const compositionViable = selected && [...selectedScenarioIds].some((id) => { const scenario = scenarios.find((entry) => entry.id === id); return scenario && scenarioRequirementStatus(scenario).ok; });
+  const displayStatus = selected && selectedScenarioIds.size ? (compositionViable ? "Viável em composição" : "Requer ajuste na composição") : status;
+  return `<article id="${anchorId}" class="motor360-group-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo${selected && quotaCount > 1 ? " total" : ""}</small><b>${formatMoney(scaleMoney(item.credito_maximo))}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status">${escapeHtml(displayStatus)}</span><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${auditId}" ${selected ? "checked" : ""}><span>Selecionar grupo</span></label>${quotaControl}<button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros${selected && quotaCount > 1 ? ` · ${quotaCount} cotas` : ""}</h4><div class="motor360-scenario-list">${scaledScenarioCards}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div></article>`;
 }
 
 function renderMotor360GroupCard(item) {
-  const key = `${motor360GroupKey(item)}|${investorState.selectedGroupProfile || "all"}|${investorState.selectedGroupScenario || "per_group"}|${investorState.selectedGroupSort || "original"}|${investorState.selectedGroupIds.has(motor360GroupKey(item)) ? investorState.quotaCounts.get(motor360GroupKey(item)) || 1 : 0}`;
+  const compositionKey = [...investorState.selectedGroupIds].sort().map((id) => `${id}:${quotaCountFor(id)}:${[...selectedScenarioIdsForGroup(id)].sort().join(",")}`).join(";");
+  const desiredCredit = Number(motor360ClientProfile().credito_liquido_desejado || 0);
+  const key = `${motor360GroupKey(item)}|${investorState.selectedGroupProfile || "all"}|${investorState.selectedGroupScenario || "per_group"}|${investorState.selectedGroupSort || "original"}|${compositionKey}|${desiredCredit}`;
   if (!motor360GroupCardCache.has(key)) motor360GroupCardCache.set(key, renderMotor360GroupCardUncached(item));
   return motor360GroupCardCache.get(key);
 }
@@ -2381,23 +2414,11 @@ function renderMotor360FloatingSelectionSummary() {
   });
   const totalQuotas = entries.reduce((sum, entry) => sum + entry.quotas, 0);
   const scenario = (scenarioId, label) => {
-    const values = entries.map((entry) => ({
-      item: entry.item,
-      quotas: entry.quotas,
-      scenario: (entry.item.cenarios || []).find((value) => value.id === scenarioId),
-    })).filter((entry) => entry.scenario);
-    if (!values.length) return "";
-    const sum = (field, fallback) => values.reduce((total, entry) => {
-      const raw = Number(entry.scenario[field] ?? entry.scenario[fallback] ?? 0);
-      const rawCredit = Number(entry.scenario.credito_liquido_projetado ?? entry.scenario.credito_contratado ?? 0);
-      const targetPerQuota = desiredCredit > 0 && totalQuotas > 0 ? desiredCredit / totalQuotas : null;
-      const ratio = targetPerQuota != null && rawCredit > 0 ? targetPerQuota / rawCredit : 1;
-      const value = field === "credito_contratado" ? Math.min(Number(entry.item.credito_maximo || raw), targetPerQuota ?? raw) : raw * ratio;
-      return total + (Number.isFinite(value) ? value : 0) * entry.quotas;
-    }, 0);
-    const credit = sum("credito_contratado", "credito_liquido_projetado");
-    const installment = sum("parcela_inicial");
-    const balance = sum("saldo_devedor");
+    const metrics = selectedCompositionScenarioMetrics(items, scenarioId, desiredCredit);
+    if (!metrics.entries.length) return "";
+    const credit = metrics.credit;
+    const installment = metrics.installment;
+    const balance = metrics.balance;
     const creditOk = desiredCredit > 0 && credit >= desiredCredit;
     const incomeOk = maximumInstallment <= 0 || installment <= maximumInstallment;
     const desiredOk = desiredInstallment <= 0 || installment <= desiredInstallment;
@@ -2411,7 +2432,8 @@ function renderMotor360FloatingSelectionSummary() {
     const quotas = quotaCountFor(item);
     return `<button type="button" class="motor360-selected-group-label" data-selected-group-anchor="${escapeHtml(anchorId)}" title="Ir para o Grupo ${escapeHtml(groupId)}"><strong>Grupo ${escapeHtml(groupId)}</strong><small>${quotas} ${quotas === 1 ? "cota" : "cotas"}</small></button>`;
   }).join("");
-  return `<aside class="motor360-floating-summary${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">${totalQuotas}</span>${minimizeButton}</div></div><div class="motor360-selected-group-labels" aria-label="Grupos selecionados">${selectedGroupLabels}</div>${renderMotor360ClientProfileSummary(client)}<div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-open-selected-groups-workspace>Analisar grupos selecionados</button></aside>`;
+  const currentComposition = selectedCompositionScenarioMetrics(items, "without_embedded", desiredCredit);
+  return `<aside class="motor360-floating-summary${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${items.length} grupo(s) · ${totalQuotas} cota(s)</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">${totalQuotas}</span>${minimizeButton}</div></div><p class="motor360-composition-credit-summary">Crédito acumulado: ${formatMoney(currentComposition.credit)} de ${formatMoney(desiredCredit)} · Faltam ${formatMoney(currentComposition.shortfall)} · Total de cotas: ${totalQuotas}</p><div class="motor360-selected-group-labels" aria-label="Grupos selecionados">${selectedGroupLabels}</div>${renderMotor360ClientProfileSummary(client)}<div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-open-selected-groups-workspace>Analisar grupos selecionados</button></aside>`;
 }
 
 function renderMotor360FloatingSelectionSummaryIntoFold() {
@@ -2559,6 +2581,52 @@ function formatAverageForOverview(item, strategy) {
   return value === null || value === undefined ? "-" : String(value).replace(".", ",");
 }
 
+function selectedCompositionScenarioMetrics(items, scenarioId, desiredCreditOverride = null) {
+  const { availableBid } = selectedGroupsClientFinancials();
+  const client = investorState.result?.cliente || {};
+  const desiredCredit = Number(desiredCreditOverride ?? client.credito_liquido_desejado ?? client.credito_desejado ?? 0);
+  const totalQuotas = items.reduce((sum, item) => sum + quotaCountFor(item), 0);
+  const targetPerQuota = desiredCredit > 0 && totalQuotas > 0 ? desiredCredit / totalQuotas : null;
+  const entries = items.map((item) => {
+    const sourceItem = investorState.selectedGroupData.get(motor360GroupKey(item)) || item;
+    const scenario = (sourceItem.cenarios || item.cenarios || []).find((value) => value.id === scenarioId);
+    const quotas = quotaCountFor(item);
+    if (!scenario) return null;
+    const rawCredit = Number(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? 0);
+    const cap = Number(sourceItem.credito_maximo || item.credito_maximo || 0);
+    const perQuotaCredit = targetPerQuota != null ? Math.min(cap > 0 ? cap : targetPerQuota, targetPerQuota) : Math.min(cap > 0 ? cap : rawCredit, rawCredit);
+    const ratio = rawCredit > 0 ? perQuotaCredit / rawCredit : 0;
+    const total = (field) => Number(scenario[field] ?? 0) * ratio * quotas;
+    const profiles = Object.fromEntries((scenario.perfis_contemplacao || []).map((profile) => [profile.id, {
+      ...profile,
+      ideal: Number(profile.lance_ideal || 0) * ratio * quotas,
+    }]));
+    return {
+      item, scenario, quotas, ratio, perQuotaCredit,
+      credit: perQuotaCredit * quotas,
+      targetCredit: (targetPerQuota ?? perQuotaCredit) * quotas,
+      installment: total("parcela_inicial"),
+      installmentAfter: scenario.parcela_pos_contemplacao == null ? null : total("parcela_pos_contemplacao"),
+      balance: total("saldo_devedor"),
+      embedded: total("lance_embutido"),
+      totalBid: total("lance_total_cenario"),
+      profiles,
+    };
+  }).filter(Boolean);
+  const credit = entries.reduce((sum, entry) => sum + entry.credit, 0);
+  const shortfall = desiredCredit > 0 ? Math.max(0, desiredCredit - credit) : 0;
+  for (const profileId of ["investor", "conservative", "moderate", "aggressive", "super_aggressive"]) {
+    const required = entries.reduce((sum, entry) => sum + Number(entry.profiles[profileId]?.ideal || 0), 0);
+    for (const entry of entries) {
+      const profile = entry.profiles[profileId];
+      if (!profile) continue;
+      profile.available = required > 0 ? availableBid * profile.ideal / required : 0;
+      profile.meets = profile.ideal > 0 && profile.available >= profile.ideal;
+    }
+  }
+  return { entries, totalQuotas, desiredCredit, targetPerQuota, credit, shortfall, installment: entries.reduce((sum, entry) => sum + entry.installment, 0), installmentAfter: entries.some((entry) => entry.installmentAfter != null) ? entries.reduce((sum, entry) => sum + Number(entry.installmentAfter || 0), 0) : null, balance: entries.reduce((sum, entry) => sum + entry.balance, 0) };
+}
+
 function selectedGroupAnalytics(item, forcedScenarioId = null) {
   const groupId = String(item.grupo || item.grupo_id || "-");
   const selectedIds = [...selectedScenarioIdsForGroup(motor360GroupKey(item))];
@@ -2567,33 +2635,28 @@ function selectedGroupAnalytics(item, forcedScenarioId = null) {
     : selectedIds[0] || "");
   const scenario = (item.cenarios || []).find((entry) => entry.id === scenarioId) || (item.cenarios || []).find((entry) => entry.id === "without_embedded") || (item.cenarios || [])[0] || {};
   const profiles = scenario.perfis_contemplacao || [];
+  const compositionItems = investorState.selectedGroupIds.has(motor360GroupKey(item)) ? selectedMotor360Items() : [item];
+  const composition = selectedCompositionScenarioMetrics(compositionItems, scenario.id);
+  const compositionEntry = composition.entries.find((entry) => motor360GroupKey(entry.item) === motor360GroupKey(item));
   const profile = (id) => {
     const value = profiles.find((entry) => entry.id === id);
-    return value ? { ...value, atinge_perfil: profileMeetsBid(item, scenario, value) } : {};
+    const calculated = compositionEntry?.profiles[id];
+    return value ? { ...value, lance_ideal: calculated?.ideal ?? Number(value.lance_ideal || 0) * quotaCountFor(item), composition_scaled: Boolean(compositionEntry), composition_available: calculated?.available, atinge_perfil: Boolean(calculated?.meets) } : {};
   };
   const historical = item.capacidade_contemplacoes || {};
   const history = (key) => Number(historical[key]?.media_contemplacoes ?? historical[key]?.media ?? 0);
   const quotaCount = quotaCountFor(item);
-  const scale = (value) => Number(value || 0) * quotaCount;
   const { client, income } = selectedGroupsClientFinancials();
-  const desiredCredit = Number(client.credito_liquido_desejado || 0);
-  const selectedTotalQuotas = [...investorState.selectedGroupIds].reduce((total, id) => total + quotaCountFor(id), 0);
-  const isSelectedComposition = investorState.selectedGroupIds.has(motor360GroupKey(item));
-  const compositionCreditPerQuota = isSelectedComposition && desiredCredit > 0 && selectedTotalQuotas > 0 ? desiredCredit / selectedTotalQuotas : null;
+  const desiredCredit = compositionEntry?.targetCredit ?? Number(client.credito_liquido_desejado || 0);
   const maxInstallment = Number(client.parcela_maxima || client.parcela_desejada || 0);
-  const scenarioCredit = Number(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? 0);
-  const groupCredit = Number(item.credito_maximo ?? 0);
-  const perQuotaCredit = compositionCreditPerQuota != null ? Math.min(groupCredit || compositionCreditPerQuota, compositionCreditPerQuota) : scenarioCredit > 0 && groupCredit > 0 ? Math.min(scenarioCredit, groupCredit) : scenarioCredit || groupCredit;
-  const compositionRatio = compositionCreditPerQuota != null && scenarioCredit > 0 ? compositionCreditPerQuota / scenarioCredit : 1;
-  const compositionScale = (value) => Number(value || 0) * compositionRatio * quotaCount;
-  const credit = scale(perQuotaCredit);
-  const contractedCredit = scale(perQuotaCredit);
-  const groupMaxCredit = scale(item.credito_maximo ?? 0);
-  const installment = compositionScale(scenario.parcela_inicial);
+  const credit = compositionEntry?.credit ?? Number(scenario.credito_liquido_projetado ?? scenario.credito_contratado ?? item.credito_maximo ?? 0) * quotaCount;
+  const contractedCredit = credit;
+  const groupMaxCredit = Number(item.credito_maximo ?? 0) * quotaCount;
+  const installment = compositionEntry?.installment ?? Number(scenario.parcela_inicial || 0) * quotaCount;
   const focusProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : "moderate";
   const focusedProfile = profile(focusProfile);
-  const idealBid = compositionScale(focusedProfile.lance_ideal);
-  const availableBid = allocatedClientBidFor(item, scenario, focusProfile);
+  const idealBid = Number(focusedProfile.lance_ideal || 0);
+  const availableBid = compositionEntry?.profiles[focusProfile]?.available ?? allocatedClientBidFor(item, scenario, focusProfile);
   const creditFit = desiredCredit > 0 ? Math.min(1, credit / desiredCredit) : 1;
   const installmentFit = maxInstallment > 0 ? Math.min(1, maxInstallment / Math.max(installment, 1)) : 1;
   const bidFit = idealBid > 0 ? Math.min(1, availableBid / idealBid) : 1;
@@ -2604,8 +2667,8 @@ function selectedGroupAnalytics(item, forcedScenarioId = null) {
   const termFit = term > 0 ? Math.min(1, term / 240) : .5;
   const adminRate = Number(item.taxa_adm ?? item.taxa_total ?? 0);
   const reserveRate = Number(item.fundo_reserva || 0);
-  const totalPaid = compositionScale(scenario.saldo_devedor ?? scenario.credito_contratado) * (1 + adminRate + reserveRate);
-  const embedded = compositionScale(scenario.lance_embutido);
+  const totalPaid = (compositionEntry?.balance ?? Number(scenario.saldo_devedor ?? scenario.credito_contratado ?? 0) * quotaCount) * (1 + adminRate + reserveRate);
+  const embedded = compositionEntry?.embedded ?? Number(scenario.lance_embutido || 0) * quotaCount;
   const creditLossRate = credit > 0 ? Math.min(1, embedded / Math.max(credit + embedded, 1)) : 0;
   const probability = Math.round(Math.min(100, Math.max(0, bidFit * 65 + historyFit * 35)));
   const probabilityLabel = probability >= 80 ? "Alta" : probability >= 60 ? "Moderada" : probability >= 40 ? "Baixa" : "Muito baixa";
@@ -2618,9 +2681,9 @@ function selectedGroupAnalytics(item, forcedScenarioId = null) {
     item, groupId, scenario, profile, history, quotaCount,
     credit, desiredCredit, contractedCredit, groupMaxCredit,
     installment,
-    installmentAfter: compositionScale(scenario.parcela_pos_contemplacao),
+    installmentAfter: compositionEntry?.installmentAfter ?? (scenario.parcela_pos_contemplacao == null ? null : Number(scenario.parcela_pos_contemplacao) * quotaCount),
     bid: scenarioTotalBidFor(item, scenario),
-    balance: compositionScale(scenario.saldo_devedor),
+    balance: compositionEntry?.balance ?? Number(scenario.saldo_devedor || 0) * quotaCount,
     idealBid, availableBid, score, scoreLabel, focusProfile, adminRate, reserveRate, totalPaid, embedded, creditLossRate, creditFit, installmentFit, bidFit, historyFit, costFit, termFit,
     incomeCommitment: commitment, probability, probabilityLabel, riskLabel,
   };
@@ -2739,28 +2802,19 @@ function renderSelectedGroupsCartSummary(items) {
   const desiredInstallment = Number(client.parcela_desejada || 0);
   const incomeInstallment = Number(client.parcela_maxima || 0);
   const { availableBid } = selectedGroupsClientFinancials();
-  const profileIds = ["conservative", "moderate", "aggressive", "super_aggressive"];
-  const profileLabels = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super Agressivo" };
+  const profileIds = ["investor", "conservative", "moderate", "aggressive", "super_aggressive"];
+  const profileLabels = { investor: "Investidor", conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Super Agressivo" };
   const scenarioSummary = (scenarioId, label) => {
-    const entries = items.map((item) => {
-      const groupId = String(item.grupo || item.grupo_id || "-");
-      const quotas = quotaCountFor(item);
-      const scenario = (item.cenarios || []).find((entry) => entry.id === scenarioId);
-      return { item, groupId, quotas, scenario };
-    }).filter((entry) => entry.scenario);
-    if (!entries.length) return "";
-    const total = (field, fallback) => entries.reduce((sum, entry) => sum + Number(entry.scenario[field] ?? entry.scenario[fallback] ?? 0) * entry.quotas, 0);
-    const credit = total("credito_liquido_projetado", "credito_contratado");
-    const installment = total("parcela_inicial");
-    const balance = total("saldo_devedor");
+    const metrics = selectedCompositionScenarioMetrics(items, scenarioId, desiredCredit);
+    if (!metrics.entries.length) return "";
+    const credit = metrics.credit;
+    const installment = metrics.installment;
+    const balance = metrics.balance;
     const creditOk = credit >= desiredCredit;
     const desiredOk = !desiredInstallment || installment <= desiredInstallment;
     const incomeOk = !incomeInstallment || installment <= incomeInstallment;
     const profiles = profileIds.map((profileId) => {
-      const requirements = entries.map((entry) => {
-        const profile = (entry.scenario.perfis_contemplacao || []).find((value) => value.id === profileId);
-        return { ...entry, required: Number(profile?.lance_ideal || 0) * entry.quotas };
-      });
+      const requirements = metrics.entries.map((entry) => ({ ...entry, groupId: String(entry.item.grupo || entry.item.grupo_id || "-"), required: Number(entry.profiles[profileId]?.ideal || 0) }));
       const requiredTotal = requirements.reduce((sum, entry) => sum + entry.required, 0);
       const pool = Math.min(availableBid, requiredTotal);
       const allocations = requirements.filter((entry) => entry.required > 0).map((entry) => ({
@@ -2769,10 +2823,15 @@ function renderSelectedGroupsCartSummary(items) {
       }));
       return { profileId, requiredTotal, gap: Math.max(0, requiredTotal - availableBid), allocations };
     });
-    return `<article class="motor360-cart-scenario"><header><strong>${label}</strong><span class="${creditOk && incomeOk ? "is-ok" : "is-warning"}">${creditOk && incomeOk ? "Composição viável" : "Requer ajuste"}</span></header><div class="motor360-cart-metrics"><div><small>Crédito líquido composto</small><b>${formatMoney(credit)}</b><em>${creditOk ? "Atende" : `Faltam ${formatMoney(desiredCredit - credit)}`}</em></div><div><small>Parcela total</small><b>${formatMoney(installment)}</b><em>${desiredOk ? "Dentro da desejada" : "Acima da desejada"} · ${incomeOk ? "Dentro de 30% da renda" : "Acima de 30% da renda"}</em></div><div><small>Saldo devedor total</small><b>${formatMoney(balance)}</b></div></div><div class="motor360-cart-profiles">${profiles.map((profile) => `<div><strong>${profileLabels[profile.profileId]}</strong><span>Lance ideal: ${formatMoney(profile.requiredTotal)}</span><b class="${profile.gap ? "is-gap" : "is-hit"}">${profile.gap ? `Faltam ${formatMoney(profile.gap)}` : "Lance suficiente"}</b><small>${profile.allocations.map((allocation) => `Grupo ${escapeHtml(allocation.groupId)}: ${formatMoney(allocation.value)}`).join(" · ") || "Sem referência de lance"}</small></div>`).join("")}</div></article>`;
+    const activeProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : allocationProfileId();
+    const activeProfileMetrics = profiles.find((profile) => profile.profileId === activeProfile);
+    const bidOk = !activeProfileMetrics || activeProfileMetrics.gap <= 0;
+    const viable = creditOk && incomeOk && desiredOk && bidOk;
+    return `<article class="motor360-cart-scenario"><header><strong>${label}</strong><span class="${viable ? "is-ok" : "is-warning"}">${viable ? "Composição viável" : "Requer ajuste"}</span></header><div class="motor360-cart-metrics"><div><small>Crédito acumulado</small><b>${formatMoney(credit)} de ${formatMoney(desiredCredit)}</b><em>${creditOk ? "Crédito atendido" : `Faltam ${formatMoney(desiredCredit - credit)}`}</em></div><div><small>Parcela total</small><b>${formatMoney(installment)}</b><em>${desiredOk ? "Dentro da desejada" : "Acima da desejada"} · ${incomeOk ? "Dentro do limite de renda" : "Acima do limite de renda"}</em></div><div><small>Saldo devedor total</small><b>${formatMoney(balance)}</b></div></div><div class="motor360-cart-profiles">${profiles.map((profile) => `<div><strong>${profileLabels[profile.profileId]}</strong><span>Lance ideal: ${formatMoney(profile.requiredTotal)}</span><b class="${profile.gap ? "is-gap" : "is-hit"}">${profile.gap ? `Faltam ${formatMoney(profile.gap)}` : "Lance suficiente"}</b><small>${profile.allocations.map((allocation) => `Grupo ${escapeHtml(allocation.groupId)}: ${formatMoney(allocation.value)}`).join(" · ") || "Sem referência de lance"}</small></div>`).join("")}</div></article>`;
   };
   const totalQuotas = items.reduce((sum, item) => sum + quotaCountFor(item), 0);
-  return `<section class="motor360-cart-summary"><div class="motor360-cart-heading"><div><span>Composição selecionada</span><h3>${items.length} grupo(s) · ${totalQuotas} cota(s)</h3></div><p>O lance disponível é distribuído proporcionalmente ao lance ideal de cada grupo em cada perfil.</p></div><div class="motor360-cart-scenarios">${scenarioSummary("without_embedded", "Sem lance embutido")}${scenarioSummary("with_embedded", "Com lance embutido")}</div></section>`;
+  const composition = selectedCompositionScenarioMetrics(items, "without_embedded", desiredCredit);
+  return `<section class="motor360-cart-summary"><div class="motor360-cart-heading"><div><span>Composição selecionada</span><h3>${items.length} grupo(s) · ${totalQuotas} cota(s)</h3></div><p>Crédito acumulado: ${formatMoney(composition.credit)} de ${formatMoney(desiredCredit)} · Faltam ${formatMoney(composition.shortfall)} · Total de cotas: ${totalQuotas}. O lance disponível é distribuído proporcionalmente ao lance ideal em cada perfil.</p></div><div class="motor360-cart-scenarios">${scenarioSummary("without_embedded", "Sem lance embutido")}${scenarioSummary("with_embedded", "Com lance embutido")}</div></section>`;
 }
 
 function renderSelectedGroupsDecisionVisuals(items) {
@@ -2907,11 +2966,16 @@ function renderSelectedGroupsScoreBreakdown(items) {
       if (!Object.keys(withoutProfile).length && !Object.keys(withProfile).length) {
         return `<section class="sg-profile-check is-unavailable"><h4>${profileLabels[profileId]}</h4><div class="sg-profile-scenarios"><span>Sem embutido: Dados não informados</span><span>Com embutido: Dados não informados</span></div></section>`;
       }
-      const selectedProfiles = scenariosForDisplay.map((scenario) => ({ scenario, profile: findProfile(scenario.id, profileId) })).filter((value) => Object.keys(value.profile).length);
+      const selectedProfiles = scenariosForDisplay.map((scenario) => {
+        const rawProfile = findProfile(scenario.id, profileId);
+        const composition = selectedCompositionScenarioMetrics(items, scenario.id);
+        const calculated = composition.entries.find((value) => motor360GroupKey(value.item) === motor360GroupKey(entry.item))?.profiles[profileId];
+        return { scenario, profile: Object.keys(rawProfile).length ? { ...rawProfile, lance_ideal: calculated?.ideal ?? Number(rawProfile.lance_ideal || 0) * entry.quotaCount, composition_scaled: Boolean(calculated), composition_available: calculated?.available } : {} };
+      }).filter((value) => Object.keys(value.profile).length);
       const profile = selectedProfiles[0]?.profile || {};
       const requiredBids = selectedProfiles.map((value) => ({
         label: value.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido",
-        value: Number(value.profile.lance_ideal || 0) * entry.quotaCount,
+        value: Number(value.profile.lance_ideal || 0),
       }));
       const passingScenarioCount = selectedProfiles.filter((value) => profileMeetsBid(entry.item, value.scenario, value.profile)).length;
       const bidPasses = selectedProfiles.length > 0 && passingScenarioCount === selectedProfiles.length;
@@ -2922,7 +2986,7 @@ function renderSelectedGroupsScoreBreakdown(items) {
         ["Parcela desejada x pós-contemplação", desiredInstallment > 0 && entry.installmentAfter > 0 && entry.installmentAfter <= desiredInstallment, `Desejada ${formatMoney(desiredInstallment)} · pós-contemplação ${formatMoney(entry.installmentAfter)}`],
         ["Crédito contratado x crédito desejado", entry.contractedCredit >= entry.desiredCredit, `Contratado ${formatMoney(entry.contractedCredit)} · desejado líquido ${formatMoney(entry.desiredCredit)}`],
       ];
-      const scenarioSummary = scenariosForDisplay.map((scenario) => { const value = findProfile(scenario.id, profileId); const meetsBid = profileMeetsBid(entry.item, scenario, value); return `<span>${scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}: ${meetsBid ? "Atende" : "Não atende"} · ideal total ${formatMoney(Number(value.lance_ideal || 0) * entry.quotaCount)}</span>`; }).join("");
+      const scenarioSummary = selectedProfiles.map(({ scenario, profile: value }) => { const meetsBid = profileMeetsBid(entry.item, scenario, value); return `<span>${scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}: ${meetsBid ? "Atende" : "Não atende"} · ideal total ${formatMoney(Number(value.lance_ideal || 0))}</span>`; }).join("");
       return `<section class="sg-profile-check"><h4>${profileLabels[profileId]}</h4><div class="sg-profile-scenarios">${scenarioSummary || "<span>Nenhum cenário escolhido</span>"}</div>${checks.map(([label, passes, detail]) => `<div class="sg-check-item ${passes ? "is-ok" : "is-fail"}"><span><b aria-hidden="true">${passes ? "✓" : "×"}</b>${label}</span><strong>${passes ? "Atende" : "Não atende"}</strong><small>${detail}</small></div>`).join("")}</section>`;
     }).join("");
   };
@@ -3824,6 +3888,30 @@ function minimumQuotasFor(item, scenarioId = null) {
   return Number.isFinite(value) && value > 0 ? Math.ceil(value) : 1;
 }
 
+function suggestedCompositionQuotas(item, scenarioId = "without_embedded") {
+  const otherItems = selectedMotor360Items().filter((entry) => motor360GroupKey(entry) !== motor360GroupKey(item));
+  if (!otherItems.length) return minimumQuotasFor(item, scenarioId);
+  const client = motor360ClientProfile();
+  const desired = Number(client.credito_liquido_desejado || 0);
+  const perQuotaCapacity = Number(item?.credito_maximo || 0);
+  if (desired <= 0 || perQuotaCapacity <= 0) return 1;
+  let combinedCapacity = otherItems.reduce((sum, entry) => sum + Number(entry.credito_maximo || 0) * quotaCountFor(entry), 0) + perQuotaCapacity;
+  for (const entry of otherItems) {
+    const key = motor360GroupKey(entry);
+    const capacity = Number(entry.credito_maximo || 0);
+    let quotas = quotaCountFor(entry);
+    while (quotas > 1 && combinedCapacity - capacity >= desired) {
+      quotas -= 1;
+      combinedCapacity -= capacity;
+      investorState.quotaCounts.set(key, quotas);
+    }
+  }
+  const alreadyCovered = combinedCapacity - perQuotaCapacity;
+  const remaining = Math.max(0, desired - alreadyCovered);
+  if (remaining <= 0) return 1;
+  return Math.min(50, Math.max(1, Math.ceil(remaining / perQuotaCapacity)));
+}
+
 function clientResourceTotal() {
   const client = investorState.result?.cliente || {};
   return Number(client.lance_cliente_total ?? client.lance_total ?? client.own_resources_total ?? 0) || 0;
@@ -3853,13 +3941,14 @@ function allocatedClientBidFor(item, scenario, profileId = allocationProfileId()
 }
 
 function profileMeetsBid(item, scenario, profile) {
-  const ideal = Number(profile?.lance_ideal || 0) * quotaCountFor(item);
-  return ideal > 0 && allocatedClientBidFor(item, scenario, profile?.id) >= ideal;
+  const ideal = profile?.composition_scaled ? Number(profile.lance_ideal || 0) : Number(profile?.lance_ideal || 0) * quotaCountFor(item);
+  const available = profile?.composition_scaled ? Number(profile.composition_available || 0) : allocatedClientBidFor(item, scenario, profile?.id);
+  return ideal > 0 && available >= ideal;
 }
 
 function profileBidGap(item, scenario, profile) {
-  const ideal = Number(profile?.lance_ideal || 0) * quotaCountFor(item);
-  const available = allocatedClientBidFor(item, scenario, profile?.id);
+  const ideal = profile?.composition_scaled ? Number(profile.lance_ideal || 0) : Number(profile?.lance_ideal || 0) * quotaCountFor(item);
+  const available = profile?.composition_scaled ? Number(profile.composition_available || 0) : allocatedClientBidFor(item, scenario, profile?.id);
   return { ideal, available, gap: Math.max(0, ideal - available) };
 }
 
@@ -4465,7 +4554,7 @@ function renderInvestorAnalysis(result) {
       }
       investorState.selectedGroupIds.add(groupId);
       if (selectedItem) investorState.selectedGroupData.set(groupId, selectedItem);
-      if (!investorState.quotaCounts.has(groupId)) investorState.quotaCounts.set(groupId, minimumQuotasFor(selectedItem, investorState.selectedGroupScenario === "with_embedded" ? "with_embedded" : "without_embedded"));
+      if (!investorState.quotaCounts.has(groupId)) investorState.quotaCounts.set(groupId, suggestedCompositionQuotas(selectedItem, investorState.selectedGroupScenario === "with_embedded" ? "with_embedded" : "without_embedded"));
     } else {
       investorState.selectedGroupIds.delete(groupId);
       investorState.selectedScenarioIds.delete(groupId);
