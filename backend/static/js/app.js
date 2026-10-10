@@ -4303,11 +4303,7 @@ function renderInvestorAnalysis(result) {
     if (!selectedScenarioIds.size) return true;
     return (item.cenarios || item.scenarios || []).some((scenario) => (
       selectedScenarioIds.has(scenario.id)
-      && (scenario.eligible === true || (scenario.credit_compatible === true && scenario.term_compatible === true && scenario.income_compatible !== false))
-      && (!result.perfil_contemplacao || (scenario.perfis_contemplacao || []).some((profile) => {
-        const aliases = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" };
-        return profile.id === (aliases[result.perfil_contemplacao] || result.perfil_contemplacao) && profile.atinge_perfil === true;
-      }))
+      && (scenario.eligible === true || (scenario.credit_compatible === true && scenario.term_compatible === true))
     ));
   };
   const scoped = (items) => selectedAdministratorKey
@@ -4369,8 +4365,8 @@ function renderInvestorAnalysis(result) {
     <button type="button" class="btn btn-outline-secondary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>Ver impedimentos e orientações</button>
     ${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}
     <div class="motor360-single-quota-note" role="note">
-      <strong>Grupos que atendem o perfil de contemplação do cliente</strong>
-      <span>Grupos cujo lance atende ao percentual necessário para o perfil de contemplação selecionado. Crédito, prazo, parcela, renda e quantidade de cotas ficam disponíveis para avaliação do operador.</span>
+      <strong>Grupos compatíveis para composição da carteira</strong>
+      <span>Exibimos grupos com crédito e prazo compatíveis. O perfil pode ser atingido pela composição de múltiplas cotas ou grupos; confira os requisitos de cada cenário antes de selecionar.</span>
     </div>
     <div class="motor360-group-list">${items.map(renderMotor360GroupCard).join("")}</div>
 
