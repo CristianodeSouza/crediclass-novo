@@ -2277,8 +2277,8 @@ function renderMotor360GroupCardUncached(item) {
     ? selectedCompositionScenarioMetrics(selectedCompositionItems, scenario.id, desiredCompositionCredit)
     : null;
   const quotaControl = selected ? `<div class="motor360-quota-area ${quotaExceeded ? "is-warning" : ""}"><div class="motor360-quota-control"><span>Cotas</span><input class="motor360-quota-input" type="number" min="1" max="50" value="${quotaCount}" data-quota-action="input" data-group-id="${auditId}" aria-label="Quantidade de cotas do grupo ${auditId}"></div>${quotaExceeded ? `<div class="motor360-quota-warning" role="alert"><strong>Acima da média histórica</strong><span>${quotaCount} cotas excedem o limite de ${quotaLimit} para este perfil.</span></div>` : ""}</div>` : "";
-  const selectedProfileId = { urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" }[investorState.result?.perfil_contemplacao] || investorState.result?.perfil_contemplacao;
-  const focusProfileId = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : selectedProfileId;
+  const selectedProfileId = motor360ClientProfileId();
+  const focusProfileId = motor360FocusedProfileId();
   const focusProfileLabel = { conservative: "Conservador", moderate: "Moderado", aggressive: "Agressivo", super_aggressive: "Superagressivo", investor: "Investidor" }[focusProfileId] || "Todos os perfis";
   const compositionMinimums = scenarios
     .map((scenario) => ({ id: scenario.id, quotas: minimumQuotasFor(item, scenario.id) }))
@@ -2330,7 +2330,7 @@ function renderMotor360GroupCardUncached(item) {
       const metrics = compositionMetrics(scenario);
       const metricEntry = metrics?.entries.find((entry) => motor360GroupKey(entry.item) === groupKey);
       const embeddedNote = scenario.id === "with_embedded" ? `<small>Embutido considerado: ${formatMoney(metricEntry?.embedded ?? scaleMoney(value.lance_embutido))}</small>` : "";
-      const totalIdeal = metrics ? metricEntry?.profiles[value.id]?.ideal || 0 : Number(value.lance_ideal || 0) * quotaCount;
+      const totalIdeal = metrics ? metricEntry?.profiles[value.id]?.ideal || 0 : motor360CompositionIdealBid(item, scenario, value.id);
       const available = metrics ? metricEntry?.profiles[value.id]?.available || 0 : allocatedClientBidFor(item, scenario, value.id);
       const meetsBid = totalIdeal <= 0 || available >= totalIdeal;
       const bidGap = { gap: Math.max(0, totalIdeal - available) };
@@ -2736,6 +2736,44 @@ function selectedCompositionAssessment(metrics, client = motor360ClientProfile()
   return { ok: failures.length === 0, failures, parcelWarning, requiredBid, availableBid, maximumInstallment, incomeLimit, installmentLimitOk, incomeOk };
 }
 
+function motor360ClientProfileId() {
+  const profile = investorState.result?.perfil_contemplacao;
+  return ({ urgent: "super_aggressive", fast: "aggressive", moderate: "moderate", conservative: "conservative", long_term: "investor" })[profile] || profile || "moderate";
+}
+
+function motor360FocusedProfileId() {
+  return investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all"
+    ? investorState.selectedGroupProfile
+    : motor360ClientProfileId();
+}
+
+function motor360CompositionIdealBid(item, scenario, profileId = motor360FocusedProfileId()) {
+  const profile = (scenario?.perfis_contemplacao || []).find((entry) => entry.id === profileId);
+  if (!profile || profile.lance_ideal == null || profile.lance_ideal === "") return null;
+  const groupKey = motor360GroupKey(item);
+  if (investorState.selectedGroupIds.has(groupKey)) {
+    const metrics = selectedCompositionScenarioMetrics(selectedMotor360Items(), scenario.id);
+    const entry = metrics.entries.find((value) => motor360GroupKey(value.item) === groupKey);
+    const ideal = entry?.profiles?.[profileId]?.ideal;
+    return Number.isFinite(Number(ideal)) ? Number(ideal) : null;
+  }
+  // For an unselected composition candidate, the card communicates a
+  // minimum-quota composition; compare its aggregate ideal bid, not one quota.
+  const quotas = item?.requires_composition === true
+    ? minimumQuotasFor(item, scenario.id)
+    : quotaCountFor(item);
+  return Number(profile.lance_ideal) * quotas;
+}
+
+function motor360ScenarioIdsForSort(item) {
+  const available = (item.cenarios || item.scenarios || []).map((scenario) => scenario.id).filter(Boolean);
+  const selectedScenario = investorState.selectedGroupScenario || "per_group";
+  if (selectedScenario === "with_embedded" || selectedScenario === "without_embedded") {
+    return available.includes(selectedScenario) ? [selectedScenario] : [];
+  }
+  return available;
+}
+
 function selectedGroupAnalytics(item, forcedScenarioId = null) {
   const groupKey = motor360GroupKey(item);
   const selectedIds = [...selectedScenarioIdsForGroup(groupKey)];
@@ -2797,7 +2835,7 @@ function selectedGroupAnalyticsUncached(item, forcedScenarioId = null) {
   const grossContractedCredit = compositionEntry?.contractedCredit ?? contractedCredit;
   const groupMaxCredit = Number(item.credito_maximo ?? 0) * quotaCount;
   const installment = compositionEntry?.installment ?? Number(scenario.parcela_inicial || 0) * quotaCount;
-  const focusProfile = investorState.selectedGroupProfile && investorState.selectedGroupProfile !== "all" ? investorState.selectedGroupProfile : "moderate";
+  const focusProfile = motor360FocusedProfileId();
   const focusedProfile = profile(focusProfile);
   const idealBid = Number(focusedProfile.lance_ideal || 0);
   const availableBid = compositionEntry?.profiles[focusProfile]?.available ?? allocatedClientBidFor(item, scenario, focusProfile);
@@ -2999,8 +3037,10 @@ function applySelectedGroupsFiltersAndSort(items) {
   const filters = selectedGroupsFilterValues();
   const metrics = new Map();
   const scenarioFor = (item) => {
-    if (investorState.selectedGroupScenario && investorState.selectedGroupScenario !== "per_group") return investorState.selectedGroupScenario;
-    return [...selectedScenarioIdsForGroup(motor360GroupKey(item))][0] || "without_embedded";
+    const configured = investorState.selectedGroupScenario;
+    if (configured === "with_embedded" || configured === "without_embedded") return configured;
+    const selected = [...selectedScenarioIdsForGroup(motor360GroupKey(item))];
+    return selected[0] || (item.cenarios || item.scenarios || [])[0]?.id || "without_embedded";
   };
   const filtered = items.filter((item) => {
     const metricKey = `${motor360GroupKey(item)}|${scenarioFor(item)}|${investorState.selectedGroupProfile || "all"}`;
@@ -3026,13 +3066,30 @@ function applySelectedGroupsFiltersAndSort(items) {
     if (raw === null || raw === undefined || raw === "") return null;
     return typeof raw === "number" ? raw : Number(parseNumberInput(raw));
   };
-  const analyticsFor = (item) => { const key = `${motor360GroupKey(item)}|${scenarioFor(item)}|${investorState.selectedGroupProfile || "all"}`; if (!metrics.has(key)) metrics.set(key, selectedGroupAnalytics(item, scenarioFor(item))); return metrics.get(key); };
-  const bidValueFor = (item) => { const entry = analyticsFor(item); return entry.idealBid > 0 && entry.groupMaxCredit > 0 ? entry.idealBid : null; };
+  const analyticsFor = (item, scenarioId = scenarioFor(item)) => { const key = `${motor360GroupKey(item)}|${scenarioId}|${investorState.selectedGroupProfile || "all"}`; if (!metrics.has(key)) metrics.set(key, selectedGroupAnalytics(item, scenarioId)); return metrics.get(key); };
+  const bidValueFor = (item) => {
+    const profileId = motor360FocusedProfileId();
+    const values = motor360ScenarioIdsForSort(item).map((scenarioId) => {
+      const scenario = (item.cenarios || item.scenarios || []).find((entry) => entry.id === scenarioId);
+      if (!scenario) return null;
+      const ideal = investorState.selectedGroupIds.has(motor360GroupKey(item))
+        ? analyticsFor(item, scenarioId).profile(profileId).lance_ideal
+        : motor360CompositionIdealBid(item, scenario, profileId);
+      return Number.isFinite(Number(ideal)) && Number(ideal) > 0 ? Number(ideal) : null;
+    }).filter((value) => value != null);
+    return values.length ? Math.min(...values) : null;
+  };
+  const bidSortValues = new Map();
+  const cachedBidValueFor = (item) => {
+    const key = motor360GroupKey(item);
+    if (!bidSortValues.has(key)) bidSortValues.set(key, bidValueFor(item));
+    return bidSortValues.get(key);
+  };
   return [...filtered].sort((a, b) => {
     if (sort === "score") return analyticsFor(b).score - analyticsFor(a).score;
     if (sort === "credit") return analyticsFor(b).groupMaxCredit - analyticsFor(a).groupMaxCredit;
     if (sort === "installment") return (valueFor(a) == null ? 1 : 0) - (valueFor(b) == null ? 1 : 0) || (valueFor(a) ?? Infinity) - (valueFor(b) ?? Infinity);
-    if (sort === "bid") return (bidValueFor(a) == null ? 1 : 0) - (bidValueFor(b) == null ? 1 : 0) || (bidValueFor(a) ?? Infinity) - (bidValueFor(b) ?? Infinity);
+    if (sort === "bid") return (cachedBidValueFor(a) == null ? 1 : 0) - (cachedBidValueFor(b) == null ? 1 : 0) || (cachedBidValueFor(a) ?? Infinity) - (cachedBidValueFor(b) ?? Infinity);
     if (sort === "history") return Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0);
     return 0;
   });

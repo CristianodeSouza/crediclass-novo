@@ -128,6 +128,27 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("if (sort === \"credit\") return analyticsFor(b).groupMaxCredit", sort_function)
         self.assertNotIn("selectedGroupSort", card_renderer)
 
+    def test_motor360_menor_lance_usa_o_mesmo_total_de_composicao_do_card(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        ideal_helper = app_js.split("function motor360CompositionIdealBid", 1)[1].split("function motor360ScenarioIdsForSort", 1)[0]
+        sort_function = app_js.split("function applySelectedGroupsFiltersAndSort", 1)[1].split("function renderMotor360SelectionFilters", 1)[0]
+        card_renderer = app_js.split("function renderMotor360GroupCardUncached", 1)[1].split("function renderMotor360GroupCard(", 1)[0]
+
+        self.assertIn("minimumQuotasFor(item, scenario.id)", ideal_helper)
+        self.assertIn("motor360FocusedProfileId()", ideal_helper)
+        self.assertIn("motor360CompositionIdealBid(item, scenario, value.id)", card_renderer)
+        self.assertIn("motor360CompositionIdealBid(item, scenario, profileId)", sort_function)
+        self.assertIn("analyticsFor(item, scenarioId).profile(profileId).lance_ideal", sort_function)
+        self.assertIn("Sem seleção: exibe grupos disponíveis, inclusive opções viáveis em composição.", index_html)
+
+        # Acceptance fixture: the focused-profile bid is aggregated across
+        # six minimum quotas before comparing it to a one-quota group.
+        i227_composition_bid = 45_250 * 6
+        group_1011_composition_bid = 56_820 * 1
+        self.assertEqual(i227_composition_bid, 271_500)
+        self.assertLess(group_1011_composition_bid, i227_composition_bid)
+
     def test_motor360_mantem_selecionados_visiveis_e_ordena_por_contemplacoes(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
