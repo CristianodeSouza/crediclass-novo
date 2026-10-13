@@ -424,6 +424,20 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(mapping["missing_rows"], 1)
         self.assertEqual(result["audit"]["group_results"][0]["result"], "matrix_approved")
 
+    def test_audit_mapping_reports_real_columns_headers_and_blank_source_values(self):
+        item = group("MAPEADO")
+        item["mapeamento_origem"] = {
+            "prazo_restante": {"source": "cabecalho", "column": "G", "header": "Prazo remanescente", "raw_value": 30},
+            "historico:2026-06:qtd_contemplacoes": {"source": "cabecalho", "column": "CT", "header": "Jun-26\nQtd", "raw_value": None},
+        }
+        result = analyze_client_consortium_viability(payload(), [item])
+        mapping = result["audit"]["data_source"]["mapping_by_administrator"]["ITAU"]
+
+        self.assertEqual(mapping["prazo_restante"]["columns"], ["G"])
+        self.assertEqual(mapping["prazo_restante"]["headers"], ["Prazo remanescente"])
+        self.assertEqual(mapping["historico:2026-06:qtd_contemplacoes"]["columns"], ["CT"])
+        self.assertEqual(mapping["historico:2026-06:qtd_contemplacoes"]["blank_value_rows"], 1)
+
     def test_composition_requires_minimum_quota_to_fit_the_income_limit(self):
         result = analyze_client_consortium_viability(payload(
             credito_desejado=600000, parcela_limite=12000, renda_total=40000,

@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.176"
+MOTOR_VERSION = "4.0.177"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BQ", "Urgente - 3 meses"),
@@ -161,7 +161,7 @@ def _parcela_inicial_por_cenario(scenario: dict[str, Any]) -> float | None:
     """Calculate the initial installment from the client's contracted credit.
 
     AK is a later card reference. It must not replace this preliminary
-    calculation, which uses the scenario debt balance and column F.
+    calculation, which uses the scenario debt balance and mapped remaining term.
     """
     saldo = parse_decimal(scenario.get("saldo_devedor"))
     prazo = scenario.get("prazo_remanescente")
@@ -892,11 +892,13 @@ def analyze_client_consortium_viability(
         administrator = str(group.get("administradora") or "Não informado")
         administrator_mapping = mapping_by_administrator.setdefault(administrator, {})
         for field, mapping in (group.get("mapeamento_origem") or {}).items():
-            entry = administrator_mapping.setdefault(field, {"headers": set(), "columns": set(), "sources": set(), "mapped_rows": 0, "missing_rows": 0})
+            entry = administrator_mapping.setdefault(field, {"headers": set(), "columns": set(), "sources": set(), "mapped_rows": 0, "missing_rows": 0, "blank_value_rows": 0})
             if mapping.get("source") == "ausente":
                 entry["missing_rows"] += 1
             else:
                 entry["mapped_rows"] += 1
+                if "raw_value" in mapping and mapping["raw_value"] in (None, ""):
+                    entry["blank_value_rows"] += 1
                 entry["headers"].add(str(mapping.get("header") or "-"))
                 if mapping.get("column"):
                     entry["columns"].add(str(mapping["column"]))
@@ -968,7 +970,7 @@ def analyze_client_consortium_viability(
         "summary": {"total_loaded": len(groups), "total_analyzed": len(groups), "total_matrix_candidates": len(matrix_approved_keys), "total_matrix_evaluated": counters["matrix_evaluated"], "total_matrix_incomplete": counters["matrix_incomplete"], "total_matrix_rejected": counters["selected_profile_rejected"] if selected_profile else counters["contemplation_rejected"], "total_preselected": len(eligible_items), "total_composition_candidates": len(composition_items), "total_credit_compatible": len(credit_eligible_items), "total_credit_rejected": counters["credit_rejected"], "total_term_income_rejected": counters["term_rejected"], "total_selected_profile_rejected": counters["selected_profile_rejected"] if selected_profile else 0, "groups_with_incomplete_data": len(incomplete_groups), "incomplete_field_occurrences": incomplete_field_occurrences, "total_rejected": len(excluded)},
         "schema_notes": {"columns_used": {"official_decision_field": "used_in_decision", "compatibility_field": "used", "compatibility_note": "The used field mirrors used_in_decision for compatibility with prior consumers."}},
         "warnings": [
-            {"level": "info", "message": "O/U participa exclusivamente da elegibilidade de crédito. AJ, AK e AL são referências e não aprovam nem eliminam grupos nesta fase."},
+            {"level": "info", "message": "P/V participam exclusivamente da elegibilidade de crédito. AK, AL e AM são referências e não aprovam nem eliminam grupos nesta fase."},
             {"level": "info", "message": "As fórmulas de crédito contratado, saldo devedor e prazo são registradas por cenário e por grupo na auditoria."},
         ],
     }

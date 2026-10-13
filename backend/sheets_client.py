@@ -364,7 +364,7 @@ def apply_mapa_grupos_fixed_columns(
             value = fixed_column_value(field, values)
             column = column_letter(index)
             source = "coluna_fixa"
-        if value in (None, "") and field in MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES:
+        if header is None and value in (None, "") and field in MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES:
             fallback_index = MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES[field]
             fallback_value = values[fallback_index] if fallback_index < len(values) else ""
             if fallback_value not in (None, ""):
@@ -372,7 +372,17 @@ def apply_mapa_grupos_fixed_columns(
                 column = column_letter(fallback_index)
                 source = "fallback_legado"
         row[canonical_field_header(field)] = value
-        source_columns[field] = {"source": source, "column": column, "header": header or ""}
+        source_columns[field] = {"source": source, "column": column, "header": header or "", "raw_value": value}
+    for index, header in enumerate(headers or []):
+        parsed = history_key_from_header(str(header))
+        if parsed:
+            month, metric = parsed
+            source_columns[f"historico:{month}:{metric}"] = {
+                "source": "cabecalho",
+                "column": column_letter(index),
+                "header": str(header),
+                "raw_value": values[index] if index < len(values) else "",
+            }
     row["__source_columns"] = source_columns
 
 
@@ -473,14 +483,22 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
             for field, header, index in selected:
                 relative_index = index - min_index
                 value = row_values[relative_index] if relative_index < len(row_values) else ""
-                if value in (None, "") and field == "taxa_adm" and 16 >= min_index:
+                if value in (None, "") and field == "taxa_adm" and header == canonical_field_header(field) and 16 >= min_index:
                     fallback_relative = 16 - min_index
                     value = row_values[fallback_relative] if fallback_relative < len(row_values) else ""
                 row[header] = value
             row["__source_columns"] = {
-                field: {"source": "cabecalho", "column": column_letter(index), "header": header}
+                field: {"source": "cabecalho", "column": column_letter(index), "header": header, "raw_value": row.get(header)}
                 for field, header, index in selected if field != "historico"
             }
+            row["__source_columns"].update({
+                f"historico:{parsed[0]}:{parsed[1]}": {
+                    "source": "cabecalho", "column": column_letter(index), "header": header,
+                    "raw_value": row.get(header),
+                }
+                for field, header, index in selected
+                if field == "historico" and (parsed := history_key_from_header(header))
+            })
             row["__source_row"] = offset + 2
             if not any(str(value).strip() for value in row.values()):
                 continue
@@ -517,9 +535,17 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
                         value = fallback_cell[0] if fallback_cell else ""
                 row[header] = value
             row["__source_columns"] = {
-                field: {"source": "cabecalho", "column": column_letter(index), "header": header}
+                field: {"source": "cabecalho", "column": column_letter(index), "header": header, "raw_value": row.get(header)}
                 for field, header, index in selected if field != "historico"
             }
+            row["__source_columns"].update({
+                f"historico:{parsed[0]}:{parsed[1]}": {
+                    "source": "cabecalho", "column": column_letter(index), "header": header,
+                    "raw_value": row.get(header),
+                }
+                for field, header, index in selected
+                if field == "historico" and (parsed := history_key_from_header(header))
+            })
             row["__source_row"] = offset + 2
             if not any(str(value).strip() for value in row.values()):
                 continue
@@ -1083,6 +1109,12 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "lance_agressivo_6m", "lance_super_agressivo_3m",
     )
     updated_month = latest_updated_history_month(historico)
+    source_mapping = {field: get_field_source(row, field) for field in mapping_fields}
+    source_mapping.update({
+        field: dict(mapping)
+        for field, mapping in (row.get("__source_columns") or {}).items()
+        if field.startswith("historico:")
+    })
     return {
         "source_row": row.get("__source_row"),
         "grupo_id": build_grupo_id(row),
@@ -1133,7 +1165,7 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "idade_maxima": parse_int(get_optional_field(row, "idade_maxima")) or parse_int(get_optional_field(row, "idade_maxima_seguro")),
         "dados_incompletos": missing,
         "origens": origins,
-        "mapeamento_origem": {field: get_field_source(row, field) for field in mapping_fields},
+        "mapeamento_origem": source_mapping,
     }
 
 

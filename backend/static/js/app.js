@@ -2408,10 +2408,7 @@ function renderMotor360GroupCardUncached(item) {
     : possibleComposition
       ? `Mínimos calculados por cenário: ${minimumDetails}.`
       : status;
-  const bidSortValue = investorState.selectedGroupSort === "bid" ? motor360BidSortValue(item) : null;
-  const bidSortLabel = bidSortValue
-    ? `Menor lance ideal · ${bidSortValue.scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}: ${formatMoney(bidSortValue.value)}`
-    : investorState.selectedGroupSort === "bid" ? "Menor lance ideal · sem referência calculável" : "";
+  const bidSortLabel = investorState.selectedGroupSort === "bid" ? motor360BidSortLabel(item) : "";
   return `<article id="${anchorId}" class="motor360-group-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo${selected && quotaCount > 1 ? " total" : ""}</small><b>${formatMoney(scaleMoney(item.credito_maximo))}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status is-${displayStatusTone}" title="${escapeHtml(displayStatusDetail)}" aria-label="${escapeHtml(`${displayStatus}. ${displayStatusDetail}`)}">${escapeHtml(displayStatus)}</span><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${auditId}" ${selected ? "checked" : ""}><span>Selecionar grupo</span></label>${quotaControl}<button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros${selected && quotaCount > 1 ? ` · ${quotaCount} cotas` : ""}</h4><div class="motor360-scenario-list">${scaledScenarioCards}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div>${bidSortLabel ? `<p class="motor360-bid-sort-value" aria-label="${escapeHtml(bidSortLabel)}">${escapeHtml(bidSortLabel)}</p>` : ""}</article>`;
 }
 
@@ -2792,23 +2789,35 @@ function motor360BidSortValue(item) {
     const value = motor360CompositionIdealBid(item, scenario, profileId);
     return value === null ? null : { value, scenarioId };
   }).filter(Boolean);
-  candidates.sort((a, b) => a.value - b.value || (a.scenarioId === "without_embedded" ? -1 : 1));
+  const scenarioPriority = (scenarioId) => scenarioId === "without_embedded" ? 0 : 1;
+  candidates.sort((a, b) => a.value - b.value || scenarioPriority(a.scenarioId) - scenarioPriority(b.scenarioId));
   return candidates[0] || null;
-}
-
-function motor360HasHistoryEvidence(item) {
-  return (item.historico_12_meses || []).some((month) => (
-    month && [month.maior_lance, month.menor_lance, month.qtd_contemplacoes]
-      .some((value) => value !== null && value !== undefined && value !== "")
-  ));
 }
 
 function motor360BidSortDescription() {
   const selected = investorState.selectedGroupScenario || "per_group";
   if (selected === "with_embedded") return "cenário com embutido";
   if (selected === "without_embedded") return "cenário sem embutido";
-  if (selected === "all") return "menor lance próprio ideal agregado entre os cenários marcados";
+  if (selected === "all") return "menor lance próprio ideal agregado entre os dois cenários";
   return "cenário selecionado por grupo; sem seleção individual, menor valor entre os cenários disponíveis";
+}
+
+function motor360BidSortLabel(item) {
+  const bid = motor360BidSortValue(item);
+  if (!bid) return "Menor lance ideal · sem referência calculável";
+  const scenarioLabel = bid.scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido";
+  return `Menor lance ideal · ${scenarioLabel}: ${formatMoney(bid.value)}`;
+}
+
+function sortMotor360ItemsByBid(items) {
+  return items
+    .map((item, originalIndex) => ({ item, originalIndex, bid: motor360BidSortValue(item) }))
+    .sort((a, b) => (
+      (a.bid === null ? 1 : 0) - (b.bid === null ? 1 : 0)
+      || (a.bid?.value ?? Infinity) - (b.bid?.value ?? Infinity)
+      || a.originalIndex - b.originalIndex
+    ))
+    .map(({ item }) => item);
 }
 
 function selectedGroupAnalytics(item, forcedScenarioId = null) {
@@ -3104,30 +3113,11 @@ function applySelectedGroupsFiltersAndSort(items) {
     return typeof raw === "number" ? raw : Number(parseNumberInput(raw));
   };
   const analyticsFor = (item, scenarioId = scenarioFor(item)) => { const key = `${motor360GroupKey(item)}|${scenarioId}|${investorState.selectedGroupProfile || "all"}`; if (!metrics.has(key)) metrics.set(key, selectedGroupAnalytics(item, scenarioId)); return metrics.get(key); };
-  const bidSortValues = new Map();
-  const cachedBidValueFor = (item) => {
-    const key = motor360GroupKey(item);
-    if (!bidSortValues.has(key)) bidSortValues.set(key, motor360BidSortValue(item));
-    return bidSortValues.get(key);
-  };
-  const originalOrder = new Map(items.map((item, index) => [motor360GroupKey(item), index]));
+  if (sort === "bid") return sortMotor360ItemsByBid(filtered);
   return [...filtered].sort((a, b) => {
     if (sort === "score") return analyticsFor(b).score - analyticsFor(a).score;
     if (sort === "credit") return analyticsFor(b).groupMaxCredit - analyticsFor(a).groupMaxCredit;
     if (sort === "installment") return (valueFor(a) == null ? 1 : 0) - (valueFor(b) == null ? 1 : 0) || (valueFor(a) ?? Infinity) - (valueFor(b) ?? Infinity);
-    if (sort === "bid") {
-      const confidenceTier = (item) => {
-        const maximum = item.credito_maximo;
-        const hasCredit = maximum !== null && maximum !== undefined && maximum !== "" && Number.isFinite(Number(maximum)) && Number(maximum) > 0;
-        return hasCredit && motor360HasHistoryEvidence(item) ? 0 : 1;
-      };
-      const left = cachedBidValueFor(a);
-      const right = cachedBidValueFor(b);
-      return confidenceTier(a) - confidenceTier(b)
-        || (left === null ? 1 : 0) - (right === null ? 1 : 0)
-        || (left?.value ?? Infinity) - (right?.value ?? Infinity)
-        || (originalOrder.get(motor360GroupKey(a)) ?? 0) - (originalOrder.get(motor360GroupKey(b)) ?? 0);
-    }
     if (sort === "history") return Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0);
     return 0;
   });
@@ -3143,7 +3133,7 @@ function renderMotor360SelectionFilters() {
     if (profileSelect) profileSelect.value = investorState.selectedGroupProfile || "all";
     if (sortSelect) sortSelect.value = investorState.selectedGroupSort || "original";
     const bidSortHelp = existing.querySelector("[data-motor360-bid-sort-help]");
-    if (bidSortHelp) bidSortHelp.textContent = `Menor lance ideal: lance próprio ideal agregado (${motor360BidSortDescription()}); R$ 0 é válido. Grupos sem crédito máximo ou histórico ficam ao final.`;
+    if (bidSortHelp) bidSortHelp.textContent = `Menor lance ideal: lance próprio ideal agregado (${motor360BidSortDescription()}); R$ 0 é válido. Somente lance sem referência calculável fica ao final; crédito e histórico não alteram a posição.`;
     const filters = selectedGroupsFilterValues();
     existing.querySelectorAll("[data-motor360-advanced]").forEach((input) => {
       const value = filters[input.dataset.motor360Advanced];
@@ -3157,7 +3147,7 @@ function renderMotor360SelectionFilters() {
   panel.open = true;
   panel.dataset.motor360SelectionFilters = "true";
   panel.className = "motor360-selection-filters";
-  panel.innerHTML = `<summary>Filtros para escolha dos grupos</summary><div class="motor360-selection-filter-grid"><label>Perfil em foco<select data-motor360-filter="profile"><option value="all">Todos os perfis</option><option value="conservative">Conservador</option><option value="moderate">Moderado</option><option value="aggressive">Agressivo</option><option value="super_aggressive">Superagressivo</option></select></label><label>Ordenar grupos<select data-motor360-filter="sort"><option value="original">Ordem original</option><option value="score">Melhor aderência</option><option value="credit">Maior crédito</option><option value="installment">Menor parcela</option><option value="bid">Menor lance ideal</option><option value="history">Maior histórico</option></select></label><label>Crédito mínimo<input type="number" data-motor360-advanced="minCredit" value="${filters.minCredit}" min="0" step="1000"></label><label>Parcela máxima<input type="number" data-motor360-advanced="maxInstallment" value="${filters.maxInstallment}" min="0" step="100"></label><label>Lance ideal máximo<input type="number" data-motor360-advanced="maxBid" value="${filters.maxBid}" min="0" step="1000"></label><label>Histórico moderado mínimo<input type="number" data-motor360-advanced="minHistory" value="${filters.minHistory}" min="0" step="0.1"></label><label>Comprometimento máximo (%)<input type="number" data-motor360-advanced="maxCommitment" value="${filters.maxCommitment}" min="0" max="100"></label><label>Taxa adm. máxima (%)<input type="number" data-motor360-advanced="maxAdmin" value="${filters.maxAdmin}" min="0" max="100"></label><label>Fundo reserva máx. (%)<input type="number" data-motor360-advanced="maxReserve" value="${filters.maxReserve}" min="0" max="100"></label><label>Prazo máximo (meses)<input type="number" data-motor360-advanced="maxTerm" value="${filters.maxTerm}" min="0"></label><label class="motor360-filter-check"><input type="checkbox" data-motor360-advanced="compatibleOnly" ${filters.compatibleOnly ? "checked" : ""}> Apenas crédito compatível</label><button type="button" class="btn btn-outline-secondary btn-sm" data-motor360-clear-filters>Limpar filtros</button></div><p class="motor360-bid-sort-help" data-motor360-bid-sort-help aria-live="polite">Menor lance ideal: lance próprio ideal agregado (${motor360BidSortDescription()}); R$ 0 é válido. Grupos sem crédito máximo ou histórico ficam ao final.</p>`;
+  panel.innerHTML = `<summary>Filtros para escolha dos grupos</summary><div class="motor360-selection-filter-grid"><label>Perfil em foco<select data-motor360-filter="profile"><option value="all">Todos os perfis</option><option value="conservative">Conservador</option><option value="moderate">Moderado</option><option value="aggressive">Agressivo</option><option value="super_aggressive">Superagressivo</option></select></label><label>Ordenar grupos<select data-motor360-filter="sort"><option value="original">Ordem original</option><option value="score">Melhor aderência</option><option value="credit">Maior crédito</option><option value="installment">Menor parcela</option><option value="bid">Menor lance ideal</option><option value="history">Maior histórico</option></select></label><label>Crédito mínimo<input type="number" data-motor360-advanced="minCredit" value="${filters.minCredit}" min="0" step="1000"></label><label>Parcela máxima<input type="number" data-motor360-advanced="maxInstallment" value="${filters.maxInstallment}" min="0" step="100"></label><label>Lance ideal máximo<input type="number" data-motor360-advanced="maxBid" value="${filters.maxBid}" min="0" step="1000"></label><label>Histórico moderado mínimo<input type="number" data-motor360-advanced="minHistory" value="${filters.minHistory}" min="0" step="0.1"></label><label>Comprometimento máximo (%)<input type="number" data-motor360-advanced="maxCommitment" value="${filters.maxCommitment}" min="0" max="100"></label><label>Taxa adm. máxima (%)<input type="number" data-motor360-advanced="maxAdmin" value="${filters.maxAdmin}" min="0" max="100"></label><label>Fundo reserva máx. (%)<input type="number" data-motor360-advanced="maxReserve" value="${filters.maxReserve}" min="0" max="100"></label><label>Prazo máximo (meses)<input type="number" data-motor360-advanced="maxTerm" value="${filters.maxTerm}" min="0"></label><label class="motor360-filter-check"><input type="checkbox" data-motor360-advanced="compatibleOnly" ${filters.compatibleOnly ? "checked" : ""}> Apenas crédito compatível</label><button type="button" class="btn btn-outline-secondary btn-sm" data-motor360-clear-filters>Limpar filtros</button></div><p class="motor360-bid-sort-help" data-motor360-bid-sort-help aria-live="polite">Menor lance ideal: lance próprio ideal agregado (${motor360BidSortDescription()}); R$ 0 é válido. Somente lance sem referência calculável fica ao final; crédito e histórico não alteram a posição.</p>`;
   host.appendChild(panel);
   panel.querySelector('[data-motor360-filter="profile"]').value = investorState.selectedGroupProfile || "all";
   panel.querySelector('[data-motor360-filter="sort"]').value = investorState.selectedGroupSort || "original";
@@ -4330,11 +4320,11 @@ function formatMotor360Reason(reason) {
     percentual_x_ausente: "Percentual de lance embutido não informado",
     percentual_x_zero: "Percentual de lance embutido igual a zero",
     percentual_x_invalido: "Percentual de lance embutido inválido",
-    credito_fora_da_faixa: "Crédito fora da faixa O/U",
-    lance_abaixo_das_faixas: "Lance abaixo das faixas BL:BP",
+    credito_fora_da_faixa: "Crédito fora da faixa P/V",
+    lance_abaixo_das_faixas: "Lance abaixo das faixas BM:BQ",
     prazo_remanescente_insuficiente: "Prazo remanescente insuficiente",
-    credito_minimo_nao_informado: "Crédito mínimo (O) não informado",
-    credito_maximo_nao_informado: "Crédito máximo (U) não informado",
+    credito_minimo_nao_informado: "Crédito mínimo (P) não informado",
+    credito_maximo_nao_informado: "Crédito máximo (V) não informado",
     identificacao_grupo_invalida: "Identificação do grupo inválida",
     composicao_parcela_maxima_excedida: "Composição excede a parcela máxima",
     composicao_credito_insuficiente_ou_limite_cotas: "Crédito insuficiente ou limite de 50 cotas",
@@ -4352,7 +4342,7 @@ function renderMotor360Audit(audit) {
   const filterRows = (audit.execution_steps || []).map((step) => `
     <tr><td>${escapeHtml(String(step.order))}</td><td>${escapeHtml(step.name)}</td><td>${escapeHtml(step.formula_or_rule)}</td><td>${step.input_count ?? 0}</td><td>${step.approved_count ?? 0}</td><td>${step.rejected_count ?? 0}</td><td>${step.incomplete_count ?? 0}</td></tr>`).join("");
   const columnRows = (audit.columns_used || []).map((column) => `<tr><td>${escapeHtml(column.column)}</td><td>${escapeHtml(column.header)}</td><td>${escapeHtml(column.technical_field)}</td><td>${escapeHtml(column.purpose)}</td></tr>`).join("");
-  const mappingRows = Object.entries(audit.data_source?.mapping_by_administrator || {}).flatMap(([administrator, fields]) => Object.entries(fields || {}).map(([field, mapping]) => `<tr><td>${escapeHtml(administrator)}</td><td>${escapeHtml(field)}</td><td>${escapeHtml((mapping.headers || []).join(", ") || "-")}</td><td>${escapeHtml((mapping.sources || []).join(", ") || "-")}</td><td>${mapping.mapped_rows ?? 0}</td><td>${mapping.missing_rows ?? 0}</td></tr>`)).join("");
+  const mappingRows = Object.entries(audit.data_source?.mapping_by_administrator || {}).flatMap(([administrator, fields]) => Object.entries(fields || {}).map(([field, mapping]) => `<tr><td>${escapeHtml(administrator)}</td><td>${escapeHtml(field)}</td><td>${escapeHtml((mapping.columns || []).join(", ") || "-")}</td><td>${escapeHtml((mapping.headers || []).join(", ") || "-")}</td><td>${escapeHtml((mapping.sources || []).join(", ") || "-")}</td><td>${mapping.mapped_rows ?? 0}</td><td>${mapping.blank_value_rows ?? 0}</td><td>${mapping.missing_rows ?? 0}</td></tr>`)).join("");
   const formulaRows = (audit.formulas || []).map((formula) => `<article class="motor360-audit-formula"><strong>${escapeHtml(formula.name)}</strong><code>${escapeHtml(formula.expression)}</code><span>Resultado: ${escapeHtml(String(formula.result ?? "calculado por grupo"))}</span></article>`).join("");
   const excluded = audit.excluded_groups || [];
   const excludedRows = excluded.map((item) => `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${escapeHtml(item.reason)}</td><td>${escapeHtml(item.detail)}</td></tr>`).join("");
@@ -4380,13 +4370,13 @@ function renderMotor360Audit(audit) {
         </div>
         <div class="motor360-audit-actions"><a class="btn btn-primary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}/exportar.pdf">Baixar PDF</a><a class="btn btn-outline-secondary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}" target="_blank" rel="noopener">Exportar JSON</a><a class="btn btn-outline-secondary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}/exportar.md">Exportar Markdown</a></div>
         <details open><summary>1. Dados recebidos e consolidados</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Campo</th><th>Técnico</th><th>Valor usado</th><th>Origem</th></tr></thead><tbody>${fieldRows}</tbody></table></div></details>
-        <details><summary>2. Base, parâmetros e colunas utilizadas</summary><p>Origem: <strong>${escapeHtml(audit.data_source?.source_name || "-")}</strong> | Modo: <strong>${escapeHtml(audit.data_source?.current_or_historical || "-")}</strong> | Linhas lidas: <strong>${audit.data_source?.total_rows ?? 0}</strong> | Hash: <strong>${escapeHtml(String(audit.data_source?.base_snapshot?.fingerprint || "-").slice(0, 16))}...</strong></p><p>Parâmetros aplicados: <strong>${escapeHtml(JSON.stringify(audit.parameters || {}))}</strong></p><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Coluna</th><th>Campo</th><th>Técnico</th><th>Uso</th></tr></thead><tbody>${columnRows}</tbody></table></div>${mappingRows ? `<h4>Mapeamento comprovado por administradora</h4><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Administradora</th><th>Campo</th><th>Cabeçalho/Fallback encontrado</th><th>Origem</th><th>Linhas mapeadas</th><th>Ausentes</th></tr></thead><tbody>${mappingRows}</tbody></table></div>` : "<p>O carregamento não forneceu metadados de mapeamento por administradora.</p>"}</details>
+        <details><summary>2. Base, parâmetros e colunas utilizadas</summary><p>Origem: <strong>${escapeHtml(audit.data_source?.source_name || "-")}</strong> | Modo: <strong>${escapeHtml(audit.data_source?.current_or_historical || "-")}</strong> | Linhas lidas: <strong>${audit.data_source?.total_rows ?? 0}</strong> | Hash: <strong>${escapeHtml(String(audit.data_source?.base_snapshot?.fingerprint || "-").slice(0, 16))}...</strong></p><p>Parâmetros aplicados: <strong>${escapeHtml(JSON.stringify(audit.parameters || {}))}</strong></p><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Coluna</th><th>Campo</th><th>Técnico</th><th>Uso</th></tr></thead><tbody>${columnRows}</tbody></table></div>${mappingRows ? `<h4>Mapeamento comprovado por administradora</h4><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Administradora</th><th>Campo</th><th>Coluna real</th><th>Cabeçalho/Fallback</th><th>Origem</th><th>Linhas com origem</th><th>Valores vazios</th><th>Origem ausente</th></tr></thead><tbody>${mappingRows}</tbody></table></div>` : "<p>O carregamento não forneceu metadados de mapeamento por administradora.</p>"}</details>
         <details><summary>3. Sequência de filtros</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>#</th><th>Filtro</th><th>Regra</th><th>Entrada</th><th>Aprovados</th><th>Eliminados</th><th>Incompletos</th></tr></thead><tbody>${filterRows}</tbody></table></div></details>
         <details><summary>4. Fórmulas e cálculos</summary><div class="motor360-audit-formulas">${formulaRows}</div></details>
         <details><summary>5. Grupos aprovados na matriz e indicadores</summary><p>${escapeHtml(audit.final_ordering?.execution_summary || "")}</p><ol>${(audit.final_ordering?.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ol><p>Aprovados no perfil: <strong>${summary.total_post_matrix_groups ?? summary.total_preselected ?? 0}</strong> | Crédito compatível: <strong>${summary.total_credit_compatible ?? 0}</strong> | Exigem composição estimada: <strong>${summary.total_requires_composition ?? 0}</strong> | Dados incompletos: <strong>${summary.groups_with_incomplete_data ?? 0}</strong> | Ocorrências incompletas: <strong>${summary.incomplete_field_occurrences ?? 0}</strong></p><p>Crédito, prazo, renda e composição são indicadores para decisão do operador e não eliminam grupos aprovados na matriz.</p></details>
         <details><summary>6. Grupos fora da matriz e motivos (${excluded.length})</summary>${excluded.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th><th>Detalhe</th></tr></thead><tbody>${excludedRows}</tbody></table></div>` : "<p>Nenhum grupo ficou fora da matriz.</p>"}</details>
         <details><summary>7. Dados incompletos por grupo (${incompleteGroups.length})</summary>${incompleteGroups.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Coluna</th><th>Campo</th><th>Valor original</th><th>Motivo</th><th>Impacto</th></tr></thead><tbody>${incompleteRows}</tbody></table></div>` : "<p>Nenhum dado obrigatório ausente.</p>"}</details>
-        <details><summary>8. Auditoria por grupo (${(audit.group_results || []).length})</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Crédito contratado</th><th>Faixa O/U</th><th>Crédito</th><th>Parcela inicial<br><small>sem / com embutido</small></th><th>Prazo calculado / F</th><th>Prazo</th><th>Contemplação<br><small>cenário aprovado</small></th><th>Resultado</th></tr></thead><tbody>${groupRows}</tbody></table></div></details>
+        <details><summary>8. Auditoria por grupo (${(audit.group_results || []).length})</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Crédito contratado</th><th>Faixa P/V</th><th>Crédito</th><th>Parcela inicial<br><small>sem / com embutido</small></th><th>Prazo calculado / G</th><th>Prazo</th><th>Contemplação<br><small>cenário aprovado</small></th><th>Resultado</th></tr></thead><tbody>${groupRows}</tbody></table></div></details>
         <details><summary>9. Alertas e regras pendentes</summary><ul class="motor360-audit-warnings">${warnings}</ul></details>
       </div>
     </details>`;
@@ -4401,7 +4391,7 @@ function renderMotor360GroupAudit(groupId) {
   const scenarios = (entry.scenarios || []).map((scenario) => {
     const scenarioTitle = scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido";
     const installment = scenario.parcela_inicial;
-    const formula = scenario.parcela_inicial_formula || "saldo devedor / prazo remanescente (coluna F)";
+    const formula = scenario.parcela_inicial_formula || "saldo devedor / prazo remanescente (coluna G)";
     const calculation = installment === null || installment === undefined
       ? "Não calculada: dados insuficientes"
       : `${formatMoney(scenario.saldo_devedor)} / ${escapeHtml(String(scenario.prazo_remanescente ?? "-"))} = ${formatMoney(installment)}`;

@@ -1,4 +1,5 @@
 import unittest
+import re
 from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -287,6 +288,151 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(grupo["lance_super_agressivo_3m"], 0.34)
         self.assertEqual(grupo["mapeamento_origem"]["credito_maximo"]["column"], "V")
         self.assertEqual(grupo["mapeamento_origem"]["prazo_restante"]["column"], "G")
+
+    def test_snapshot_real_da_planilha_mantem_valores_e_rastreia_historico(self):
+        headers = [f"Campo {index}" for index in range(105)]
+        for index, header in {
+            0: "Adm", 1: "Grupo", 2: "Tipo de Bem", 6: "Prazo remanescente",
+            15: "Menor\nCrédito", 21: "Maior\nCrédito", 24: "Lance Embutido",
+            27: "Fundo RSV Total", 29: "Taxa\nAdm Total", 64: "Investidor (36 meses)",
+            65: "Conservador\n(24 meses)", 66: "Moderado\n(12 meses)",
+            67: "Agressivo\n(6 meses) = Rápido", 68: "Super Agressivo\n(3 meses) = Urgente",
+            95: "Jun-26\nMaior Lance", 96: "Jun-26\nMenor Lance", 97: "Jun-26\nQtd",
+            98: "MAY-26\nMaior Lance", 99: "MAY-26\nMenor Lance", 100: "MAY-26\nQtd",
+        }.items():
+            headers[index] = header
+        raw = [""] * len(headers)
+        raw[0:3] = ["AUTO-ITAÚ", 20370.0, "Auto"]
+        raw[6], raw[15], raw[21] = 30, "R$ 63.230,00\n", 63230.0
+        raw[24], raw[27], raw[29] = 0.30, 0.02, 0.24
+        raw[64:69] = [0.3025, 0.3025, 0.3025, 0.3025, 0.3025]
+        raw[95:101] = [0.3588, 0.3233, 8.0, 0.42, 0.30, 9.0]
+        sheet_values = [headers, raw]
+
+        class Request:
+            def __init__(self, result):
+                self.result = result
+
+            def execute(self):
+                return self.result
+
+        class ValuesApi:
+            def get(self, spreadsheetId, range):
+                if range.endswith("!A:ZZ"):
+                    return Request({"values": sheet_values})
+                match = re.search(r"!([A-Z]+)2:([A-Z]+)$", range)
+                def column_index(letters):
+                    value = 0
+                    for letter in letters:
+                        value = value * 26 + ord(letter) - ord("A") + 1
+                    return value - 1
+                start = column_index(match.group(1))
+                end = column_index(match.group(2))
+                return Request({"values": [raw[start:end + 1]]})
+
+        class Service:
+            def spreadsheets(self):
+                return self
+
+            def values(self):
+                return ValuesApi()
+
+        settings = SimpleNamespace(google_sheets_id="snapshot", google_sheet_name="Tabela de Grupos 3.0")
+        sheets_client.clear_rows_cache()
+        with (
+            patch("backend.sheets_client.read_sheet_headers", return_value=headers),
+            patch("backend.sheets_client.get_service", return_value=Service()),
+            patch("backend.sheets_client.get_settings", return_value=settings),
+        ):
+            summary_group = row_to_grupo(sheets_client.read_summary_rows(force_reload=True, include_history=True)[0])
+            sheets_client.clear_rows_cache()
+            full_group = row_to_grupo(sheets_client.read_sheet_rows(force_reload=True)[0])
+
+        compared_fields = (
+            "administradora", "grupo", "credito_minimo", "credito_maximo", "prazo_restante",
+            "fundo_reserva", "taxa_adm", "lance_investidor", "lance_conservador_24m",
+            "lance_moderado_12m", "lance_agressivo_6m", "lance_super_agressivo_3m",
+            "historico_12_meses",
+        )
+        for field in compared_fields:
+            self.assertEqual(summary_group[field], full_group[field], field)
+        self.assertEqual(summary_group["credito_minimo"], 63230)
+        self.assertEqual(summary_group["credito_maximo"], 63230)
+        self.assertEqual(summary_group["prazo_restante"], 30)
+        self.assertEqual(summary_group["fundo_reserva"], 0.02)
+        self.assertEqual(summary_group["taxa_adm"], 0.24)
+        self.assertEqual(summary_group["lance_super_agressivo_3m"], 0.3025)
+        self.assertEqual(summary_group["historico_12_meses"][0]["qtd_contemplacoes"], 9)
+        self.assertEqual(summary_group["mapeamento_origem"]["credito_maximo"]["column"], "V")
+        self.assertEqual(summary_group["mapeamento_origem"]["historico:2026-06:qtd_contemplacoes"], {
+            "source": "cabecalho", "column": "CT", "header": "Jun-26\nQtd", "raw_value": 8.0,
+        })
+
+        self.assertIsNone(parse_credit(None))
+        self.assertIsNone(parse_credit(""))
+        self.assertEqual(parse_credit(0), 0)
+        self.assertIsNone(parse_percent(None))
+        self.assertIsNone(parse_percent(""))
+        self.assertEqual(parse_percent(0), 0)
+        self.assertEqual(parse_percent(0.01), 0.01)
+        self.assertEqual(parse_percent(1), 1)
+
+    def test_amostra_real_congela_colunas_financeiras_dos_grupos_auditados(self):
+        headers = [f"Campo {index}" for index in range(69)]
+        for index, header in {
+            0: "Adm", 1: "Grupo", 2: "Tipo de Bem", 6: "Prazo remanescente",
+            15: "Menor\nCrédito", 21: "Maior\nCrédito", 24: "Lance Embutido",
+            27: "Fundo RSV Total", 29: "Taxa\nAdm Total", 64: "Investidor (36 meses)",
+            65: "Conservador\n(24 meses)", 66: "Moderado\n(12 meses)",
+            67: "Agressivo\n(6 meses) = Rápido", 68: "Super Agressivo\n(3 meses) = Urgente",
+        }.items():
+            headers[index] = header
+        samples = [
+            (59, "CNP", 1011.0, 61, 717519.32, 1255658.79, .05, .20, [.094704, .094704, .094704, .094704, .1625]),
+            (142, "PORTO", "I210", 137, 55000.0, 110000.0, .01, .21, [.5725, .5725, .5725, .5725, .58]),
+            (145, "PORTO", "I214", 137, "R$ 70.000,00\n", 140000.0, .01, .18, [.5425, .5425, .5425, .5425, .5495]),
+            (209, "PORTO", "l226", 147, 55000.0, 110000.0, .01, .19, [.5576, .5576, .5576, .5576, .5576]),
+            (210, "PORTO", "I227", 147, 55000.0, 110000.0, .01, .21, [.4525, .4525, .4525, .4525, .6846]),
+            (308, "AUTO-ITAÚ", 20370.0, 30, "R$ 63.230,00\n", 63230.0, .02, .24, [.3025, .3025, .3025, .3025, .3025]),
+            (315, "AUTO-ITAÚ", 20399.0, 13, None, None, .02, .18, [.0028, .0028, .0028, .0133, .0272]),
+        ]
+        for source_row, administrator, group_id, term, minimum, maximum, reserve, fee, references in samples:
+            values = [""] * len(headers)
+            values[0:3] = [administrator, group_id, "Auto" if administrator == "AUTO-ITAÚ" else "Imóvel"]
+            values[6], values[15], values[21] = term, minimum, maximum
+            values[24], values[27], values[29] = .30, reserve, fee
+            values[64:69] = references
+            row = dict(zip(headers, values))
+            row["__source_row"] = source_row
+            sheets_client.apply_mapa_grupos_fixed_columns(row, values, headers=headers)
+            group = row_to_grupo(row)
+
+            self.assertEqual(group["source_row"], source_row)
+            self.assertEqual(group["prazo_restante"], term)
+            self.assertEqual(group["credito_minimo"], parse_credit(minimum))
+            self.assertEqual(group["credito_maximo"], parse_credit(maximum))
+            self.assertEqual(group["fundo_reserva"], reserve)
+            self.assertEqual(group["taxa_adm"], fee)
+            self.assertEqual(group["lance_investidor"], references[0])
+            self.assertEqual(group["lance_super_agressivo_3m"], references[4])
+            self.assertEqual(group["mapeamento_origem"]["fundo_reserva"]["column"], "AB")
+            self.assertEqual(group["mapeamento_origem"]["taxa_adm"]["column"], "AD")
+
+    def test_header_atual_vazio_nao_usa_indice_legado_com_dado_conflitante(self):
+        headers = [f"Campo {index}" for index in range(69)]
+        headers[0], headers[1], headers[2] = "Adm", "Grupo", "Tipo de Bem"
+        headers[6], headers[15], headers[21] = "Prazo remanescente", "Menor Crédito", "Maior Crédito"
+        values = [""] * len(headers)
+        values[0:3] = ["AUTO-ITAÚ", 20399, "Auto"]
+        values[6], values[15], values[21] = 13, None, None
+        values[17] = 999999  # posição antiga de crédito máximo, não é a coluna V atual
+        row = dict(zip(headers, values))
+
+        sheets_client.apply_mapa_grupos_fixed_columns(row, values, headers=headers)
+        group = row_to_grupo(row)
+
+        self.assertIsNone(group["credito_maximo"])
+        self.assertEqual(group["mapeamento_origem"]["credito_maximo"]["column"], "V")
 
     def test_colunas_financeiras_atuais_preservam_o_embutido(self):
         row = [""] * 31

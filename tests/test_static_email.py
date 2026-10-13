@@ -1,5 +1,8 @@
 import unittest
 import re
+import json
+import shutil
+import subprocess
 from pathlib import Path
 
 
@@ -134,19 +137,20 @@ class StaticEmailTest(unittest.TestCase):
         ideal_helper = app_js.split("function motor360CompositionIdealBid", 1)[1].split("function motor360ScenarioIdsForSort", 1)[0]
         sort_function = app_js.split("function applySelectedGroupsFiltersAndSort", 1)[1].split("function renderMotor360SelectionFilters", 1)[0]
         card_renderer = app_js.split("function renderMotor360GroupCardUncached", 1)[1].split("function renderMotor360GroupCard(", 1)[0]
-        bid_sort_helper = app_js.split("function motor360BidSortValue", 1)[1].split("function motor360HasHistoryEvidence", 1)[0]
+        bid_sort_helper = app_js.split("function motor360BidSortValue", 1)[1].split("function motor360BidSortDescription", 1)[0]
 
         self.assertIn("minimumQuotasFor(item, scenario.id)", ideal_helper)
         self.assertIn("motor360FocusedProfileId()", ideal_helper)
         self.assertIn("motor360CompositionIdealBid(item, scenario, value.id)", card_renderer)
         self.assertIn("motor360CompositionIdealBid(item, scenario, profileId)", bid_sort_helper)
-        self.assertIn("motor360BidSortValue(item)", sort_function)
+        self.assertIn('if (sort === "bid") return sortMotor360ItemsByBid(filtered)', sort_function)
         self.assertIn("Sem seleção: exibe grupos disponíveis, inclusive opções viáveis em composição.", index_html)
         self.assertIn("numericIdeal >= 0", ideal_helper)
-        self.assertIn("motor360HasHistoryEvidence(item)", sort_function)
-        self.assertIn("left?.value ?? Infinity", sort_function)
-        self.assertIn("Menor lance ideal · ${bidSortValue.scenarioId", card_renderer)
+        self.assertIn('if (sort === "bid") return sortMotor360ItemsByBid(filtered)', sort_function)
+        self.assertNotIn("motor360HasHistoryEvidence", app_js)
+        self.assertIn("motor360BidSortLabel(item)", card_renderer)
         self.assertIn("R$ 0 é válido", app_js)
+        self.assertIn("crédito e histórico não alteram a posição", app_js)
 
         # Acceptance fixture: the focused-profile bid is aggregated across
         # six minimum quotas before comparing it to a one-quota group.
@@ -154,6 +158,61 @@ class StaticEmailTest(unittest.TestCase):
         group_1011_composition_bid = 56_820 * 1
         self.assertEqual(i227_composition_bid, 271_500)
         self.assertLess(group_1011_composition_bid, i227_composition_bid)
+
+    def test_motor360_ordenacao_real_corresponde_ao_rotulo_do_card(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js indisponível para executar o teste de integração do helper da tela")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        def section(start, end):
+            return app_js.split(start, 1)[1].split(end, 1)[0]
+
+        functions = "\n".join((
+            "function motor360CompositionIdealBid" + section("function motor360CompositionIdealBid", "function motor360ScenarioIdsForSort"),
+            "function motor360ScenarioIdsForSort" + section("function motor360ScenarioIdsForSort", "function motor360BidSortValue"),
+            "function motor360BidSortValue" + section("function motor360BidSortValue", "function motor360BidSortDescription"),
+            "function motor360BidSortLabel" + section("function motor360BidSortLabel", "function sortMotor360ItemsByBid"),
+            "function sortMotor360ItemsByBid" + section("function sortMotor360ItemsByBid", "function selectedGroupAnalytics"),
+        ))
+        harness = r'''
+const investorState = { selectedGroupIds: new Set(), selectedGroupScenario: "per_group" };
+const groupScenarios = new Map();
+const motor360GroupKey = (item) => String(item.grupo);
+const motor360FocusedProfileId = () => "moderate";
+const selectedScenarioIdsForGroup = (key) => groupScenarios.get(key) || new Set();
+const selectedMotor360Items = () => [];
+const selectedCompositionScenarioMetrics = () => ({ entries: [] });
+const minimumQuotasFor = (item, scenarioId) => item.minQuotas?.[scenarioId] || 1;
+const quotaCountFor = (item) => item.quotas || 1;
+const formatMoney = (value) => `R$ ${Number(value).toFixed(2)}`;
+''' + functions + r'''
+const scenario = (id, ideal) => ({ id, perfis_contemplacao: [{ id: "moderate", lance_ideal: ideal }] });
+const items = [
+  { grupo: "I227", requires_composition: true, minQuotas: { without_embedded: 6 }, credito_maximo: 110000, historico_12_meses: [], cenarios: [scenario("without_embedded", 45250)] },
+  { grupo: "20399", credito_maximo: null, historico_12_meses: [], cenarios: [scenario("without_embedded", null)] },
+  { grupo: "1011", credito_maximo: 1255658.79, historico_12_meses: [{ qtd_contemplacoes: 3 }], cenarios: [scenario("without_embedded", 56820)] },
+  { grupo: "20370", credito_maximo: 63230, historico_12_meses: [{ qtd_contemplacoes: 8 }], cenarios: [scenario("with_embedded", 2000), scenario("without_embedded", 1000)] },
+  { grupo: "ZERO", credito_maximo: null, historico_12_meses: [], cenarios: [scenario("without_embedded", 0)] },
+];
+const sorted = sortMotor360ItemsByBid(items);
+console.log(JSON.stringify(sorted.map((item) => ({ grupo: item.grupo, label: motor360BidSortLabel(item) }))));
+'''
+        completed = subprocess.run([node, "-e", harness], check=True, capture_output=True, text=True)
+        rows = json.loads(completed.stdout)
+        self.assertEqual([row["grupo"] for row in rows], ["ZERO", "20370", "1011", "I227", "20399"])
+        self.assertIn("R$ 0.00", rows[0]["label"])
+        self.assertIn("Sem embutido: R$ 1000.00", rows[1]["label"])
+        self.assertIn("R$ 271500.00", rows[3]["label"])
+        self.assertIn("sem refer", rows[4]["label"].lower())
+        self.assertIn("calcul", rows[4]["label"].lower())
+
+        # Explicit scenario filtering must use only that scenario's exact card value.
+        harness_with_scenario = harness.replace('selectedGroupScenario: "per_group"', 'selectedGroupScenario: "with_embedded"')
+        completed = subprocess.run([node, "-e", harness_with_scenario], check=True, capture_output=True, text=True)
+        with_embedded = json.loads(completed.stdout)
+        self.assertEqual(with_embedded[0]["grupo"], "20370")
+        self.assertIn("Com embutido: R$ 2000.00", with_embedded[0]["label"])
 
     def test_motor360_mantem_selecionados_visiveis_e_ordena_por_contemplacoes(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")

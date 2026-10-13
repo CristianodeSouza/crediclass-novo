@@ -173,14 +173,14 @@ def _audit_pdf_lines(audit: dict[str, Any]) -> list[tuple[str, int, bool]]:
             line(f"Lance financeiro do cenario: {scenario.get('lance_total', '-')} ({scenario.get('percentual_lance', '-')})")
             line(f"Saldo devedor: {scenario.get('saldo_devedor', '-')} | Prazo remanescente: {scenario.get('prazo_remanescente', '-')} | Prazo apos lance: {scenario.get('prazo_apos_lance_limite_renda_meses', '-')}")
             parcela = scenario.get("parcela_inicial")
-            line(f"Parcela inicial: {parcela if parcela is not None else '-'} | Formula: {scenario.get('parcela_inicial_formula', 'saldo devedor / prazo remanescente (coluna F)')}")
+            line(f"Parcela inicial: {parcela if parcela is not None else '-'} | Formula: {scenario.get('parcela_inicial_formula', 'saldo devedor / prazo remanescente (coluna G)')}")
             if parcela is not None:
                 line(f"Calculo auditavel: {scenario.get('saldo_devedor', '-')} / {scenario.get('prazo_remanescente', '-')} = {parcela}")
             line(f"Resultado do cenario: credito {'aprovado' if scenario.get('credit_compatible') else 'reprovado'} | prazo {'compativel' if scenario.get('term_compatible') else 'nao compativel'} | liquidez {'preservada' if scenario.get('liquidez_preservada') else 'nao preservada'}")
         strategies = item.get("contemplation_classification", {}).get("strategies", [])
         line(f"Classificacao de contemplacao: {', '.join(strategies) or 'informativa'}")
     heading("6. Observacao de auditoria")
-    line("Os valores acima sao uma fotografia da execucao registrada. A Parcela Inicial e calculada por cenario usando o saldo devedor dividido pelo prazo remanescente da coluna F.")
+    line("Os valores acima sao uma fotografia da execucao registrada. A Parcela Inicial e calculada por cenario usando o saldo devedor dividido pelo prazo remanescente da coluna G.")
     return lines
 
 
