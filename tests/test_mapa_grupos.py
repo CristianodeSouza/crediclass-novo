@@ -376,6 +376,8 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(parse_percent(0), 0)
         self.assertEqual(parse_percent(0.01), 0.01)
         self.assertEqual(parse_percent(1), 1)
+        self.assertEqual(parse_percent("1%"), 0.01)
+        self.assertEqual(parse_percent("21%"), 0.21)
 
     def test_amostra_real_congela_colunas_financeiras_dos_grupos_auditados(self):
         headers = [f"Campo {index}" for index in range(69)]
@@ -389,10 +391,10 @@ class MapaGruposTest(unittest.TestCase):
             headers[index] = header
         samples = [
             (59, "CNP", 1011.0, 61, 717519.32, 1255658.79, .05, .20, [.094704, .094704, .094704, .094704, .1625]),
-            (142, "PORTO", "I210", 137, 55000.0, 110000.0, .01, .21, [.5725, .5725, .5725, .5725, .58]),
-            (145, "PORTO", "I214", 137, "R$ 70.000,00\n", 140000.0, .01, .18, [.5425, .5425, .5425, .5425, .5495]),
-            (209, "PORTO", "l226", 147, 55000.0, 110000.0, .01, .19, [.5576, .5576, .5576, .5576, .5576]),
-            (210, "PORTO", "I227", 147, 55000.0, 110000.0, .01, .21, [.4525, .4525, .4525, .4525, .6846]),
+            (142, "PORTO", "I210", 137, 55000.0, 110000.0, "1%", .21, [.5725, .5725, .5725, .5725, .58]),
+            (145, "PORTO", "I214", 137, "R$ 70.000,00\n", 140000.0, "1%", .18, [.5425, .5425, .5425, .5425, .5495]),
+            (209, "PORTO", "l226", 147, 55000.0, 110000.0, "1%", .19, [.5576, .5576, .5576, .5576, .5576]),
+            (210, "PORTO", "I227", 147, 55000.0, 110000.0, "1%", .21, [.4525, .4525, .4525, .4525, .6846]),
             (308, "AUTO-ITAÚ", 20370.0, 30, "R$ 63.230,00\n", 63230.0, .02, .24, [.3025, .3025, .3025, .3025, .3025]),
             (315, "AUTO-ITAÚ", 20399.0, 13, None, None, .02, .18, [.0028, .0028, .0028, .0133, .0272]),
         ]
@@ -411,12 +413,15 @@ class MapaGruposTest(unittest.TestCase):
             self.assertEqual(group["prazo_restante"], term)
             self.assertEqual(group["credito_minimo"], parse_credit(minimum))
             self.assertEqual(group["credito_maximo"], parse_credit(maximum))
-            self.assertEqual(group["fundo_reserva"], reserve)
+            self.assertEqual(group["fundo_reserva"], parse_percent(reserve))
             self.assertEqual(group["taxa_adm"], fee)
             self.assertEqual(group["lance_investidor"], references[0])
             self.assertEqual(group["lance_super_agressivo_3m"], references[4])
             self.assertEqual(group["mapeamento_origem"]["fundo_reserva"]["column"], "AB")
             self.assertEqual(group["mapeamento_origem"]["taxa_adm"]["column"], "AD")
+            if administrator == "PORTO":
+                self.assertEqual(group["fundo_reserva"], 0.01)
+                self.assertEqual(group["mapeamento_origem"]["fundo_reserva"]["raw_value"], "1%")
 
     def test_header_atual_vazio_nao_usa_indice_legado_com_dado_conflitante(self):
         headers = [f"Campo {index}" for index in range(69)]

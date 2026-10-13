@@ -2415,7 +2415,7 @@ function renderMotor360GroupCardUncached(item) {
 function renderMotor360GroupCard(item) {
   const compositionKey = [...investorState.selectedGroupIds].sort().map((id) => `${id}:${quotaCountFor(id)}:${[...selectedScenarioIdsForGroup(id)].sort().join(",")}`).join(";");
   const desiredCredit = Number(motor360ClientProfile().credito_liquido_desejado || 0);
-  const key = `${motor360GroupKey(item)}|${investorState.selectedGroupProfile || "all"}|${investorState.selectedGroupScenario || "per_group"}|${compositionKey}|${desiredCredit}`;
+  const key = `${motor360GroupKey(item)}|${investorState.selectedGroupProfile || "all"}|${investorState.selectedGroupScenario || "per_group"}|${investorState.selectedGroupSort || "original"}|${compositionKey}|${desiredCredit}`;
   if (!motor360GroupCardCache.has(key)) {
     if (motor360GroupCardCache.size >= 1500) {
       const oldestKey = motor360GroupCardCache.keys().next().value;
@@ -2760,13 +2760,11 @@ function motor360CompositionIdealBid(item, scenario, profileId = motor360Focused
     const numericIdeal = Number(ideal);
     return Number.isFinite(numericIdeal) && numericIdeal >= 0 ? numericIdeal : null;
   }
-  // For an unselected composition candidate, the card communicates a
-  // minimum-quota composition; compare its aggregate ideal bid, not one quota.
-  const quotas = item?.requires_composition === true
-    ? minimumQuotasFor(item, scenario.id)
-    : quotaCountFor(item);
-  const idealPerQuota = Number(profile.lance_ideal);
-  return Number.isFinite(idealPerQuota) && idealPerQuota >= 0 ? idealPerQuota * quotas : null;
+  // The backend's scenario/profile lance_ideal is already expressed against
+  // the client's desired total credit. Multiplying by the minimum quota count
+  // repeats that credit target and inflates the aggregate bid.
+  const aggregateIdealBid = Number(profile.lance_ideal);
+  return Number.isFinite(aggregateIdealBid) && aggregateIdealBid >= 0 ? aggregateIdealBid : null;
 }
 
 function motor360ScenarioIdsForSort(item) {
@@ -4346,6 +4344,8 @@ function renderMotor360Audit(audit) {
   const formulaRows = (audit.formulas || []).map((formula) => `<article class="motor360-audit-formula"><strong>${escapeHtml(formula.name)}</strong><code>${escapeHtml(formula.expression)}</code><span>Resultado: ${escapeHtml(String(formula.result ?? "calculado por grupo"))}</span></article>`).join("");
   const excluded = audit.excluded_groups || [];
   const excludedRows = excluded.map((item) => `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${escapeHtml(item.reason)}</td><td>${escapeHtml(item.detail)}</td></tr>`).join("");
+  const matrixExcluded = summary.matrix_excluded_groups || [];
+  const matrixExcludedRows = matrixExcluded.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.source_row ?? "-"))}</td><td>${escapeHtml(item.result || "-")}</td><td>${escapeHtml((item.justification || []).join(", ") || "Sem cenário aprovado na matriz")}</td></tr>`).join("");
   const incompleteGroups = audit.incomplete_groups || [];
   const incompleteRows = incompleteGroups.flatMap((item) => (item.missing_fields || []).map((field) => `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${escapeHtml(field.column || "-")}</td><td>${escapeHtml(field.field || "-")}</td><td>${escapeHtml(String(field.raw_value ?? "-"))}</td><td>${escapeHtml(field.reason || "-")}</td><td>${escapeHtml(field.impact || "-")}</td></tr>`)).join("");
   const groupRows = (audit.group_results || []).map((item) => {
@@ -4373,7 +4373,7 @@ function renderMotor360Audit(audit) {
         <details><summary>2. Base, parâmetros e colunas utilizadas</summary><p>Origem: <strong>${escapeHtml(audit.data_source?.source_name || "-")}</strong> | Modo: <strong>${escapeHtml(audit.data_source?.current_or_historical || "-")}</strong> | Linhas lidas: <strong>${audit.data_source?.total_rows ?? 0}</strong> | Hash: <strong>${escapeHtml(String(audit.data_source?.base_snapshot?.fingerprint || "-").slice(0, 16))}...</strong></p><p>Parâmetros aplicados: <strong>${escapeHtml(JSON.stringify(audit.parameters || {}))}</strong></p><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Coluna</th><th>Campo</th><th>Técnico</th><th>Uso</th></tr></thead><tbody>${columnRows}</tbody></table></div>${mappingRows ? `<h4>Mapeamento comprovado por administradora</h4><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Administradora</th><th>Campo</th><th>Coluna real</th><th>Cabeçalho/Fallback</th><th>Origem</th><th>Linhas com origem</th><th>Valores vazios</th><th>Origem ausente</th></tr></thead><tbody>${mappingRows}</tbody></table></div>` : "<p>O carregamento não forneceu metadados de mapeamento por administradora.</p>"}</details>
         <details><summary>3. Sequência de filtros</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>#</th><th>Filtro</th><th>Regra</th><th>Entrada</th><th>Aprovados</th><th>Eliminados</th><th>Incompletos</th></tr></thead><tbody>${filterRows}</tbody></table></div></details>
         <details><summary>4. Fórmulas e cálculos</summary><div class="motor360-audit-formulas">${formulaRows}</div></details>
-        <details><summary>5. Grupos aprovados na matriz e indicadores</summary><p>${escapeHtml(audit.final_ordering?.execution_summary || "")}</p><ol>${(audit.final_ordering?.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ol><p>Aprovados no perfil: <strong>${summary.total_post_matrix_groups ?? summary.total_preselected ?? 0}</strong> | Crédito compatível: <strong>${summary.total_credit_compatible ?? 0}</strong> | Exigem composição estimada: <strong>${summary.total_requires_composition ?? 0}</strong> | Dados incompletos: <strong>${summary.groups_with_incomplete_data ?? 0}</strong> | Ocorrências incompletas: <strong>${summary.incomplete_field_occurrences ?? 0}</strong></p><p>Crédito, prazo, renda e composição são indicadores para decisão do operador e não eliminam grupos aprovados na matriz.</p></details>
+        <details><summary>5. Grupos aprovados na matriz e indicadores</summary><p>${escapeHtml(audit.final_ordering?.execution_summary || "")}</p><ol>${(audit.final_ordering?.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ol><p>Aprovados no perfil: <strong>${summary.total_post_matrix_groups ?? summary.total_preselected ?? 0}</strong> | Crédito compatível: <strong>${summary.total_credit_compatible ?? 0}</strong> | Exigem composição estimada: <strong>${summary.total_requires_composition ?? 0}</strong> | Dados incompletos: <strong>${summary.groups_with_incomplete_data ?? 0}</strong> | Ocorrências incompletas: <strong>${summary.incomplete_field_occurrences ?? 0}</strong> | Fora da lista pós-matriz: <strong>${matrixExcluded.length}</strong></p><p>Crédito, prazo, renda e composição são indicadores para decisão do operador e não eliminam grupos aprovados na matriz.</p>${matrixExcluded.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Linha fonte</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody>${matrixExcludedRows}</tbody></table></div>` : "<p>Todos os grupos válidos da análise aparecem na lista pós-matriz.</p>"}</details>
         <details><summary>6. Grupos fora da matriz e motivos (${excluded.length})</summary>${excluded.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th><th>Detalhe</th></tr></thead><tbody>${excludedRows}</tbody></table></div>` : "<p>Nenhum grupo ficou fora da matriz.</p>"}</details>
         <details><summary>7. Dados incompletos por grupo (${incompleteGroups.length})</summary>${incompleteGroups.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Coluna</th><th>Campo</th><th>Valor original</th><th>Motivo</th><th>Impacto</th></tr></thead><tbody>${incompleteRows}</tbody></table></div>` : "<p>Nenhum dado obrigatório ausente.</p>"}</details>
         <details><summary>8. Auditoria por grupo (${(audit.group_results || []).length})</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Crédito contratado</th><th>Faixa P/V</th><th>Crédito</th><th>Parcela inicial<br><small>sem / com embutido</small></th><th>Prazo calculado / G</th><th>Prazo</th><th>Contemplação<br><small>cenário aprovado</small></th><th>Resultado</th></tr></thead><tbody>${groupRows}</tbody></table></div></details>

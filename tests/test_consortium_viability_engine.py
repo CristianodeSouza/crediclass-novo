@@ -111,6 +111,51 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertTrue(item["capacidade_contemplacoes"])
         self.assertEqual(item["historico_12_meses"], history)
 
+    def test_matrix_projection_preserves_source_fields_for_non_composition_result(self):
+        history = [{"mes": "2026-06", "menor_lance": 0.41, "qtd_contemplacoes": 8}]
+        source_map = {
+            "credito_maximo": {"source": "cabecalho", "column": "V", "header": "Maior Crédito", "raw_value": 63230},
+            "prazo_restante": {"source": "cabecalho", "column": "G", "header": "Prazo remanescente", "raw_value": 30},
+            "fundo_reserva": {"source": "cabecalho", "column": "AB", "header": "Fundo RSV Total", "raw_value": "2%"},
+        }
+        result = analyze_client_consortium_viability(payload(
+            credito_desejado=600000, lance_proprio=181500, fgts=0,
+            parcela_limite=12000, renda_total=40000,
+        ), [group(
+            "20370", administradora="AUTO-ITAÚ", credito_minimo=63230,
+            credito_maximo=63230, prazo_restante=30, vencimento_parcela="15",
+            taxa_adm="24%", fundo_reserva="2%", lance_super_agressivo_3m="30.25%",
+            lance_agressivo_6m="30.25%", lance_moderado_12m="30.25%",
+            lance_conservador_24m="30.25%", lance_investidor="30.25%",
+            historico_12_meses=history, source_row=308, mapeamento_origem=source_map,
+        )])
+
+        self.assertEqual(len(result["items"]), 1)
+        item = result["items"][0]
+        self.assertEqual(item["credito_minimo"], 63230)
+        self.assertEqual(item["credito_maximo"], 63230)
+        self.assertEqual(item["prazo_restante"], 30)
+        self.assertEqual(item["vencimento_parcela"], "15")
+        self.assertEqual(item["taxa_adm"], 0.24)
+        self.assertEqual(item["fundo_reserva"], 0.02)
+        self.assertEqual(item["historico_12_meses"], history)
+        self.assertEqual(item["source_row"], 308)
+        self.assertEqual(item["mapeamento_origem"]["credito_maximo"]["column"], "V")
+
+    def test_audit_lists_the_groups_omitted_from_post_matrix_results(self):
+        result = analyze_client_consortium_viability(payload(
+            contemplacao_perfil="urgent", lance_proprio=10000, fgts=0,
+            parcela_limite=1000000,
+        ), [
+            group("VISIBLE", lance_super_agressivo_3m="1%"),
+            group("OMITTED", lance_super_agressivo_3m="90%", source_row=27),
+        ])
+
+        omitted = result["audit"]["summary"]["matrix_excluded_groups"]
+        self.assertEqual([item["grupo"] for item in omitted], ["OMITTED"])
+        self.assertEqual(omitted[0]["source_row"], 27)
+        self.assertEqual(omitted[0]["result"], "excluded_contemplation")
+
     def test_expoe_media_maxima_de_contemplacoes_para_controlar_cotas(self):
         history = [
             {"mes": "2026-04", "qtd_contemplacoes": 2},

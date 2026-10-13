@@ -966,10 +966,14 @@ def parse_int(value: Any) -> int | None:
 
 
 def parse_percent(value: Any) -> float | None:
+    text = "" if value is None else str(value).strip()
     number = parse_number(value)
     if number is None:
         return None
-    normalized = number / 100 if number > 1 else number
+    # Google Sheets returns formatted percent cells as strings such as "1%".
+    # Keep that explicit unit before parse_number strips the percent sign; a
+    # literal "1%" means 0.01, while numeric 1 remains the fraction 1.0.
+    normalized = number / 100 if "%" in text or number > 1 else number
     return normalized if 0 <= normalized <= 1 else None
 
 

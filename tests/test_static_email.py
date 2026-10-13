@@ -129,7 +129,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("const motor360GroupAnalyticsCache = new Map()", app_js)
         self.assertIn("const cached = motor360GroupAnalyticsCache.get(cacheKey)", app_js)
         self.assertIn("if (sort === \"credit\") return analyticsFor(b).groupMaxCredit", sort_function)
-        self.assertNotIn("selectedGroupSort", card_renderer)
+        self.assertIn("investorState.selectedGroupSort || \"original\"", card_renderer)
 
     def test_motor360_menor_lance_usa_o_mesmo_total_de_composicao_do_card(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
@@ -139,7 +139,8 @@ class StaticEmailTest(unittest.TestCase):
         card_renderer = app_js.split("function renderMotor360GroupCardUncached", 1)[1].split("function renderMotor360GroupCard(", 1)[0]
         bid_sort_helper = app_js.split("function motor360BidSortValue", 1)[1].split("function motor360BidSortDescription", 1)[0]
 
-        self.assertIn("minimumQuotasFor(item, scenario.id)", ideal_helper)
+        self.assertIn("aggregateIdealBid", ideal_helper)
+        self.assertNotIn("idealPerQuota * quotas", ideal_helper)
         self.assertIn("motor360FocusedProfileId()", ideal_helper)
         self.assertIn("motor360CompositionIdealBid(item, scenario, value.id)", card_renderer)
         self.assertIn("motor360CompositionIdealBid(item, scenario, profileId)", bid_sort_helper)
@@ -149,15 +150,14 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('if (sort === "bid") return sortMotor360ItemsByBid(filtered)', sort_function)
         self.assertNotIn("motor360HasHistoryEvidence", app_js)
         self.assertIn("motor360BidSortLabel(item)", card_renderer)
+        self.assertIn("investorState.selectedGroupSort || \"original\"", app_js.split("function renderMotor360GroupCard(item)", 1)[1].split("function selectedMotor360Items", 1)[0])
         self.assertIn("R$ 0 é válido", app_js)
         self.assertIn("crédito e histórico não alteram a posição", app_js)
 
-        # Acceptance fixture: the focused-profile bid is aggregated across
-        # six minimum quotas before comparing it to a one-quota group.
-        i227_composition_bid = 45_250 * 6
-        group_1011_composition_bid = 56_820 * 1
-        self.assertEqual(i227_composition_bid, 271_500)
-        self.assertLess(group_1011_composition_bid, i227_composition_bid)
+        # Production audit: the 68.46% profile reference is already based on
+        # the target composition credit (R$ 600k), not one target per quota.
+        i227_composition_bid = 410_760
+        self.assertEqual(i227_composition_bid, 600_000 * 0.6846)
 
     def test_motor360_ordenacao_real_corresponde_ao_rotulo_do_card(self):
         node = shutil.which("node")
@@ -189,7 +189,7 @@ const formatMoney = (value) => `R$ ${Number(value).toFixed(2)}`;
 ''' + functions + r'''
 const scenario = (id, ideal) => ({ id, perfis_contemplacao: [{ id: "moderate", lance_ideal: ideal }] });
 const items = [
-  { grupo: "I227", requires_composition: true, minQuotas: { without_embedded: 6 }, credito_maximo: 110000, historico_12_meses: [], cenarios: [scenario("without_embedded", 45250)] },
+  { grupo: "I227", requires_composition: true, minQuotas: { without_embedded: 6 }, credito_maximo: 110000, historico_12_meses: [], cenarios: [scenario("without_embedded", 410760)] },
   { grupo: "20399", credito_maximo: null, historico_12_meses: [], cenarios: [scenario("without_embedded", null)] },
   { grupo: "1011", credito_maximo: 1255658.79, historico_12_meses: [{ qtd_contemplacoes: 3 }], cenarios: [scenario("without_embedded", 56820)] },
   { grupo: "20370", credito_maximo: 63230, historico_12_meses: [{ qtd_contemplacoes: 8 }], cenarios: [scenario("with_embedded", 2000), scenario("without_embedded", 1000)] },
@@ -203,7 +203,7 @@ console.log(JSON.stringify(sorted.map((item) => ({ grupo: item.grupo, label: mot
         self.assertEqual([row["grupo"] for row in rows], ["ZERO", "20370", "1011", "I227", "20399"])
         self.assertIn("R$ 0.00", rows[0]["label"])
         self.assertIn("Sem embutido: R$ 1000.00", rows[1]["label"])
-        self.assertIn("R$ 271500.00", rows[3]["label"])
+        self.assertIn("R$ 410760.00", rows[3]["label"])
         self.assertIn("sem refer", rows[4]["label"].lower())
         self.assertIn("calcul", rows[4]["label"].lower())
 

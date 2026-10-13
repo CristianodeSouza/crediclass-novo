@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.177"
+MOTOR_VERSION = "4.0.178"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BQ", "Urgente - 3 meses"),
@@ -459,6 +459,7 @@ def analyze_client_consortium_viability(
         contemplation_capacities = _contemplation_capacity(group)
         source_values = {
             "filtros_grupo": feature_flags,
+            "tipo_bem": str(group.get("tipo_bem") or ""),
             "prazo_restante": remaining_term,
             "credito_minimo": money(minimum),
             "credito_maximo": money(maximum),
@@ -468,8 +469,28 @@ def analyze_client_consortium_viability(
             "percentual_lance_embutido": money(embedded),
             "faixas_lance": ranges,
             "capacidade_contemplacoes": contemplation_capacities,
+            "historico_12_meses": list(group.get("historico_12_meses") or []),
             "mapeamento_origem": group.get("mapeamento_origem") or {},
         }
+        # Keep the normalized source record attached to the matrix result even
+        # when the financial/composition path rejects the richer result item.
+        # The operator list still includes matrix-approved groups and must not
+        # replace real source values with a reduced identity-only projection.
+        group_ref.update({
+            "tipo_bem": str(group.get("tipo_bem") or ""),
+            "credito_minimo": money(minimum),
+            "credito_maximo": money(maximum),
+            "prazo_restante": remaining_term,
+            "prazo_remanescente": remaining_term,
+            "taxa_adm": money(fee),
+            "fundo_reserva": money(fund),
+            "historico_12_meses": list(group.get("historico_12_meses") or []),
+            "capacidade_contemplacoes": contemplation_capacities,
+            "mapeamento_origem": group.get("mapeamento_origem") or {},
+            "source_values": source_values,
+        })
+        for strategy_key, field, _, _ in STRATEGY_TARGETS:
+            group_ref[field] = ranges.get(strategy_key)
         composition_item: dict[str, Any] | None = None
         composition_rejection_reason: str | None = None
         if (
@@ -995,8 +1016,7 @@ def analyze_client_consortium_viability(
         if not eligible_scenarios:
             continue
         matrix_items.append({
-            "grupo": entry.get("grupo"),
-            "administradora": entry.get("administradora"),
+            **entry,
             "cenarios": entry.get("scenarios", []),
             "eligible_scenarios": [scenario.get("id") for scenario in eligible_scenarios],
             "stage_results": entry.get("stage_results", {}),
@@ -1052,6 +1072,17 @@ def analyze_client_consortium_viability(
             entry["result"] = "matrix_approved"
             entry["matrix_approved"] = True
             entry["justification"] = []
+    audit["summary"]["matrix_excluded_groups"] = [
+        {
+            "grupo": entry.get("grupo"),
+            "administradora": entry.get("administradora"),
+            "source_row": entry.get("source_row"),
+            "result": entry.get("result"),
+            "justification": entry.get("justification", []),
+        }
+        for entry in audit.get("group_results", [])
+        if (str(entry.get("administradora") or "").strip().lower(), str(entry.get("grupo") or "").strip()) not in final_keys
+    ]
     audit["parameters"]["post_matrix_selection"] = "matrix_approved_groups_only"
     audit["summary"]["total_post_matrix_groups"] = len(final_items)
     audit["summary"]["total_requires_composition"] = sum(1 for item in final_items if item.get("requires_composition"))
