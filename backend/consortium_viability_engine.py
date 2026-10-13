@@ -22,14 +22,14 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.174"
+MOTOR_VERSION = "4.0.176"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
-    ("urgent", "lance_super_agressivo_3m", "BP", "Urgente - 3 meses"),
-    ("fast", "lance_agressivo_6m", "BO", "Rapido - 6 meses"),
-    ("moderate", "lance_moderado_12m", "BN", "Moderado - 12 meses"),
-    ("conservative", "lance_conservador_24m", "BM", "Conservador - 24 meses"),
-    ("long_term", "lance_investidor", "BL", "Investidor - 36 meses"),
+    ("urgent", "lance_super_agressivo_3m", "BQ", "Urgente - 3 meses"),
+    ("fast", "lance_agressivo_6m", "BP", "Rapido - 6 meses"),
+    ("moderate", "lance_moderado_12m", "BO", "Moderado - 12 meses"),
+    ("conservative", "lance_conservador_24m", "BN", "Conservador - 24 meses"),
+    ("long_term", "lance_investidor", "BM", "Investidor - 36 meses"),
 )
 
 CONTEMPLATION_PROFILE_TARGETS = (
@@ -160,7 +160,7 @@ def _contemplation_capacity(group: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def _parcela_inicial_por_cenario(scenario: dict[str, Any]) -> float | None:
     """Calculate the initial installment from the client's contracted credit.
 
-    AJ is a later card reference. It must not replace this preliminary
+    AK is a later card reference. It must not replace this preliminary
     calculation, which uses the scenario debt balance and column F.
     """
     saldo = parse_decimal(scenario.get("saldo_devedor"))
@@ -349,7 +349,7 @@ def analyze_client_consortium_viability(
             scenario["credito_minimo"] = money(minimum)
             scenario["credito_maximo"] = money(maximum)
             scenario["parcela_inicial"] = _parcela_inicial_por_cenario(scenario)
-            scenario["parcela_inicial_formula"] = "saldo devedor / prazo remanescente (coluna F)"
+            scenario["parcela_inicial_formula"] = "saldo devedor / prazo remanescente (coluna G)"
             client_bid = own + fgts
             contracted_credit = parse_decimal(scenario.get("credito_contratado"))
             embedded_amount = parse_decimal(scenario.get("valor_lance_embutido")) or Decimal("0")
@@ -589,19 +589,19 @@ def analyze_client_consortium_viability(
             else:
                 composition_rejection_reason = "composicao_credito_insuficiente_ou_limite_cotas"
         missing_fields = [
-            {"field": "Credito minimo", "column": "O", "raw_value": group.get("credito_minimo"), "reason": "Necessario para validar a faixa de credito.", "impact": "group_excluded"} if minimum is None else None,
-            {"field": "Credito maximo", "column": "U", "raw_value": group.get("credito_maximo"), "reason": "Necessario para validar a faixa de credito.", "impact": "group_excluded"} if maximum is None else None,
-            {"field": "Taxa ADM total", "column": "AC", "raw_value": group.get("taxa_adm"), "reason": "Necessaria para calcular saldo e prazo.", "impact": "scenario_unavailable"} if fee is None else None,
-            {"field": "Fundo de reserva total", "column": "AA", "raw_value": group.get("fundo_reserva"), "reason": "Necessario para calcular saldo e prazo.", "impact": "scenario_unavailable"} if fund is None else None,
-            {"field": "Prazo remanescente", "column": "F", "raw_value": group.get("prazo_restante", group.get("prazo_remanescente")), "reason": "Necessario para validar prazo/renda.", "impact": "group_excluded"} if remaining_term is None else None,
-            {"field": "Faixas de contemplacao", "column": "BL:BP", "raw_value": json.dumps(raw_ranges, ensure_ascii=False, sort_keys=True), "reason": "Usadas somente na classificacao informativa posterior.", "impact": "informational_only"} if not has_ranges else None,
+            {"field": "Credito minimo", "column": "P", "raw_value": group.get("credito_minimo"), "reason": "Necessario para validar a faixa de credito.", "impact": "group_excluded"} if minimum is None else None,
+            {"field": "Credito maximo", "column": "V", "raw_value": group.get("credito_maximo"), "reason": "Necessario para validar a faixa de credito.", "impact": "group_excluded"} if maximum is None else None,
+            {"field": "Taxa ADM total", "column": "AD", "raw_value": group.get("taxa_adm"), "reason": "Necessaria para calcular saldo e prazo.", "impact": "scenario_unavailable"} if fee is None else None,
+            {"field": "Fundo de reserva total", "column": "AB", "raw_value": group.get("fundo_reserva"), "reason": "Necessario para calcular saldo e prazo.", "impact": "scenario_unavailable"} if fund is None else None,
+            {"field": "Prazo remanescente", "column": "G", "raw_value": group.get("prazo_restante", group.get("prazo_remanescente")), "reason": "Necessario para validar prazo/renda.", "impact": "group_excluded"} if remaining_term is None else None,
+            {"field": "Faixas de contemplacao", "column": "BM:BQ", "raw_value": json.dumps(raw_ranges, ensure_ascii=False, sort_keys=True), "reason": "Usadas somente na classificacao informativa posterior.", "impact": "informational_only"} if not has_ranges else None,
         ]
         missing_fields = [field for field in missing_fields if field]
         if missing_fields:
             incomplete_groups.append({**group_ref, "missing_fields": missing_fields})
         matrix_data_incomplete = bool(administrator_scenarios) and (
             not has_ranges
-            or any(field["column"] == "BL:BP" for field in missing_fields)
+            or any(field["column"] == "BM:BQ" for field in missing_fields)
         )
         if administrator_scenarios:
             counters["matrix_incomplete"] += int(matrix_data_incomplete)
@@ -609,10 +609,10 @@ def analyze_client_consortium_viability(
         if selected_profile and administrator_scenarios and not matrix_data_incomplete and not selected_profile_scenarios:
             counters["selected_profile_rejected"] += 1
         stage_results = {
-            "credito": {"approved": bool(credit_scenarios), "scenario_ids": [scenario["id"] for scenario in credit_scenarios], "rule": "O <= crédito contratado <= U"},
-            "prazo": {"approved": bool(term_scenarios), "scenario_ids": [scenario["id"] for scenario in term_scenarios], "rule": "F >= ceil(saldo após lance / parcela máxima)"},
+            "credito": {"approved": bool(credit_scenarios), "scenario_ids": [scenario["id"] for scenario in credit_scenarios], "rule": "P <= crédito contratado <= V"},
+            "prazo": {"approved": bool(term_scenarios), "scenario_ids": [scenario["id"] for scenario in term_scenarios], "rule": "G >= ceil(saldo após lance / parcela máxima)"},
             "administradora": {"approved": bool(administrator_scenarios), "scenario_ids": [scenario["id"] for scenario in administrator_scenarios], "rule": "Sem regra adicional definida"},
-            "contemplacao": {"approved": bool(selected_profile_scenarios if selected_profile else contemplation_scenarios), "scenario_ids": [scenario["id"] for scenario in (selected_profile_scenarios if selected_profile else contemplation_scenarios)], "perfil_selecionado": selected_profile, "rule": "Lance do cliente >= faixa do perfil selecionado" if selected_profile else "Lance do cliente >= uma faixa BL:BP"},
+            "contemplacao": {"approved": bool(selected_profile_scenarios if selected_profile else contemplation_scenarios), "scenario_ids": [scenario["id"] for scenario in (selected_profile_scenarios if selected_profile else contemplation_scenarios)], "perfil_selecionado": selected_profile, "rule": "Lance do cliente >= faixa do perfil selecionado" if selected_profile else "Lance do cliente >= uma faixa BM:BQ"},
             "composicao": {"approved": bool(composition_item), "scenario_ids": [composition_item["selected_composition_scenario"]] if composition_item else [], "rule": "Crédito e parcela total compatíveis em até 50 cotas"},
         }
         counters["credit_approved"] += int(bool(credit_scenarios))
@@ -643,7 +643,7 @@ def analyze_client_consortium_viability(
                 "reference_installment": parcelas_iniciais.get("without_embedded"),
                 "parcela_inicial_sem_embutido": parcelas_iniciais.get("without_embedded"),
                 "parcela_inicial_com_embutido": parcelas_iniciais.get("with_embedded"),
-                "installment_source": "saldo devedor da categoria / prazo remanescente (coluna F)",
+                "installment_source": "saldo devedor da categoria / prazo remanescente (coluna G)",
                 "cenarios": scenarios,
                 "eligible_scenarios": [scenario["id"] for scenario in approved_scenarios],
                 "credit_compatible": True,
@@ -732,7 +732,7 @@ def analyze_client_consortium_viability(
             "reference_installment": parcelas_iniciais.get("without_embedded"),
             "parcela_inicial_sem_embutido": parcelas_iniciais.get("without_embedded"),
             "parcela_inicial_com_embutido": parcelas_iniciais.get("with_embedded"),
-            "installment_source": "saldo devedor da categoria / prazo remanescente (coluna F)",
+            "installment_source": "saldo devedor da categoria / prazo remanescente (coluna G)",
             "cenarios": scenarios,
             "eligible_scenarios": [scenario["id"] for scenario in approved_scenarios],
             "credit_compatible": True,
@@ -843,20 +843,36 @@ def analyze_client_consortium_viability(
         "parcela_maxima": money(income_limit),
         "percentual_comprometimento": float(commitment),
     }
-    columns = [
-        ("A", "Administradora", "administradora", "Identificacao"), ("B", "Grupo", "grupo", "Identificacao"),
-        ("C", "Tipo de bem", "tipo_bem", "Filtro explicito"), ("F", "Prazo remanescente", "prazo_remanescente", "Elegibilidade de prazo"),
-        ("O", "Menor Credito", "credito_minimo", "Limite inferior de credito"), ("U", "Maior Credito", "credito_maximo", "Limite superior de credito"),
-        ("W", "Indexador", "indexador", "Parametro do grupo"), ("X", "Modalidades de assembleia", "modalidades_assembleia", "Parametro operacional"),
-        ("Y", "Lance embutido", "percentual_lance_embutido", "Cenario com embutido"), ("Z", "Calculo do embutido", "base_calculo_embutido", "Parametro operacional"),
-        ("AA", "Modalidades do embutido", "modalidades_embutido", "Parametro operacional"), ("AB", "Fundo reserva total", "fundo_reserva", "Saldo devedor"),
-        ("AD", "Taxa ADM total", "taxa_adm", "Saldo devedor"), ("AJ", "Parcela inicial", "parcela_inicial_grupo", "Referencia apos selecao da carta"),
-        ("AK", "Parcela apos lance", "parcela_apos_lance_grupo", "Referencia apos selecao da carta"), ("AL", "Parcela reduzida", "parcela_reduzida", "Ranking configuravel"),
-        *[(column, label, field, "Faixa de contemplacao") for _, field, column, label in STRATEGY_TARGETS],
+    column_specs = [
+        ("administradora", "A", "Administradora", "Identificacao"),
+        ("grupo", "B", "Grupo", "Identificacao"),
+        ("tipo_bem", "C", "Tipo de bem", "Filtro explicito"),
+        ("prazo_restante", "G", "Prazo remanescente", "Elegibilidade de prazo"),
+        ("credito_minimo", "P", "Menor Credito", "Limite inferior de credito"),
+        ("credito_maximo", "V", "Maior Credito", "Limite superior de credito"),
+        ("indexador", "W", "Indexador", "Parametro do grupo"),
+        ("modalidades_assembleia", "X", "Modalidades de assembleia", "Parametro operacional"),
+        ("percentual_lance_embutido", "Y", "Lance embutido", "Cenario com embutido"),
+        ("base_calculo_embutido", "Z", "Calculo do embutido", "Parametro operacional"),
+        ("modalidades_embutido", "AA", "Modalidades do embutido", "Parametro operacional"),
+        ("fundo_reserva", "AB", "Fundo reserva total", "Saldo devedor"),
+        ("taxa_adm", "AD", "Taxa ADM total", "Saldo devedor"),
+        ("parcela_inicial_grupo", "AK", "Parcela inicial", "Referencia apos selecao da carta"),
+        ("parcela_apos_lance_grupo", "AL", "Parcela apos lance", "Referencia apos selecao da carta"),
+        ("parcela_reduzida", "AM", "Parcela reduzida", "Ranking configuravel"),
+        *[(field, column, label, "Faixa de contemplacao") for _, field, column, label in STRATEGY_TARGETS],
     ]
-    decision_columns = {"A", "B", "F", "O", "U", "Y", "AB", "AD"}
+    source_mapping = next((group.get("mapeamento_origem") or {} for group in groups if group.get("mapeamento_origem")), {})
+    columns = []
+    for field, fallback_column, fallback_header, purpose in column_specs:
+        source = source_mapping.get(field) or {}
+        column = source.get("column") or fallback_column
+        header = source.get("header") or fallback_header
+        columns.append((column, header, field, purpose))
+    decision_fields = {"administradora", "grupo", "prazo_restante", "credito_minimo", "credito_maximo", "percentual_lance_embutido", "fundo_reserva", "taxa_adm"}
     if explicit_type:
-        decision_columns.add("C")
+        decision_fields.add("tipo_bem")
+    decision_columns = {column for column, _, field, _ in columns if field in decision_fields}
     source_snapshot = [
         {
             "source_row": group.get("source_row"),
@@ -876,16 +892,19 @@ def analyze_client_consortium_viability(
         administrator = str(group.get("administradora") or "Não informado")
         administrator_mapping = mapping_by_administrator.setdefault(administrator, {})
         for field, mapping in (group.get("mapeamento_origem") or {}).items():
-            entry = administrator_mapping.setdefault(field, {"headers": set(), "sources": set(), "mapped_rows": 0, "missing_rows": 0})
+            entry = administrator_mapping.setdefault(field, {"headers": set(), "columns": set(), "sources": set(), "mapped_rows": 0, "missing_rows": 0})
             if mapping.get("source") == "ausente":
                 entry["missing_rows"] += 1
             else:
                 entry["mapped_rows"] += 1
                 entry["headers"].add(str(mapping.get("header") or "-"))
+                if mapping.get("column"):
+                    entry["columns"].add(str(mapping["column"]))
                 entry["sources"].add(str(mapping.get("source") or "-"))
     for administrator_mapping in mapping_by_administrator.values():
         for entry in administrator_mapping.values():
             entry["headers"] = sorted(entry["headers"])
+            entry["columns"] = sorted(entry["columns"])
             entry["sources"] = sorted(entry["sources"])
 
     # Keep the audit contract aligned with the actual request. The analysis
@@ -922,21 +941,21 @@ def analyze_client_consortium_viability(
         "execution_steps": [
             {"order": 1, "id": "status", "name": "Status e identificação", "formula_or_rule": "Somente status Ativo e grupo com administradora/número válidos", "input_count": len(groups), "approved_count": counters["active"], "rejected_count": counters["status_rejected"] + counters["invalid_identity"], "incomplete_count": 0, "duration_ms": round(durations["status"] * 1000, 3)},
             {"order": 2, "id": "type", "name": "Tipo de bem", "formula_or_rule": "Aplicado somente quando explicitamente informado", "input_count": counters["active"], "approved_count": counters["active"] - counters["type_rejected"], "rejected_count": counters["type_rejected"], "incomplete_count": 0, "duration_ms": round(durations["type"] * 1000, 3)},
-            {"order": 3, "id": "credit", "name": "Faixa de credito", "formula_or_rule": "Cenarios independentes sem e com X; O <= credito contratado <= U", "input_count": counters["active"] - counters["type_rejected"], "approved_count": counters["credit_approved"], "rejected_count": counters["credit_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"O", "U"} for field in item["missing_fields"])), "duration_ms": round((durations["scenario"] + durations["credit_decision"]) * 1000, 3)},
-            {"order": 4, "id": "term", "name": "Prazo e renda", "formula_or_rule": "F >= ceil(saldo apos lance / parcela maxima); parcela desejada tambem permanece auditada", "input_count": counters["credit_approved"], "approved_count": counters["term_approved"], "rejected_count": counters["term_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"F", "AA", "AC"} for field in item["missing_fields"])), "duration_ms": round(durations["term"] * 1000, 3)},
+            {"order": 3, "id": "credit", "name": "Faixa de credito", "formula_or_rule": "Cenarios independentes sem e com X; P <= credito contratado <= V", "input_count": counters["active"] - counters["type_rejected"], "approved_count": counters["credit_approved"], "rejected_count": counters["credit_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"P", "V"} for field in item["missing_fields"])), "duration_ms": round((durations["scenario"] + durations["credit_decision"]) * 1000, 3)},
+            {"order": 4, "id": "term", "name": "Prazo e renda", "formula_or_rule": "G >= ceil(saldo apos lance / parcela maxima); parcela desejada tambem permanece auditada", "input_count": counters["credit_approved"], "approved_count": counters["term_approved"], "rejected_count": counters["term_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] in {"G", "AB", "AD"} for field in item["missing_fields"])), "duration_ms": round(durations["term"] * 1000, 3)},
             {"order": 5, "id": "administrator_rules", "name": "Regras da administradora", "formula_or_rule": "Nenhuma regra adicional foi definida nos documentos oficiais; nenhuma exclusao aplicada.", "input_count": counters["term_approved"], "approved_count": counters["administrator_approved"], "rejected_count": 0, "incomplete_count": 0, "duration_ms": round(durations["administrator_rules"] * 1000, 3)},
-            {"order": 6, "id": "contemplation", "name": "Filtro de contemplacao", "formula_or_rule": "Com perfil selecionado, o lance efetivo deve atingir a faixa BL:BP correspondente; sem perfil explicito a classificacao permanece informativa", "input_count": counters["administrator_approved"], "approved_count": len(eligible_items), "rejected_count": counters["selected_profile_rejected"] if selected_profile else counters["contemplation_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] == "BL:BP" for field in item["missing_fields"])), "duration_ms": round(durations["contemplation"] * 1000, 3)},
+            {"order": 6, "id": "contemplation", "name": "Filtro de contemplacao", "formula_or_rule": "Com perfil selecionado, o lance efetivo deve atingir a faixa BM:BQ correspondente; sem perfil explicito a classificacao permanece informativa", "input_count": counters["administrator_approved"], "approved_count": len(eligible_items), "rejected_count": counters["selected_profile_rejected"] if selected_profile else counters["contemplation_rejected"], "incomplete_count": sum(1 for item in incomplete_groups if any(field["column"] == "BM:BQ" for field in item["missing_fields"])), "duration_ms": round(durations["contemplation"] * 1000, 3)},
             {"order": 7, "id": "ranking", "name": "Ranking", "formula_or_rule": "Preferências configuráveis apenas reordenam os grupos finais", "input_count": counters["contemplation_approved"], "approved_count": len(eligible_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
         ],
         "formulas": [
             {"id": "base_liquida", "name": "Base liquida", "expression": "credito liquido desejado", "result": money(desired)},
             {"id": "credito_sem_embutido", "name": "Credito sem embutido", "expression": "base liquida", "result": money(desired)},
             {"id": "credito_com_embutido", "name": "Credito com embutido", "expression": "base liquida / (1 - X)", "result": "calculado por grupo"},
-            {"id": "taxa", "name": "Taxa", "expression": "credito contratado x AC", "result": "calculado por cenario"},
-            {"id": "fundo", "name": "Fundo", "expression": "credito contratado x AA", "result": "calculado por cenario"},
+            {"id": "taxa", "name": "Taxa", "expression": "credito contratado x AD", "result": "calculado por cenario"},
+            {"id": "fundo", "name": "Fundo", "expression": "credito contratado x AB", "result": "calculado por cenario"},
             {"id": "saldo", "name": "Saldo devedor", "expression": "credito + taxa + fundo", "result": "calculado por cenario"},
-            {"id": "parcela_inicial_sem_embutido", "name": "Parcela inicial sem lance embutido", "expression": "saldo devedor sem lance embutido / prazo remanescente (coluna F)", "result": "calculado por grupo"},
-            {"id": "parcela_inicial_com_embutido", "name": "Parcela inicial com lance embutido", "expression": "saldo devedor com lance embutido / prazo remanescente (coluna F)", "result": "calculado por grupo"},
+            {"id": "parcela_inicial_sem_embutido", "name": "Parcela inicial sem lance embutido", "expression": "saldo devedor sem lance embutido / prazo remanescente (coluna G)", "result": "calculado por grupo"},
+            {"id": "parcela_inicial_com_embutido", "name": "Parcela inicial com lance embutido", "expression": "saldo devedor com lance embutido / prazo remanescente (coluna G)", "result": "calculado por grupo"},
             {"id": "parcela_pos_contemplacao", "name": "Parcela pós-contemplação por cenário", "expression": "(saldo devedor - parcela inicial - lance total ofertado) / (prazo remanescente - 1)", "result": "calculado por grupo e cenário"},
             {"id": "lance_cliente", "name": "Lance ofertado pelo cliente", "expression": "RP + FGTS", "result": money(own + fgts)},
             {"id": "lance_cenario", "name": "Lance financeiro do cenario", "expression": "RP + FGTS + lance embutido quando aplicavel", "result": "calculado por cenario"},

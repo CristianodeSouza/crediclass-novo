@@ -66,7 +66,7 @@ SUMMARY_FIELDS = [
     "fgts",
     "percentual_lance_embutido",
     "percentual_lance_fixo",
-    # BL:BP are the official historical thresholds used by Motor 360.
+    # BM:BQ are the official profile thresholds used by Motor 360.
     "lance_investidor",
     "lance_conservador_24m",
     "lance_moderado_12m",
@@ -90,13 +90,13 @@ MAPA_GRUPOS_COLUMN_INDEXES = {
     "administradora": 0,  # A
     "grupo": 1,  # B
     "tipo_bem": 2,  # C
-    "prazo_restante": 5,  # F
+    "prazo_restante": 6,  # G
     "vencimento_parcela": 10,  # K
     "seguro_obrigatorio": 11,  # L
     "idade_maxima_seguro": 12,  # M
     "aliquota_seguro": 13,  # N
-    "credito_minimo": 14,  # O
-    "credito_maximo": 20,  # U
+    "credito_minimo": 15,  # P
+    "credito_maximo": 21,  # V
     "indexador": 22,  # W
     "modalidades_assembleia": 23,  # X
     "percentual_lance_embutido": 24,  # Y
@@ -106,20 +106,22 @@ MAPA_GRUPOS_COLUMN_INDEXES = {
     "fundo_reserva_ano": 28,  # AC
     "taxa_adm": 29,  # AD
     "taxa_adm_ano": 30,  # AE
-    "parcela_inicial_grupo": 35,  # AJ
-    "parcela_apos_lance_grupo": 36,  # AK
-    "parcela_reduzida": 37,  # AL
-    "lance_investidor": 63,  # BL
-    "lance_conservador_24m": 64,  # BM
-    "lance_moderado_12m": 65,  # BN
-    "lance_agressivo_6m": 66,  # BO
-    "lance_super_agressivo_3m": 67,  # BP
+    "parcela_inicial_grupo": 36,  # AK
+    "parcela_apos_lance_grupo": 37,  # AL
+    "parcela_reduzida": 38,  # AM
+    "lance_investidor": 64,  # BM
+    "lance_conservador_24m": 65,  # BN
+    "lance_moderado_12m": 66,  # BO
+    "lance_agressivo_6m": 67,  # BP
+    "lance_super_agressivo_3m": 68,  # BQ
 }
 
 # Older exports of the group map used these positions.  When headers are
 # generic ("Coluna N"), retain the legacy positions instead of returning an
 # empty financial field; named headers always remain authoritative.
 MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES: dict[str, int] = {
+    "prazo_restante": 5,
+    "credito_minimo": 14,
     "credito_maximo": 17,
     "taxa_adm": 18,
     "lance_super_conservador": 59,
@@ -216,9 +218,9 @@ FIELD_ALIASES = {
     "lance_conservador": ["lance conservador", "conservador", "cons"],
     "lance_moderado": ["lance moderado", "moderado", "mod"],
     "lance_agressivo": ["lance agressivo", "agressivo", "agr"],
-    "lance_investidor": ["lance investidor", "investidor"],
-    "lance_super_agressivo_3m": ["lance super agressivo 3m", "super agressivo 3 meses"],
-    "lance_agressivo_6m": ["lance agressivo 6m", "agressivo 6 meses"],
+    "lance_investidor": ["lance investidor", "investidor", "investidor 36 meses"],
+    "lance_super_agressivo_3m": ["lance super agressivo 3m", "super agressivo 3 meses", "super agressivo 3 meses urgente"],
+    "lance_agressivo_6m": ["lance agressivo 6m", "agressivo 6 meses", "agressivo 6 meses rapido"],
     "lance_moderado_12m": ["lance moderado 12m", "moderado 12 meses"],
     "lance_conservador_24m": ["lance conservador 24m", "conservador 24 meses"],
     "investidor": ["investidor"],
@@ -341,9 +343,37 @@ def canonical_field_header(field: str) -> str:
     return f"__{field}"
 
 
-def apply_mapa_grupos_fixed_columns(row: dict[str, Any], values: list[Any]) -> None:
+def apply_mapa_grupos_fixed_columns(
+    row: dict[str, Any], values: list[Any], headers: list[str] | None = None,
+) -> None:
+    """Populate canonical fields, preferring the actual sheet header.
+
+    Fixed indices are only a fallback for exports with generic/missing headers.
+    This keeps detail endpoints aligned with the header-based summary reader.
+    """
+    header_positions = headers_index(headers or [])
+    source_columns: dict[str, dict[str, str]] = {}
     for field, index in MAPA_GRUPOS_COLUMN_INDEXES.items():
-        row[canonical_field_header(field)] = fixed_column_value(field, values)
+        header = find_header(headers or [], field) if headers else None
+        if header is not None:
+            source_index = header_positions[header]
+            value = values[source_index] if source_index < len(values) else ""
+            column = column_letter(source_index)
+            source = "cabecalho"
+        else:
+            value = fixed_column_value(field, values)
+            column = column_letter(index)
+            source = "coluna_fixa"
+        if value in (None, "") and field in MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES:
+            fallback_index = MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES[field]
+            fallback_value = values[fallback_index] if fallback_index < len(values) else ""
+            if fallback_value not in (None, ""):
+                value = fallback_value
+                column = column_letter(fallback_index)
+                source = "fallback_legado"
+        row[canonical_field_header(field)] = value
+        source_columns[field] = {"source": source, "column": column, "header": header or ""}
+    row["__source_columns"] = source_columns
 
 
 def fixed_column_value(field: str, values: list[Any], base_index: int = 0) -> Any:
@@ -399,10 +429,10 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
     selected: list[tuple[str, str, int]] = []
     header_positions = headers_index(headers)
     for field in SUMMARY_FIELDS:
-        # BL:BP are the official profile thresholds in the group map. Some
+        # BM:BQ are the official profile thresholds in the group map. Some
         # sheet versions also contain monthly history columns, but those
         # columns must not suppress the fixed profile fields: Motor 360 needs
-        # the values from BM/BN/BO/BP even when their display labels include
+        # the values from BM: BQ even when their display labels include
         # line breaks or the aliases "Rápido" and "Urgente".
         try:
             header, index = summary_field_index(headers, field, header_positions)
@@ -447,6 +477,10 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
                     fallback_relative = 16 - min_index
                     value = row_values[fallback_relative] if fallback_relative < len(row_values) else ""
                 row[header] = value
+            row["__source_columns"] = {
+                field: {"source": "cabecalho", "column": column_letter(index), "header": header}
+                for field, header, index in selected if field != "historico"
+            }
             row["__source_row"] = offset + 2
             if not any(str(value).strip() for value in row.values()):
                 continue
@@ -482,6 +516,10 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
                         fallback_cell = columns[fallback_index][offset] if offset < len(columns[fallback_index]) else []
                         value = fallback_cell[0] if fallback_cell else ""
                 row[header] = value
+            row["__source_columns"] = {
+                field: {"source": "cabecalho", "column": column_letter(index), "header": header}
+                for field, header, index in selected if field != "historico"
+            }
             row["__source_row"] = offset + 2
             if not any(str(value).strip() for value in row.values()):
                 continue
@@ -520,7 +558,7 @@ def read_sheet_rows(force_reload: bool = False) -> list[dict[str, Any]]:
         row_dict = {}
         for index, header in enumerate(headers):
             row_dict[str(header).strip()] = row[index] if index < len(row) else ""
-        apply_mapa_grupos_fixed_columns(row_dict, row)
+        apply_mapa_grupos_fixed_columns(row_dict, row, headers=[str(header).strip() for header in headers])
         if any(str(value).strip() for value in row_dict.values()):
             rows.append(row_dict)
 
@@ -854,7 +892,13 @@ def get_field_source(row: dict[str, Any], field: str) -> dict[str, str]:
     """
     canonical = canonical_field_header(field)
     if canonical in row:
+        source = (row.get("__source_columns") or {}).get(field)
+        if source:
+            return dict(source)
         return {"source": "coluna_fixa", "header": canonical}
+    source = (row.get("__source_columns") or {}).get(field)
+    if source:
+        return dict(source)
     aliases = {normalize_header(alias) for alias in FIELD_ALIASES.get(field, [])}
     for header, value in row.items():
         if normalize_header(str(header)) in aliases and value not in (None, ""):
@@ -1031,8 +1075,10 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "indices_perfil": "planilha",
     }
     mapping_fields = (
-        "administradora", "grupo", "prazo_restante", "credito_minimo",
-        "credito_maximo", "taxa_adm", "fundo_reserva",
+        "administradora", "grupo", "tipo_bem", "prazo_restante", "credito_minimo",
+        "credito_maximo", "indexador", "modalidades_assembleia", "percentual_lance_embutido",
+        "base_calculo_embutido", "modalidades_embutido", "taxa_adm", "fundo_reserva",
+        "parcela_inicial_grupo", "parcela_apos_lance_grupo", "parcela_reduzida",
         "lance_investidor", "lance_conservador_24m", "lance_moderado_12m",
         "lance_agressivo_6m", "lance_super_agressivo_3m",
     )

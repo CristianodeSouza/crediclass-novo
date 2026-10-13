@@ -373,7 +373,7 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(audit["metadata"]["engine_version"], MOTOR_VERSION)
         self.assertEqual(audit["metadata"]["rules_version"], "RFC-001-architecture-v4.0")
         self.assertIn("Y", [item["column"] for item in audit["columns_used"]])
-        self.assertIn("BL", [item["column"] for item in audit["columns_used"]])
+        self.assertIn("BM", [item["column"] for item in audit["columns_used"]])
         self.assertEqual(len(audit["group_results"]), 1)
 
     def test_regression_real_administrators_duplicate_group_and_effective_bid_audit(self):

@@ -134,13 +134,19 @@ class StaticEmailTest(unittest.TestCase):
         ideal_helper = app_js.split("function motor360CompositionIdealBid", 1)[1].split("function motor360ScenarioIdsForSort", 1)[0]
         sort_function = app_js.split("function applySelectedGroupsFiltersAndSort", 1)[1].split("function renderMotor360SelectionFilters", 1)[0]
         card_renderer = app_js.split("function renderMotor360GroupCardUncached", 1)[1].split("function renderMotor360GroupCard(", 1)[0]
+        bid_sort_helper = app_js.split("function motor360BidSortValue", 1)[1].split("function motor360HasHistoryEvidence", 1)[0]
 
         self.assertIn("minimumQuotasFor(item, scenario.id)", ideal_helper)
         self.assertIn("motor360FocusedProfileId()", ideal_helper)
         self.assertIn("motor360CompositionIdealBid(item, scenario, value.id)", card_renderer)
-        self.assertIn("motor360CompositionIdealBid(item, scenario, profileId)", sort_function)
-        self.assertIn("analyticsFor(item, scenarioId).profile(profileId).lance_ideal", sort_function)
+        self.assertIn("motor360CompositionIdealBid(item, scenario, profileId)", bid_sort_helper)
+        self.assertIn("motor360BidSortValue(item)", sort_function)
         self.assertIn("Sem seleção: exibe grupos disponíveis, inclusive opções viáveis em composição.", index_html)
+        self.assertIn("numericIdeal >= 0", ideal_helper)
+        self.assertIn("motor360HasHistoryEvidence(item)", sort_function)
+        self.assertIn("left?.value ?? Infinity", sort_function)
+        self.assertIn("Menor lance ideal · ${bidSortValue.scenarioId", card_renderer)
+        self.assertIn("R$ 0 é válido", app_js)
 
         # Acceptance fixture: the focused-profile bid is aggregated across
         # six minimum quotas before comparing it to a one-quota group.

@@ -2408,7 +2408,11 @@ function renderMotor360GroupCardUncached(item) {
     : possibleComposition
       ? `Mínimos calculados por cenário: ${minimumDetails}.`
       : status;
-  return `<article id="${anchorId}" class="motor360-group-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo${selected && quotaCount > 1 ? " total" : ""}</small><b>${formatMoney(scaleMoney(item.credito_maximo))}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status is-${displayStatusTone}" title="${escapeHtml(displayStatusDetail)}" aria-label="${escapeHtml(`${displayStatus}. ${displayStatusDetail}`)}">${escapeHtml(displayStatus)}</span><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${auditId}" ${selected ? "checked" : ""}><span>Selecionar grupo</span></label>${quotaControl}<button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros${selected && quotaCount > 1 ? ` · ${quotaCount} cotas` : ""}</h4><div class="motor360-scenario-list">${scaledScenarioCards}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div></article>`;
+  const bidSortValue = investorState.selectedGroupSort === "bid" ? motor360BidSortValue(item) : null;
+  const bidSortLabel = bidSortValue
+    ? `Menor lance ideal · ${bidSortValue.scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}: ${formatMoney(bidSortValue.value)}`
+    : investorState.selectedGroupSort === "bid" ? "Menor lance ideal · sem referência calculável" : "";
+  return `<article id="${anchorId}" class="motor360-group-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo${selected && quotaCount > 1 ? " total" : ""}</small><b>${formatMoney(scaleMoney(item.credito_maximo))}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status is-${displayStatusTone}" title="${escapeHtml(displayStatusDetail)}" aria-label="${escapeHtml(`${displayStatus}. ${displayStatusDetail}`)}">${escapeHtml(displayStatus)}</span><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${auditId}" ${selected ? "checked" : ""}><span>Selecionar grupo</span></label>${quotaControl}<button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros${selected && quotaCount > 1 ? ` · ${quotaCount} cotas` : ""}</h4><div class="motor360-scenario-list">${scaledScenarioCards}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div>${bidSortLabel ? `<p class="motor360-bid-sort-value" aria-label="${escapeHtml(bidSortLabel)}">${escapeHtml(bidSortLabel)}</p>` : ""}</article>`;
 }
 
 function renderMotor360GroupCard(item) {
@@ -2755,14 +2759,17 @@ function motor360CompositionIdealBid(item, scenario, profileId = motor360Focused
     const metrics = selectedCompositionScenarioMetrics(selectedMotor360Items(), scenario.id);
     const entry = metrics.entries.find((value) => motor360GroupKey(value.item) === groupKey);
     const ideal = entry?.profiles?.[profileId]?.ideal;
-    return Number.isFinite(Number(ideal)) ? Number(ideal) : null;
+    if (ideal === null || ideal === undefined || ideal === "") return null;
+    const numericIdeal = Number(ideal);
+    return Number.isFinite(numericIdeal) && numericIdeal >= 0 ? numericIdeal : null;
   }
   // For an unselected composition candidate, the card communicates a
   // minimum-quota composition; compare its aggregate ideal bid, not one quota.
   const quotas = item?.requires_composition === true
     ? minimumQuotasFor(item, scenario.id)
     : quotaCountFor(item);
-  return Number(profile.lance_ideal) * quotas;
+  const idealPerQuota = Number(profile.lance_ideal);
+  return Number.isFinite(idealPerQuota) && idealPerQuota >= 0 ? idealPerQuota * quotas : null;
 }
 
 function motor360ScenarioIdsForSort(item) {
@@ -2771,7 +2778,37 @@ function motor360ScenarioIdsForSort(item) {
   if (selectedScenario === "with_embedded" || selectedScenario === "without_embedded") {
     return available.includes(selectedScenario) ? [selectedScenario] : [];
   }
+  const selectedForGroup = [...selectedScenarioIdsForGroup(motor360GroupKey(item))]
+    .filter((scenarioId) => available.includes(scenarioId));
+  if (selectedForGroup.length) return selectedForGroup;
   return available;
+}
+
+function motor360BidSortValue(item) {
+  const profileId = motor360FocusedProfileId();
+  const candidates = motor360ScenarioIdsForSort(item).map((scenarioId) => {
+    const scenario = (item.cenarios || item.scenarios || []).find((entry) => entry.id === scenarioId);
+    if (!scenario) return null;
+    const value = motor360CompositionIdealBid(item, scenario, profileId);
+    return value === null ? null : { value, scenarioId };
+  }).filter(Boolean);
+  candidates.sort((a, b) => a.value - b.value || (a.scenarioId === "without_embedded" ? -1 : 1));
+  return candidates[0] || null;
+}
+
+function motor360HasHistoryEvidence(item) {
+  return (item.historico_12_meses || []).some((month) => (
+    month && [month.maior_lance, month.menor_lance, month.qtd_contemplacoes]
+      .some((value) => value !== null && value !== undefined && value !== "")
+  ));
+}
+
+function motor360BidSortDescription() {
+  const selected = investorState.selectedGroupScenario || "per_group";
+  if (selected === "with_embedded") return "cenário com embutido";
+  if (selected === "without_embedded") return "cenário sem embutido";
+  if (selected === "all") return "menor lance próprio ideal agregado entre os cenários marcados";
+  return "cenário selecionado por grupo; sem seleção individual, menor valor entre os cenários disponíveis";
 }
 
 function selectedGroupAnalytics(item, forcedScenarioId = null) {
@@ -3067,29 +3104,30 @@ function applySelectedGroupsFiltersAndSort(items) {
     return typeof raw === "number" ? raw : Number(parseNumberInput(raw));
   };
   const analyticsFor = (item, scenarioId = scenarioFor(item)) => { const key = `${motor360GroupKey(item)}|${scenarioId}|${investorState.selectedGroupProfile || "all"}`; if (!metrics.has(key)) metrics.set(key, selectedGroupAnalytics(item, scenarioId)); return metrics.get(key); };
-  const bidValueFor = (item) => {
-    const profileId = motor360FocusedProfileId();
-    const values = motor360ScenarioIdsForSort(item).map((scenarioId) => {
-      const scenario = (item.cenarios || item.scenarios || []).find((entry) => entry.id === scenarioId);
-      if (!scenario) return null;
-      const ideal = investorState.selectedGroupIds.has(motor360GroupKey(item))
-        ? analyticsFor(item, scenarioId).profile(profileId).lance_ideal
-        : motor360CompositionIdealBid(item, scenario, profileId);
-      return Number.isFinite(Number(ideal)) && Number(ideal) > 0 ? Number(ideal) : null;
-    }).filter((value) => value != null);
-    return values.length ? Math.min(...values) : null;
-  };
   const bidSortValues = new Map();
   const cachedBidValueFor = (item) => {
     const key = motor360GroupKey(item);
-    if (!bidSortValues.has(key)) bidSortValues.set(key, bidValueFor(item));
+    if (!bidSortValues.has(key)) bidSortValues.set(key, motor360BidSortValue(item));
     return bidSortValues.get(key);
   };
+  const originalOrder = new Map(items.map((item, index) => [motor360GroupKey(item), index]));
   return [...filtered].sort((a, b) => {
     if (sort === "score") return analyticsFor(b).score - analyticsFor(a).score;
     if (sort === "credit") return analyticsFor(b).groupMaxCredit - analyticsFor(a).groupMaxCredit;
     if (sort === "installment") return (valueFor(a) == null ? 1 : 0) - (valueFor(b) == null ? 1 : 0) || (valueFor(a) ?? Infinity) - (valueFor(b) ?? Infinity);
-    if (sort === "bid") return (cachedBidValueFor(a) == null ? 1 : 0) - (cachedBidValueFor(b) == null ? 1 : 0) || (cachedBidValueFor(a) ?? Infinity) - (cachedBidValueFor(b) ?? Infinity);
+    if (sort === "bid") {
+      const confidenceTier = (item) => {
+        const maximum = item.credito_maximo;
+        const hasCredit = maximum !== null && maximum !== undefined && maximum !== "" && Number.isFinite(Number(maximum)) && Number(maximum) > 0;
+        return hasCredit && motor360HasHistoryEvidence(item) ? 0 : 1;
+      };
+      const left = cachedBidValueFor(a);
+      const right = cachedBidValueFor(b);
+      return confidenceTier(a) - confidenceTier(b)
+        || (left === null ? 1 : 0) - (right === null ? 1 : 0)
+        || (left?.value ?? Infinity) - (right?.value ?? Infinity)
+        || (originalOrder.get(motor360GroupKey(a)) ?? 0) - (originalOrder.get(motor360GroupKey(b)) ?? 0);
+    }
     if (sort === "history") return Number(b.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0) - Number(a.capacidade_contemplacoes?.moderate?.media_contemplacoes || 0);
     return 0;
   });
@@ -3104,6 +3142,8 @@ function renderMotor360SelectionFilters() {
     const sortSelect = existing.querySelector('[data-motor360-filter="sort"]');
     if (profileSelect) profileSelect.value = investorState.selectedGroupProfile || "all";
     if (sortSelect) sortSelect.value = investorState.selectedGroupSort || "original";
+    const bidSortHelp = existing.querySelector("[data-motor360-bid-sort-help]");
+    if (bidSortHelp) bidSortHelp.textContent = `Menor lance ideal: lance próprio ideal agregado (${motor360BidSortDescription()}); R$ 0 é válido. Grupos sem crédito máximo ou histórico ficam ao final.`;
     const filters = selectedGroupsFilterValues();
     existing.querySelectorAll("[data-motor360-advanced]").forEach((input) => {
       const value = filters[input.dataset.motor360Advanced];
@@ -3117,7 +3157,7 @@ function renderMotor360SelectionFilters() {
   panel.open = true;
   panel.dataset.motor360SelectionFilters = "true";
   panel.className = "motor360-selection-filters";
-  panel.innerHTML = `<summary>Filtros para escolha dos grupos</summary><div class="motor360-selection-filter-grid"><label>Perfil em foco<select data-motor360-filter="profile"><option value="all">Todos os perfis</option><option value="conservative">Conservador</option><option value="moderate">Moderado</option><option value="aggressive">Agressivo</option><option value="super_aggressive">Superagressivo</option></select></label><label>Ordenar grupos<select data-motor360-filter="sort"><option value="original">Ordem original</option><option value="score">Melhor aderência</option><option value="credit">Maior crédito</option><option value="installment">Menor parcela</option><option value="bid">Menor lance ideal</option><option value="history">Maior histórico</option></select></label><label>Crédito mínimo<input type="number" data-motor360-advanced="minCredit" value="${filters.minCredit}" min="0" step="1000"></label><label>Parcela máxima<input type="number" data-motor360-advanced="maxInstallment" value="${filters.maxInstallment}" min="0" step="100"></label><label>Lance ideal máximo<input type="number" data-motor360-advanced="maxBid" value="${filters.maxBid}" min="0" step="1000"></label><label>Histórico moderado mínimo<input type="number" data-motor360-advanced="minHistory" value="${filters.minHistory}" min="0" step="0.1"></label><label>Comprometimento máximo (%)<input type="number" data-motor360-advanced="maxCommitment" value="${filters.maxCommitment}" min="0" max="100"></label><label>Taxa adm. máxima (%)<input type="number" data-motor360-advanced="maxAdmin" value="${filters.maxAdmin}" min="0" max="100"></label><label>Fundo reserva máx. (%)<input type="number" data-motor360-advanced="maxReserve" value="${filters.maxReserve}" min="0" max="100"></label><label>Prazo máximo (meses)<input type="number" data-motor360-advanced="maxTerm" value="${filters.maxTerm}" min="0"></label><label class="motor360-filter-check"><input type="checkbox" data-motor360-advanced="compatibleOnly" ${filters.compatibleOnly ? "checked" : ""}> Apenas crédito compatível</label><button type="button" class="btn btn-outline-secondary btn-sm" data-motor360-clear-filters>Limpar filtros</button></div>`;
+  panel.innerHTML = `<summary>Filtros para escolha dos grupos</summary><div class="motor360-selection-filter-grid"><label>Perfil em foco<select data-motor360-filter="profile"><option value="all">Todos os perfis</option><option value="conservative">Conservador</option><option value="moderate">Moderado</option><option value="aggressive">Agressivo</option><option value="super_aggressive">Superagressivo</option></select></label><label>Ordenar grupos<select data-motor360-filter="sort"><option value="original">Ordem original</option><option value="score">Melhor aderência</option><option value="credit">Maior crédito</option><option value="installment">Menor parcela</option><option value="bid">Menor lance ideal</option><option value="history">Maior histórico</option></select></label><label>Crédito mínimo<input type="number" data-motor360-advanced="minCredit" value="${filters.minCredit}" min="0" step="1000"></label><label>Parcela máxima<input type="number" data-motor360-advanced="maxInstallment" value="${filters.maxInstallment}" min="0" step="100"></label><label>Lance ideal máximo<input type="number" data-motor360-advanced="maxBid" value="${filters.maxBid}" min="0" step="1000"></label><label>Histórico moderado mínimo<input type="number" data-motor360-advanced="minHistory" value="${filters.minHistory}" min="0" step="0.1"></label><label>Comprometimento máximo (%)<input type="number" data-motor360-advanced="maxCommitment" value="${filters.maxCommitment}" min="0" max="100"></label><label>Taxa adm. máxima (%)<input type="number" data-motor360-advanced="maxAdmin" value="${filters.maxAdmin}" min="0" max="100"></label><label>Fundo reserva máx. (%)<input type="number" data-motor360-advanced="maxReserve" value="${filters.maxReserve}" min="0" max="100"></label><label>Prazo máximo (meses)<input type="number" data-motor360-advanced="maxTerm" value="${filters.maxTerm}" min="0"></label><label class="motor360-filter-check"><input type="checkbox" data-motor360-advanced="compatibleOnly" ${filters.compatibleOnly ? "checked" : ""}> Apenas crédito compatível</label><button type="button" class="btn btn-outline-secondary btn-sm" data-motor360-clear-filters>Limpar filtros</button></div><p class="motor360-bid-sort-help" data-motor360-bid-sort-help aria-live="polite">Menor lance ideal: lance próprio ideal agregado (${motor360BidSortDescription()}); R$ 0 é válido. Grupos sem crédito máximo ou histórico ficam ao final.</p>`;
   host.appendChild(panel);
   panel.querySelector('[data-motor360-filter="profile"]').value = investorState.selectedGroupProfile || "all";
   panel.querySelector('[data-motor360-filter="sort"]').value = investorState.selectedGroupSort || "original";

@@ -193,7 +193,7 @@ class MapaGruposTest(unittest.TestCase):
             rows = sheets_client.read_summary_rows(include_history=True)
 
         self.assertEqual(rows[0]["JAN-26 Menor Lance"], "24")
-        self.assertEqual(service.values_api.get_kwargs["range"], "'Grupos'!A2:BP")
+        self.assertEqual(service.values_api.get_kwargs["range"], "'Grupos'!A2:BQ")
 
     def test_read_summary_rows_usa_colunas_fixas_do_mapa_de_grupos(self):
         sheets_client.clear_rows_cache()
@@ -205,7 +205,7 @@ class MapaGruposTest(unittest.TestCase):
         row[0] = "PORTO"
         row[1] = "1136"
         row[2] = "Imovel"
-        row[5] = "14"
+        row[5] = "14"  # legado: prazo remanescente em F
         row[17] = "600.000,00"
         row[18] = "18%"
         row[59] = "10%"
@@ -251,6 +251,42 @@ class MapaGruposTest(unittest.TestCase):
         self.assertEqual(grupo["lance_conservador"], 0.2)
         self.assertEqual(grupo["lance_moderado"], 0.3)
         self.assertEqual(grupo["lance_agressivo"], 0.4)
+
+    def test_mapa_atual_prioriza_cabecalhos_reais_e_rastreia_colunas(self):
+        headers = [f"Campo {index}" for index in range(194)]
+        headers[0], headers[1], headers[2] = "Adm", "Grupo", "Tipo de Bem"
+        headers[6] = "Prazo remanescente"
+        headers[15] = "Menor\nCrédito"
+        headers[21] = "Maior\nCrédito"
+        headers[24] = "Lance Embutido"
+        headers[27] = "Fundo RSV Total"
+        headers[29] = "Taxa\nAdm Total"
+        headers[64] = "Investidor (36 meses)"
+        headers[65] = "Conservador\n(24 meses)"
+        headers[66] = "Moderado\n(12 meses)"
+        headers[67] = "Agressivo\n(6 meses) = Rápido"
+        headers[68] = "Super Agressivo\n(3 meses) = Urgente"
+        values = [""] * len(headers)
+        values[0:3] = ["AUTO-ITAÚ", "20370", "Auto"]
+        values[6], values[15], values[21] = "30", 10000, 63230
+        values[24], values[27], values[29] = "30%", "0.02", "24%"
+        values[64:69] = ["30.25%", "31%", "32%", "33%", "34%"]
+        row = dict(zip(headers, values))
+
+        sheets_client.apply_mapa_grupos_fixed_columns(row, values, headers=headers)
+        grupo = row_to_grupo(row)
+
+        self.assertEqual(grupo["prazo_restante"], 30)
+        self.assertEqual(grupo["credito_minimo"], 10000)
+        self.assertEqual(grupo["credito_maximo"], 63230)
+        self.assertEqual(grupo["fundo_reserva"], 0.02)
+        self.assertEqual(grupo["lance_investidor"], 0.3025)
+        self.assertEqual(grupo["lance_conservador_24m"], 0.31)
+        self.assertEqual(grupo["lance_moderado_12m"], 0.32)
+        self.assertEqual(grupo["lance_agressivo_6m"], 0.33)
+        self.assertEqual(grupo["lance_super_agressivo_3m"], 0.34)
+        self.assertEqual(grupo["mapeamento_origem"]["credito_maximo"]["column"], "V")
+        self.assertEqual(grupo["mapeamento_origem"]["prazo_restante"]["column"], "G")
 
     def test_colunas_financeiras_atuais_preservam_o_embutido(self):
         row = [""] * 31

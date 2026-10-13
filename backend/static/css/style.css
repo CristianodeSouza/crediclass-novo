@@ -7271,3 +7271,19 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-selection-filter-grid button { align-self:end; }
 @media (max-width:900px) { .motor360-selection-filter-grid { grid-template-columns:repeat(2,minmax(140px,1fr)); } }
 @media (max-width:520px) { .motor360-selection-filter-grid { grid-template-columns:1fr; } }
+.motor360-bid-sort-help,
+.motor360-bid-sort-value {
+  margin: 8px 0 0;
+  padding: 7px 10px;
+  border-left: 3px solid #1d7188;
+  border-radius: 4px;
+  background: #eef7f8;
+  color: #31515b;
+  font-size: 0.82rem;
+}
+
+.motor360-bid-sort-value {
+  display: inline-block;
+  margin-top: 6px;
+  font-weight: 600;
+}
