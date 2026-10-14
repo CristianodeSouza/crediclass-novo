@@ -786,7 +786,6 @@ def analyze_client_consortium_viability(
     if selected_profile:
         eligible_items = [item for item in eligible_items if (str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip()) in matrix_approved_keys]
         credit_eligible_items = [item for item in credit_eligible_items if (str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip()) in matrix_approved_keys]
-        composition_items = [item for item in composition_items if (str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip()) in matrix_approved_keys]
 
     def ordering_key(item: dict[str, Any]) -> tuple[Any, ...]:
         number = re.search(r"\d+", str(item.get("grupo") or ""))
@@ -1032,7 +1031,7 @@ def analyze_client_consortium_viability(
             if item.get("selected_scenario") not in scenario_filter:
                 item["selected_scenario"] = next((scenario_id for scenario_id in item.get("eligible_scenarios", []) if scenario_id in scenario_filter), None)
             if item.get("selected_composition_scenario") not in scenario_filter:
-                item["selected_composition_scenario"] = next((scenario.get("id") for scenario in item.get("cenarios", [])), None)
+                item["selected_composition_scenario"] = next((scenario.get("id") for scenario in item.get("cenarios", []) if scenario.get("eligible") is True), None)
             filtered_items.append(item)
         return filtered_items
 
@@ -1047,8 +1046,10 @@ def analyze_client_consortium_viability(
     for item in [*eligible_items, *credit_eligible_items, *composition_items]:
         detail_items[(str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip())] = item
     final_items = []
+    matrix_keys = set()
     for matrix_item in matrix_items:
         key = (str(matrix_item.get("administradora") or "").strip().lower(), str(matrix_item.get("grupo") or "").strip())
+        matrix_keys.add(key)
         item = dict(detail_items.get(key) or matrix_item)
         item["cenarios"] = matrix_item.get("cenarios", item.get("cenarios", []))
         item["eligible_scenarios"] = matrix_item.get("eligible_scenarios", item.get("eligible_scenarios", []))
@@ -1059,16 +1060,41 @@ def analyze_client_consortium_viability(
             for scenario in item.get("cenarios", [])
         ) or (parse_decimal(item.get("credito_maximo")) or Decimal("0")) < desired
         final_items.append(item)
+    composition_only_items = []
+    for candidate in composition_items:
+        key = (str(candidate.get("administradora") or "").strip().lower(), str(candidate.get("grupo") or "").strip())
+        if key in matrix_keys:
+            continue
+        eligible_composition_scenarios = [scenario for scenario in candidate.get("cenarios", []) if scenario.get("eligible") is True]
+        if not eligible_composition_scenarios:
+            continue
+        item = dict(candidate)
+        item["eligible_scenarios"] = [scenario.get("id") for scenario in eligible_composition_scenarios]
+        item["selected_composition_scenario"] = item.get("selected_composition_scenario") or eligible_composition_scenarios[0].get("id")
+        item["matrix_approved"] = False
+        item["selection_stage"] = "composition"
+        item["composition_candidate"] = True
+        item["requires_composition"] = True
+        item["result"] = "composition"
+        composition_only_items.append(item)
+    final_items.extend(composition_only_items)
     final_items.sort(key=ordering_key)
     for rank, item in enumerate(final_items, 1):
         item["ranking"] = rank
+    final_rank_by_key = {
+        (str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip()): item["ranking"]
+        for item in final_items
+    }
+    for entry in audit.get("group_results", []):
+        key = (str(entry.get("administradora") or "").strip().lower(), str(entry.get("grupo") or "").strip())
+        entry["ranking"] = final_rank_by_key.get(key)
     final_keys = {
         (str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip())
         for item in final_items
     }
     for entry in audit.get("group_results", []):
         key = (str(entry.get("administradora") or "").strip().lower(), str(entry.get("grupo") or "").strip())
-        if key in final_keys:
+        if key in matrix_keys:
             entry["result"] = "matrix_approved"
             entry["matrix_approved"] = True
             entry["justification"] = []
@@ -1090,18 +1116,20 @@ def analyze_client_consortium_viability(
         if (str(entry.get("administradora") or "").strip().lower(), str(entry.get("grupo") or "").strip()) not in final_keys
     ]
     audit["summary"]["total_matrix_omitted_groups"] = len(audit["summary"]["matrix_excluded_groups"])
-    audit["parameters"]["post_matrix_selection"] = "matrix_approved_groups_only"
+    audit["parameters"]["post_matrix_selection"] = "matrix_approved_and_viable_composition_candidates"
+    audit["summary"]["total_matrix_approved_groups"] = len(matrix_items)
+    audit["summary"]["total_displayed_groups"] = len(final_items)
     audit["summary"]["total_post_matrix_groups"] = len(final_items)
     audit["summary"]["total_requires_composition"] = sum(1 for item in final_items if item.get("requires_composition"))
     audit["summary"]["total_preselected"] = len(final_items)
     audit["summary"]["total_composition_candidates"] = sum(1 for item in final_items if item.get("requires_composition"))
-    audit["final_ordering"]["execution_summary"] = "Os grupos são ordenados primeiro por cenário sem embutido compatível, depois com embutido compatível e, por fim, pelos demais grupos aprovados na matriz; dentro de cada bloco, administradora, grupo e percentual de contemplação."
+    audit["final_ordering"]["execution_summary"] = "A lista combina grupos aprovados individualmente na matriz e opções viáveis em composição, sem confundir os dois estados. A ordenação organiza esses resultados para análise do operador."
     audit["execution_steps"] = [
         audit["execution_steps"][0],
         audit["execution_steps"][1],
-        {"order": 3, "id": "matrix", "name": "Matriz de contemplação", "formula_or_rule": "Lance efetivo atende à faixa do perfil selecionado no cenário permitido.", "input_count": len(groups), "approved_count": len(final_items), "rejected_count": max(0, len(groups) - len(final_items)), "incomplete_count": counters["matrix_incomplete"], "duration_ms": round(durations["contemplation"] * 1000, 3)},
-        {"order": 4, "id": "operator_analysis", "name": "Indicadores para análise do operador", "formula_or_rule": "Crédito, prazo, renda, parcela e composição são informativos e não eliminam grupos aprovados na matriz.", "input_count": len(final_items), "approved_count": len(final_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
-        {"order": 5, "id": "ranking", "name": "Ordem preliminar", "formula_or_rule": "Preferências configuráveis apenas reordenam os grupos aprovados na matriz.", "input_count": len(final_items), "approved_count": len(final_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
+        {"order": 3, "id": "matrix", "name": "Matriz e opções de composição", "formula_or_rule": "Aprovação individual e viabilidade em composição são contabilizadas separadamente.", "input_count": len(groups), "approved_count": len(matrix_items), "composition_count": len(composition_only_items), "rejected_count": max(0, len(groups) - len(final_items)), "incomplete_count": counters["matrix_incomplete"], "duration_ms": round(durations["contemplation"] * 1000, 3)},
+        {"order": 4, "id": "operator_analysis", "name": "Indicadores para análise do operador", "formula_or_rule": "Crédito, prazo, renda, parcela e composição são apresentados para decisão do operador.", "input_count": len(final_items), "approved_count": len(matrix_items), "composition_count": len(composition_only_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
+        {"order": 5, "id": "ranking", "name": "Ordem preliminar", "formula_or_rule": "Preferências configuráveis reordenam grupos aprovados individualmente e opções viáveis em composição, contabilizados separadamente.", "input_count": len(final_items), "approved_count": len(matrix_items), "composition_count": len(composition_only_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
     ]
     administrators_analyzed = sorted({str(group.get("administradora") or "").strip() for group in groups if str(group.get("administradora") or "").strip()}, key=normalize_text)
-    return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "perfil_contemplacao": selected_profile, "administradoras_analisadas": administrators_analyzed, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(final_items), "total_grupos_viaveis": len(final_items), "total_grupos_composicao": sum(1 for item in final_items if item.get("requires_composition")), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Matriz de contemplacao aplicada primeiro pelo lance e perfil em todas as administradoras.", "Indicadores de credito, prazo, renda e composicao calculados sem eliminar grupos aprovados na matriz.", "Grupos aprovados na matriz apresentados em lista unica para avaliacao do operador.", "Ordem preliminar aplicada sem ranking definitivo."], "items": final_items, "final_items": final_items, "credit_items": credit_eligible_items, "matrix_items": matrix_items, "composition_items": composition_items, "audit": audit}
+    return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "perfil_contemplacao": selected_profile, "administradoras_analisadas": administrators_analyzed, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(final_items), "total_grupos_viaveis": len(final_items), "total_grupos_composicao": sum(1 for item in final_items if item.get("requires_composition")), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Matriz de contemplacao aplicada primeiro pelo lance e perfil em todas as administradoras.", "Indicadores de credito, prazo, renda e composicao apresentados para decisao do operador.", "Grupos aprovados individualmente e opcoes viaveis em composicao exibidos com estados distintos.", "Ordem preliminar aplicada sem ranking definitivo."], "items": final_items, "final_items": final_items, "credit_items": credit_eligible_items, "matrix_items": matrix_items, "composition_items": composition_items, "audit": audit}

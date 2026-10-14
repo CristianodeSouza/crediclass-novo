@@ -182,6 +182,37 @@ document.querySelector("#result").textContent = JSON.stringify({
         self.assertIn("- meses", result["credit"])
         self.assertNotIn("Aprovado no perfil de contemplação", result["status"])
 
+    def test_real_card_dom_distinguishes_composition_candidate_from_single_quota_approval(self):
+        result = self._run_browser(r'''
+const candidate = {
+  grupo: "1045", administradora: "CNP", result: "composition", matrix_approved: false,
+  composition_candidate: true, requires_composition: true, selection_stage: "composition",
+  cotas_minimas_sem_embutido: 2, cotas_minimas_com_embutido: 3,
+  credito_minimo: 100000, credito_maximo: 300000, prazo_restante: 300,
+  minQuotas: { without_embedded: 2, with_embedded: 3 }, alerts: [],
+  cenarios: [
+    { ...scenario("without_embedded", 300000, false), eligible: false, cotas_minimas: 2, credito_contratado: 300000 },
+    { ...scenario("with_embedded", 300000, true), eligible: true, cotas_minimas: 3, credito_contratado: 300000 },
+  ],
+};
+document.querySelector("#cards").innerHTML = renderMotor360GroupCard(candidate);
+const card = document.querySelector(".motor360-group-card");
+const normalize = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replaceAll("\u00ad", "");
+const scenarioCards = [...card.querySelectorAll(".motor360-scenario-card")];
+document.querySelector("#result").textContent = JSON.stringify({
+  status: normalize(card.querySelector(".motor360-group-status")?.textContent).replace(/[^a-zA-Z0-9]+/g, " ").trim(),
+  aria: normalize(card.querySelector(".motor360-group-status")?.getAttribute("aria-label")),
+  scenarioTitles: scenarioCards.map(node => normalize(node.querySelector(".motor360-scenario-title")?.textContent)),
+  scenarioStatuses: scenarioCards.map(node => normalize(node.querySelector(".motor360-scenario-title span")?.textContent)),
+  eligibleScenarioCompatibleClass: scenarioCards[1]?.classList.contains("is-compatible"),
+});
+''')
+        self.assertEqual(result["status"], "Possivel em composicao min 2 cotas")
+        self.assertIn("nao e aprovacao de uma cota isolada", result["aria"])
+        self.assertIn("minimo de 3 cotas", result["scenarioTitles"][1])
+        self.assertIn("Viavel em composicao", result["scenarioStatuses"][1])
+        self.assertTrue(result["eligibleScenarioCompatibleClass"])
+
     def test_omitted_group_diagnostics_are_complete_and_searchable_in_real_dom(self):
         source = APP_JS.read_text(encoding="utf-8")
         diagnostic_functions = "\n".join((
@@ -191,33 +222,75 @@ document.querySelector("#result").textContent = JSON.stringify({
         result = self._run_browser(r'''
 const audit = {
   metadata: { audit_id: "BROWSER-FIXTURE" },
-  summary: { total_analyzed: 5, total_post_matrix_groups: 2, matrix_excluded_groups: [
-    { grupo: "A1", administradora: "Banco A", source_row: 10, result: "excluded_contemplation", justification: ["lance_insuficiente_para_perfil"] },
+  summary: { total_analyzed: 6, total_displayed_groups: 2, matrix_excluded_groups: [
+    { grupo: "A1", administradora: "Banco A", source_row: 10, result: "excluded_credit", justification: ["credito_fora_da_faixa"] },
     { grupo: "A2", administradora: "Banco A", source_row: 11, result: "excluded_data", justification: ["credito_maximo_nao_informado", "credito_maximo_nao_informado"], missing_fields: [{ reason: "credito_maximo_nao_informado" }] },
-    { grupo: "", administradora: "Banco B", source_row: 12, result: "excluded_data", justification: [] },
+    { grupo: "-", administradora: "Banco B", source_row: 12, result: "excluded_invalid_identity", justification: ["identificacao_grupo_invalida"] },
+    { grupo: "", administradora: "Banco B", source_row: 13, result: "composition", justification: ["composicao_parcela_maxima_excedida"] },
   ] },
 };
 renderMotor360BlockingDiagnostics(audit);
 const dialog = document.querySelector("dialog");
-const before = [...dialog.querySelectorAll("tbody tr")].map(row => row.textContent);
+const normalize = value => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replaceAll("\u00ad", "");
+const before = [...dialog.querySelectorAll("tbody tr")].map(row => normalize(row.textContent));
+const resultCells = [...dialog.querySelectorAll("tbody tr td:nth-child(4)")].map(cell => normalize(cell.textContent));
 const input = dialog.querySelector("[data-motor360-omitted-search]");
-input.value = "linha 12";
+input.value = "linha 13";
 input.dispatchEvent(new Event("input", { bubbles: true }));
-const after = [...dialog.querySelectorAll("tbody tr")].map(row => ({ text: row.textContent, hidden: row.classList.contains("d-none") }));
+const after = [...dialog.querySelectorAll("tbody tr")].map(row => ({ text: normalize(row.textContent), hidden: row.classList.contains("d-none") }));
 document.querySelector("#result").textContent = JSON.stringify({
   summary: [...dialog.querySelectorAll(".motor360-blocking-summary b")].map(node => node.textContent),
-  rows: before.length, hasA2: before.some(row => row.includes("A2")), hasSourceRow: before.some(row => row.includes("12")),
-  duplicateReasonCount: (before.find(row => row.includes("A2"))?.match(/Crédito máximo/g) || []).length,
+  rows: before.length, resultCells, hasA2: before.some(row => row.includes("A2")), hasSourceRow: before.some(row => row.includes("12")), hasUnnamed: before.some(row => row.includes("Sem identificador de grupo")),
+  hasTechnicalCode: before.some(row => /excluded_[a-z_]+|\bcomposition\b/.test(row)),
+  duplicateReasonCount: (before.find(row => row.includes("A2"))?.match(/Credito maximo/g) || []).length,
   searchResult: after.filter(row => !row.hidden).length, searchedRow: after.find(row => !row.hidden)?.text,
 });
 ''', diagnostic_functions)
-        self.assertEqual(result["summary"], ["5", "2", "3", "1"])
-        self.assertEqual(result["rows"], 3)
+        self.assertEqual(result["summary"], ["6", "2", "4", "2"])
+        self.assertEqual(result["rows"], 4)
+        self.assertIn("Fora da faixa de credito", result["resultCells"])
+        self.assertIn("Possivel em composicao; nao aprovado como cota isolada", result["resultCells"])
+        self.assertFalse(result["hasTechnicalCode"])
         self.assertTrue(result["hasA2"])
         self.assertTrue(result["hasSourceRow"])
+        self.assertTrue(result["hasUnnamed"])
         self.assertEqual(result["duplicateReasonCount"], 1)
         self.assertEqual(result["searchResult"], 1)
-        self.assertIn("12", result["searchedRow"])
+        self.assertIn("13", result["searchedRow"])
+
+    def test_full_audit_tables_translate_composition_and_exclusion_codes(self):
+        source = APP_JS.read_text(encoding="utf-8")
+        audit_function = _between(source, "function renderMotor360Audit", "function renderMotor360GroupAudit")
+        result = self._run_browser(r'''
+const audit = {
+  metadata: { audit_id: "AUDIT-LABELS" }, summary: {
+    total_analyzed: 2, total_displayed_groups: 1, total_matrix_approved_groups: 0,
+    matrix_excluded_groups: [{ grupo: "EX1", administradora: "CNP", source_row: 20,
+      result: "excluded_credit", justification: ["credito_fora_da_faixa"] }],
+  },
+  client_snapshot: { raw_fields: [] }, execution_steps: [{ order: 3, name: "Matriz e opções de composição",
+    formula_or_rule: "Contabilizadas separadamente", input_count: 2, approved_count: 0,
+    composition_count: 1, rejected_count: 1, incomplete_count: 0 }], columns_used: [], formulas: [],
+  excluded_groups: [], incomplete_groups: [], group_results: [{ grupo: "1045", administradora: "CNP",
+    result: "composition", matrix_approved: false, stage_results: {}, scenarios: [], source_values: {} }],
+  final_ordering: { execution_summary: "", rules: [] }, warnings: [], data_source: {},
+};
+const html = renderMotor360Audit(audit);
+document.querySelector("#cards").innerHTML = html;
+const rendered = document.querySelector("#cards").textContent;
+const sequenceTable = [...document.querySelectorAll(".motor360-audit-panel table")]
+  .find(table => table.querySelector("thead")?.textContent.includes("Opções viáveis em composição"));
+document.querySelector("#result").textContent = JSON.stringify({
+  hasHumanCreditLabel: rendered.includes("Fora da faixa de crédito"),
+  hasHumanCompositionLabel: rendered.includes("Possível em composição; não aprovado como cota isolada"),
+  separatesCompositionCount: Boolean(sequenceTable && sequenceTable.tBodies[0].rows[0].textContent.includes("0") && sequenceTable.tBodies[0].rows[0].textContent.includes("1")),
+  technicalCodeLeak: /excluded_credit|\bcomposition\b/.test(rendered),
+});
+''', "function auditDateTime() { return '-'; }\nfunction formatMotor360Duration() { return '-'; }\n" + audit_function)
+        self.assertTrue(result["hasHumanCreditLabel"])
+        self.assertTrue(result["hasHumanCompositionLabel"])
+        self.assertTrue(result["separatesCompositionCount"])
+        self.assertFalse(result["technicalCodeLeak"])
 
 
 if __name__ == "__main__":

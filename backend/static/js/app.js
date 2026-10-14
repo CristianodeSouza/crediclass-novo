@@ -2292,7 +2292,7 @@ function renderMotor360GroupCardUncached(item) {
   );
   const possibleComposition = !selected
     && item.requires_composition === true
-    && compositionDataComplete
+    && (compositionDataComplete || (item.composition_candidate === true && scenarios.some((scenario) => scenario.eligible === true)))
     && compositionMinimums.length > 0;
   const configuredScenario = investorState.selectedGroupScenario;
   const visibleMinimum = (configuredScenario === "with_embedded"
@@ -2304,6 +2304,17 @@ function renderMotor360GroupCardUncached(item) {
     .map((entry) => `${entry.quotas} cotas ${entry.id === "with_embedded" ? "com" : "sem"} embutido`)
     .join("; ");
   const scenarioRequirementStatus = (scenario) => {
+    if (item.composition_candidate === true) {
+      const minimum = Number(scenario.cotas_minimas || minimumQuotasFor(item, scenario.id) || 0);
+      const ok = scenario.eligible === true;
+      return {
+        ok,
+        failed: ok ? [] : ["Composição"],
+        title: ok
+          ? `Esta opção é viável em composição com no mínimo ${minimum} cotas; isso não significa aprovação de uma cota isolada.`
+          : "Esta composição não atende simultaneamente aos limites calculados de crédito, parcela/renda ou perfil.",
+      };
+    }
     const composed = compositionMetrics(scenario);
     if (composed) {
       const client = motor360ClientProfile();
@@ -2344,7 +2355,10 @@ function renderMotor360GroupCardUncached(item) {
   const scaledScenarioCards = scenarios.map((scenario) => {
     const title = (scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido") + (minimumQuotasFor(item, scenario.id) > 1 ? ` · Composição: mínimo de ${minimumQuotasFor(item, scenario.id)} cotas` : "");
     const requirement = scenarioRequirementStatus(scenario);
-    const statusLabel = requirement.ok ? `Requisitos atendidos${requirement.parcelWarning ? ` · ${requirement.parcelWarning}` : ""}` : "Requisitos não atendidos";
+    const compositionQuotaLabel = item.composition_candidate === true ? ` · mínimo de ${Number(scenario.cotas_minimas || minimumQuotasFor(item, scenario.id))} cotas` : "";
+    const statusLabel = item.composition_candidate === true
+      ? requirement.ok ? `Viável em composição${compositionQuotaLabel}` : "Composição não viável neste cenário"
+      : requirement.ok ? `Requisitos atendidos${requirement.parcelWarning ? ` · ${requirement.parcelWarning}` : ""}` : "Requisitos não atendidos";
     const info = `<span class="motor360-requirement-info" title="${escapeHtml(requirement.title)}" aria-label="${escapeHtml(requirement.title)}" tabindex="0">i</span>`;
     const metrics = compositionMetrics(scenario);
     const metric = (field) => metrics ? metrics.entries.find((entry) => motor360GroupKey(entry.item) === groupKey)?.[field] : null;
@@ -2406,7 +2420,7 @@ function renderMotor360GroupCardUncached(item) {
     : selected && selectedScenarioIds.size
     ? [...selectedScenarioIds].map((id) => { const scenario = scenarios.find((entry) => entry.id === id); return scenario ? scenarioRequirementStatus(scenario).title : ""; }).filter(Boolean).join(" · ")
     : possibleComposition
-      ? `Mínimos calculados por cenário: ${minimumDetails}.`
+      ? `Opção viável somente em composição; não é aprovação de uma cota isolada. Mínimos por cenário: ${minimumDetails}.`
       : status;
   const bidSortLabel = investorState.selectedGroupSort === "bid" ? motor360BidSortLabel(item) : "";
   return `<article id="${anchorId}" class="motor360-group-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo${selected && quotaCount > 1 ? " total" : ""}</small><b>${formatMoney(scaleMoney(item.credito_maximo))}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><span class="motor360-group-status is-${displayStatusTone}" title="${escapeHtml(displayStatusDetail)}" aria-label="${escapeHtml(`${displayStatus}. ${displayStatusDetail}`)}">${escapeHtml(displayStatus)}</span><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${auditId}" ${selected ? "checked" : ""}><span>Selecionar grupo</span></label>${quotaControl}<button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></header><section class="motor360-group-section"><h4>Cenários financeiros${selected && quotaCount > 1 ? ` · ${quotaCount} cotas` : ""}</h4><div class="motor360-scenario-list">${scaledScenarioCards}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div>${bidSortLabel ? `<p class="motor360-bid-sort-value" aria-label="${escapeHtml(bidSortLabel)}">${escapeHtml(bidSortLabel)}</p>` : ""}</article>`;
@@ -4326,8 +4340,36 @@ function formatMotor360Reason(reason) {
     identificacao_grupo_invalida: "Identificação do grupo inválida",
     composicao_parcela_maxima_excedida: "Composição excede a parcela máxima",
     composicao_credito_insuficiente_ou_limite_cotas: "Crédito insuficiente ou limite de 50 cotas",
+    lance_insuficiente_para_perfil: "Lance insuficiente para o perfil selecionado",
+    excluded_credit: "Fora da faixa de crédito",
+    excluded_term_income: "Prazo ou limite de renda não atendido",
+    excluded_contemplation: "Não atingiu o perfil de contemplação individual",
+    excluded_composition: "Composição não viável nos limites calculados",
+    excluded_invalid_identity: "Identificação do grupo inválida",
+    excluded_data: "Dados insuficientes para análise",
+    matrix_approved: "Aprovado individualmente na matriz",
+    composition: "Possível em composição; não aprovado como cota isolada",
+    rejected: "Reprovado em regra obrigatória",
   };
-  return labels[reason] || String(reason || "-").replaceAll("_", " ");
+  const normalized = String(reason || "-");
+  return labels[normalized] || normalized.replace(/^excluded_/, "").replaceAll("_", " ").replace(/^./, (letter) => letter.toLocaleUpperCase("pt-BR"));
+}
+
+function formatMotor360Result(result) {
+  return formatMotor360Reason(result);
+}
+
+function formatMotor360Stage(stage) {
+  const labels = {
+    credito: "Crédito de uma cota fora da faixa",
+    prazo: "Prazo ou renda de uma cota não atendido",
+    administradora: "Regra da administradora não atendida",
+    contemplacao: "Perfil de contemplação individual não atingido",
+    composicao: "Composição não atende aos limites",
+    status: "Status do grupo não elegível",
+    identificacao: "Identificação do grupo inválida",
+  };
+  return labels[stage] || `Etapa: ${formatMotor360Reason(stage)}`;
 }
 
 function formatMotor360Duration(milliseconds) {
@@ -4353,14 +4395,14 @@ function renderMotor360Audit(audit) {
   const fieldRows = (client.raw_fields || []).map((field) => `
     <tr><td>${escapeHtml(field.field_name || "-")}</td><td>${escapeHtml(field.technical_name || "-")}</td><td>${escapeHtml(String(field.normalized_value ?? "-"))}</td><td>${escapeHtml(field.source_reference || field.source || "-")}</td></tr>`).join("");
   const filterRows = (audit.execution_steps || []).map((step) => `
-    <tr><td>${escapeHtml(String(step.order))}</td><td>${escapeHtml(step.name)}</td><td>${escapeHtml(step.formula_or_rule)}</td><td>${step.input_count ?? 0}</td><td>${step.approved_count ?? 0}</td><td>${step.rejected_count ?? 0}</td><td>${step.incomplete_count ?? 0}</td></tr>`).join("");
+    <tr><td>${escapeHtml(String(step.order))}</td><td>${escapeHtml(step.name)}</td><td>${escapeHtml(step.formula_or_rule)}</td><td>${step.input_count ?? 0}</td><td>${step.approved_count ?? 0}</td><td>${step.composition_count ?? 0}</td><td>${step.rejected_count ?? 0}</td><td>${step.incomplete_count ?? 0}</td></tr>`).join("");
   const columnRows = (audit.columns_used || []).map((column) => `<tr><td>${escapeHtml(column.column)}</td><td>${escapeHtml(column.header)}</td><td>${escapeHtml(column.technical_field)}</td><td>${escapeHtml(column.purpose)}</td></tr>`).join("");
   const mappingRows = Object.entries(audit.data_source?.mapping_by_administrator || {}).flatMap(([administrator, fields]) => Object.entries(fields || {}).map(([field, mapping]) => `<tr><td>${escapeHtml(administrator)}</td><td>${escapeHtml(field)}</td><td>${escapeHtml((mapping.columns || []).join(", ") || "-")}</td><td>${escapeHtml((mapping.headers || []).join(", ") || "-")}</td><td>${escapeHtml((mapping.sources || []).join(", ") || "-")}</td><td>${mapping.mapped_rows ?? 0}</td><td>${mapping.blank_value_rows ?? 0}</td><td>${mapping.missing_rows ?? 0}</td></tr>`)).join("");
   const formulaRows = (audit.formulas || []).map((formula) => `<article class="motor360-audit-formula"><strong>${escapeHtml(formula.name)}</strong><code>${escapeHtml(formula.expression)}</code><span>Resultado: ${escapeHtml(String(formula.result ?? "calculado por grupo"))}</span></article>`).join("");
   const excluded = audit.excluded_groups || [];
   const excludedRows = excluded.map((item) => `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${escapeHtml(item.reason)}</td><td>${escapeHtml(item.detail)}</td></tr>`).join("");
   const matrixExcluded = summary.matrix_excluded_groups || [];
-  const matrixExcludedRows = matrixExcluded.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.source_row ?? "-"))}</td><td>${escapeHtml(item.result || "-")}</td><td>${escapeHtml((item.justification || []).join(", ") || "Sem cenário aprovado na matriz")}</td></tr>`).join("");
+  const matrixExcludedRows = matrixExcluded.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.source_row ?? "-"))}</td><td>${escapeHtml(formatMotor360Result(item.result))}</td><td>${escapeHtml((item.justification || []).map(formatMotor360Reason).join(" · ") || "Sem cenário aprovado na matriz")}</td></tr>`).join("");
   const incompleteGroups = audit.incomplete_groups || [];
   const incompleteRows = incompleteGroups.flatMap((item) => (item.missing_fields || []).map((field) => `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${escapeHtml(field.column || "-")}</td><td>${escapeHtml(field.field || "-")}</td><td>${escapeHtml(String(field.raw_value ?? "-"))}</td><td>${escapeHtml(field.reason || "-")}</td><td>${escapeHtml(field.impact || "-")}</td></tr>`)).join("");
   const groupRows = (audit.group_results || []).map((item) => {
@@ -4368,7 +4410,7 @@ function renderMotor360Audit(audit) {
     const embeddedScenario = (item.scenarios || []).find((entry) => entry.id === "with_embedded") || {};
     const stages = item.stage_results || {};
     const mark = (stage) => stages[stage]?.approved ? "Aprovado" : "Reprovado";
-    const resultLabel = item.result === "matrix_approved" || item.matrix_approved ? "Aprovado no perfil" : item.result === "excluded_contemplation" ? "Fora do perfil" : item.result === "rejected" ? "Fora da análise" : "Indicador para análise";
+    const resultLabel = item.matrix_approved ? "Aprovado individualmente no perfil" : formatMotor360Result(item.result);
     const approvedScenarios = stages.contemplacao?.scenario_ids || [];
     return `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${formatMoney(scenario.credito_contratado)}</td><td>${formatMoney(scenario.credito_minimo)} a ${formatMoney(scenario.credito_maximo)}</td><td>${mark("credito")}</td><td>${formatMoney(scenario.parcela_inicial)}<br><small>com emb.: ${formatMoney(embeddedScenario.parcela_inicial)}</small></td><td>${escapeHtml(String(scenario.prazo_apos_lance_limite_renda_meses ?? "-"))} / ${escapeHtml(String(item.source_values?.prazo_restante ?? "-"))}</td><td>${mark("prazo")}</td><td>${mark("contemplacao")}<br><small>${escapeHtml(approvedScenarios.length ? `cenário(s): ${approvedScenarios.join(", ")}` : "nenhum cenário aprovado")}</small></td><td>${resultLabel}</td></tr>`;
   }).join("");
@@ -4388,10 +4430,10 @@ function renderMotor360Audit(audit) {
         <div class="motor360-audit-actions"><a class="btn btn-primary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}/exportar.pdf">Baixar PDF</a><a class="btn btn-outline-secondary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}" target="_blank" rel="noopener">Exportar JSON</a><a class="btn btn-outline-secondary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}/exportar.md">Exportar Markdown</a></div>
         <details open><summary>1. Dados recebidos e consolidados</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Campo</th><th>Técnico</th><th>Valor usado</th><th>Origem</th></tr></thead><tbody>${fieldRows}</tbody></table></div></details>
         <details><summary>2. Base, parâmetros e colunas utilizadas</summary><p>Origem: <strong>${escapeHtml(audit.data_source?.source_name || "-")}</strong> | Modo: <strong>${escapeHtml(audit.data_source?.current_or_historical || "-")}</strong> | Linhas lidas: <strong>${audit.data_source?.total_rows ?? 0}</strong> | Hash: <strong>${escapeHtml(String(audit.data_source?.base_snapshot?.fingerprint || "-").slice(0, 16))}...</strong></p><p>Parâmetros aplicados: <strong>${escapeHtml(JSON.stringify(audit.parameters || {}))}</strong></p><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Coluna</th><th>Campo</th><th>Técnico</th><th>Uso</th></tr></thead><tbody>${columnRows}</tbody></table></div>${mappingRows ? `<h4>Mapeamento comprovado por administradora</h4><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Administradora</th><th>Campo</th><th>Coluna real</th><th>Cabeçalho/Fallback</th><th>Origem</th><th>Linhas com origem</th><th>Valores vazios</th><th>Origem ausente</th></tr></thead><tbody>${mappingRows}</tbody></table></div>` : "<p>O carregamento não forneceu metadados de mapeamento por administradora.</p>"}</details>
-        <details><summary>3. Sequência de filtros</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>#</th><th>Filtro</th><th>Regra</th><th>Entrada</th><th>Aprovados</th><th>Eliminados</th><th>Incompletos</th></tr></thead><tbody>${filterRows}</tbody></table></div></details>
+        <details><summary>3. Sequência de filtros</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>#</th><th>Etapa</th><th>Regra</th><th>Entrada</th><th>Aprovados individualmente</th><th>Opções viáveis em composição</th><th>Eliminados</th><th>Incompletos</th></tr></thead><tbody>${filterRows}</tbody></table></div></details>
         <details><summary>4. Fórmulas e cálculos</summary><div class="motor360-audit-formulas">${formulaRows}</div></details>
-        <details class="motor360-audit-omitted" open><summary>Grupos que não aparecem na lista do Motor 360 (${matrixExcluded.length})</summary><p>Estes grupos foram avaliados, mas não passaram pela matriz de contemplação aplicada nesta execução. A relação abaixo é nominal e inclui a linha de origem e o motivo.</p>${matrixExcluded.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Linha fonte</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody>${matrixExcludedRows}</tbody></table></div>` : "<p class=\"motor360-audit-empty\">Nenhum grupo foi omitido pela matriz nesta execução.</p>"}</details>
-        <details><summary>5. Grupos aprovados na matriz e indicadores</summary><p>${escapeHtml(audit.final_ordering?.execution_summary || "")}</p><ol>${(audit.final_ordering?.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ol><p>Aprovados no perfil: <strong>${summary.total_post_matrix_groups ?? summary.total_preselected ?? 0}</strong> | Crédito compatível: <strong>${summary.total_credit_compatible ?? 0}</strong> | Exigem composição estimada: <strong>${summary.total_requires_composition ?? 0}</strong> | Dados incompletos: <strong>${summary.groups_with_incomplete_data ?? 0}</strong> | Ocorrências incompletas: <strong>${summary.incomplete_field_occurrences ?? 0}</strong></p><p>Crédito, prazo, renda e composição são indicadores para decisão do operador e não eliminam grupos aprovados na matriz.</p></details>
+        <details class="motor360-audit-omitted" open><summary>Grupos que não aparecem na lista do Motor 360 (${matrixExcluded.length})</summary><p>Estes grupos foram avaliados, mas não foram aprovados individualmente nem classificados como opção viável em composição nesta execução. A relação abaixo é nominal e inclui a linha de origem e o motivo.</p>${matrixExcluded.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Linha fonte</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody>${matrixExcludedRows}</tbody></table></div>` : "<p class=\"motor360-audit-empty\">Nenhum grupo foi omitido nesta execução.</p>"}</details>
+        <details><summary>5. Grupos aprovados na matriz e opções de composição</summary><p>${escapeHtml(audit.final_ordering?.execution_summary || "")}</p><ol>${(audit.final_ordering?.rules || []).map((rule) => `<li>${escapeHtml(rule)}</li>`).join("")}</ol><p>Aprovados individualmente: <strong>${summary.total_matrix_approved_groups ?? summary.total_post_matrix_groups ?? summary.total_preselected ?? 0}</strong> | Na lista total: <strong>${summary.total_displayed_groups ?? summary.total_post_matrix_groups ?? 0}</strong> | Crédito compatível: <strong>${summary.total_credit_compatible ?? 0}</strong> | Exigem composição estimada: <strong>${summary.total_requires_composition ?? 0}</strong> | Dados incompletos: <strong>${summary.groups_with_incomplete_data ?? 0}</strong> | Ocorrências incompletas: <strong>${summary.incomplete_field_occurrences ?? 0}</strong></p><p>Opções viáveis em composição são exploráveis pelo operador e não são apresentadas como aprovação de uma cota isolada.</p></details>
         <details><summary>6. Grupos fora da matriz e motivos (${excluded.length})</summary>${excluded.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th><th>Detalhe</th></tr></thead><tbody>${excludedRows}</tbody></table></div>` : "<p>Nenhum grupo ficou fora da matriz.</p>"}</details>
         <details><summary>7. Dados incompletos por grupo (${incompleteGroups.length})</summary>${incompleteGroups.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Coluna</th><th>Campo</th><th>Valor original</th><th>Motivo</th><th>Impacto</th></tr></thead><tbody>${incompleteRows}</tbody></table></div>` : "<p>Nenhum dado obrigatório ausente.</p>"}</details>
         <details><summary>8. Auditoria por grupo (${(audit.group_results || []).length})</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Crédito contratado</th><th>Faixa P/V</th><th>Crédito</th><th>Parcela inicial<br><small>sem / com embutido</small></th><th>Prazo calculado / G</th><th>Prazo</th><th>Contemplação<br><small>cenário aprovado</small></th><th>Resultado</th></tr></thead><tbody>${groupRows}</tbody></table></div></details>
@@ -4424,7 +4466,7 @@ function renderMotor360GroupAudit(groupId) {
   dialog.id = "motor360GroupAuditDialog";
   dialog.className = "motor360-group-audit-dialog";
   const reasons = (entry.justification || []).map(formatMotor360Reason).join(", ");
-  dialog.innerHTML = `<div class="motor360-group-audit-dialog-header"><div><h3>Justificativa do grupo ${escapeHtml(entry.grupo)}</h3><p>${escapeHtml(entry.administradora || "-")} · Resultado: ${escapeHtml(entry.result || "-")} · Ordem ${escapeHtml(String(entry.ranking || "-"))}</p></div><button class="btn btn-outline-secondary btn-sm" type="button">Fechar</button></div><div class="motor360-group-audit-scenarios">${scenarios}</div><div class="motor360-group-audit-alerts"><strong>Dados da base utilizados</strong><p>Prazo restante (F): ${escapeHtml(String(entry.source_values?.prazo_restante ?? "-"))} | Embutido (X): ${escapeHtml(String(entry.source_values?.percentual_lance_embutido ?? "-"))}</p><strong>Motivos e alertas</strong><p>${escapeHtml(reasons || "Nenhum alerta registrado.")}</p></div>`;
+  dialog.innerHTML = `<div class="motor360-group-audit-dialog-header"><div><h3>Justificativa do grupo ${escapeHtml(entry.grupo)}</h3><p>${escapeHtml(entry.administradora || "-")} · Resultado: ${escapeHtml(formatMotor360Result(entry.result))} · Ordem ${escapeHtml(String(entry.ranking || "-"))}</p></div><button class="btn btn-outline-secondary btn-sm" type="button">Fechar</button></div><div class="motor360-group-audit-scenarios">${scenarios}</div><div class="motor360-group-audit-alerts"><strong>Dados da base utilizados</strong><p>Prazo restante (F): ${escapeHtml(String(entry.source_values?.prazo_restante ?? "-"))} | Embutido (X): ${escapeHtml(String(entry.source_values?.percentual_lance_embutido ?? "-"))}</p><strong>Motivos e alertas</strong><p>${escapeHtml(reasons || "Nenhum alerta registrado.")}</p></div>`;
   dialog.querySelector("button")?.addEventListener("click", () => dialog.close());
   dialog.addEventListener("close", () => dialog.remove());
   document.body.append(dialog);
@@ -4458,7 +4500,9 @@ function renderMotor360BlockingDiagnostics(audit) {
     : `${item.administradora || "-"}|${item.grupo || item.grupo_id || "sem-identificador"}`;
   const omitted = [...new Map(rawOmissions.map((item) => [omissionKey(item), item])).values()];
   const omittedRows = omitted.map((item) => {
-    const group = String(item.grupo || item.grupo_id || "").trim();
+    const group = [item.grupo, item.grupo_id]
+      .map((value) => String(value ?? "").trim())
+      .find((value) => value && value !== "-" && value !== "–") || "";
     const missing = item.missing_fields || [];
     const reasons = [...new Set([
       ...(item.justification || []),
@@ -4468,16 +4512,18 @@ function renderMotor360BlockingDiagnostics(audit) {
     const stageFailures = Object.entries(item.stage_results || {})
       .filter(([, stage]) => stage?.approved === false)
       .map(([stage]) => stage);
-    const details = [...reasonLabels, ...stageFailures.map((stage) => stage.replaceAll("_", " "))];
+    const details = [...reasonLabels, ...stageFailures.map(formatMotor360Stage)];
     const reason = [...new Set(details)].join(" · ") || "Motivo não registrado nesta execução";
     const identity = group || "Sem identificador de grupo";
     const sourceRowSearch = item.source_row == null ? "" : `linha ${item.source_row}`;
     const search = [identity, item.administradora, sourceRowSearch, reason].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
-    return `<tr data-omitted-search="${escapeHtml(search)}"><td>${escapeHtml(identity)}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.source_row ?? "Linha não informada"))}</td><td>${escapeHtml(item.result || "-")}</td><td>${escapeHtml(reason)}</td></tr>`;
+    return `<tr data-omitted-search="${escapeHtml(search)}"><td>${escapeHtml(identity)}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.source_row ?? "Linha não informada"))}</td><td>${escapeHtml(formatMotor360Result(item.result))}</td><td>${escapeHtml(reason)}</td></tr>`;
   }).join("");
   const analyzedCount = Number(summary.total_analyzed ?? audit?.data_source?.total_rows ?? entries.length);
-  const displayedCount = Number(summary.total_post_matrix_groups ?? summary.total_preselected ?? entries.filter((entry) => entry.matrix_approved || entry.result === "matrix_approved").length);
-  const unidentifiedCount = omitted.filter((item) => !String(item.grupo || item.grupo_id || "").trim()).length;
+  const displayedCount = Number(summary.total_displayed_groups ?? summary.total_post_matrix_groups ?? summary.total_preselected ?? entries.filter((entry) => entry.matrix_approved || entry.result === "matrix_approved").length);
+  const unidentifiedCount = omitted.filter((item) => ![item.grupo, item.grupo_id]
+    .map((value) => String(value ?? "").trim())
+    .some((identifier) => identifier && identifier !== "-" && identifier !== "–")).length;
   const advice = [...new Set(omitted.flatMap((item) => [
     ...(item.justification || []),
     ...(item.missing_fields || []).map((field) => field.reason),
@@ -4715,14 +4761,13 @@ function renderInvestorAnalysis(result) {
     ["Parcela máxima", formatMoney(client.parcela_maxima)],
     ["Lance ofertado", formatMoney(client.lance_cliente_total)],
     ["Administradora", selectedAdministrator || "-"],
-    ["Grupos desta administradora", items.length],
-    ["Aprovados no perfil", result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0],
+    ["Aprovados individualmente", result.audit?.summary?.total_matrix_approved_groups ?? (result.matrix_items || []).length],
+    ["Opções viáveis em composição", result.total_grupos_composicao ?? 0],
     ["Crédito compatível", result.total_grupos_credito_compativeis ?? 0],
     ["Exigem análise de prazo/renda", result.audit?.summary?.total_term_income_rejected ?? 0],
     ["Exigem composição estimada", result.audit?.summary?.total_requires_composition ?? 0],
     ["Dados incompletos", totals.dados_incompletos ?? 0],
-    ["Grupos exibidos", items.length],
-    ["Grupos aprovados no perfil", items.length],
+    ["Grupos exibidos nesta administradora", items.length],
   ];
   summary.innerHTML = summaryItems.map(([label, value]) => (
     `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`

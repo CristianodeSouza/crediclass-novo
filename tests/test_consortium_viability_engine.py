@@ -500,6 +500,44 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(len(result["items"]), 1)
         self.assertTrue(result["items"][0]["requires_composition"])
 
+    def test_viable_composition_candidates_are_displayed_without_individual_approval(self):
+        result = analyze_client_consortium_viability(payload(
+            credito_desejado=600000, lance_proprio=100000, fgts=0,
+            renda_total=40000, parcela_limite=12000, contemplacao_perfil="urgent",
+        ), [group(
+            "1045", administradora="CNP", credito_minimo=100000,
+            credito_maximo=300000, prazo_restante=300,
+            lance_super_agressivo_3m="50%", lance_agressivo_6m="50%",
+            lance_moderado_12m="50%", lance_conservador_24m="50%",
+            lance_investidor="50%",
+        )])
+
+        self.assertEqual([item["grupo"] for item in result["items"]], ["1045"])
+        candidate = result["items"][0]
+        self.assertEqual(candidate["result"], "composition")
+        self.assertTrue(candidate["composition_candidate"])
+        self.assertTrue(candidate["requires_composition"])
+        self.assertFalse(candidate["matrix_approved"])
+        self.assertEqual(candidate["selection_stage"], "composition")
+        self.assertEqual(candidate["eligible_scenarios"], ["with_embedded"])
+        self.assertEqual(candidate["cotas_minimas_com_embutido"], 3)
+        self.assertEqual(result["matrix_items"], [])
+        self.assertEqual(result["audit"]["group_results"][0]["result"], "composition")
+        self.assertEqual(result["audit"]["summary"]["total_matrix_approved_groups"], 0)
+        self.assertEqual(result["audit"]["summary"]["total_displayed_groups"], 1)
+        matrix_step = next(step for step in result["audit"]["execution_steps"] if step["id"] == "matrix")
+        self.assertEqual(matrix_step["approved_count"], 0)
+        self.assertEqual(matrix_step["composition_count"], 1)
+        matrix_step = next(step for step in result["audit"]["execution_steps"] if step["id"] == "matrix")
+        self.assertEqual(matrix_step["approved_count"], 0)
+        self.assertEqual(matrix_step["composition_count"], 1)
+        self.assertEqual(result["audit"]["summary"]["matrix_excluded_groups"], [])
+        self.assertEqual(
+            result["audit"]["summary"]["total_analyzed"],
+            result["audit"]["summary"]["total_displayed_groups"]
+            + result["audit"]["summary"]["total_matrix_omitted_groups"],
+        )
+
     def test_invalid_source_identity_is_audited_but_never_reaches_matrix(self):
         result = analyze_client_consortium_viability(payload(), [
             group("", administradora=""),
