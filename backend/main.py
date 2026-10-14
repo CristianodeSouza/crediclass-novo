@@ -593,10 +593,14 @@ def grupos(
     sort_order: str | None = None,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 25,
+    response: Response = None,
 ):
+    request_started = time.perf_counter()
     logger.info("GET /api/grupos page=%s page_size=%s busca=%s", page, page_size, busca)
     try:
+        source_started = time.perf_counter()
         items = list_grupos(include_history=True)
+        source_duration_ms = (time.perf_counter() - source_started) * 1000
         warm_grupos_defasagem_cache_async()
     except Exception as error:
         logger.exception("Erro ao listar grupos")
@@ -648,7 +652,10 @@ def grupos(
     total_administradoras = len({item["administradora"] for item in items if item["administradora"]})
     start = (page - 1) * page_size
     end = start + page_size
-    logger.info("GET /api/grupos retornou total=%s page=%s", total, page)
+    total_duration_ms = (time.perf_counter() - request_started) * 1000
+    if response is not None:
+        response.headers["Server-Timing"] = f"sheet_cache;dur={source_duration_ms:.2f}, total;dur={total_duration_ms:.2f}"
+    logger.info("GET /api/grupos retornou total=%s page=%s sheet_cache_ms=%.2f total_ms=%.2f", total, page, source_duration_ms, total_duration_ms)
     return {
         "total": total,
         "page": page,
@@ -808,15 +815,18 @@ def grupo_historico_lote_atualizar(grupo_id: str, payload: HistoricoBatchUpdateR
 
 
 @app.post("/api/viabilidade-360/analisar")
-def viabilidade_360_analisar(payload: ViabilidadeRequest):
+def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response):
     """Single entry point: declared objective is a presentation preference, never an exclusion."""
+    request_started = time.perf_counter()
     request_id = f"REQ-{uuid4().hex[:12].upper()}"
     logger.info("POST /api/viabilidade-360/analisar request_id=%s credito=%s", request_id, payload.credito_desejado)
     try:
         # O histórico completo alimenta o tooltip do Motor 360. A leitura é
         # cacheada pelo cliente da planilha, portanto não há uma nova consulta
         # ao Google Sheets para cada grupo exibido.
+        source_started = time.perf_counter()
         groups = list_grupos(include_history=True)
+        source_duration_ms = (time.perf_counter() - source_started) * 1000
         administrators_analyzed = sorted(
             {str(group.get("administradora") or "").strip() for group in groups if str(group.get("administradora") or "").strip()},
             key=str.casefold,
@@ -824,10 +834,26 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest):
         selected_administrator = str(payload.administradora or "").strip()
         if selected_administrator:
             groups = [group for group in groups if str(group.get("administradora") or "").strip().casefold() == selected_administrator.casefold()]
+        engine_started = time.perf_counter()
         result = analyze_client_consortium_viability(payload, groups, mode=payload.base_mode, request_id=request_id)
+        engine_duration_ms = (time.perf_counter() - engine_started) * 1000
         result["administradoras_analisadas"] = administrators_analyzed
         result["administradora_selecionada"] = selected_administrator or None
-        audit = save_motor360_audit(result.pop("audit"))
+        audit_payload = result.pop("audit")
+        audit_payload.setdefault("data_source", {})["load_duration_ms"] = round(source_duration_ms, 2)
+        audit_payload["metadata"]["engine_duration_ms"] = round(engine_duration_ms, 2)
+        audit_started = time.perf_counter()
+        audit = save_motor360_audit(audit_payload)
+        audit_save_duration_ms = (time.perf_counter() - audit_started) * 1000
+        total_duration_ms = (time.perf_counter() - request_started) * 1000
+        response.headers["Server-Timing"] = (
+            f"sheet_load;dur={source_duration_ms:.2f}, engine;dur={engine_duration_ms:.2f}, "
+            f"audit_save;dur={audit_save_duration_ms:.2f}, total;dur={total_duration_ms:.2f}"
+        )
+        logger.info(
+            "Motor 360 concluido request_id=%s grupos=%s sheet_load_ms=%.2f engine_ms=%.2f audit_save_ms=%.2f total_ms=%.2f",
+            request_id, len(groups), source_duration_ms, engine_duration_ms, audit_save_duration_ms, total_duration_ms,
+        )
         result["audit_id"] = audit["metadata"]["audit_id"]
         result["request_id"] = request_id
         return result

@@ -6501,6 +6501,19 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .motor360-audit-content details > summary { color: #1e4f9a; font-size: 13px; font-weight: 700; }
+.motor360-audit-content details.motor360-audit-omitted {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #f3c96b;
+  border-left: 4px solid #df8b00;
+  border-radius: 8px;
+  background: #fffaf0;
+}
+.motor360-audit-content details.motor360-audit-omitted > summary {
+  color: #754600;
+  font-size: 14px;
+}
+.motor360-audit-content .motor360-audit-empty { color: #526170; font-style: italic; }
 .motor360-audit-content details > p { margin: 10px 0 0; font-size: 12px; }
 .motor360-audit-table { margin: 10px 0 0; font-size: 11px; }
 .motor360-audit-table th, .motor360-audit-table td { padding: 7px 8px; vertical-align: top; }

@@ -206,6 +206,7 @@ console.log(JSON.stringify(sorted.map((item) => ({ grupo: item.grupo, label: mot
         self.assertIn("R$ 410760.00", rows[3]["label"])
         self.assertIn("sem refer", rows[4]["label"].lower())
         self.assertIn("calcul", rows[4]["label"].lower())
+        self.assertEqual(rows[-1]["grupo"], "20399")
 
         # Explicit scenario filtering must use only that scenario's exact card value.
         harness_with_scenario = harness.replace('selectedGroupScenario: "per_group"', 'selectedGroupScenario: "with_embedded"')
@@ -213,6 +214,21 @@ console.log(JSON.stringify(sorted.map((item) => ({ grupo: item.grupo, label: mot
         with_embedded = json.loads(completed.stdout)
         self.assertEqual(with_embedded[0]["grupo"], "20370")
         self.assertIn("Com embutido: R$ 2000.00", with_embedded[0]["label"])
+
+    def test_motor360_auditoria_destaca_grupos_omitidos_e_timing_de_referencia(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+        main_py = (ROOT / "backend" / "main.py").read_text(encoding="utf-8")
+
+        self.assertIn('class="motor360-audit-omitted" open', app_js)
+        self.assertIn("Grupos que não aparecem na lista do Motor 360", app_js)
+        self.assertIn("matrixExcludedRows", app_js)
+        self.assertIn("Nenhum grupo foi omitido pela matriz nesta execução.", app_js)
+        self.assertIn(".motor360-audit-content details.motor360-audit-omitted", style_css)
+        self.assertIn('response.headers["Server-Timing"]', main_py)
+        self.assertIn("sheet_load;dur=", main_py)
+        self.assertIn("audit_save;dur=", main_py)
+        self.assertIn("sheet_cache;dur=", main_py)
 
     def test_motor360_mantem_selecionados_visiveis_e_ordena_por_contemplacoes(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
