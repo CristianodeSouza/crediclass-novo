@@ -10,6 +10,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class StaticEmailTest(unittest.TestCase):
+    def test_release_version_matches_backend_render_and_front_assets(self):
+        config_py = (ROOT / "backend" / "config.py").read_text(encoding="utf-8")
+        render_yaml = (ROOT / "render.yaml").read_text(encoding="utf-8")
+        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
+        build_version = re.search(r'<meta name="crediclass-build" content="([^"]+)"', index_html).group(1)
+
+        self.assertIn(f'version: str = "{build_version}"', config_py)
+        self.assertIn(f'version="{build_version}"', config_py)
+        self.assertRegex(render_yaml, rf"(?m)^\s+value: {re.escape(build_version)}$")
+
     def test_estudos_email_usa_cliente_de_email(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
 
