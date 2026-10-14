@@ -32,6 +32,12 @@ class MapaGruposTest(unittest.TestCase):
         self.assertIn("duration_ms=", log_text)
         self.assertIn("groups=1", log_text)
         self.assertNotIn("ITAU-128", log_text)
+        duration_match = re.search(r"event=refresh_succeeded[^\n]*duration_ms=([\d.]+) duration_s_pt=([\d,]+)", log_text)
+        self.assertIsNotNone(duration_match)
+        self.assertEqual(
+            duration_match.group(2),
+            sheets_client.format_duration_seconds_pt(float(duration_match.group(1))),
+        )
         sheets_client.clear_rows_cache()
 
     def test_log_de_erro_google_sheets_nao_expoe_mensagem_da_excecao(self):
@@ -61,7 +67,7 @@ class MapaGruposTest(unittest.TestCase):
             def execute(self):
                 response = SimpleNamespace(status=200)
                 for callback in self.callbacks:
-                    callback(response, b"not logged")
+                    callback(response)
                 return {"values": [["safe"]]}
 
         with self.assertLogs("crediclass.sheets", level="INFO") as captured:
@@ -71,7 +77,7 @@ class MapaGruposTest(unittest.TestCase):
         log_text = "\n".join(captured.output)
         self.assertIn("http_status=200", log_text)
         self.assertRegex(log_text, r"api_s_pt=\d+,\d{3}")
-        self.assertNotIn("not logged", log_text)
+        self.assertNotIn("safe", log_text)
 
     def test_format_duration_seconds_uses_decimal_comma(self):
         self.assertEqual(sheets_client.format_duration_seconds_pt(1250), "1,250")
