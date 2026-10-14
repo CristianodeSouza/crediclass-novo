@@ -300,12 +300,27 @@ def execute_sheets_read(request_factory, operation: str) -> dict[str, Any]:
     """Execute a read request with a fresh Sheets client after transient failures."""
     last_error: Exception | None = None
     for attempt in range(1, SHEETS_READ_ATTEMPTS + 1):
+        attempt_started = time.perf_counter()
         try:
-            return request_factory().execute()
+            result = request_factory().execute()
+            logger.info(
+                "Google Sheets leitura concluida operation=%s attempt=%s api_ms=%.2f",
+                operation,
+                attempt,
+                (time.perf_counter() - attempt_started) * 1000,
+            )
+            return result
         except (AttributeError, OSError, TimeoutError, GoogleAuthError, HttpError) as error:
             last_error = error
             http_status = getattr(error.resp, "status", 0) if isinstance(error, HttpError) else 0
             is_transient = not isinstance(error, HttpError) or http_status == 429 or http_status >= 500
+            logger.warning(
+                "Google Sheets leitura falhou operation=%s attempt=%s api_ms=%.2f status=%s",
+                operation,
+                attempt,
+                (time.perf_counter() - attempt_started) * 1000,
+                http_status or "n/a",
+            )
             if not is_transient or attempt == SHEETS_READ_ATTEMPTS:
                 break
             logger.warning(

@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.179"
+MOTOR_VERSION = "4.0.180"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BQ", "Urgente - 3 meses"),
@@ -1075,14 +1075,21 @@ def analyze_client_consortium_viability(
     audit["summary"]["matrix_excluded_groups"] = [
         {
             "grupo": entry.get("grupo"),
+            "grupo_id": entry.get("grupo_id"),
             "administradora": entry.get("administradora"),
             "source_row": entry.get("source_row"),
             "result": entry.get("result"),
-            "justification": entry.get("justification", []),
+            "justification": list(dict.fromkeys([
+                *(entry.get("justification") or []),
+                *(field.get("reason") for field in (entry.get("missing_fields") or []) if field.get("reason")),
+            ])),
+            "missing_fields": entry.get("missing_fields", []),
+            "stage_results": entry.get("stage_results", {}),
         }
         for entry in audit.get("group_results", [])
         if (str(entry.get("administradora") or "").strip().lower(), str(entry.get("grupo") or "").strip()) not in final_keys
     ]
+    audit["summary"]["total_matrix_omitted_groups"] = len(audit["summary"]["matrix_excluded_groups"])
     audit["parameters"]["post_matrix_selection"] = "matrix_approved_groups_only"
     audit["summary"]["total_post_matrix_groups"] = len(final_items)
     audit["summary"]["total_requires_composition"] = sum(1 for item in final_items if item.get("requires_composition"))

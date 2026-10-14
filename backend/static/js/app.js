@@ -4330,6 +4330,21 @@ function formatMotor360Reason(reason) {
   return labels[reason] || String(reason || "-").replaceAll("_", " ");
 }
 
+function formatMotor360Duration(milliseconds) {
+  const value = Number(milliseconds);
+  if (!Number.isFinite(value) || value < 0) return "Não informado";
+  const seconds = value >= 1000;
+  return `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: seconds ? 2 : 1, maximumFractionDigits: seconds ? 2 : 1 }).format(seconds ? value / 1000 : value)} ${seconds ? "s" : "ms"}`;
+}
+
+function formatMotor360ServerTiming(header) {
+  if (!header) return "";
+  const labels = { sheet_load: "Leitura da planilha/cache", engine: "Motor 360", audit_save: "Gravação da auditoria", total: "Total no servidor" };
+  return [...header.matchAll(/([\w-]+);dur=([\d.]+)/g)]
+    .map(([, key, duration]) => `${labels[key] || key}: ${formatMotor360Duration(duration)}`)
+    .join(" · ");
+}
+
 function renderMotor360Audit(audit) {
   if (!audit) return "";
   const metadata = audit.metadata || {};
@@ -4365,7 +4380,9 @@ function renderMotor360Audit(audit) {
         <div class="motor360-audit-meta">
           <span><small>Execução</small><b>${auditDateTime(metadata.completed_at)}</b></span>
           <span><small>Identificador</small><b>${escapeHtml(metadata.audit_id || "-")}</b></span>
-          <span><small>Duração</small><b>${escapeHtml(String(metadata.duration_ms ?? 0))} ms</b></span>
+          <span><small>Duração do cálculo interno</small><b>${escapeHtml(formatMotor360Duration(metadata.duration_ms))}</b></span>
+          <span><small>Leitura da planilha/cache</small><b>${escapeHtml(formatMotor360Duration(audit.data_source?.load_duration_ms))}</b></span>
+          <span><small>Tempo total do motor</small><b>${escapeHtml(formatMotor360Duration(metadata.engine_duration_ms))}</b></span>
           <span><small>Motor</small><b>${escapeHtml(metadata.engine_version || "-")}</b></span>
         </div>
         <div class="motor360-audit-actions"><a class="btn btn-primary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}/exportar.pdf">Baixar PDF</a><a class="btn btn-outline-secondary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}" target="_blank" rel="noopener">Exportar JSON</a><a class="btn btn-outline-secondary btn-sm" href="/api/viabilidade-360/auditorias/${encodeURIComponent(metadata.audit_id || "")}/exportar.md">Exportar Markdown</a></div>
@@ -4432,42 +4449,57 @@ function motor360BlockingReasonAdvice(reason) {
 
 function renderMotor360BlockingDiagnostics(audit) {
   const entries = audit?.group_results || [];
-  const requirementLabels = { status: "Status do grupo", tipo_bem: "Tipo de bem", credito: "Faixa de crédito", prazo: "Prazo e renda", contemplacao: "Contemplação no perfil selecionado", grupo_filter: "Filtros do operador" };
-  const grouped = new Map();
-  entries.forEach((entry) => {
-    const reasons = [
-      ...(entry.missing_fields || []).map((field) => field.reason),
-      ...(entry.justification || []),
-    ].filter(Boolean).map(String);
-    const actionable = entry.result !== "matrix_approved" && !entry.matrix_approved && reasons.length;
-    if (!actionable) return;
-    const key = `${entry.administradora || "-"}|${reasons.sort().join(",") || entry.result || "sem_motivo"}`;
-    const requirements = Object.entries(entry.stage_results || {}).map(([stage, value]) => ({ label: requirementLabels[stage] || stage.replaceAll("_", " "), ok: Boolean(value?.approved) }));
-    const current = grouped.get(key) || { administradora: entry.administradora || "-", reasons: [], groups: [], examples: [], count: 0 };
-    current.count += 1;
-    current.reasons = [...new Set([...current.reasons, ...reasons])];
-    if (current.groups.length < 8) current.groups.push(entry.grupo || entry.grupo_id || "-");
-    if (current.examples.length < 3) current.examples.push({ group: entry.grupo || entry.grupo_id || "-", requirements });
-    grouped.set(key, current);
-  });
-  const cards = [...grouped.values()].sort((left, right) => right.count - left.count).map((item) => {
-    const reasons = item.reasons.length ? item.reasons : ["dados_insuficientes"];
-    const labels = reasons.map(formatMotor360Reason).join("; ");
-    const advice = reasons.map(motor360BlockingReasonAdvice).filter((value, index, values) => values.indexOf(value) === index).join(" ");
-    const requirementHtml = item.examples.map((example) => {
-      const ok = example.requirements.filter((requirement) => requirement.ok).map((requirement) => `<li>${escapeHtml(requirement.label)}</li>`).join("") || "<li>Nenhum requisito aprovado foi registrado.</li>";
-      const failed = example.requirements.filter((requirement) => !requirement.ok).map((requirement) => `<li>${escapeHtml(requirement.label)}</li>`).join("") || "<li>Nenhum requisito reprovado nesta etapa.</li>";
-      const missing = (entries.find((entry) => String(entry.grupo || entry.grupo_id) === String(example.group))?.missing_fields || []).map((field) => `<li>${escapeHtml(field.field || field.column || "Campo não informado")}: ${escapeHtml(formatMotor360Reason(field.reason || "dados_insuficientes"))}</li>`).join("");
-      return `<div class="motor360-blocking-requirements"><strong>Grupo ${escapeHtml(String(example.group))}</strong><div><section class="is-ok"><b>Requisitos cumpridos (OK)</b><ul>${ok}</ul></section><section class="is-failed"><b>Requisitos não cumpridos</b><ul>${failed}${missing}</ul></section></div></div>`;
-    }).join("");
-    return `<article class="motor360-blocking-card"><div class="motor360-blocking-card-title"><strong>${item.count} grupo(s) · ${escapeHtml(item.administradora)}</strong><span>${escapeHtml(item.groups.join(", "))}${item.count > item.groups.length ? " e outros" : ""}</span></div><p><strong>O que bloqueou:</strong> ${escapeHtml(labels)}</p>${requirementHtml}<p class="motor360-blocking-advice"><strong>Como corrigir:</strong> ${escapeHtml(advice)}</p></article>`;
-  }).join("");
   const summary = audit?.summary || {};
+  const rawOmissions = Array.isArray(summary.matrix_excluded_groups)
+    ? summary.matrix_excluded_groups
+    : entries.filter((entry) => entry.result !== "matrix_approved" && !entry.matrix_approved);
+  const omissionKey = (item) => item.source_row != null
+    ? `row:${item.source_row}`
+    : `${item.administradora || "-"}|${item.grupo || item.grupo_id || "sem-identificador"}`;
+  const omitted = [...new Map(rawOmissions.map((item) => [omissionKey(item), item])).values()];
+  const omittedRows = omitted.map((item) => {
+    const group = String(item.grupo || item.grupo_id || "").trim();
+    const missing = item.missing_fields || [];
+    const reasons = [...new Set([
+      ...(item.justification || []),
+      ...missing.map((field) => field.reason),
+    ].filter(Boolean).map(String))];
+    const reasonLabels = [...new Set(reasons.map(formatMotor360Reason))];
+    const stageFailures = Object.entries(item.stage_results || {})
+      .filter(([, stage]) => stage?.approved === false)
+      .map(([stage]) => stage);
+    const details = [...reasonLabels, ...stageFailures.map((stage) => stage.replaceAll("_", " "))];
+    const reason = [...new Set(details)].join(" · ") || "Motivo não registrado nesta execução";
+    const identity = group || "Sem identificador de grupo";
+    const search = [identity, item.administradora, item.source_row, reason].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
+    return `<tr data-omitted-search="${escapeHtml(search)}"><td>${escapeHtml(identity)}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.source_row ?? "Linha não informada"))}</td><td>${escapeHtml(item.result || "-")}</td><td>${escapeHtml(reason)}</td></tr>`;
+  }).join("");
+  const analyzedCount = Number(summary.total_analyzed ?? audit?.data_source?.total_rows ?? entries.length);
+  const displayedCount = Number(summary.total_post_matrix_groups ?? summary.total_preselected ?? entries.filter((entry) => entry.matrix_approved || entry.result === "matrix_approved").length);
+  const unidentifiedCount = omitted.filter((item) => !String(item.grupo || item.grupo_id || "").trim()).length;
+  const advice = [...new Set(omitted.flatMap((item) => [
+    ...(item.justification || []),
+    ...(item.missing_fields || []).map((field) => field.reason),
+  ].filter(Boolean).map(String)).map(motor360BlockingReasonAdvice))].join(" ");
+  const omissionTable = omitted.length
+    ? `<label class="motor360-omitted-search">Buscar grupo, administradora, linha ou motivo<input type="search" data-motor360-omitted-search placeholder="Ex.: 20370, Santander ou linha 308"></label><div class="table-responsive motor360-omitted-table-wrap"><table class="table motor360-audit-table"><thead><tr><th>Grupo / identificação</th><th>Administradora</th><th>Linha da planilha</th><th>Resultado</th><th>Motivo</th></tr></thead><tbody>${omittedRows}</tbody></table><p class="motor360-omitted-no-match d-none" data-motor360-omitted-no-match>Nenhum grupo corresponde à busca.</p></div>`
+    : '<p class="table-state">Nenhum grupo foi omitido pela matriz nesta execução.</p>';
   const dialog = document.createElement("dialog");
   dialog.id = "motor360BlockingDiagnosticsDialog";
   dialog.className = "motor360-blocking-dialog";
-  dialog.innerHTML = `<div class="motor360-blocking-dialog-header"><div><h3>O que está impedindo os grupos</h3><p>Diagnóstico da execução ${escapeHtml(audit?.metadata?.audit_id || "")}</p></div><button class="btn btn-outline-secondary btn-sm" type="button">Fechar</button></div><div class="motor360-blocking-dialog-body"><div class="motor360-blocking-summary"><span><small>Compatíveis por crédito</small><b>${summary.total_credit_compatible ?? 0}</b></span><span><small>Eliminados por prazo/renda</small><b>${summary.total_term_income_rejected ?? 0}</b></span><span><small>Eliminados pelo perfil</small><b>${summary.total_selected_profile_rejected ?? 0}</b></span><span><small>Dados incompletos</small><b>${summary.groups_with_incomplete_data ?? 0}</b></span></div><p class="motor360-blocking-intro">Os grupos abaixo podem ter atendido parte da necessidade, mas não foram apresentados como opções finais porque faltou informação, o cenário financeiro não fechou ou o lance não atingiu o perfil escolhido.</p>${cards || '<div class="table-state">Nenhum impedimento detalhado foi registrado nesta auditoria.</div>'}</div>`;
+  dialog.innerHTML = `<div class="motor360-blocking-dialog-header"><div><h3>O que está impedindo os grupos</h3><p>Diagnóstico da execução ${escapeHtml(audit?.metadata?.audit_id || "")}</p></div><button class="btn btn-outline-secondary btn-sm" type="button">Fechar</button></div><div class="motor360-blocking-dialog-body"><div class="motor360-blocking-summary"><span><small>Analisados</small><b>${analyzedCount}</b></span><span><small>Na lista</small><b>${displayedCount}</b></span><span><small>Omitidos</small><b>${omitted.length}</b></span><span><small>Sem identificação</small><b>${unidentifiedCount}</b></span></div><p class="motor360-blocking-intro">Os totais usam a mesma base de grupos: analisados = exibidos + omitidos. Cada linha abaixo representa um grupo omitido, sem truncamento; quando o número do grupo não existe na fonte, a linha da planilha permanece identificada.</p>${omissionTable}${advice ? `<p class="motor360-blocking-advice"><strong>Orientações:</strong> ${escapeHtml(advice)}</p>` : ""}</div>`;
   dialog.querySelector("button")?.addEventListener("click", () => dialog.close());
+  const searchInput = dialog.querySelector("[data-motor360-omitted-search]");
+  searchInput?.addEventListener("input", () => {
+    const query = searchInput.value.trim().toLocaleLowerCase("pt-BR");
+    let visibleRows = 0;
+    dialog.querySelectorAll("[data-omitted-search]").forEach((row) => {
+      const matches = !query || row.dataset.omittedSearch.includes(query);
+      row.classList.toggle("d-none", !matches);
+      if (matches) visibleRows += 1;
+    });
+    dialog.querySelector("[data-motor360-omitted-no-match]")?.classList.toggle("d-none", visibleRows !== 0);
+  });
   dialog.addEventListener("close", () => dialog.remove(), { once: true });
   document.body.append(dialog);
   dialog.showModal();
@@ -4483,11 +4515,11 @@ async function loadMotor360Audit(auditId) {
     syncMotor360BidExplorer();
     const metadata = audit.metadata || {};
     const snapshot = audit.data_source?.base_snapshot || {};
-    addMotor360ExecutionLog("Auditoria técnica carregada", `${metadata.audit_id || auditId} · ${metadata.duration_ms ?? 0} ms.`);
+    addMotor360ExecutionLog("Auditoria técnica carregada", `${metadata.audit_id || auditId} · cálculo interno ${formatMotor360Duration(metadata.duration_ms)} · carga da base ${formatMotor360Duration(audit.data_source?.load_duration_ms)} · motor total ${formatMotor360Duration(metadata.engine_duration_ms)}.`);
     addMotor360ExecutionLog("Base identificada", `${audit.data_source?.total_rows ?? 0} linhas · SHA-256 ${String(snapshot.fingerprint || "não disponível").slice(0, 16)}...`);
     addMotor360ExecutionLog("Rastreabilidade preparada", `${(audit.columns_used || []).filter((column) => column.used_in_decision).length} colunas usadas na decisão · ${(audit.formulas || []).length} fórmulas registradas.`);
     (audit.execution_steps || []).forEach((step) => {
-      addMotor360ExecutionLog(`Etapa ${step.order}: ${step.name}`, `Entrada ${step.input_count ?? 0} · aprovados ${step.approved_count ?? step.evaluated_count ?? 0} · eliminados ${step.rejected_count ?? 0} · ${step.duration_ms ?? 0} ms.`);
+      addMotor360ExecutionLog(`Etapa ${step.order}: ${step.name}`, `Entrada ${step.input_count ?? 0} · aprovados ${step.approved_count ?? step.evaluated_count ?? 0} · eliminados ${step.rejected_count ?? 0} · ${formatMotor360Duration(step.duration_ms)}.`);
     });
     addMotor360ExecutionLog("Auditoria por grupo disponível", `${(audit.group_results || []).length} grupos com decisão, cenários, colunas e motivos registrados.`);
     if (investorState.result) {
@@ -4950,7 +4982,9 @@ async function loadInvestorAnalysis() {
         body: JSON.stringify(profile),
       });
       result = await response.json().catch(() => ({}));
-      addMotor360ExecutionLog("Resposta recebida", `Tentativa ${attempt}/${maxAttempts} · HTTP ${response.status} · ${Math.round(performance.now() - startedAt)} ms · ${result.request_id || "sem ID"}.`);
+      addMotor360ExecutionLog("Resposta recebida", `Tentativa ${attempt}/${maxAttempts} · HTTP ${response.status} · ${formatMotor360Duration(performance.now() - startedAt)} · ${result.request_id || "sem ID"}.`);
+      const serverTiming = formatMotor360ServerTiming(response.headers.get("Server-Timing"));
+      if (serverTiming) addMotor360ExecutionLog("Tempos detalhados do servidor", serverTiming);
       if (response.ok || !retryableStatuses.has(response.status) || attempt === maxAttempts) break;
       status.textContent = `Sincronizando base... ${attempt + 1}/${maxAttempts}`;
       addMotor360ExecutionLog("Nova tentativa programada", `Serviço temporariamente indisponível (HTTP ${response.status}).`, "warning");
@@ -4963,9 +4997,10 @@ async function loadInvestorAnalysis() {
     investorState.audit = result.audit || null;
     try { sessionStorage.setItem(INVESTOR_ANALYSIS_CACHE_KEY, JSON.stringify({ key: analysisKey, result })); } catch (_) { /* cache cheio */ }
     syncMotor360BidExplorer();
-    const oneQuotaCount = Number(result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0);
     const compositionCount = Number(result.total_grupos_composicao ?? 0);
-    addMotor360ExecutionLog("Análise concluída", `${result.total_grupos_analisados ?? 0} analisados · ${oneQuotaCount} em 1 cota · ${compositionCount} em composição.`);
+    const displayedCount = Number(result.total_grupos_preselecionados ?? result.total_grupos_viaveis ?? 0);
+    const oneQuotaCount = Math.max(0, displayedCount - compositionCount);
+    addMotor360ExecutionLog("Análise concluída", `${result.total_grupos_analisados ?? 0} analisados · ${displayedCount} exibidos (${oneQuotaCount} opção(ões) de 1 cota · ${compositionCount} que exigem composição).`);
     renderInvestorAnalysis(result);
     loadMotor360Audit(result.audit_id);
   } catch (error) {

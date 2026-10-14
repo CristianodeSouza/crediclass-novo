@@ -155,6 +155,13 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual([item["grupo"] for item in omitted], ["OMITTED"])
         self.assertEqual(omitted[0]["source_row"], 27)
         self.assertEqual(omitted[0]["result"], "excluded_contemplation")
+        self.assertEqual(result["audit"]["summary"]["total_matrix_omitted_groups"], 1)
+        self.assertEqual(
+            result["audit"]["summary"]["total_analyzed"],
+            result["audit"]["summary"]["total_post_matrix_groups"] + result["audit"]["summary"]["total_matrix_omitted_groups"],
+        )
+        self.assertIn("missing_fields", omitted[0])
+        self.assertIn("stage_results", omitted[0])
 
     def test_expoe_media_maxima_de_contemplacoes_para_controlar_cotas(self):
         history = [

@@ -230,6 +230,61 @@ console.log(JSON.stringify(sorted.map((item) => ({ grupo: item.grupo, label: mot
         self.assertIn("audit_save;dur=", main_py)
         self.assertIn("sheet_cache;dur=", main_py)
 
+    def test_motor360_impedimentos_lista_todos_os_omitidos_com_linha_e_motivo_unico(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js indisponível para validar a renderização dos impedimentos")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+
+        def section(start, end):
+            return app_js.split(start, 1)[1].split(end, 1)[0]
+
+        functions = "\n".join((
+            "function formatMotor360Reason" + section("function formatMotor360Reason", "function formatMotor360Duration"),
+            "function motor360BlockingReasonAdvice" + section("function motor360BlockingReasonAdvice", "function renderMotor360BlockingDiagnostics"),
+            "function renderMotor360BlockingDiagnostics" + section("function renderMotor360BlockingDiagnostics", "async function loadMotor360Audit"),
+        ))
+        harness = r'''
+const escapeHtml = (value) => String(value ?? "").replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+const dialog = { innerHTML: "", querySelector: () => null, addEventListener: () => {}, showModal: () => {} };
+globalThis.document = { createElement: () => dialog, body: { append: () => {} } };
+''' + functions + r'''
+const audit = {
+  metadata: { audit_id: "FIXTURE-AUDIT" },
+  summary: { total_analyzed: 5, total_post_matrix_groups: 2, matrix_excluded_groups: [
+    { grupo: "A1", administradora: "Banco A", source_row: 10, result: "excluded_contemplation", justification: ["lance_insuficiente_para_perfil"] },
+    { grupo: "A2", administradora: "Banco A", source_row: 11, result: "excluded_data", justification: ["credito_maximo_nao_informado", "credito_maximo_nao_informado"], missing_fields: [{ reason: "credito_maximo_nao_informado" }] },
+    { grupo: "", administradora: "-", source_row: 12, result: "excluded_data", justification: [], missing_fields: [] },
+  ] },
+};
+renderMotor360BlockingDiagnostics(audit);
+console.log(JSON.stringify(dialog.innerHTML));
+'''
+        completed = subprocess.run([node, "-e", harness], check=True, capture_output=True, text=True)
+        rendered = json.loads(completed.stdout)
+        self.assertEqual(rendered.count("<tr data-omitted-search="), 3)
+        self.assertIn("Analisados</small><b>5", rendered)
+        self.assertIn("Na lista</small><b>2", rendered)
+        self.assertIn("Omitidos</small><b>3", rendered)
+        self.assertIn("<b>1</b></span></div>", rendered)
+        self.assertIn("Banco A", rendered)
+        self.assertIn("Linha da planilha", rendered)
+        self.assertEqual(rendered.count("(V)"), 1)
+        self.assertNotIn(" e outros", rendered)
+
+    def test_motor360_formata_todos_os_tempos_em_portugues_sem_ambiguidade(self):
+        node = shutil.which("node")
+        if not node:
+            self.skipTest("Node.js indisponível para validar a formatação de duração")
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        formatter = "function formatMotor360Duration" + app_js.split("function formatMotor360Duration", 1)[1].split("function renderMotor360Audit", 1)[0]
+        harness = formatter + r'''
+console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Duration(1979), formatMotor360Duration(22096)]));
+'''
+        completed = subprocess.run([node, "-e", harness], check=True, capture_output=True, text=True)
+        formatted = json.loads(completed.stdout)
+        self.assertEqual(formatted, ["56,5 ms", "1,98 s", "22,10 s"])
+
     def test_motor360_mantem_selecionados_visiveis_e_ordena_por_contemplacoes(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
