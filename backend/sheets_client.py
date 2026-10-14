@@ -300,18 +300,36 @@ def get_service():
     return build("sheets", "v4", credentials=credentials, cache_discovery=False)
 
 
+def format_duration_seconds_pt(duration_ms: float) -> str:
+    """Human-readable seconds using the application's Portuguese decimal convention."""
+    return f"{duration_ms / 1000:.3f}".replace(".", ",")
+
+
 def execute_sheets_read(request_factory, operation: str) -> dict[str, Any]:
     """Execute a read request with a fresh Sheets client after transient failures."""
     last_error: Exception | None = None
     for attempt in range(1, SHEETS_READ_ATTEMPTS + 1):
         attempt_started = time.perf_counter()
         try:
-            result = request_factory().execute()
+            request = request_factory()
+            response_status: int | str = "n/a"
+
+            def capture_response_status(response, _content):
+                nonlocal response_status
+                response_status = getattr(response, "status", "n/a")
+
+            add_response_callback = getattr(request, "add_response_callback", None)
+            if callable(add_response_callback):
+                add_response_callback(capture_response_status)
+            result = request.execute()
+            duration_ms = (time.perf_counter() - attempt_started) * 1000
             logger.info(
-                "Google Sheets leitura concluida operation=%s attempt=%s api_ms=%.2f",
+                "Google Sheets leitura concluida operation=%s attempt=%s http_status=%s api_ms=%.2f api_s_pt=%s",
                 operation,
                 attempt,
-                (time.perf_counter() - attempt_started) * 1000,
+                response_status,
+                duration_ms,
+                format_duration_seconds_pt(duration_ms),
             )
             return result
         except (AttributeError, OSError, TimeoutError, GoogleAuthError, HttpError) as error:
@@ -319,11 +337,12 @@ def execute_sheets_read(request_factory, operation: str) -> dict[str, Any]:
             http_status = getattr(error.resp, "status", 0) if isinstance(error, HttpError) else 0
             is_transient = not isinstance(error, HttpError) or http_status == 429 or http_status >= 500
             logger.warning(
-                "Google Sheets leitura falhou operation=%s attempt=%s api_ms=%.2f status=%s error_type=%s",
+                "Google Sheets leitura falhou operation=%s attempt=%s http_status=%s api_ms=%.2f api_s_pt=%s error_type=%s",
                 operation,
                 attempt,
-                (time.perf_counter() - attempt_started) * 1000,
                 http_status or "n/a",
+                (duration_ms := (time.perf_counter() - attempt_started) * 1000),
+                format_duration_seconds_pt(duration_ms),
                 type(error).__name__,
             )
             if not is_transient or attempt == SHEETS_READ_ATTEMPTS:
@@ -453,10 +472,20 @@ def read_sheet_headers(force_reload: bool = False) -> list[str]:
 
 
 def read_summary_rows(force_reload: bool = False, include_history: bool = True) -> list[dict[str, Any]]:
+    total_started = time.perf_counter()
+    headers_started = total_started
     headers = read_sheet_headers(force_reload=force_reload)
+    headers_ms = (time.perf_counter() - headers_started) * 1000
     if not headers:
+        logger.info(
+            "motor360_sheet_rows event=completed headers_ms=%.1f headers_s_pt=%s schema_ms=0 fetch_and_rows_build_ms=0 total_ms=%.1f rows=0",
+            headers_ms,
+            format_duration_seconds_pt(headers_ms),
+            (time.perf_counter() - total_started) * 1000,
+        )
         return []
 
+    schema_started = time.perf_counter()
     selected: list[tuple[str, str, int]] = []
     header_positions = headers_index(headers)
     for field in SUMMARY_FIELDS:
@@ -485,9 +514,11 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
 
     validate_required_headers(headers, ["administradora", "grupo", "tipo_bem"])
     settings = get_settings()
+    schema_ms = (time.perf_counter() - schema_started) * 1000
     rows: list[dict[str, Any]] = []
     row_index: dict[str, int] = {}
 
+    rows_build_started = time.perf_counter()
     if include_history:
         min_index = min(index for _, _, index in selected)
         max_index = max(index for _, _, index in selected)
@@ -575,9 +606,27 @@ def read_summary_rows(force_reload: bool = False, include_history: bool = True) 
             if grupo_id:
                 row_index[grupo_id.upper()] = offset + 2
 
+    fetch_and_rows_build_ms = (time.perf_counter() - rows_build_started) * 1000
+    index_started = time.perf_counter()
     with _cache_lock:
         _group_row_index.clear()
         _group_row_index.update(row_index)
+    index_ms = (time.perf_counter() - index_started) * 1000
+    total_ms = (time.perf_counter() - total_started) * 1000
+    logger.info(
+        "motor360_sheet_rows event=completed headers_ms=%.1f headers_s_pt=%s schema_ms=%.1f fetch_and_rows_build_ms=%.1f fetch_and_rows_build_s_pt=%s index_ms=%.1f total_ms=%.1f total_s_pt=%s rows=%s selected_columns=%s include_history=%s",
+        headers_ms,
+        format_duration_seconds_pt(headers_ms),
+        schema_ms,
+        fetch_and_rows_build_ms,
+        format_duration_seconds_pt(fetch_and_rows_build_ms),
+        index_ms,
+        total_ms,
+        format_duration_seconds_pt(total_ms),
+        len(rows),
+        len(selected),
+        include_history,
+    )
     return rows
 
 
@@ -1285,37 +1334,51 @@ def list_grupos(include_history: bool = True, force_reload: bool = False) -> lis
             lock_wait_ms,
         )
         refresh_started = time.perf_counter()
+        read_started = time.perf_counter()
         try:
             rows = read_summary_rows(
                 force_reload=force_reload,
                 include_history=include_history,
             )
+            read_ms = (time.perf_counter() - read_started) * 1000
         except (AttributeError, OSError, TimeoutError, HttpError, GoogleAuthError, RuntimeError, ValueError) as error:
             if cached_items is None:
                 logger.error(
-                    "motor360_groups_cache event=refresh_failed key=%s duration_ms=%.1f error_type=%s cache_fallback=false",
+                    "motor360_groups_cache event=refresh_failed key=%s duration_ms=%.1f duration_s_pt=%s error_type=%s cache_fallback=false",
                     cache_key,
                     (time.perf_counter() - refresh_started) * 1000,
+                    format_duration_seconds_pt((time.perf_counter() - refresh_started) * 1000),
                     type(error).__name__,
                 )
                 raise
             logger.warning(
-                "motor360_groups_cache event=refresh_failed key=%s duration_ms=%.1f error_type=%s cache_fallback=true stale_items=%s",
+                "motor360_groups_cache event=refresh_failed key=%s duration_ms=%.1f duration_s_pt=%s error_type=%s cache_fallback=true stale_items=%s",
                 cache_key,
                 (time.perf_counter() - refresh_started) * 1000,
+                format_duration_seconds_pt((time.perf_counter() - refresh_started) * 1000),
                 type(error).__name__,
                 len(cached_items),
             )
             return list(cached_items)
+        mapping_started = time.perf_counter()
         items = [row_to_grupo(row) for row in rows]
+        mapping_ms = (time.perf_counter() - mapping_started) * 1000
+        cache_write_started = time.perf_counter()
         with _cache_lock:
             cache = _grupos_cache[cache_key]
             cache["items"] = items
             cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
+        cache_write_ms = (time.perf_counter() - cache_write_started) * 1000
         logger.info(
-            "motor360_groups_cache event=refresh_succeeded key=%s duration_ms=%.1f rows=%s groups=%s ttl_s=%s",
+            "motor360_groups_cache event=refresh_succeeded key=%s duration_ms=%.1f duration_s_pt=%s read_summary_ms=%.1f read_summary_s_pt=%s group_mapping_ms=%.1f group_mapping_s_pt=%s cache_write_ms=%.1f rows=%s groups=%s ttl_s=%s",
             cache_key,
             (time.perf_counter() - refresh_started) * 1000,
+            format_duration_seconds_pt((time.perf_counter() - refresh_started) * 1000),
+            read_ms,
+            format_duration_seconds_pt(read_ms),
+            mapping_ms,
+            format_duration_seconds_pt(mapping_ms),
+            cache_write_ms,
             len(rows),
             len(items),
             CACHE_TTL_SECONDS,
@@ -1352,17 +1415,19 @@ def warm_motor360_cache_async() -> bool:
             try:
                 groups = list_grupos(include_history=True, force_reload=not first_load)
                 logger.info(
-                    "motor360_cache_warmup event=succeeded kind=%s duration_ms=%.1f groups=%s",
+                    "motor360_cache_warmup event=succeeded kind=%s duration_ms=%.1f duration_s_pt=%s groups=%s",
                     refresh_kind,
                     (time.perf_counter() - refresh_started) * 1000,
+                    format_duration_seconds_pt((time.perf_counter() - refresh_started) * 1000),
                     len(groups),
                 )
                 first_load = False
             except Exception as error:
                 logger.error(
-                    "motor360_cache_warmup event=failed kind=%s duration_ms=%.1f error_type=%s",
+                    "motor360_cache_warmup event=failed kind=%s duration_ms=%.1f duration_s_pt=%s error_type=%s",
                     refresh_kind,
                     (time.perf_counter() - refresh_started) * 1000,
+                    format_duration_seconds_pt((time.perf_counter() - refresh_started) * 1000),
                     type(error).__name__,
                 )
             time.sleep(CACHE_REFRESH_INTERVAL_SECONDS)

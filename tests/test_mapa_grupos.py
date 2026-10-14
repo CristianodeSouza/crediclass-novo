@@ -50,6 +50,32 @@ class MapaGruposTest(unittest.TestCase):
         self.assertIn("error_type=OSError", log_text)
         self.assertNotIn("sensitive-sheet-id-and-token", log_text)
 
+    def test_log_de_leitura_registra_status_http_e_segundos_pt(self):
+        class SuccessfulRequest:
+            def __init__(self):
+                self.callbacks = []
+
+            def add_response_callback(self, callback):
+                self.callbacks.append(callback)
+
+            def execute(self):
+                response = SimpleNamespace(status=200)
+                for callback in self.callbacks:
+                    callback(response, b"not logged")
+                return {"values": [["safe"]]}
+
+        with self.assertLogs("crediclass.sheets", level="INFO") as captured:
+            result = sheets_client.execute_sheets_read(lambda: SuccessfulRequest(), "ler teste")
+
+        self.assertEqual(result, {"values": [["safe"]]})
+        log_text = "\n".join(captured.output)
+        self.assertIn("http_status=200", log_text)
+        self.assertRegex(log_text, r"api_s_pt=\d+,\d{3}")
+        self.assertNotIn("not logged", log_text)
+
+    def test_format_duration_seconds_uses_decimal_comma(self):
+        self.assertEqual(sheets_client.format_duration_seconds_pt(1250), "1,250")
+
     def test_list_grupos_serializa_cache_miss_para_evitar_leituras_concorrentes(self):
         sheets_client.clear_rows_cache()
         barrier = threading.Barrier(6)
