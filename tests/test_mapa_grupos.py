@@ -1,5 +1,7 @@
 import unittest
 import re
+import threading
+import time
 from datetime import date
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -15,6 +17,59 @@ from backend.sheets_client import build_historico, clean_text, create_grupo, del
 
 
 class MapaGruposTest(unittest.TestCase):
+    def test_list_grupos_serializa_cache_miss_para_evitar_leituras_concorrentes(self):
+        sheets_client.clear_rows_cache()
+        barrier = threading.Barrier(6)
+        source_row = {"Administradora": "Itau", "Grupo": "128"}
+        with (
+            patch("backend.sheets_client.read_summary_rows", side_effect=lambda **_kwargs: (time.sleep(0.05), [source_row])[1]) as read_rows,
+            patch("backend.sheets_client.row_to_grupo", return_value={"grupo_id": "ITAU-128"}),
+        ):
+            results = []
+
+            def load_groups():
+                barrier.wait()
+                results.append(sheets_client.list_grupos())
+
+            workers = [threading.Thread(target=load_groups) for _ in range(6)]
+            for worker in workers:
+                worker.start()
+            for worker in workers:
+                worker.join(timeout=2)
+
+        self.assertTrue(all(not worker.is_alive() for worker in workers))
+        self.assertEqual(read_rows.call_count, 1)
+        self.assertEqual(len(results), 6)
+        self.assertTrue(all(result == [{"grupo_id": "ITAU-128"}] for result in results))
+        sheets_client.clear_rows_cache()
+
+    def test_refresh_forcado_preserva_cache_valido_se_a_planilha_falhar(self):
+        sheets_client.clear_rows_cache()
+        cached_group = {"grupo_id": "ITAU-128"}
+        with (
+            patch("backend.sheets_client.read_summary_rows", return_value=[{"Grupo": "128"}]),
+            patch("backend.sheets_client.row_to_grupo", return_value=cached_group),
+        ):
+            self.assertEqual(sheets_client.list_grupos(), [cached_group])
+
+        with patch("backend.sheets_client.read_summary_rows", side_effect=OSError("Sheets indisponivel")):
+            self.assertEqual(sheets_client.list_grupos(force_reload=True), [cached_group])
+
+        sheets_client.clear_rows_cache()
+
+    def test_refresh_forcado_rele_a_fonte_e_atualiza_cache(self):
+        sheets_client.clear_rows_cache()
+        with (
+            patch("backend.sheets_client.read_summary_rows", side_effect=[[{"Grupo": "128"}], [{"Grupo": "129"}]]) as read_rows,
+            patch("backend.sheets_client.row_to_grupo", side_effect=lambda row: {"grupo_id": row["Grupo"]}),
+        ):
+            self.assertEqual(sheets_client.list_grupos(), [{"grupo_id": "128"}])
+            self.assertEqual(sheets_client.list_grupos(force_reload=True), [{"grupo_id": "129"}])
+
+        self.assertEqual(read_rows.call_count, 2)
+        self.assertTrue(read_rows.call_args.kwargs["force_reload"])
+        sheets_client.clear_rows_cache()
+
     def test_defasagem_calcula_meses_pendentes_e_ordena_prioridade(self):
         groups = [
             {

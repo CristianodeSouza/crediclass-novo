@@ -2255,7 +2255,9 @@ const motor360GroupCardCache = new Map();
 function renderMotor360GroupCardUncached(item) {
   const scenarios = Array.isArray(item.cenarios) ? item.cenarios : [];
   const byId = Object.fromEntries(scenarios.map((scenario) => [scenario.id, scenario]));
-  const profiles = byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [];
+  const profiles = item.composition_candidate
+    ? (byId.without_embedded?.composition_totals?.perfis_contemplacao || byId.with_embedded?.composition_totals?.perfis_contemplacao || byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || [])
+    : (byId.without_embedded?.perfis_contemplacao || byId.with_embedded?.perfis_contemplacao || []);
   const requestedPreference = investorState.result?.preferencia_declarada;
   const objectiveCompatible = !requestedPreference || (item.compatible_contemplation_strategies || []).includes(requestedPreference);
   const hasCompleteScenario = scenarios.some((scenario) => (scenario.eligible === true || (scenario.credit_compatible === true && scenario.term_compatible === true && scenario.income_compatible !== false)) && scenario.credito_contratado != null && scenario.parcela_inicial != null && item.prazo_restante != null && item.prazo_restante !== "");
@@ -2304,14 +2306,18 @@ function renderMotor360GroupCardUncached(item) {
     .map((entry) => `${entry.quotas} cotas ${entry.id === "with_embedded" ? "com" : "sem"} embutido`)
     .join("; ");
   const scenarioRequirementStatus = (scenario) => {
-    if (item.composition_candidate === true) {
+    if (item.composition_candidate === true && !selected) {
       const minimum = Number(scenario.cotas_minimas || minimumQuotasFor(item, scenario.id) || 0);
       const ok = scenario.eligible === true;
+      const profile = (scenario.composition_totals?.perfis_contemplacao || []).find((entry) => entry.id === selectedProfileId);
+      const profilePending = ok && scenario.profile_compatible_in_composition === false;
+      const profileGap = profilePending ? Math.max(0, Number(profile?.falta_para_ideal || 0)) : 0;
       return {
         ok,
+        profilePending,
         failed: ok ? [] : ["Composição"],
         title: ok
-          ? `Esta opção é viável em composição com no mínimo ${minimum} cotas; isso não significa aprovação de uma cota isolada.`
+          ? `${profilePending ? `Crédito e parcela cabem em composição com ${minimum} cotas, mas o lance não atinge o perfil selecionado${profileGap > 0 ? `; faltam ${formatMoney(profileGap)}` : ""}.` : `Esta opção é viável em composição com no mínimo ${minimum} cotas.`} Isso não é aprovação de uma cota isolada.`
           : "Esta composição não atende simultaneamente aos limites calculados de crédito, parcela/renda ou perfil.",
       };
     }
@@ -2334,15 +2340,20 @@ function renderMotor360GroupCardUncached(item) {
   };
   const profileDisplayLabels = { conservative: "Conservador (24 meses)", moderate: "Moderado (12 meses)", aggressive: "Agressivo / Rápido (6 meses)", super_aggressive: "Super agressivo / Urgente (3 meses)" };
   const renderScenarioProfiles = (scenario) => {
+    const profileRows = item.composition_candidate
+      ? (scenario.composition_totals?.perfis_contemplacao || scenario.perfis_contemplacao || [])
+      : (scenario.perfis_contemplacao || []);
     const values = profiles.map((profile) => {
-      const value = (scenario.perfis_contemplacao || []).find((entry) => entry.id === profile.id);
+      const value = profileRows.find((entry) => entry.id === profile.id);
       if (!value || value.percentual_referencia === null || value.percentual_referencia === undefined) return `<div class="motor360-profile-card-value is-empty"><small>Não informado</small></div>`;
       const idealLabel = scenario.id === "with_embedded" ? "Lance ideal em recursos do cliente" : "Lance ideal";
       const metrics = compositionMetrics(scenario);
       const metricEntry = metrics?.entries.find((entry) => motor360GroupKey(entry.item) === groupKey);
       const embeddedNote = scenario.id === "with_embedded" ? `<small>Embutido considerado: ${formatMoney(metricEntry?.embedded ?? scaleMoney(value.lance_embutido))}</small>` : "";
       const totalIdeal = metrics ? metricEntry?.profiles[value.id]?.ideal || 0 : motor360CompositionIdealBid(item, scenario, value.id);
-      const available = metrics ? metricEntry?.profiles[value.id]?.available || 0 : allocatedClientBidFor(item, scenario, value.id);
+      const available = metrics ? metricEntry?.profiles[value.id]?.available || 0 : item.composition_candidate
+        ? Number(scenario.composition_totals?.lance_cliente_total ?? scenario.lance_cliente_total ?? 0)
+        : allocatedClientBidFor(item, scenario, value.id);
       const meetsBid = totalIdeal <= 0 || available >= totalIdeal;
       const bidGap = { gap: Math.max(0, totalIdeal - available) };
       const bidStatusLabel = totalIdeal <= 0 ? "Sem lance próprio necessário" : meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(bidGap.gap)}`;
@@ -2350,30 +2361,37 @@ function renderMotor360GroupCardUncached(item) {
       return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"} ${focused ? "is-focused" : ""}" ${focused ? 'aria-current="true"' : ""}><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}${focused ? '<span class="motor360-profile-focus-tag">Em foco</span>' : ""}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${bidStatusLabel}</span><em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
     }).join("");
     const scenarioLabel = scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
-    return `<section class="motor360-scenario-profiles"><div class="motor360-profile-section-title"><h4>Perfis · ${scenarioLabel}</h4><small>Foco: ${escapeHtml(focusProfileLabel)} · Referência: ${formatMoney(scenario.lance_cliente_total)}</small></div><div class="motor360-profile-card-values">${values || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section>`;
+    const compositionTotals = item.composition_candidate ? scenario.composition_totals : null;
+    const referenceBid = compositionTotals?.lance_cliente_total ?? scenario.lance_cliente_total;
+    return `<section class="motor360-scenario-profiles"><div class="motor360-profile-section-title"><h4>Perfis · ${scenarioLabel}</h4><small>Foco: ${escapeHtml(focusProfileLabel)} · Referência: ${formatMoney(referenceBid)}</small></div><div class="motor360-profile-card-values">${values || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section>`;
   };
   const scaledScenarioCards = scenarios.map((scenario) => {
     const title = (scenario.id === "with_embedded" ? "Crédito contratado com lance embutido" : "Crédito contratado sem lance embutido") + (minimumQuotasFor(item, scenario.id) > 1 ? ` · Composição: mínimo de ${minimumQuotasFor(item, scenario.id)} cotas` : "");
     const requirement = scenarioRequirementStatus(scenario);
     const compositionQuotaLabel = item.composition_candidate === true ? ` · mínimo de ${Number(scenario.cotas_minimas || minimumQuotasFor(item, scenario.id))} cotas` : "";
     const statusLabel = item.composition_candidate === true
-      ? requirement.ok ? `Viável em composição${compositionQuotaLabel}` : "Composição não viável neste cenário"
+      ? requirement.ok ? requirement.profilePending ? `Possível em composição · perfil pendente${compositionQuotaLabel}` : `Viável em composição${compositionQuotaLabel}` : "Composição não viável neste cenário"
       : requirement.ok ? `Requisitos atendidos${requirement.parcelWarning ? ` · ${requirement.parcelWarning}` : ""}` : "Requisitos não atendidos";
     const info = `<span class="motor360-requirement-info" title="${escapeHtml(requirement.title)}" aria-label="${escapeHtml(requirement.title)}" tabindex="0">i</span>`;
     const metrics = compositionMetrics(scenario);
     const metric = (field) => metrics ? metrics.entries.find((entry) => motor360GroupKey(entry.item) === groupKey)?.[field] : null;
-    const cardCredit = metric("contractedCredit") ?? scaleMoney(scenario.credito_contratado);
-    const cardInstallment = metric("installment") ?? scaleMoney(scenario.parcela_inicial);
-    const cardAfter = metric("installmentAfter") ?? scaleMoney(scenario.parcela_pos_contemplacao);
-    const cardBalance = metric("balance") ?? scaleMoney(scenario.saldo_devedor);
+    const aggregate = item.composition_candidate && !selected ? scenario.composition_totals : null;
+    const cardCredit = metric("contractedCredit") ?? aggregate?.credito_contratado ?? scaleMoney(scenario.credito_contratado);
+    const cardInstallment = metric("installment") ?? aggregate?.parcela_inicial ?? scaleMoney(scenario.parcela_inicial);
+    const cardAfter = metric("installmentAfter") ?? aggregate?.parcela_pos_contemplacao ?? scaleMoney(scenario.parcela_pos_contemplacao);
+    const cardBalance = metric("balance") ?? aggregate?.saldo_devedor ?? scaleMoney(scenario.saldo_devedor);
     const metricEntry = metrics?.entries.find((entry) => motor360GroupKey(entry.item) === groupKey);
-    const cardClientBid = metrics ? clientResourceTotal() : Number(scenario.lance_cliente_total || 0);
-    const cardEmbedded = metrics?.embedded ?? scaleMoney(scenario.lance_embutido);
-    const cardScenarioBid = metrics ? cardClientBid + cardEmbedded : scaleMoney(scenario.lance_total_cenario);
+    const cardClientBid = metrics ? clientResourceTotal() : Number(aggregate?.lance_cliente_total ?? scenario.lance_cliente_total ?? 0);
+    const cardEmbedded = metrics?.embedded ?? aggregate?.lance_embutido ?? scaleMoney(scenario.lance_embutido);
+    const cardScenarioBid = metrics ? cardClientBid + cardEmbedded : Number(aggregate?.lance_total_cenario ?? scaleMoney(scenario.lance_total_cenario));
     const cardLabel = metrics ? `<small class="motor360-scenario-note">Crédito acumulado: ${formatMoney(metrics.credit)} de ${formatMoney(desiredCompositionCredit)} · ${metrics.shortfall > 0 ? `Faltam ${formatMoney(metrics.shortfall)}` : "Crédito atendido"}</small>` : "";
-    const clientBidPercent = metrics?.contractedCredit > 0 ? cardClientBid / metrics.contractedCredit : Number(scenario.percentual_lance_cliente || 0);
-    const scenarioBidPercent = metrics?.contractedCredit > 0 ? cardScenarioBid / metrics.contractedCredit : Number(scenario.percentual_lance_efetivo || 0);
-    const showPortfolioLabels = Boolean(metrics && metrics.totalQuotas > 1);
+    const clientBidPercent = metrics?.contractedCredit > 0
+      ? cardClientBid / metrics.contractedCredit
+      : aggregate?.credito_contratado > 0 ? cardClientBid / aggregate.credito_contratado : Number(scenario.percentual_lance_cliente || 0);
+    const scenarioBidPercent = metrics?.contractedCredit > 0
+      ? cardScenarioBid / metrics.contractedCredit
+      : aggregate?.credito_contratado > 0 ? cardScenarioBid / aggregate.credito_contratado : Number(scenario.percentual_lance_efetivo || 0);
+    const showPortfolioLabels = Boolean((metrics && metrics.totalQuotas > 1) || (aggregate && Number(aggregate.cotas_minimas) > 1));
     const compositionCreditGuidance = possibleComposition
       && minimumQuotasFor(item, scenario.id) > 1
       && requirement.failed.includes("Crédito")
@@ -2763,7 +2781,10 @@ function motor360FocusedProfileId() {
 }
 
 function motor360CompositionIdealBid(item, scenario, profileId = motor360FocusedProfileId()) {
-  const profile = (scenario?.perfis_contemplacao || []).find((entry) => entry.id === profileId);
+  const profileRows = item?.composition_candidate && !investorState.selectedGroupIds.has(motor360GroupKey(item))
+    ? (scenario?.composition_totals?.perfis_contemplacao || scenario?.perfis_contemplacao || [])
+    : (scenario?.perfis_contemplacao || []);
+  const profile = profileRows.find((entry) => entry.id === profileId);
   if (!profile || profile.lance_ideal == null || profile.lance_ideal === "") return null;
   const groupKey = motor360GroupKey(item);
   if (investorState.selectedGroupIds.has(groupKey)) {
@@ -4552,6 +4573,13 @@ function renderMotor360BlockingDiagnostics(audit) {
   dialog.showModal();
 }
 
+function motor360ExecutionStepMessage(step) {
+  const compositionCount = Number(step.composition_count || 0);
+  const approvedLabel = step.order === 3 ? "aprovados individualmente" : "aprovados";
+  const compositionLabel = compositionCount ? ` · opções em composição ${compositionCount}` : "";
+  return `Entrada ${step.input_count ?? 0} · ${approvedLabel} ${step.approved_count ?? step.evaluated_count ?? 0}${compositionLabel} · eliminados ${step.rejected_count ?? 0} · ${formatMotor360Duration(step.duration_ms)}.`;
+}
+
 async function loadMotor360Audit(auditId) {
   if (!auditId) return;
   try {
@@ -4566,7 +4594,7 @@ async function loadMotor360Audit(auditId) {
     addMotor360ExecutionLog("Base identificada", `${audit.data_source?.total_rows ?? 0} linhas · SHA-256 ${String(snapshot.fingerprint || "não disponível").slice(0, 16)}...`);
     addMotor360ExecutionLog("Rastreabilidade preparada", `${(audit.columns_used || []).filter((column) => column.used_in_decision).length} colunas usadas na decisão · ${(audit.formulas || []).length} fórmulas registradas.`);
     (audit.execution_steps || []).forEach((step) => {
-      addMotor360ExecutionLog(`Etapa ${step.order}: ${step.name}`, `Entrada ${step.input_count ?? 0} · aprovados ${step.approved_count ?? step.evaluated_count ?? 0} · eliminados ${step.rejected_count ?? 0} · ${formatMotor360Duration(step.duration_ms)}.`);
+      addMotor360ExecutionLog(`Etapa ${step.order}: ${step.name}`, motor360ExecutionStepMessage(step));
     });
     addMotor360ExecutionLog("Auditoria por grupo disponível", `${(audit.group_results || []).length} grupos com decisão, cenários, colunas e motivos registrados.`);
     if (investorState.result) {

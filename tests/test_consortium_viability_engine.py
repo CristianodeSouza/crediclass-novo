@@ -107,7 +107,8 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(item["cotas_minimas_sem_embutido"], 2)
         self.assertEqual(item["cotas_minimas_com_embutido"], 3)
         self.assertEqual(item["cotas_maximas"], 50)
-        self.assertEqual(item["cenarios"][0]["credito_liquido_projetado"], 600000)
+        self.assertEqual(item["cenarios"][0]["credito_liquido_projetado"], 300000)
+        self.assertEqual(item["cenarios"][0]["composition_totals"]["credito_liquido_projetado"], 600000)
         self.assertTrue(item["capacidade_contemplacoes"])
         self.assertEqual(item["historico_12_meses"], history)
 
@@ -519,8 +520,9 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertTrue(candidate["requires_composition"])
         self.assertFalse(candidate["matrix_approved"])
         self.assertEqual(candidate["selection_stage"], "composition")
-        self.assertEqual(candidate["eligible_scenarios"], ["with_embedded"])
+        self.assertEqual(candidate["eligible_scenarios"], ["without_embedded", "with_embedded"])
         self.assertEqual(candidate["cotas_minimas_com_embutido"], 3)
+        self.assertFalse(next(s for s in candidate["cenarios"] if s["id"] == "with_embedded")["profile_compatible_in_composition"])
         self.assertEqual(result["matrix_items"], [])
         self.assertEqual(result["audit"]["group_results"][0]["result"], "composition")
         self.assertEqual(result["audit"]["summary"]["total_matrix_approved_groups"], 0)
@@ -537,6 +539,53 @@ class Motor360RfcTest(unittest.TestCase):
             result["audit"]["summary"]["total_displayed_groups"]
             + result["audit"]["summary"]["total_matrix_omitted_groups"],
         )
+
+    def test_composition_candidates_use_same_aggregate_financial_basis_as_matrix_items(self):
+        result = analyze_client_consortium_viability(payload(
+            credito_desejado=600000, lance_proprio=460000, fgts=0,
+            renda_total=40000, parcela_limite=12000, contemplacao_perfil="urgent",
+        ), [
+            group("MATRIX", credito_minimo=100000, credito_maximo=2000000,
+                  percentual_lance_embutido="30%", lance_super_agressivo_3m="50%"),
+            group("COMPOSITION", credito_minimo=100000, credito_maximo=300000,
+                  percentual_lance_embutido="30%", lance_super_agressivo_3m="50%"),
+        ])
+        matrix = next(item for item in result["items"] if item["grupo"] == "MATRIX")
+        candidate = next(item for item in result["items"] if item["grupo"] == "COMPOSITION")
+        matrix_scenarios = {scenario["id"]: scenario for scenario in matrix["cenarios"]}
+        candidate_scenarios = {scenario["id"]: scenario for scenario in candidate["cenarios"]}
+
+        self.assertEqual(candidate["cotas_minimas_sem_embutido"], 2)
+        self.assertEqual(candidate["cotas_minimas_com_embutido"], 3)
+        for scenario_id, scenario in candidate_scenarios.items():
+            aggregate = scenario["composition_totals"]
+            reference = matrix_scenarios[scenario_id]
+            self.assertEqual(aggregate["credito_contratado"], reference["credito_contratado"])
+            self.assertEqual(aggregate["credito_liquido_projetado"], reference["credito_liquido_projetado"])
+            self.assertEqual(aggregate["lance_cliente_total"], 460000)
+            self.assertEqual(aggregate["lance_embutido"], reference["lance_embutido"])
+            self.assertEqual(aggregate["lance_total_cenario"], reference["lance_total_cenario"])
+            self.assertEqual(aggregate["saldo_devedor"], reference["saldo_devedor"])
+            self.assertEqual(aggregate["parcela_inicial"], reference["parcela_inicial"])
+            self.assertEqual(aggregate["parcela_pos_contemplacao"], reference["parcela_pos_contemplacao"])
+            aggregate_profiles = {profile["id"]: profile for profile in aggregate["perfis_contemplacao"]}
+            reference_profiles = {profile["id"]: profile for profile in reference["perfis_contemplacao"]}
+            self.assertEqual(aggregate_profiles.keys(), reference_profiles.keys())
+            for profile_id, aggregate_profile in aggregate_profiles.items():
+                reference_profile = reference_profiles[profile_id]
+                for field in ("lance_ideal", "lance_ideal_total", "lance_embutido", "lance_cliente", "falta_para_ideal"):
+                    self.assertEqual(aggregate_profile[field], reference_profile[field], (scenario_id, profile_id, field))
+                self.assertAlmostEqual(aggregate_profile["percentual_lance_efetivo"], reference_profile["percentual_lance_efetivo"], places=7)
+                self.assertEqual(aggregate_profile["atinge_perfil"], reference_profile["atinge_perfil"])
+        stages = {step["id"]: step for step in result["audit"]["execution_steps"]}
+        self.assertEqual(stages["matrix"]["input_count"], 2)
+        self.assertEqual(stages["matrix"]["approved_count"], 1)
+        self.assertEqual(stages["matrix"]["composition_count"], 1)
+        self.assertEqual(stages["matrix"]["rejected_count"], 0)
+        for step_id in ("operator_analysis", "ranking"):
+            self.assertEqual(stages[step_id]["input_count"], 2)
+            self.assertEqual(stages[step_id]["approved_count"], 1)
+            self.assertEqual(stages[step_id]["composition_count"], 1)
 
     def test_invalid_source_identity_is_audited_but_never_reaches_matrix(self):
         result = analyze_client_consortium_viability(payload(), [

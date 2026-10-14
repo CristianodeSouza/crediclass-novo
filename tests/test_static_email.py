@@ -92,7 +92,9 @@ class StaticEmailTest(unittest.TestCase):
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
         card_renderer = app_js.split("function renderMotor360GroupCardUncached", 1)[1].split("function renderMotor360GroupCard(", 1)[0]
 
-        self.assertIn("const showPortfolioLabels = Boolean(metrics && metrics.totalQuotas > 1)", card_renderer)
+        self.assertIn("const showPortfolioLabels = Boolean((metrics && metrics.totalQuotas > 1) || (aggregate && Number(aggregate.cotas_minimas) > 1))", card_renderer)
+        self.assertIn("scenario.composition_totals", card_renderer)
+        self.assertIn("scenario.profile_compatible_in_composition", card_renderer)
         self.assertIn('showPortfolioLabels ? "Lance do cliente na composição" : "Lance do cliente"', card_renderer)
         self.assertIn('showPortfolioLabels ? "Lance total da composição" : "Lance total do cenário"', card_renderer)
         self.assertIn('item.requires_composition === true', card_renderer)

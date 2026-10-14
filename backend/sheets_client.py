@@ -20,6 +20,7 @@ from .config import get_settings
 logger = logging.getLogger("crediclass.sheets")
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 CACHE_TTL_SECONDS = 300
+CACHE_REFRESH_INTERVAL_SECONDS = 240
 METADATA_CACHE_TTL_SECONDS = 900
 SHEETS_READ_ATTEMPTS = 3
 MAX_CREDIT_VALUE = 100_000_000
@@ -34,8 +35,11 @@ _sheet_metadata_cache: dict[str, Any] = {"expires_at": 0.0, "headers": None}
 _group_row_index: dict[str, int] = {}
 _grupo_detail_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 _cache_lock = threading.RLock()
+_grupos_refresh_lock = threading.Lock()
+_motor360_warm_lock = threading.Lock()
 _detail_build_lock = threading.Lock()
 _defasagem_warm_lock = threading.Lock()
+_motor360_warm_started = False
 
 SUMMARY_FIELDS = [
     "administradora",
@@ -338,20 +342,21 @@ def execute_sheets_read(request_factory, operation: str) -> dict[str, Any]:
 
 
 def clear_rows_cache() -> None:
-    with _cache_lock:
-        for cache in _grupos_cache.values():
-            cache["expires_at"] = 0.0
-            cache["items"] = None
-        _grupos_detalhe_cache["expires_at"] = 0.0
-        _grupos_detalhe_cache["items"] = None
-        _grupos_defasagem_cache["expires_at"] = 0.0
-        _grupos_defasagem_cache["items"] = None
-        _sheet_rows_cache["expires_at"] = 0.0
-        _sheet_rows_cache["rows"] = None
-        _sheet_metadata_cache["expires_at"] = 0.0
-        _sheet_metadata_cache["headers"] = None
-        _group_row_index.clear()
-        _grupo_detail_cache.clear()
+    with _grupos_refresh_lock:
+        with _cache_lock:
+            for cache in _grupos_cache.values():
+                cache["expires_at"] = 0.0
+                cache["items"] = None
+            _grupos_detalhe_cache["expires_at"] = 0.0
+            _grupos_detalhe_cache["items"] = None
+            _grupos_defasagem_cache["expires_at"] = 0.0
+            _grupos_defasagem_cache["items"] = None
+            _sheet_rows_cache["expires_at"] = 0.0
+            _sheet_rows_cache["rows"] = None
+            _sheet_metadata_cache["expires_at"] = 0.0
+            _sheet_metadata_cache["headers"] = None
+            _group_row_index.clear()
+            _grupo_detail_cache.clear()
 
 
 def canonical_field_header(field: str) -> str:
@@ -1234,28 +1239,67 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
     return detalhe
 
 
-def list_grupos(include_history: bool = True) -> list[dict[str, Any]]:
+def list_grupos(include_history: bool = True, force_reload: bool = False) -> list[dict[str, Any]]:
     now = time.time()
     cache_key = "with_history" if include_history else "light"
     with _cache_lock:
         cache = _grupos_cache[cache_key]
         cached_items = cache["items"]
-        if cached_items is not None and now < cache["expires_at"]:
+        if not force_reload and cached_items is not None and now < cache["expires_at"]:
             logger.info("Usando cache de grupos (%s)", cache_key)
             return list(cached_items)
 
-    try:
-        items = [row_to_grupo(row) for row in read_summary_rows(include_history=include_history)]
-    except (AttributeError, OSError, TimeoutError, HttpError):
-        if cached_items is None:
-            raise
-        logger.exception("Falha ao atualizar grupos; mantendo o ultimo cache valido (%s)", cache_key)
-        return list(cached_items)
-    with _cache_lock:
-        cache = _grupos_cache[cache_key]
-        cache["items"] = items
-        cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
-    return list(items)
+    # Serialize cache misses/refreshes so concurrent requests do not all read
+    # the entire Google Sheet after expiry or a process restart.
+    with _grupos_refresh_lock:
+        now = time.time()
+        with _cache_lock:
+            cache = _grupos_cache[cache_key]
+            cached_items = cache["items"]
+            if not force_reload and cached_items is not None and now < cache["expires_at"]:
+                logger.info("Cache de grupos preenchido por requisicao concorrente (%s)", cache_key)
+                return list(cached_items)
+
+        try:
+            items = [row_to_grupo(row) for row in read_summary_rows(
+                force_reload=force_reload,
+                include_history=include_history,
+            )]
+        except (AttributeError, OSError, TimeoutError, HttpError):
+            if cached_items is None:
+                raise
+            logger.exception("Falha ao atualizar grupos; mantendo o ultimo cache valido (%s)", cache_key)
+            return list(cached_items)
+        with _cache_lock:
+            cache = _grupos_cache[cache_key]
+            cache["items"] = items
+            cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
+        return list(items)
+
+
+def warm_motor360_cache_async() -> bool:
+    """Warm Motor 360 data after startup and refresh before the TTL expires."""
+    global _motor360_warm_started
+    settings = get_settings()
+    if not settings.google_sheets_id or not settings.google_service_account_json:
+        return False
+    with _motor360_warm_lock:
+        if _motor360_warm_started:
+            return False
+        _motor360_warm_started = True
+
+    def refresh_loop() -> None:
+        first_load = True
+        while True:
+            try:
+                list_grupos(include_history=True, force_reload=not first_load)
+                first_load = False
+            except Exception:
+                logger.exception("Nao foi possivel aquecer/renovar o cache do Motor 360")
+            time.sleep(CACHE_REFRESH_INTERVAL_SECONDS)
+
+    threading.Thread(target=refresh_loop, name="warm-motor360-cache", daemon=True).start()
+    return True
 
 
 def list_grupos_detalhe() -> list[dict[str, Any]]:

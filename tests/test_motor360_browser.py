@@ -57,6 +57,7 @@ class Motor360BrowserTest(unittest.TestCase):
             _between(source, "function motor360BidSortValue", "function motor360BidSortDescription"),
             _between(source, "function motor360BidSortLabel", "function sortMotor360ItemsByBid"),
             _between(source, "function sortMotor360ItemsByBid", "function selectedGroupAnalytics"),
+            _between(source, "function motor360ExecutionStepMessage", "async function loadMotor360Audit"),
             _between(source, "function renderMotor360GroupCardUncached", "function renderMotor360GroupCard"),
             _between(source, "function renderMotor360GroupCard(item)", "function selectedMotor360Items"),
         ))
@@ -92,6 +93,7 @@ const formatPercent = value => `${(Number(value || 0) * 100).toLocaleString("pt-
 const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 const motor360HistoricalAverages = () => "";
 const motor360HistoryTrigger = () => "";
+window.formatMotor360Duration = value => `${Number(value || 0)} ms`;
 '''+ self.production_functions + "\n" + extra_functions + r'''
 const scenario = (id, ideal, compatible = true) => ({
   id, eligible: compatible, credit_compatible: compatible, term_compatible: compatible,
@@ -212,6 +214,77 @@ document.querySelector("#result").textContent = JSON.stringify({
         self.assertIn("minimo de 3 cotas", result["scenarioTitles"][1])
         self.assertIn("Viavel em composicao", result["scenarioStatuses"][1])
         self.assertTrue(result["eligibleScenarioCompatibleClass"])
+
+    def test_composition_candidate_card_uses_aggregate_totals_and_profile_gap(self):
+        result = self._run_browser(r'''
+const profileRows = [{ id: "moderate", label: "Moderado", percentual_referencia: .9,
+  lance_ideal: 540000, lance_ideal_total: 540000, lance_embutido: 0,
+  lance_cliente: 460000, percentual_lance_efetivo: .766667, atinge_perfil: false, falta_para_ideal: 80000 }];
+const candidate = {
+  grupo: "40145", administradora: "ITAÚ", result: "composition", matrix_approved: false,
+  composition_candidate: true, requires_composition: true, selection_stage: "composition",
+  credito_minimo: 70000, credito_maximo: 114778, prazo_restante: 133,
+  cotas_minimas_sem_embutido: 6, cotas_minimas_com_embutido: 8,
+  minQuotas: { without_embedded: 6, with_embedded: 8 }, alerts: [],
+  cenarios: [
+    {
+      ...scenario("without_embedded", 114778, false), eligible: true,
+      financially_eligible_in_composition: true, profile_compatible_in_composition: false,
+      cotas_minimas: 6,
+      composition_totals: { credito_contratado: 600000, credito_liquido_projetado: 600000,
+        credito_por_cota: 100000, lance_cliente_total: 460000, lance_embutido: 0,
+        lance_total_cenario: 460000, percentual_lance_cliente: .766667,
+        percentual_lance_efetivo: .766667, saldo_devedor: 750000,
+        parcela_inicial: 5639.10, parcela_pos_contemplacao: 2154.25,
+        cotas_minimas: 6, perfis_contemplacao: profileRows },
+    },
+    {
+      ...scenario("with_embedded", 114778, true), eligible: true,
+      financially_eligible_in_composition: true, profile_compatible_in_composition: false,
+      cotas_minimas: 8,
+      composition_totals: { credito_contratado: 857142.86, credito_liquido_projetado: 600000,
+        credito_por_cota: 107142.86, lance_cliente_total: 460000, lance_embutido: 257142.86,
+        lance_total_cenario: 717142.86, percentual_lance_cliente: .536667,
+        percentual_lance_efetivo: .836667, saldo_devedor: 1071428.58,
+        parcela_inicial: 8055.10, parcela_pos_contemplacao: 2622.96,
+        cotas_minimas: 8, perfis_contemplacao: [{ ...profileRows[0], lance_ideal: 514285.71,
+          lance_ideal_total: 771428.57, lance_embutido: 257142.86, percentual_lance_efetivo: .836667,
+          atinge_perfil: false, falta_para_ideal: 54285.71 }] },
+    },
+  ],
+};
+investorState.selectedGroupSort = "bid";
+document.querySelector("#cards").innerHTML = renderMotor360GroupCard(candidate);
+const card = document.querySelector(".motor360-group-card");
+document.querySelector("#result").textContent = JSON.stringify({
+  card: card.textContent.replaceAll("\u00ad", ""),
+  order: motor360BidSortLabel(candidate),
+  raw: [...card.querySelectorAll(".motor360-scenario-grid b")].map(node => node.textContent),
+});
+''')
+        self.assertIn("R$ 600.000,00", result["card"])
+        self.assertIn("R$ 460.000,00", result["card"])
+        self.assertIn("R$ 5.639,10", result["card"])
+        self.assertIn("R$ 857.142,86", result["card"])
+        self.assertIn("R$ 257.142,86", result["card"])
+        self.assertIn("R$ 717.142,86", result["card"])
+        self.assertIn("perfil pendente", result["card"].lower())
+        self.assertIn("perfil", result["card"].lower())
+        self.assertIn("R$ 514.285,71", result["order"])
+        self.assertIn("80.000,00", result["card"])
+
+    def test_execution_log_shows_all_three_outcomes_without_losing_candidates(self):
+        result = self._run_browser(r'''
+const messages = [
+  motor360ExecutionStepMessage({ order: 3, input_count: 502, approved_count: 317, composition_count: 4, rejected_count: 181, duration_ms: 0 }),
+  motor360ExecutionStepMessage({ order: 4, input_count: 321, approved_count: 317, composition_count: 4, rejected_count: 0, duration_ms: 0 }),
+  motor360ExecutionStepMessage({ order: 5, input_count: 321, approved_count: 317, composition_count: 4, rejected_count: 0, duration_ms: 0 }),
+].map(message => message.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replaceAll("·", "|"));
+document.querySelector("#result").textContent = JSON.stringify(messages);
+''')
+        self.assertIn("Entrada 502 | aprovados individualmente 317 | opcoes em composicao 4 | eliminados 181", result[0])
+        self.assertIn("Entrada 321 | aprovados 317 | opcoes em composicao 4 | eliminados 0", result[1])
+        self.assertIn("Entrada 321 | aprovados 317 | opcoes em composicao 4 | eliminados 0", result[2])
 
     def test_omitted_group_diagnostics_are_complete_and_searchable_in_real_dom(self):
         source = APP_JS.read_text(encoding="utf-8")

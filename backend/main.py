@@ -1,4 +1,5 @@
 from pathlib import Path
+from contextlib import asynccontextmanager
 import platform
 import sys
 import base64
@@ -35,7 +36,7 @@ from .estudos import build_estudo_audit_payload, build_estudo_preview, clear_all
 from .pdf_bridge import build_react_pdf_payload, react_pdf_service_status, render_react_study_pdf
 from .piperun import fetch_opportunities_preview, fetch_opportunity_notes
 from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
-from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async
+from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -248,7 +249,15 @@ FILES_DIR.mkdir(exist_ok=True)
 logger = logging.getLogger("crediclass.api")
 PDF_RENDER_LOCK = Lock()
 
-app = FastAPI(title="Crediclass Dashboard V3")
+@asynccontextmanager
+async def app_lifespan(_app: FastAPI):
+    # Warm asynchronously so the web process becomes available immediately;
+    # the cache worker refreshes before its five-minute TTL expires.
+    warm_motor360_cache_async()
+    yield
+
+
+app = FastAPI(title="Crediclass Dashboard V3", lifespan=app_lifespan)
 PIPERUN_EXECUTIONS: set[str] = set()
 
 

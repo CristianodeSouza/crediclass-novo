@@ -22,7 +22,7 @@ from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_p
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.180"
+MOTOR_VERSION = "4.0.184"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BQ", "Urgente - 3 meses"),
@@ -536,6 +536,78 @@ def analyze_client_consortium_viability(
                         "atinge_perfil": total_bid_percent is not None and threshold_decimal is not None and total_bid_percent >= threshold_decimal,
                         "falta_para_ideal": money(max(Decimal("0"), ideal_client - (own + fgts))) if ideal_client is not None else None,
                     })
+                aggregate_contracted = desired / (Decimal("1") - (embedded or Decimal("0"))) if with_embedded else desired
+                aggregate_embedded = aggregate_contracted * (embedded or Decimal("0")) if with_embedded else Decimal("0")
+                aggregate_liquid = aggregate_contracted - aggregate_embedded
+                aggregate_fee = aggregate_contracted * fee
+                aggregate_fund = aggregate_contracted * fund
+                aggregate_balance = aggregate_contracted + aggregate_fee + aggregate_fund
+                aggregate_installment = aggregate_balance / Decimal(remaining_term)
+                aggregate_client_bid = own + fgts
+                aggregate_total_bid = aggregate_client_bid + aggregate_embedded
+                aggregate_bid_percent = aggregate_total_bid / aggregate_contracted if aggregate_contracted > 0 else None
+                aggregate_client_percent = aggregate_client_bid / aggregate_contracted if aggregate_contracted > 0 else None
+                aggregate_after_installment = _parcela_pos_contemplacao_por_cenario({
+                    "saldo_devedor": aggregate_balance,
+                    "parcela_inicial": aggregate_installment,
+                    "lance_total_cenario": aggregate_total_bid,
+                    "prazo_remanescente": remaining_term,
+                })
+                aggregate_profiles = []
+                for profile_id, label, strategy_key in CONTEMPLATION_PROFILE_TARGETS:
+                    threshold = ranges.get(strategy_key)
+                    threshold_decimal = Decimal(str(threshold)) if threshold is not None else None
+                    ideal_total = aggregate_contracted * threshold_decimal if threshold_decimal is not None else None
+                    ideal_client = max(Decimal("0"), ideal_total - aggregate_embedded) if ideal_total is not None else None
+                    aggregate_profiles.append({
+                        "id": profile_id,
+                        "label": label,
+                        "percentual_referencia": threshold,
+                        "lance_ideal": money(ideal_client),
+                        "lance_ideal_total": money(ideal_total),
+                        "lance_embutido": money(aggregate_embedded),
+                        "lance_cliente": money(aggregate_client_bid),
+                        "percentual_lance_efetivo": float(aggregate_bid_percent) if aggregate_bid_percent is not None else None,
+                        "atinge_perfil": aggregate_bid_percent is not None and threshold_decimal is not None and aggregate_bid_percent >= threshold_decimal,
+                        "falta_para_ideal": money(max(Decimal("0"), ideal_client - aggregate_client_bid)) if ideal_client is not None else None,
+                    })
+                contracted_credit_per_quota = aggregate_contracted / Decimal(minimum_quotas) if minimum_quotas else None
+                quota_credit_compatible = (
+                    contracted_credit_per_quota is not None
+                    and contracted_credit_per_quota <= maximum
+                    and (minimum is None or contracted_credit_per_quota >= minimum)
+                )
+                composition_totals = {
+                    "credito_contratado": money(aggregate_contracted),
+                    "credito_liquido_projetado": money(aggregate_liquid),
+                    "credito_por_cota": money(contracted_credit_per_quota),
+                    "lance_cliente_total": money(aggregate_client_bid),
+                    "lance_embutido": money(aggregate_embedded),
+                    "lance_total_cenario": money(aggregate_total_bid),
+                    "percentual_lance_cliente": float(aggregate_client_percent) if aggregate_client_percent is not None else None,
+                    "percentual_lance_efetivo": float(aggregate_bid_percent) if aggregate_bid_percent is not None else None,
+                    "taxa_administracao": money(aggregate_fee),
+                    "fundo_reserva": money(aggregate_fund),
+                    "saldo_devedor": money(aggregate_balance),
+                    "parcela_inicial": money(aggregate_installment),
+                    "parcela_pos_contemplacao": aggregate_after_installment,
+                    "cotas_minimas": minimum_quotas,
+                    "credito_por_cota_compativel": quota_credit_compatible,
+                    "parcela_maxima_compativel": aggregate_installment <= income_limit,
+                    "perfis_contemplacao": aggregate_profiles,
+                }
+                selected_aggregate_profile = next(
+                    (profile for profile in aggregate_profiles if profile.get("id") == selected_profile_row),
+                    None,
+                )
+                financial_composition_eligible = bool(
+                    minimum_quotas
+                    and 1 <= int(minimum_quotas) <= 50
+                    and money(aggregate_liquid) is not None
+                    and money(aggregate_liquid) >= money(desired)
+                    and quota_credit_compatible
+                    and aggregate_installment <= income_limit
+                )
                 composition_scenarios.append({
                     "id": scenario_id,
                     "credito_contratado": money(maximum),
@@ -548,29 +620,22 @@ def analyze_client_consortium_viability(
                     "parcela_total_minima": money(initial_installment * Decimal(minimum_quotas)) if minimum_quotas else None,
                     "parcela_maxima_compatível": bool(minimum_quotas and initial_installment * Decimal(minimum_quotas) <= income_limit),
                     "perfis_contemplacao": profile_rows,
+                    "composition_totals": composition_totals,
                     "credit_compatible": True,
                     "term_compatible": None,
                     "composition_candidate": True,
+                    "financially_eligible_in_composition": financial_composition_eligible,
+                    "profile_compatible_in_composition": (
+                        selected_aggregate_profile.get("atinge_perfil") is True
+                        if selected_profile and selected_aggregate_profile
+                        else None
+                    ),
+                    "eligible": financial_composition_eligible,
                 })
             composition_financial_scenarios = [
                 scenario for scenario in composition_scenarios
-                if (
-                    scenario.get("cotas_minimas") is not None
-                    and 1 <= int(scenario["cotas_minimas"]) <= 50
-                    and (parse_decimal(scenario.get("credito_total_minimo")) or Decimal("0")) >= desired
-                    and scenario.get("parcela_maxima_compatível") is True
-                    and (
-                        not selected_profile
-                        or any(
-                            profile.get("id") == selected_profile_row and profile.get("atinge_perfil") is True
-                            for profile in scenario.get("perfis_contemplacao", [])
-                        )
-                    )
-                )
+                if scenario.get("financially_eligible_in_composition") is True
             ]
-            eligible_composition_ids = {scenario["id"] for scenario in composition_financial_scenarios}
-            for scenario in composition_scenarios:
-                scenario["eligible"] = scenario["id"] in eligible_composition_ids
             selected_composition_scenario = composition_financial_scenarios[0] if composition_financial_scenarios else None
             if selected_composition_scenario:
                 composition_capacity_key = preference if preference in contemplation_capacities else next(iter(contemplation_capacities), "")
@@ -1047,20 +1112,40 @@ def analyze_client_consortium_viability(
         detail_items[(str(item.get("administradora") or "").strip().lower(), str(item.get("grupo") or "").strip())] = item
     final_items = []
     matrix_keys = set()
+    final_matrix_approved_keys = set()
+    composition_candidate_by_key = {
+        (str(candidate.get("administradora") or "").strip().lower(), str(candidate.get("grupo") or "").strip()): candidate
+        for candidate in composition_items
+    }
+    composition_only_items = []
     for matrix_item in matrix_items:
         key = (str(matrix_item.get("administradora") or "").strip().lower(), str(matrix_item.get("grupo") or "").strip())
         matrix_keys.add(key)
+        composition_candidate = composition_candidate_by_key.get(key)
+        if composition_candidate and matrix_item.get("result") == "composition":
+            item = dict(composition_candidate)
+            item["eligible_scenarios"] = [
+                scenario.get("id") for scenario in item.get("cenarios", [])
+                if scenario.get("financially_eligible_in_composition") is True
+            ]
+            item["matrix_approved"] = False
+            item["selection_stage"] = "composition"
+            item["composition_candidate"] = True
+            item["requires_composition"] = True
+            item["result"] = "composition"
+            composition_only_items.append(item)
+            continue
         item = dict(detail_items.get(key) or matrix_item)
         item["cenarios"] = matrix_item.get("cenarios", item.get("cenarios", []))
         item["eligible_scenarios"] = matrix_item.get("eligible_scenarios", item.get("eligible_scenarios", []))
         item["matrix_approved"] = True
         item["selection_stage"] = "matrix"
+        final_matrix_approved_keys.add(key)
         item["requires_composition"] = any(
             scenario.get("cotas_minimas") is not None and int(scenario.get("cotas_minimas") or 1) > 1
             for scenario in item.get("cenarios", [])
         ) or (parse_decimal(item.get("credito_maximo")) or Decimal("0")) < desired
         final_items.append(item)
-    composition_only_items = []
     for candidate in composition_items:
         key = (str(candidate.get("administradora") or "").strip().lower(), str(candidate.get("grupo") or "").strip())
         if key in matrix_keys:
@@ -1094,10 +1179,13 @@ def analyze_client_consortium_viability(
     }
     for entry in audit.get("group_results", []):
         key = (str(entry.get("administradora") or "").strip().lower(), str(entry.get("grupo") or "").strip())
-        if key in matrix_keys:
+        if key in final_matrix_approved_keys:
             entry["result"] = "matrix_approved"
             entry["matrix_approved"] = True
             entry["justification"] = []
+        elif key in final_keys and key in composition_candidate_by_key:
+            entry["result"] = "composition"
+            entry["matrix_approved"] = False
     audit["summary"]["matrix_excluded_groups"] = [
         {
             "grupo": entry.get("grupo"),
@@ -1117,7 +1205,8 @@ def analyze_client_consortium_viability(
     ]
     audit["summary"]["total_matrix_omitted_groups"] = len(audit["summary"]["matrix_excluded_groups"])
     audit["parameters"]["post_matrix_selection"] = "matrix_approved_and_viable_composition_candidates"
-    audit["summary"]["total_matrix_approved_groups"] = len(matrix_items)
+    matrix_approved_count = len(final_matrix_approved_keys)
+    audit["summary"]["total_matrix_approved_groups"] = matrix_approved_count
     audit["summary"]["total_displayed_groups"] = len(final_items)
     audit["summary"]["total_post_matrix_groups"] = len(final_items)
     audit["summary"]["total_requires_composition"] = sum(1 for item in final_items if item.get("requires_composition"))
@@ -1127,9 +1216,9 @@ def analyze_client_consortium_viability(
     audit["execution_steps"] = [
         audit["execution_steps"][0],
         audit["execution_steps"][1],
-        {"order": 3, "id": "matrix", "name": "Matriz e opções de composição", "formula_or_rule": "Aprovação individual e viabilidade em composição são contabilizadas separadamente.", "input_count": len(groups), "approved_count": len(matrix_items), "composition_count": len(composition_only_items), "rejected_count": max(0, len(groups) - len(final_items)), "incomplete_count": counters["matrix_incomplete"], "duration_ms": round(durations["contemplation"] * 1000, 3)},
-        {"order": 4, "id": "operator_analysis", "name": "Indicadores para análise do operador", "formula_or_rule": "Crédito, prazo, renda, parcela e composição são apresentados para decisão do operador.", "input_count": len(final_items), "approved_count": len(matrix_items), "composition_count": len(composition_only_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
-        {"order": 5, "id": "ranking", "name": "Ordem preliminar", "formula_or_rule": "Preferências configuráveis reordenam grupos aprovados individualmente e opções viáveis em composição, contabilizados separadamente.", "input_count": len(final_items), "approved_count": len(matrix_items), "composition_count": len(composition_only_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
+        {"order": 3, "id": "matrix", "name": "Matriz e opções de composição", "formula_or_rule": "Aprovação individual e viabilidade em composição são contabilizadas separadamente.", "input_count": len(groups), "approved_count": matrix_approved_count, "composition_count": len(composition_only_items), "rejected_count": max(0, len(groups) - len(final_items)), "incomplete_count": counters["matrix_incomplete"], "duration_ms": round(durations["contemplation"] * 1000, 3)},
+        {"order": 4, "id": "operator_analysis", "name": "Indicadores para análise do operador", "formula_or_rule": "Crédito, prazo, renda e parcela são apresentados; perfil de contemplação permanece indicador independente.", "input_count": len(final_items), "approved_count": matrix_approved_count, "composition_count": len(composition_only_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
+        {"order": 5, "id": "ranking", "name": "Ordem preliminar", "formula_or_rule": "Preferências configuráveis reordenam grupos aprovados individualmente e opções viáveis em composição, contabilizados separadamente.", "input_count": len(final_items), "approved_count": matrix_approved_count, "composition_count": len(composition_only_items), "rejected_count": 0, "incomplete_count": 0, "duration_ms": 0},
     ]
     administrators_analyzed = sorted({str(group.get("administradora") or "").strip() for group in groups if str(group.get("administradora") or "").strip()}, key=normalize_text)
     return {"motor": "360", "base_mode": mode, "objetivo_declarado": objective, "preferencia_declarada": preference, "perfil_contemplacao": selected_profile, "administradoras_analisadas": administrators_analyzed, "cliente": client, "total_grupos_analisados": len(groups), "total_grupos_credito_compativeis": len(credit_eligible_items), "total_grupos_preselecionados": len(final_items), "total_grupos_viaveis": len(final_items), "total_grupos_composicao": sum(1 for item in final_items if item.get("requires_composition")), "contadores": dict(counters), "passos": ["Perfil consolidado.", "Cenarios sem e com embutido calculados de forma independente por grupo.", "Matriz de contemplacao aplicada primeiro pelo lance e perfil em todas as administradoras.", "Indicadores de credito, prazo, renda e composicao apresentados para decisao do operador.", "Grupos aprovados individualmente e opcoes viaveis em composicao exibidos com estados distintos.", "Ordem preliminar aplicada sem ranking definitivo."], "items": final_items, "final_items": final_items, "credit_items": credit_eligible_items, "matrix_items": matrix_items, "composition_items": composition_items, "audit": audit}

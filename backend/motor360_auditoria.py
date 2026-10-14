@@ -77,11 +77,13 @@ def audit_to_markdown(audit: dict[str, Any]) -> str:
         lines.append(f"- **{key}:** {value}")
     lines.extend(["", "## Etapas de filtro", ""])
     for step in audit.get("execution_steps", []):
+        approved_label = "Aprovados individualmente" if step.get("id") in {"matrix", "operator_analysis", "ranking"} else "Aprovados"
         lines.extend([
             f"### {step.get('order', '-')}. {step.get('name', '-')}",
             f"- Regra: {step.get('formula_or_rule', '-')}",
             f"- Entrada: {step.get('input_count', 0)}",
-            f"- Aprovados: {step.get('approved_count', 0)}",
+            f"- {approved_label}: {step.get('approved_count', 0)}",
+            f"- Opções em composição: {step.get('composition_count', 0)}",
             f"- Eliminados: {step.get('rejected_count', 0)}",
         ])
     lines.extend([
@@ -156,7 +158,8 @@ def _audit_pdf_lines(audit: dict[str, Any]) -> list[tuple[str, int, bool]]:
     line("Filtro aplicado: somente grupos aprovados na matriz; crédito, prazo, renda e composição permanecem como indicadores para análise do operador.")
     heading("3. Sequencia de filtros")
     for step in audit.get("execution_steps", []):
-        line(f"{step.get('order', '-')}. {step.get('name', '-')}: {step.get('formula_or_rule', '-')} | Entrada {step.get('input_count', 0)} | Aprovados {step.get('approved_count', 0)} | Eliminados {step.get('rejected_count', 0)} | Incompletos {step.get('incomplete_count', 0)}")
+        approved_label = "Aprovados individualmente" if step.get("id") in {"matrix", "operator_analysis", "ranking"} else "Aprovados"
+        line(f"{step.get('order', '-')}. {step.get('name', '-')}: {step.get('formula_or_rule', '-')} | Entrada {step.get('input_count', 0)} | {approved_label} {step.get('approved_count', 0)} | Opções em composição {step.get('composition_count', 0)} | Eliminados {step.get('rejected_count', 0)} | Incompletos {step.get('incomplete_count', 0)}")
     heading("4. Formulas utilizadas")
     for formula in audit.get("formulas", []):
         line(f"{formula.get('name', '-')}: {formula.get('expression', '-')} | Resultado: {formula.get('result', 'calculado por grupo')}")
