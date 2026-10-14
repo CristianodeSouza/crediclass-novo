@@ -17,6 +17,39 @@ from backend.sheets_client import build_historico, clean_text, create_grupo, del
 
 
 class MapaGruposTest(unittest.TestCase):
+    def test_log_de_refresh_registra_metricas_sem_valores_dos_grupos(self):
+        sheets_client.clear_rows_cache()
+        with (
+            self.assertLogs("crediclass.sheets", level="INFO") as captured,
+            patch("backend.sheets_client.read_summary_rows", return_value=[{"Grupo": "128"}]),
+            patch("backend.sheets_client.row_to_grupo", return_value={"grupo_id": "ITAU-128"}),
+        ):
+            sheets_client.list_grupos()
+
+        log_text = "\n".join(captured.output)
+        self.assertIn("event=refresh_started", log_text)
+        self.assertIn("event=refresh_succeeded", log_text)
+        self.assertIn("duration_ms=", log_text)
+        self.assertIn("groups=1", log_text)
+        self.assertNotIn("ITAU-128", log_text)
+        sheets_client.clear_rows_cache()
+
+    def test_log_de_erro_google_sheets_nao_expoe_mensagem_da_excecao(self):
+        class FailingRequest:
+            def execute(self):
+                raise OSError("sensitive-sheet-id-and-token")
+
+        with (
+            self.assertLogs("crediclass.sheets", level="WARNING") as captured,
+            patch("backend.sheets_client.SHEETS_READ_ATTEMPTS", 1),
+        ):
+            with self.assertRaises(OSError):
+                sheets_client.execute_sheets_read(lambda: FailingRequest(), "ler a base resumida")
+
+        log_text = "\n".join(captured.output)
+        self.assertIn("error_type=OSError", log_text)
+        self.assertNotIn("sensitive-sheet-id-and-token", log_text)
+
     def test_list_grupos_serializa_cache_miss_para_evitar_leituras_concorrentes(self):
         sheets_client.clear_rows_cache()
         barrier = threading.Barrier(6)

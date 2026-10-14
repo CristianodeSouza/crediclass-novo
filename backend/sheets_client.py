@@ -319,20 +319,21 @@ def execute_sheets_read(request_factory, operation: str) -> dict[str, Any]:
             http_status = getattr(error.resp, "status", 0) if isinstance(error, HttpError) else 0
             is_transient = not isinstance(error, HttpError) or http_status == 429 or http_status >= 500
             logger.warning(
-                "Google Sheets leitura falhou operation=%s attempt=%s api_ms=%.2f status=%s",
+                "Google Sheets leitura falhou operation=%s attempt=%s api_ms=%.2f status=%s error_type=%s",
                 operation,
                 attempt,
                 (time.perf_counter() - attempt_started) * 1000,
                 http_status or "n/a",
+                type(error).__name__,
             )
             if not is_transient or attempt == SHEETS_READ_ATTEMPTS:
                 break
             logger.warning(
-                "Falha temporaria ao %s na planilha (tentativa %s/%s): %s",
+                "Falha temporaria ao %s na planilha tentativa=%s/%s error_type=%s",
                 operation,
                 attempt,
                 SHEETS_READ_ATTEMPTS,
-                error,
+                type(error).__name__,
             )
             get_service.cache_clear()
             time.sleep(0.25 * attempt)
@@ -1246,35 +1247,82 @@ def list_grupos(include_history: bool = True, force_reload: bool = False) -> lis
         cache = _grupos_cache[cache_key]
         cached_items = cache["items"]
         if not force_reload and cached_items is not None and now < cache["expires_at"]:
-            logger.info("Usando cache de grupos (%s)", cache_key)
+            logger.info(
+                "motor360_groups_cache event=hit key=%s count=%s ttl_remaining_s=%.1f",
+                cache_key,
+                len(cached_items),
+                max(0.0, cache["expires_at"] - now),
+            )
             return list(cached_items)
 
     # Serialize cache misses/refreshes so concurrent requests do not all read
     # the entire Google Sheet after expiry or a process restart.
-    with _grupos_refresh_lock:
+    lock_wait_started = time.perf_counter()
+    acquired = _grupos_refresh_lock.acquire(blocking=False)
+    if not acquired:
+        logger.info("motor360_groups_cache event=refresh_wait key=%s", cache_key)
+        _grupos_refresh_lock.acquire()
+    lock_wait_ms = (time.perf_counter() - lock_wait_started) * 1000
+    try:
         now = time.time()
         with _cache_lock:
             cache = _grupos_cache[cache_key]
             cached_items = cache["items"]
             if not force_reload and cached_items is not None and now < cache["expires_at"]:
-                logger.info("Cache de grupos preenchido por requisicao concorrente (%s)", cache_key)
+                logger.info(
+                    "motor360_groups_cache event=hit_after_wait key=%s count=%s wait_ms=%.1f",
+                    cache_key,
+                    len(cached_items),
+                    lock_wait_ms,
+                )
                 return list(cached_items)
 
+        logger.info(
+            "motor360_groups_cache event=refresh_started key=%s force=%s cache_present=%s wait_ms=%.1f",
+            cache_key,
+            force_reload,
+            cached_items is not None,
+            lock_wait_ms,
+        )
+        refresh_started = time.perf_counter()
         try:
-            items = [row_to_grupo(row) for row in read_summary_rows(
+            rows = read_summary_rows(
                 force_reload=force_reload,
                 include_history=include_history,
-            )]
-        except (AttributeError, OSError, TimeoutError, HttpError):
+            )
+        except (AttributeError, OSError, TimeoutError, HttpError, GoogleAuthError, RuntimeError, ValueError) as error:
             if cached_items is None:
+                logger.error(
+                    "motor360_groups_cache event=refresh_failed key=%s duration_ms=%.1f error_type=%s cache_fallback=false",
+                    cache_key,
+                    (time.perf_counter() - refresh_started) * 1000,
+                    type(error).__name__,
+                )
                 raise
-            logger.exception("Falha ao atualizar grupos; mantendo o ultimo cache valido (%s)", cache_key)
+            logger.warning(
+                "motor360_groups_cache event=refresh_failed key=%s duration_ms=%.1f error_type=%s cache_fallback=true stale_items=%s",
+                cache_key,
+                (time.perf_counter() - refresh_started) * 1000,
+                type(error).__name__,
+                len(cached_items),
+            )
             return list(cached_items)
+        items = [row_to_grupo(row) for row in rows]
         with _cache_lock:
             cache = _grupos_cache[cache_key]
             cache["items"] = items
             cache["expires_at"] = time.time() + CACHE_TTL_SECONDS
+        logger.info(
+            "motor360_groups_cache event=refresh_succeeded key=%s duration_ms=%.1f rows=%s groups=%s ttl_s=%s",
+            cache_key,
+            (time.perf_counter() - refresh_started) * 1000,
+            len(rows),
+            len(items),
+            CACHE_TTL_SECONDS,
+        )
         return list(items)
+    finally:
+        _grupos_refresh_lock.release()
 
 
 def warm_motor360_cache_async() -> bool:
@@ -1282,20 +1330,41 @@ def warm_motor360_cache_async() -> bool:
     global _motor360_warm_started
     settings = get_settings()
     if not settings.google_sheets_id or not settings.google_service_account_json:
+        logger.warning("motor360_cache_warmup event=skipped reason=google_sheets_configuration_missing")
         return False
     with _motor360_warm_lock:
         if _motor360_warm_started:
+            logger.info("motor360_cache_warmup event=already_running")
             return False
         _motor360_warm_started = True
 
     def refresh_loop() -> None:
         first_load = True
         while True:
+            refresh_kind = "initial" if first_load else "periodic"
+            logger.info(
+                "motor360_cache_warmup event=started kind=%s refresh_interval_s=%s cache_ttl_s=%s",
+                refresh_kind,
+                CACHE_REFRESH_INTERVAL_SECONDS,
+                CACHE_TTL_SECONDS,
+            )
+            refresh_started = time.perf_counter()
             try:
-                list_grupos(include_history=True, force_reload=not first_load)
+                groups = list_grupos(include_history=True, force_reload=not first_load)
+                logger.info(
+                    "motor360_cache_warmup event=succeeded kind=%s duration_ms=%.1f groups=%s",
+                    refresh_kind,
+                    (time.perf_counter() - refresh_started) * 1000,
+                    len(groups),
+                )
                 first_load = False
-            except Exception:
-                logger.exception("Nao foi possivel aquecer/renovar o cache do Motor 360")
+            except Exception as error:
+                logger.error(
+                    "motor360_cache_warmup event=failed kind=%s duration_ms=%.1f error_type=%s",
+                    refresh_kind,
+                    (time.perf_counter() - refresh_started) * 1000,
+                    type(error).__name__,
+                )
             time.sleep(CACHE_REFRESH_INTERVAL_SECONDS)
 
     threading.Thread(target=refresh_loop, name="warm-motor360-cache", daemon=True).start()

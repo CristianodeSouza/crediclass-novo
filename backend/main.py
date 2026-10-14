@@ -38,6 +38,14 @@ from .piperun import fetch_opportunities_preview, fetch_opportunity_notes
 from .models import EstudoCreateResponse, EstudoPreviewRequest, EstudoRequest, EstudosResponse, GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
 
+# Uvicorn's default configuration does not attach a handler to the root
+# logger. Configure application logs explicitly so Render captures them.
+logging.basicConfig(
+    level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    stream=sys.stdout,
+)
+
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
 FILES_DIR = BASE_DIR / "generated_files"
