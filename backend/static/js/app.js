@@ -4716,7 +4716,10 @@ function renderInvestorAnalysis(result) {
     return scenarios.some((scenario) => (scenario.perfis_contemplacao || []).some((profile) => profile.id === matrixProfileId && profile.atinge_perfil === true));
   }).map((item) => `${motor360AdministratorKey(item)}|${String(item.grupo || item.grupo_id || "")}`));
   const onlyMatrixApproved = (items) => items.filter((item) => matrixApprovedKeys.has(`${motor360AdministratorKey(item)}|${String(item.grupo || item.grupo_id || "")}`));
-  const sourceItems = result.perfil_contemplacao ? onlyMatrixApproved(finalItems) : finalItems;
+  const isCompositionCandidate = (item) => item.composition_candidate === true || item.selection_stage === "composition";
+  const sourceItems = result.perfil_contemplacao
+    ? finalItems.filter((item) => isCompositionCandidate(item) || matrixApprovedKeys.has(`${motor360AdministratorKey(item)}|${String(item.grupo || item.grupo_id || "")}`))
+    : finalItems;
   const selectedAdministrator = syncMotor360AdministratorFilter([
     ...(result.administradoras_analisadas || []),
     ...sourceItems,
@@ -4773,7 +4776,6 @@ function renderInvestorAnalysis(result) {
     `<div class="smart-engine-summary-item"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value))}</strong></div>`
   )).join("");
   updateMotor360SelectionSummary();
-  status.textContent = `${items.length} grupos aprovados no perfil exibidos`;
   if (!items.length) {
     const profileLabel = { urgent: "Urgente", fast: "Rápido", moderate: "Moderado", conservative: "Conservador", long_term: "Investidor" }[result.perfil_contemplacao] || "selecionado";
     const rejectedHtml = contemplationRejected.length ? `<details class="motor360-credit-excluded" open><summary>${contemplationRejected.length} grupo(s) não atingem o perfil ${profileLabel}</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th></tr></thead><tbody>${contemplationRejected.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>Lance disponível abaixo da faixa do perfil selecionado.</td></tr>`).join("")}</tbody></table></div></details>` : "";
@@ -4961,7 +4963,10 @@ function setInvestorAnalysisState(state) {
     results: "Análise concluída",
     empty: "Aguardando perfil",
   };
-  status.textContent = labels[normalizedState];
+  const renderedGroupCount = results?.querySelectorAll(".motor360-group-card").length;
+  status.textContent = normalizedState === "results" && results?.querySelector(".motor360-group-list")
+    ? `${renderedGroupCount} grupos disponíveis exibidos`
+    : labels[normalizedState];
   status.dataset.state = normalizedState;
 }
 

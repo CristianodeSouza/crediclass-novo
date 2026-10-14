@@ -6,6 +6,7 @@ import json
 import html
 import re
 import os
+import copy
 import shutil
 import subprocess
 import tempfile
@@ -35,6 +36,7 @@ class Motor360ApplicationBrowserTest(unittest.TestCase):
 
     def setUp(self):
         self.analysis_calls = 0
+        self.composition_candidate_e2e = False
         outer = self
 
         class Handler(BaseHTTPRequestHandler):
@@ -55,7 +57,11 @@ class Motor360ApplicationBrowserTest(unittest.TestCase):
                 path = urlsplit(self.path).path
                 if path == "/":
                     html = (STATIC / "index.html").read_text(encoding="utf-8")
-                    e2e_script = outer._automation_script()
+                    e2e_script = (
+                        outer._composition_candidate_automation_script()
+                        if getattr(outer, "composition_candidate_e2e", False)
+                        else outer._automation_script()
+                    )
                     html = html.replace("</body>", f"{e2e_script}</body>")
                     raw = html.encode("utf-8")
                     self.send_response(200)
@@ -183,6 +189,61 @@ const until = async (predicate, timeout = 15000) => {
 });
 </script><pre id="motor360-e2e-result">pending</pre>'''
 
+    @staticmethod
+    def _composition_candidate_automation_script() -> str:
+        return r'''<script>
+window.__motor360E2E = { errors: [], analysisCalls: 0, outcome: null };
+window.addEventListener("error", event => window.__motor360E2E.errors.push(event.message));
+window.addEventListener("unhandledrejection", event => window.__motor360E2E.errors.push(String(event.reason)));
+const originalFetch = window.fetch.bind(window);
+window.fetch = (input, init) => {
+  if (String(input).includes("/api/viabilidade-360/analisar")) window.__motor360E2E.analysisCalls++;
+  return originalFetch(input, init).then(response => {
+    if (!response.ok) window.__motor360E2E.errors.push(`HTTP ${response.status} ${input}`);
+    return response;
+  });
+};
+const sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+const until = async (predicate, timeout = 15000) => {
+  const start = Date.now();
+  while (!predicate()) {
+    if (Date.now() - start > timeout) throw new Error("Timeout aguardando lista do Motor 360");
+    await sleep(50);
+  }
+};
+(async () => {
+  await until(() => document.body.classList.contains("authenticated"));
+  document.getElementById("clientProfileCredito").value = "600000";
+  document.getElementById("clientProfileParcelaIdeal").value = "12000";
+  document.getElementById("clientProfileParcelaLimite").value = "12000";
+  updateClientProfileTotals();
+  document.querySelector('[data-screen="motor360"]').click();
+  await until(() => document.querySelector("#investorAnalysisResults .motor360-group-list"));
+  await sleep(250);
+  const result = investorState.result;
+  const apiItems = result.final_items || result.items || [];
+  const cards = [...document.querySelectorAll("#investorAnalysisResults .motor360-group-card")];
+  const compositionCard = cards.find(card => card.querySelector("h3")?.textContent.includes("1045"));
+  window.__motor360E2E.outcome = {
+    apiCount: apiItems.length,
+    renderedCount: cards.length,
+    renderedGroups: cards.map(card => card.querySelector("h3")?.textContent.trim()),
+    compositionCandidateVisible: Boolean(compositionCard),
+    compositionStatus: compositionCard?.querySelector(".motor360-group-status")?.textContent.trim() || "",
+    displayedStatus: document.getElementById("investorAnalysisStatus")?.textContent.trim() || "",
+    summaryDisplayedCount: [...document.querySelectorAll(".smart-engine-summary-item")]
+      .find(node => node.querySelector("span")?.textContent.includes("Grupos exibidos nesta administradora"))
+      ?.querySelector("strong")?.textContent.trim() || "",
+    analysisCalls: window.__motor360E2E.analysisCalls,
+    errors: window.__motor360E2E.errors,
+  };
+  document.getElementById("motor360-e2e-result").textContent = JSON.stringify(window.__motor360E2E.outcome);
+})().catch(error => {
+  window.__motor360E2E.errors.push(error.stack || String(error));
+  document.getElementById("motor360-e2e-result").textContent = JSON.stringify({ errors: window.__motor360E2E.errors });
+});
+</script><pre id="motor360-e2e-result">pending</pre>'''
+
     def test_real_application_flow_with_mocked_api(self):
         expected = self.fixture["fixture_metadata"]
         with tempfile.TemporaryDirectory(prefix="motor360-app-e2e-") as directory:
@@ -219,6 +280,55 @@ const until = async (predicate, timeout = 15000) => {
         self.assertTrue(outcome["cleared"])
         self.assertEqual(outcome["analysisCalls"], 1, "filtros/ordenação locais não podem repetir o POST de análise")
         self.assertLessEqual(outcome["layout"]["results"], outcome["layout"]["viewport"] + 2)
+
+    def test_profile_filter_keeps_composition_candidates_and_matches_payload_count(self):
+        self.composition_candidate_e2e = True
+        self.fixture = copy.deepcopy(type(self).fixture)
+        payload = self.fixture["payload"]
+        payload["perfil_contemplacao"] = "moderate"
+        existing_items = payload["items"]
+        for item in existing_items:
+            for scenario in item.get("cenarios", []):
+                for profile in scenario.get("perfis_contemplacao", []):
+                    if profile.get("id") == "moderate":
+                        profile["atinge_perfil"] = True
+        candidate = copy.deepcopy(next(item for item in existing_items if item["grupo"] == "I227"))
+        candidate.update({
+            "grupo": "1045",
+            "administradora": "CNP",
+            "matrix_approved": False,
+            "result": "composition",
+            "composition_candidate": True,
+            "requires_composition": True,
+            "selection_stage": "composition",
+        })
+        payload["items"] = [*existing_items, candidate]
+        payload["final_items"] = payload["items"]
+        payload["matrix_items"] = existing_items
+        payload["total_grupos_preselecionados"] = len(payload["final_items"])
+        payload["total_grupos_viaveis"] = len(payload["final_items"])
+        payload["total_grupos_composicao"] = 2
+
+        with tempfile.TemporaryDirectory(prefix="motor360-composition-e2e-") as directory:
+            profile = Path(directory) / "chrome-profile"
+            completed = subprocess.run(
+                [self.chrome, "--headless=new", "--disable-gpu", "--no-sandbox", "--disable-dev-shm-usage",
+                 "--window-size=390,844", "--virtual-time-budget=8000", f"--user-data-dir={profile}",
+                 "--dump-dom", f"http://127.0.0.1:{self.server.server_port}/"],
+                capture_output=True, text=True, timeout=45, check=True,
+                encoding="utf-8", errors="replace",
+            )
+        marker = '<pre id="motor360-e2e-result">'
+        self.assertIn(marker, completed.stdout, completed.stderr[-2000:])
+        outcome = json.loads(completed.stdout.split(marker, 1)[1].split("</pre>", 1)[0])
+        self.assertFalse(outcome.get("errors"), outcome.get("errors"))
+        self.assertEqual(outcome["apiCount"], 5)
+        self.assertEqual(outcome["renderedCount"], outcome["apiCount"], outcome["renderedGroups"])
+        self.assertTrue(outcome["compositionCandidateVisible"], outcome["renderedGroups"])
+        self.assertIn("Possível em composição", outcome["compositionStatus"])
+        self.assertIn("5 grupos disponíveis exibidos", outcome["displayedStatus"])
+        self.assertEqual(outcome["summaryDisplayedCount"], "5")
+        self.assertEqual(outcome["analysisCalls"], 1)
 
 
 if __name__ == "__main__":
