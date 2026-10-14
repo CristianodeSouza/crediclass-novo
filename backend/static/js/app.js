@@ -4471,7 +4471,8 @@ function renderMotor360BlockingDiagnostics(audit) {
     const details = [...reasonLabels, ...stageFailures.map((stage) => stage.replaceAll("_", " "))];
     const reason = [...new Set(details)].join(" · ") || "Motivo não registrado nesta execução";
     const identity = group || "Sem identificador de grupo";
-    const search = [identity, item.administradora, item.source_row, reason].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
+    const sourceRowSearch = item.source_row == null ? "" : `linha ${item.source_row}`;
+    const search = [identity, item.administradora, sourceRowSearch, reason].filter(Boolean).join(" ").toLocaleLowerCase("pt-BR");
     return `<tr data-omitted-search="${escapeHtml(search)}"><td>${escapeHtml(identity)}</td><td>${escapeHtml(item.administradora || "-")}</td><td>${escapeHtml(String(item.source_row ?? "Linha não informada"))}</td><td>${escapeHtml(item.result || "-")}</td><td>${escapeHtml(reason)}</td></tr>`;
   }).join("");
   const analyzedCount = Number(summary.total_analyzed ?? audit?.data_source?.total_rows ?? entries.length);

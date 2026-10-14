@@ -1,0 +1,66 @@
+{
+  "fixture_metadata": {
+    "name": "motor360-ui-contract-v1",
+    "purpose": "Deterministic, non-production API payload for browser acceptance tests",
+    "source_basis": "Audited Motor 360 cases in the project conversation; values below are synthetic test inputs, not a fresh Google Sheets snapshot.",
+    "expected_visible_groups_per_scenario": {
+      "per_group": ["20399", "1011", "I227", "NO-BID"],
+      "with_embedded": ["20399", "I227"],
+      "without_embedded": ["20399", "1011", "I227", "NO-BID"]
+    },
+    "expected_bid_order": ["20399", "1011", "I227", "NO-BID"],
+    "expected_numeric_bid_order": [0, 56820, 329657]
+  },
+  "payload": {
+    "cliente": {
+      "credito_liquido_desejado": 600000,
+      "lance_cliente_total": 460000,
+      "renda_total": 40000,
+      "parcela_maxima": 12000
+    },
+    "administradoras_analisadas": ["AUTO-ITAÚ", "CNP", "PORTO", "TESTE"],
+    "total_grupos_analisados": 4,
+    "total_grupos_preselecionados": 4,
+    "total_grupos_composicao": 1,
+    "contadores": {"dados_incompletos": 1},
+    "items": [
+      {
+        "grupo": "20399", "administradora": "AUTO-ITAÚ", "matrix_approved": true,
+        "credito_minimo": null, "credito_maximo": null, "prazo_restante": 13,
+        "taxa_adm": 0.18, "fundo_reserva": 0.02, "cotas_minimas_sem_embutido": 1,
+        "cenarios": [
+          {"id": "with_embedded", "eligible": true, "credit_compatible": true, "term_compatible": true, "income_compatible": true, "credito_contratado": 600000, "parcela_inicial": 4200, "parcela_pos_contemplacao": 3900, "lance_cliente_total": 0, "lance_embutido": 0, "lance_total_cenario": 0, "saldo_devedor": 520000, "percentual_lance_cliente": 0, "percentual_lance_efetivo": 0, "perfis_contemplacao": [{"id": "moderate", "label": "Moderado", "percentual_referencia": 0.3, "lance_ideal": 0, "lance_embutido": 0}]},
+          {"id": "without_embedded", "eligible": true, "credit_compatible": true, "term_compatible": true, "income_compatible": true, "credito_contratado": 600000, "parcela_inicial": 4200, "parcela_pos_contemplacao": 3900, "lance_cliente_total": 460000, "lance_embutido": 0, "lance_total_cenario": 460000, "saldo_devedor": 520000, "percentual_lance_cliente": 0.76667, "percentual_lance_efetivo": 0.76667, "perfis_contemplacao": [{"id": "moderate", "label": "Moderado", "percentual_referencia": 0.3, "lance_ideal": 0, "lance_embutido": 0}]}
+        ]
+      },
+      {
+        "grupo": "1011", "administradora": "CNP", "matrix_approved": true,
+        "credito_minimo": 717519.32, "credito_maximo": 1255658.79, "prazo_restante": 61,
+        "taxa_adm": 0.2, "fundo_reserva": 0.05, "cotas_minimas_sem_embutido": 1,
+        "cenarios": [
+          {"id": "with_embedded", "eligible": false, "credit_compatible": false, "term_compatible": true, "income_compatible": true, "credito_contratado": 857142.86, "parcela_inicial": 5100, "parcela_pos_contemplacao": 4800, "lance_cliente_total": 0, "lance_embutido": 257142.86, "lance_total_cenario": 257142.86, "saldo_devedor": 744000, "percentual_lance_cliente": 0, "percentual_lance_efetivo": 0.3, "perfis_contemplacao": [{"id": "moderate", "label": "Moderado", "percentual_referencia": 0.4, "lance_ideal": 80000, "lance_embutido": 257142.86}]},
+          {"id": "without_embedded", "eligible": true, "credit_compatible": true, "term_compatible": true, "income_compatible": true, "credito_contratado": 600000, "parcela_inicial": 4800, "parcela_pos_contemplacao": 4500, "lance_cliente_total": 460000, "lance_embutido": 0, "lance_total_cenario": 460000, "saldo_devedor": 500000, "percentual_lance_cliente": 0.76667, "percentual_lance_efetivo": 0.76667, "perfis_contemplacao": [{"id": "moderate", "label": "Moderado", "percentual_referencia": 0.4, "lance_ideal": 56820, "lance_embutido": 0}]}
+        ]
+      },
+      {
+        "grupo": "I227", "administradora": "PORTO", "matrix_approved": false, "requires_composition": true,
+        "credito_minimo": 55000, "credito_maximo": 110000, "prazo_restante": 147, "vencimento_parcela": "10",
+        "taxa_adm": 0.21, "fundo_reserva": 0.01, "cotas_minimas_sem_embutido": 6, "cotas_minimas_com_embutido": 8,
+        "cenarios": [
+          {"id": "with_embedded", "eligible": true, "credit_compatible": true, "term_compatible": true, "income_compatible": true, "creation_status": "created", "data_complete": true, "credito_contratado": 857142.86, "parcela_inicial": 6000, "parcela_pos_contemplacao": 5600, "lance_cliente_total": 0, "lance_embutido": 257142.86, "lance_total_cenario": 257142.86, "saldo_devedor": 732000, "percentual_lance_cliente": 0, "percentual_lance_efetivo": 0.3, "perfis_contemplacao": [{"id": "moderate", "label": "Moderado", "percentual_referencia": 0.45, "lance_ideal": 329657.14, "lance_embutido": 257142.86}]},
+          {"id": "without_embedded", "eligible": true, "credit_compatible": true, "term_compatible": true, "income_compatible": true, "creation_status": "created", "data_complete": true, "credito_contratado": 600000, "parcela_inicial": 5200, "parcela_pos_contemplacao": 4800, "lance_cliente_total": 460000, "lance_embutido": 0, "lance_total_cenario": 460000, "saldo_devedor": 714000, "percentual_lance_cliente": 0.76667, "percentual_lance_efetivo": 0.76667, "perfis_contemplacao": [{"id": "moderate", "label": "Moderado", "percentual_referencia": 0.45, "lance_ideal": 410760, "lance_embutido": 0}]}
+        ]
+      },
+      {
+        "grupo": "NO-BID", "administradora": "TESTE", "matrix_approved": false,
+        "credito_minimo": null, "credito_maximo": 500000, "prazo_restante": 12,
+        "taxa_adm": 0.18, "fundo_reserva": 0.02,
+        "cenarios": [
+          {"id": "with_embedded", "eligible": false, "credit_compatible": false, "term_compatible": true, "income_compatible": true, "credito_contratado": 600000, "parcela_inicial": 9000, "parcela_pos_contemplacao": 8800, "lance_cliente_total": 0, "lance_embutido": 0, "lance_total_cenario": 0, "saldo_devedor": 580000, "percentual_lance_cliente": 0, "percentual_lance_efetivo": 0, "perfis_contemplacao": [{"id": "moderate", "label": "Moderado", "percentual_referencia": 0.4, "lance_ideal": null, "lance_embutido": 0}]},
+          {"id": "without_embedded", "eligible": true, "credit_compatible": true, "term_compatible": true, "income_compatible": true, "credito_contratado": 600000, "parcela_inicial": 9000, "parcela_pos_contemplacao": 8800, "lance_cliente_total": 460000, "lance_embutido": 0, "lance_total_cenario": 460000, "saldo_devedor": 580000, "percentual_lance_cliente": 0.76667, "percentual_lance_efetivo": 0.76667, "perfis_contemplacao": [{"id": "moderate", "label": "Moderado", "percentual_referencia": 0.4, "lance_ideal": null, "lance_embutido": 0}]}
+        ]
+      }
+    ],
+    "audit_id": null
+  }
+}
