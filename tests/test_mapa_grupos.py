@@ -30,6 +30,11 @@ class MapaGruposTest(unittest.TestCase):
         self.assertIn("event=refresh_started", log_text)
         self.assertIn("event=refresh_succeeded", log_text)
         self.assertIn("duration_ms=", log_text)
+        self.assertIn("map_history_ms=", log_text)
+        self.assertIn("map_lance_references_ms=", log_text)
+        self.assertIn("map_fields_ms=", log_text)
+        self.assertIn("rss_before_mapping_mb=", log_text)
+        self.assertIn("rss_after_mapping_mb=", log_text)
         self.assertIn("groups=1", log_text)
         self.assertNotIn("ITAU-128", log_text)
         duration_match = re.search(r"event=refresh_succeeded[^\n]*duration_ms=([\d.]+) duration_s_pt=([\d,]+)", log_text)
@@ -39,6 +44,31 @@ class MapaGruposTest(unittest.TestCase):
             sheets_client.format_duration_seconds_pt(float(duration_match.group(1))),
         )
         sheets_client.clear_rows_cache()
+
+    def test_mapeamento_de_502_linhas_com_historico_preserva_dados_e_expoe_etapas(self):
+        row = {
+            "ADM": "PORTO", "Grupo": "I227", "Tipo de Bem": "Imovel",
+            "Credito Minimo": "55.000,00", "Credito Maximo": "110.000,00",
+            "Taxa Administracao": "21%", "Fundo Reserva": "1%",
+            "Prazo Restante": "147", "__source_row": 210,
+        }
+        for month in ("JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"):
+            month = f"{month}-26"
+            row[f"{month} Menor Lance"] = "45%"
+            row[f"{month} Maior Lance"] = "60%"
+            row[f"{month} Qtd Contemplacoes"] = "2"
+
+        rows = [dict(row, Grupo=f"I{index:03d}") for index in range(502)]
+        timings: dict[str, float] = {}
+        mapped = [row_to_grupo(item, _timings=timings) for item in rows]
+
+        self.assertEqual(len(mapped), 502)
+        self.assertEqual(mapped[209]["credito_maximo"], 110000)
+        self.assertEqual(mapped[209]["fundo_reserva"], 0.01)
+        self.assertEqual(mapped[209]["prazo_restante"], 147)
+        self.assertEqual(mapped[209]["historico_12_meses"][-1]["qtd_contemplacoes"], 2)
+        self.assertEqual(set(timings), {"history_ms", "references_ms", "field_mapping_ms"})
+        self.assertTrue(all(value >= 0 for value in timings.values()))
 
     def test_log_de_erro_google_sheets_nao_expoe_mensagem_da_excecao(self):
         class FailingRequest:
@@ -126,7 +156,7 @@ class MapaGruposTest(unittest.TestCase):
         sheets_client.clear_rows_cache()
         with (
             patch("backend.sheets_client.read_summary_rows", side_effect=[[{"Grupo": "128"}], [{"Grupo": "129"}]]) as read_rows,
-            patch("backend.sheets_client.row_to_grupo", side_effect=lambda row: {"grupo_id": row["Grupo"]}),
+            patch("backend.sheets_client.row_to_grupo", side_effect=lambda row, **_kwargs: {"grupo_id": row["Grupo"]}),
         ):
             self.assertEqual(sheets_client.list_grupos(), [{"grupo_id": "128"}])
             self.assertEqual(sheets_client.list_grupos(force_reload=True), [{"grupo_id": "129"}])

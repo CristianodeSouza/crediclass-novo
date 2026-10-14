@@ -512,11 +512,13 @@ def index():
 @app.get("/api/health")
 def health():
     settings = get_settings()
+    commit = (os.getenv("RENDER_GIT_COMMIT") or os.getenv("GIT_COMMIT") or os.getenv("SOURCE_VERSION") or "").strip()
     return {
         "status": "ok",
         "app": settings.app_name,
         "version": settings.version,
         "environment": settings.environment,
+        "commit": commit[:40] or None,
     }
 
 

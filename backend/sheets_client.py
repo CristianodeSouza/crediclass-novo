@@ -135,6 +135,7 @@ MAPA_GRUPOS_FALLBACK_COLUMN_INDEXES: dict[str, int] = {
 }
 
 
+@lru_cache(maxsize=4096)
 def normalize_header(value: str) -> str:
     text = unicodedata.normalize("NFKD", value or "")
     text = "".join(ch for ch in text if not unicodedata.combining(ch))
@@ -967,13 +968,24 @@ def update_historico_mensal_lote(grupo_id: str, payloads: list[dict[str, Any]]) 
     return {"success": True, "meses": months}
 
 
+@lru_cache(maxsize=64)
+def _normalized_row_headers(headers: tuple[str, ...]) -> dict[str, tuple[tuple[str, int], ...]]:
+    """Cache normalized names and original header order for a sheet row shape."""
+    normalized: dict[str, tuple[tuple[str, int], ...]] = {}
+    for index, header in enumerate(headers):
+        key = normalize_header(header)
+        normalized[key] = normalized.get(key, ()) + ((header, index),)
+    return normalized
+
+
 def get_field(row: dict[str, Any], field: str) -> Any:
     canonical = row.get(canonical_field_header(field))
     if canonical_field_header(field) in row:
         return canonical
-    normalized = {normalize_header(key): value for key, value in row.items()}
+    normalized_headers = _normalized_row_headers(tuple(row))
     for alias in FIELD_ALIASES[field]:
-        value = normalized.get(normalize_header(alias))
+        matched = normalized_headers.get(normalize_header(alias))
+        value = row.get(matched[-1][0]) if matched is not None else None
         if value not in (None, ""):
             return value
     return ""
@@ -997,9 +1009,16 @@ def get_field_source(row: dict[str, Any], field: str) -> dict[str, str]:
     if source:
         return dict(source)
     aliases = {normalize_header(alias) for alias in FIELD_ALIASES.get(field, [])}
-    for header, value in row.items():
-        if normalize_header(str(header)) in aliases and value not in (None, ""):
-            return {"source": "cabecalho", "header": str(header)}
+    normalized_headers = _normalized_row_headers(tuple(str(header) for header in row))
+    matching_headers = sorted(
+        (index, header)
+        for normalized_header, entries in normalized_headers.items()
+        if normalized_header in aliases
+        for header, index in entries
+        if row.get(header) not in (None, "")
+    )
+    if matching_headers:
+        return {"source": "cabecalho", "header": str(matching_headers[0][1])}
     return {"source": "ausente", "header": ""}
 
 
@@ -1059,6 +1078,7 @@ def parse_bool(value: Any) -> bool | None:
     return None
 
 
+@lru_cache(maxsize=2048)
 def history_key_from_header(header: str) -> tuple[str, str] | None:
     normalized = normalize_header(header).upper()
     match = re.search(r"\b([A-Z]{3})\s*(?:-|/|\s)?\s*(\d{2})\b", normalized)
@@ -1142,11 +1162,18 @@ def build_administradora_id(row: dict[str, Any]) -> str:
     return re.sub(r"[^A-Za-z0-9]+", "-", ascii_name).strip("-").upper()
 
 
-def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
+def row_to_grupo(row: dict[str, Any], _timings: dict[str, float] | None = None) -> dict[str, Any]:
     from .lance_reference import calculate_lance_references
 
+    stage_started = time.perf_counter()
     historico = build_historico(row)
+    if _timings is not None:
+        _timings["history_ms"] = _timings.get("history_ms", 0.0) + (time.perf_counter() - stage_started) * 1000
+    stage_started = time.perf_counter()
     lance_references = calculate_lance_references(historico)
+    if _timings is not None:
+        _timings["references_ms"] = _timings.get("references_ms", 0.0) + (time.perf_counter() - stage_started) * 1000
+    stage_started = time.perf_counter()
     # Direct profile values from the official sheet override calculated
     # references when present, including legacy canonical __field keys.
     def direct_percent(field: str) -> float | None:
@@ -1190,7 +1217,7 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         for field, mapping in (row.get("__source_columns") or {}).items()
         if field.startswith("historico:")
     })
-    return {
+    result = {
         "source_row": row.get("__source_row"),
         "grupo_id": build_grupo_id(row),
         "administradora_id": build_administradora_id(row),
@@ -1242,6 +1269,9 @@ def row_to_grupo(row: dict[str, Any]) -> dict[str, Any]:
         "origens": origins,
         "mapeamento_origem": source_mapping,
     }
+    if _timings is not None:
+        _timings["field_mapping_ms"] = _timings.get("field_mapping_ms", 0.0) + (time.perf_counter() - stage_started) * 1000
+    return result
 
 
 def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
@@ -1288,6 +1318,18 @@ def row_to_grupo_detalhe(row: dict[str, Any]) -> dict[str, Any]:
         detalhe.get("percentual_lance_fixo"),
     ))
     return detalhe
+
+
+def _current_rss_mb() -> float | None:
+    """Read current process RSS on Linux without adding a runtime dependency."""
+    try:
+        with open("/proc/self/status", encoding="utf-8") as status_file:
+            for line in status_file:
+                if line.startswith("VmRSS:"):
+                    return int(line.split()[1]) / 1024
+    except (OSError, ValueError, IndexError):
+        return None
+    return None
 
 
 def list_grupos(include_history: bool = True, force_reload: bool = False) -> list[dict[str, Any]]:
@@ -1364,8 +1406,11 @@ def list_grupos(include_history: bool = True, force_reload: bool = False) -> lis
             )
             return list(cached_items)
         mapping_started = time.perf_counter()
-        items = [row_to_grupo(row) for row in rows]
+        mapping_metrics: dict[str, float] = {}
+        rss_before_mapping_mb = _current_rss_mb()
+        items = [row_to_grupo(row, _timings=mapping_metrics) for row in rows]
         mapping_ms = (time.perf_counter() - mapping_started) * 1000
+        rss_after_mapping_mb = _current_rss_mb()
         cache_write_started = time.perf_counter()
         with _cache_lock:
             cache = _grupos_cache[cache_key]
@@ -1374,7 +1419,7 @@ def list_grupos(include_history: bool = True, force_reload: bool = False) -> lis
         cache_write_ms = (time.perf_counter() - cache_write_started) * 1000
         refresh_duration_ms = (time.perf_counter() - refresh_started) * 1000
         logger.info(
-            "motor360_groups_cache event=refresh_succeeded key=%s duration_ms=%.1f duration_s_pt=%s read_summary_ms=%.1f read_summary_s_pt=%s group_mapping_ms=%.1f group_mapping_s_pt=%s cache_write_ms=%.1f rows=%s groups=%s ttl_s=%s",
+            "motor360_groups_cache event=refresh_succeeded key=%s duration_ms=%.1f duration_s_pt=%s read_summary_ms=%.1f read_summary_s_pt=%s group_mapping_ms=%.1f group_mapping_s_pt=%s map_history_ms=%.1f map_lance_references_ms=%.1f map_fields_ms=%.1f rss_before_mapping_mb=%s rss_after_mapping_mb=%s rss_delta_mapping_mb=%s cache_write_ms=%.1f rows=%s groups=%s ttl_s=%s",
             cache_key,
             refresh_duration_ms,
             format_duration_seconds_pt(refresh_duration_ms),
@@ -1382,6 +1427,12 @@ def list_grupos(include_history: bool = True, force_reload: bool = False) -> lis
             format_duration_seconds_pt(read_ms),
             mapping_ms,
             format_duration_seconds_pt(mapping_ms),
+            mapping_metrics.get("history_ms", 0.0),
+            mapping_metrics.get("references_ms", 0.0),
+            mapping_metrics.get("field_mapping_ms", 0.0),
+            "na" if rss_before_mapping_mb is None else f"{rss_before_mapping_mb:.1f}",
+            "na" if rss_after_mapping_mb is None else f"{rss_after_mapping_mb:.1f}",
+            "na" if rss_before_mapping_mb is None or rss_after_mapping_mb is None else f"{rss_after_mapping_mb - rss_before_mapping_mb:.1f}",
             cache_write_ms,
             len(rows),
             len(items),
