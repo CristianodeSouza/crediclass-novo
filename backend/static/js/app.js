@@ -353,7 +353,7 @@ function activateScreen(screenName) {
   document.getElementById("screenLetter").textContent = meta.letter;
   document.getElementById("screenTitle").textContent = meta.title;
   document.getElementById("screenSubtitle").textContent = meta.subtitle;
-  document.querySelector(".page-header")?.classList.toggle("d-none", ["perfil", "motor360", "grupos-selecionados", "crm-piperun"].includes(screenName));
+  document.querySelector(".page-header")?.classList.toggle("d-none", ["perfil", "motor360", "grupos-selecionados", "crm-piperun", "estudo"].includes(screenName));
   const primaryAction = document.getElementById("primaryAction");
   primaryAction.textContent = meta.action;
   primaryAction.classList.toggle("d-none", ["motor360", "estudo", "mapa-assembleia"].includes(screenName));
@@ -367,17 +367,14 @@ function activateScreen(screenName) {
     }
   }
   if (screenName === "mapa-assembleia") loadAssemblyMap();
-  if (screenName === "estudo") renderEmptyFinancialStudyScreen();
+  if (screenName === "estudo") clearRetiredFinancialStudyState();
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
   if (screenName === "crm-piperun") resetPipeRunPreview();
 }
 
-function renderEmptyFinancialStudyScreen() {
-  const screen = document.getElementById("screen-estudo");
-  if (!screen) return;
-  screen.replaceChildren();
+function clearRetiredFinancialStudyState() {
   sessionStorage.removeItem("crediclass.currentStudy");
   localStorage.removeItem("crediclass.financialStudy.sections");
 }
