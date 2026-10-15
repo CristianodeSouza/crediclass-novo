@@ -109,6 +109,32 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn('target.textContent = administrators.length', app_js)
         self.assertIn('renderFinancialStudySelectedAdministrator();', app_js)
 
+    def test_part_four_quadro_resumo_uses_motor_composition_and_hypothetical_html_values(self):
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+        start = html.index('data-study-part="4"')
+        end = html.index("</section>", start)
+        part = html[start:end]
+
+        self.assertIn('data-study-part-name="Quadro Resumo"', part)
+        self.assertIn("QUADRO RESUMO", part)
+        self.assertIn("SIMULAÇÃO INVESTIMENTOS", part)
+        self.assertIn("Valores hipotéticos do HTML de referência", part)
+        for value in ("R$ 3.713.088,00", "R$ 1.927.733,55", "R$ 1.223.300,97", "R$ 6.726.706,47", "R$ 3.491.636,87", "R$ 2.216.157,17"):
+            self.assertIn(value, part)
+        self.assertIn('id="financialStudyPart4Content"', part)
+        self.assertNotIn("<img", part)
+        function_start = app_js.index("function renderFinancialStudySummary()")
+        function_end = app_js.index("\nfunction clearRetiredFinancialStudyState()", function_start)
+        summary_renderer = app_js[function_start:function_end]
+        self.assertIn("selectedMotor360Items()", summary_renderer)
+        self.assertIn("selectedCompositionScenarioMetrics(items, id)", summary_renderer)
+        self.assertIn("selectedScenarioIdsForGroup(key)", summary_renderer)
+        self.assertIn("renderFinancialStudySummary();", app_js)
+        self.assertIn(".financial-study-part4-overview", css)
+        self.assertIn(".financial-study-part4-table", css)
+
     def test_legacy_study_backend_modules_are_absent(self):
         backend = ROOT / "backend"
         for module in ("estudos.py", "templates_estudos.py", "financial_study_engine.py", "pdf_bridge.py"):

@@ -370,6 +370,7 @@ function activateScreen(screenName) {
   if (screenName === "estudo") {
     clearRetiredFinancialStudyState();
     renderFinancialStudySelectedAdministrator();
+    renderFinancialStudySummary();
   }
   if (screenName === "configuracoes") {
     loadConfiguracoes();
@@ -386,6 +387,79 @@ function renderFinancialStudySelectedAdministrator() {
   target.textContent = administrators.length
     ? administrators.join(" · ")
     : "Nenhuma administradora selecionada";
+}
+
+function renderFinancialStudySummary() {
+  const target = document.getElementById("financialStudyPart4Content");
+  if (!target) return;
+  const items = selectedMotor360Items();
+  if (!items.length) {
+    target.innerHTML = '<p class="financial-study-part4-empty">Selecione grupos e cenários no Motor 360 para preencher este quadro.</p>';
+    return;
+  }
+
+  const scenarioIds = ["without_embedded", "with_embedded"];
+  const metricsByScenario = Object.fromEntries(scenarioIds.map((id) => [id, selectedCompositionScenarioMetrics(items, id)]));
+  const rows = [];
+  const chosenEntries = [];
+  for (const item of items) {
+    const key = motor360GroupKey(item);
+    const selectedIds = selectedScenarioIdsForGroup(key);
+    const selectedIdsToUse = selectedIds.size ? [...selectedIds] : [];
+    for (const scenarioId of selectedIdsToUse) {
+      const metrics = metricsByScenario[scenarioId];
+      const entry = metrics?.entries.find((candidate) => motor360GroupKey(candidate.item) === key);
+      if (!entry) continue;
+      chosenEntries.push({ ...entry, scenarioId });
+    }
+  }
+  if (!chosenEntries.length) {
+    target.innerHTML = '<p class="financial-study-part4-empty">Escolha ao menos um cenário em cada grupo selecionado no Motor 360.</p>';
+    return;
+  }
+
+  const selectedScenarioEntries = Object.fromEntries(scenarioIds.map((id) => [id, chosenEntries.filter((entry) => entry.scenarioId === id)]));
+  const terms = chosenEntries.map((entry) => Number(entry.item.prazo_restante)).filter((value) => Number.isFinite(value) && value > 0);
+  const termLabel = terms.length ? (Math.min(...terms) === Math.max(...terms) ? `${Math.min(...terms)} meses` : `${Math.min(...terms)} a ${Math.max(...terms)} meses`) : "Não informado";
+  const groupTerms = [...new Map(items.map((item) => [motor360GroupKey(item), item])).values()];
+  const rateRows = groupTerms.map((item) => `<tr><th scope="row">${escapeHtml(String(item.administradora || "Administradora"))} · Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</th><td>${formatPercent(item.taxa_ano)}</td><td>${formatPercent(item.taxa_adm ?? item.taxa_total)}</td><td>${formatPercent(item.fundo_reserva)}</td></tr>`).join("");
+  const profileLabels = { conservative: "Conservador", moderate: "Moderado" };
+  for (const profileId of Object.keys(profileLabels)) {
+    for (const scenarioId of scenarioIds) {
+      const scenarioItems = chosenEntries.filter((entry) => entry.scenarioId === scenarioId);
+      if (!scenarioItems.length) continue;
+      const ideal = scenarioItems.reduce((sum, entry) => sum + Number(entry.profiles[profileId]?.ideal || 0), 0);
+      const rowCredit = scenarioItems.reduce((sum, entry) => sum + Number(entry.credit || 0), 0);
+      const rowInstallment = scenarioItems.reduce((sum, entry) => sum + Number(entry.installment || 0), 0);
+      const references = scenarioItems.map((entry) => {
+        const reference = entry.profiles[profileId]?.percentual_referencia;
+        if (reference === null || reference === undefined) return null;
+        const group = String(entry.item.grupo || entry.item.grupo_id || "-");
+        return `${escapeHtml(group)}: ${formatPercent(reference)}`;
+      }).filter(Boolean).join(" · ") || "Sem referência";
+      const title = scenarioId === "without_embedded" ? `Lance Livre · ${profileLabels[profileId]}` : `Lance Livre · ${profileLabels[profileId]} · com embutido`;
+      rows.push(`<tr><th scope="row">${escapeHtml(title)}</th><td>${references}</td><td>${ideal > 0 ? formatMoney(ideal) : "Não exige lance"}</td><td>${formatMoney(rowCredit)}</td><td>${formatMoney(rowInstallment)}</td><td>${termLabel}</td></tr>`);
+    }
+  }
+  const lotteryEntries = chosenEntries.filter((entry) => entry.scenarioId === "without_embedded");
+  if (lotteryEntries.length) {
+    rows.unshift(`<tr><th scope="row">Sorteio · sem lance ofertado</th><td>Não se aplica</td><td>Não exige lance</td><td>${formatMoney(lotteryEntries.reduce((sum, entry) => sum + entry.credit, 0))}</td><td>${formatMoney(lotteryEntries.reduce((sum, entry) => sum + entry.installment, 0))}</td><td>${termLabel}</td></tr>`);
+  }
+
+  const admins = [...new Set(items.map((item) => String(item.administradora || "").trim()).filter(Boolean))];
+  const adminLabel = admins.length ? admins.join(" · ") : "Não informada";
+  const scenarioSummaries = scenarioIds.map((id) => {
+    const entries = selectedScenarioEntries[id];
+    if (!entries.length) return "";
+    const sum = (field) => entries.reduce((value, entry) => value + Number(entry[field] || 0), 0);
+    const title = id === "with_embedded" ? "Com embutido" : "Sem embutido";
+    return `<section class="financial-study-part4-scenario-summary" aria-label="Resumo da composição ${title}"><h3>${title}</h3><div class="financial-study-part4-overview"><article><small>Crédito líquido projetado</small><strong>${formatMoney(sum("credit"))}</strong></article><article><small>Crédito contratado</small><strong>${formatMoney(sum("contractedCredit"))}</strong></article><article><small>Parcelas iniciais</small><strong>${formatMoney(sum("installment"))}</strong></article><article><small>Prazo restante</small><strong>${escapeHtml(termLabel)}</strong></article><article><small>Lance embutido</small><strong>${formatMoney(sum("embedded"))}</strong></article></div></section>`;
+  }).join("");
+  target.innerHTML = `<p class="financial-study-part4-administrator">Administradora(s): <strong>${escapeHtml(adminLabel)}</strong></p>
+    ${scenarioSummaries}
+    <div class="financial-study-part4-rates-wrap"><table class="financial-study-part4-table"><thead><tr><th scope="col">Taxas por grupo</th><th scope="col">Taxa administrativa anual</th><th scope="col">Taxa administrativa total</th><th scope="col">Fundo de reserva</th></tr></thead><tbody>${rateRows || '<tr><td colspan="4">Taxas não informadas nos dados selecionados.</td></tr>'}</tbody></table></div>
+    <div class="financial-study-part4-scenarios-wrap" role="region" aria-label="Cenários e perfis da composição" tabindex="0"><table class="financial-study-part4-table"><thead><tr><th scope="col">Simulação</th><th scope="col">Referência do perfil</th><th scope="col">Lance próprio ideal</th><th scope="col">Crédito disponível</th><th scope="col">Parcela inicial</th><th scope="col">Prazo</th></tr></thead><tbody>${rows.length ? rows.join("") : '<tr><td colspan="6">Os cenários selecionados não têm referências de perfil calculáveis.</td></tr>'}</tbody></table></div>
+    <p class="financial-study-part4-source-note">Valores do consórcio derivados dos grupos, cotas e cenários selecionados no Motor 360. Taxas e prazos são discriminados por grupo; não foram somados nem convertidos em uma taxa única.</p>`;
 }
 
 function clearRetiredFinancialStudyState() {

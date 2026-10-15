@@ -5219,6 +5219,38 @@ body[data-theme="escuro"] .btn-outline-secondary {
   margin-top: 7px;
 }
 
+.financial-study-part--summary { margin-top: 26px; }
+.financial-study-part4-title,
+.financial-study-part4-investments h3 {
+  margin: 0;
+  padding: 8px 14px;
+  background: #2e3f47;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+}
+.financial-study-part4-subtitle { margin: 0; padding: 9px 12px; border: 1px solid #c6cbcd; text-align: center; font-size: 0.78rem; }
+.financial-study-part4-administrator { margin: 0; padding: 9px 12px; background: #f1f1f1; text-align: center; font-size: 0.76rem; }
+.financial-study-part4-scenario-summary { border-bottom: 1px solid #c6cbcd; }
+.financial-study-part4-scenario-summary > h3 { margin: 0; padding: 6px 10px; background: #f3f4f4; font-size: 0.72rem; text-align: center; }
+.financial-study-part4-overview { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid #c6cbcd; }
+.financial-study-part4-overview article { display: grid; align-content: center; gap: 6px; min-height: 66px; padding: 10px; text-align: center; }
+.financial-study-part4-overview article + article { border-left: 1px solid #d4d8da; }
+.financial-study-part4-overview small { font-size: 0.68rem; font-weight: 700; }
+.financial-study-part4-overview strong { font-size: 0.78rem; }
+.financial-study-part4-rates-wrap, .financial-study-part4-table-wrap, .financial-study-part4-scenarios-wrap { max-width: 100%; overflow-x: auto; }
+.financial-study-part4-table { width: 100%; border-collapse: collapse; color: #17272d; font-size: 0.72rem; text-align: center; }
+.financial-study-part4-table th, .financial-study-part4-table td { padding: 7px 9px; border: 1px solid #c6cbcd; vertical-align: middle; }
+.financial-study-part4-table thead th { background: #e4e1df; font-weight: 700; }
+.financial-study-part4-table tbody th { background: #f3f4f4; }
+.financial-study-part4-investments { margin-top: 18px; border: 1px solid #c6cbcd; }
+.financial-study-part4-investments h3 { font-size: 0.82rem; }
+.financial-study-part4-disclaimer, .financial-study-part4-source-note { margin: 0; padding: 8px 10px; color: #65747a; font-size: 0.68rem; font-style: italic; }
+.financial-study-part4-gain { color: #147a48; font-weight: 700; white-space: nowrap; }
+.financial-study-part4-empty { margin: 0; padding: 18px 12px; color: #65747a; text-align: center; }
+
 @media (max-width: 600px) {
   .financial-study-document {
     margin-top: 0;
@@ -5254,6 +5286,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-part3-content {
     padding: 11px 12px;
   }
+
+  .financial-study-part4-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .financial-study-part4-overview article + article { border-left: 0; }
+  .financial-study-part4-overview article:nth-child(even) { border-left: 1px solid #d4d8da; }
 }
 
 @media print {
@@ -5277,4 +5313,6 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-part--best-consortia {
     break-inside: avoid;
   }
+
+  .financial-study-part--summary { break-inside: auto; }
 }
