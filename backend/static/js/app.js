@@ -1061,10 +1061,6 @@ function renderFinancialStudySummary() {
     { label: "Taxa administrativa", annual: weightedRate("taxa_ano"), total: weightedRate("taxa_adm"), amount: chargeTotal("taxa_adm") },
     { label: "Fundo de reserva", annual: weightedRate("fundo_reserva_ano"), total: weightedRate("fundo_reserva"), amount: chargeTotal("fundo_reserva") },
   ].map((row) => `<tr><th scope="row" data-label="Encargo">${row.label}</th><td data-label="Ao ano">${formatPercent(row.annual)}</td><td data-label="Total (%)">${formatPercent(row.total)}</td><td data-label="Valor total">${formatMoney(row.amount)}</td></tr>`).join("");
-  const detailRows = items.map((item) => {
-    const label = `${item.administradora || "Administradora"} · Grupo ${item.grupo || item.grupo_id || "-"}`;
-    return `<tr><th scope="row" data-label="Grupo">${escapeHtml(label)}</th><td data-label="Taxa administrativa anual">${formatPercent(item.taxa_ano)}</td><td data-label="Taxa administrativa total">${formatPercent(item.taxa_adm ?? item.taxa_total)}</td><td data-label="Fundo de reserva anual">${formatPercent(item.fundo_reserva_ano)}</td><td data-label="Fundo de reserva total">${formatPercent(item.fundo_reserva)}</td></tr>`;
-  }).join("");
   const sumProfile = (entries, profileId, field = "ideal") => {
     if (entries.length !== items.length || entries.some((entry) => !entry.profiles?.[profileId] || entry.profiles[profileId][field] === null || entry.profiles[profileId][field] === undefined || !Number.isFinite(Number(entry.profiles[profileId][field])))) return null;
     return entries.reduce((sum, entry) => sum + Number(entry.profiles[profileId][field]), 0);
@@ -1090,16 +1086,15 @@ function renderFinancialStudySummary() {
     const partial = groupsWithHistory < items.length ? " Há grupos sem histórico completo." : "";
     return `Histórico informado: ${hitCount} contemplações somadas nos últimos 11 registros mensais disponíveis por grupo. Dado histórico agregado, não é previsão.${partial}`;
   };
-  const clientBidAvailable = Number(selectedGroupsClientFinancials().availableBid || 0);
   const profileLabels = {
     conservative: "Conservador (24 meses)",
     moderate: "Moderado (12 meses)",
     aggressive: "Agressivo / Rápido (6 meses)",
     super_aggressive: "Super agressivo / Urgente (3 meses)",
   };
-  const scenarioEntryRows = scenarioIds.flatMap((scenarioId) => {
+  const profileRowsForScenario = (scenarioId) => {
     const entries = metricsByScenario[scenarioId]?.entries || [];
-    const scenarioLabel = scenarioId === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
+    if (!entries.length) return [];
     const availableCredit = sumField(entries, "credit");
     const installment = sumField(entries, "installment");
     const embeddedBid = sumField(entries, "embedded");
@@ -1107,23 +1102,19 @@ function renderFinancialStudySummary() {
       const idealOwnBid = sumProfile(entries, profileId, "ideal");
       const idealTotalBid = sumProfile(entries, profileId, "idealTotal");
       const contractedCredit = sumField(entries, "contractedCredit");
-      const referenceValuesComplete = entries.length === items.length && entries.every((entry) => {
-        const value = entry.profiles?.[profileId]?.percentual_referencia;
-        return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
-      });
-      const reference = referenceValuesComplete && contractedCredit > 0
-        ? entries.reduce((sum, entry) => sum + Number(entry.contractedCredit) * Number(entry.profiles[profileId].percentual_referencia), 0) / contractedCredit
-        : null;
-      const meetsProfile = idealOwnBid !== null && clientBidAvailable >= idealOwnBid;
-      const status = idealOwnBid === null
-        ? "Referência indisponível"
-        : meetsProfile
-          ? "Recursos disponíveis atingem o perfil"
-          : `Faltam ${formatMoney(idealOwnBid - clientBidAvailable)} em recursos próprios`;
-      return `<tr class="financial-study-part4-profile-row"><th scope="row" data-label="Perfil">${profileLabels[profileId]}<small>Referência Motor 360: ${formatPercent(reference)}</small><strong class="${meetsProfile ? "is-hit" : "is-gap"}">${status}</strong></th><td data-label="Cenário">${scenarioLabel}</td><td data-label="Lance próprio ideal">${formatMoney(idealOwnBid)}</td><td data-label="Lance total ideal">${formatMoney(idealTotalBid)}</td><td data-label="Embutido considerado">${formatMoney(embeddedBid)}</td><td data-label="Crédito disponível">${formatMoney(availableCredit)}</td><td data-label="Parcela inicial">${formatMoney(installment)}</td><td data-label="Prazo">${escapeHtml(scenarioTermLabel)}</td></tr>`;
+      return `<tr class="financial-study-part4-profile-row"><th scope="row" data-label="Perfil">${profileLabels[profileId]}</th><td data-label="Lance próprio ideal somado">${formatMoney(idealOwnBid)}</td><td data-label="Lance total ideal somado">${formatMoney(idealTotalBid)}</td><td data-label="Lance embutido somado">${formatMoney(embeddedBid)}</td><td data-label="Crédito disponível somado">${formatMoney(availableCredit)}</td><td data-label="Parcela inicial somada">${formatMoney(installment)}</td><td data-label="Prazo">${escapeHtml(scenarioTermLabel)}</td></tr>`;
     });
-  }).join("");
-  const lotteryRow = `<tr class="financial-study-part4-lottery-row"><th scope="row" data-label="Modalidade">Sorteio Geral</th><td data-label="Cenário">Sem lance embutido</td><td data-label="Lance próprio ideal">Não exige</td><td data-label="Lance total ideal">-</td><td data-label="Embutido considerado">${formatMoney(0)}</td><td data-label="Crédito disponível">${formatMoney(totalContractedCredit)}</td><td data-label="Parcela inicial">${formatMoney(initialInstallment)}</td><td data-label="Prazo">${escapeHtml(scenarioTermLabel)}</td></tr>`;
+  };
+  const profileTable = (scenarioId) => {
+    const scenarioLabel = scenarioId === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
+    const entries = metricsByScenario[scenarioId]?.entries || [];
+    const lotteryRow = scenarioId === "without_embedded"
+      ? `<tr class="financial-study-part4-lottery-row"><th scope="row" data-label="Perfil">Sorteio Geral<small>Não exige lance</small></th><td data-label="Lance próprio ideal somado">-</td><td data-label="Lance total ideal somado">-</td><td data-label="Lance embutido somado">${formatMoney(0)}</td><td data-label="Crédito disponível somado">${formatMoney(totalContractedCredit)}</td><td data-label="Parcela inicial somada">${formatMoney(initialInstallment)}</td><td data-label="Prazo">${escapeHtml(scenarioTermLabel)}</td></tr>`
+      : "";
+    const emptyRow = entries.length ? "" : '<tr><td colspan="7">Dados somados deste cenário não disponíveis no Motor 360.</td></tr>';
+    return `<section class="financial-study-part4-scenario-summary"><h3>${scenarioLabel} · somatória dos grupos selecionados</h3><div class="financial-study-part4-scenarios-wrap" role="region" aria-label="${scenarioLabel}: perfis somados do Motor 360" tabindex="0"><table class="financial-study-part4-table financial-study-part4-scenarios-table"><colgroup><col style="width:32%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:14%"><col style="width:10%"><col style="width:6%"></colgroup><thead><tr><th scope="col">Perfil</th><th scope="col">Lance próprio ideal somado</th><th scope="col">Lance total ideal somado</th><th scope="col">Embutido somado</th><th scope="col">Crédito disponível somado</th><th scope="col">Parcela inicial somada</th><th scope="col">Prazo</th></tr></thead><tbody>${entries.length ? lotteryRow : ""}${profileRowsForScenario(scenarioId).join("")}${emptyRow}</tbody></table></div></section>`;
+  };
+  const scenarioTables = scenarioIds.map(profileTable).join("");
   const incompleteGroupCount = items.length - Math.min(baseEntries.length, embeddedEntries.length);
   const adminsText = escapeHtml(adminLabel);
   target.innerHTML = `<p class="financial-study-part4-administrator">Administradora(s): <strong>${adminsText}</strong></p>
@@ -1131,9 +1122,8 @@ function renderFinancialStudySummary() {
       <div class="financial-study-part4-overview-wrap" role="region" aria-label="Somatória dos grupos selecionados" tabindex="0"><table class="financial-study-part4-table financial-study-part4-overview-table"><thead><tr><th scope="col">Carta de Crédito</th><th scope="col">Parcelas<br>sem seguro</th><th scope="col">Prazo<br>meses</th></tr></thead><tbody><tr><td data-label="Carta de Crédito">${formatMoney(totalContractedCredit)}</td><td data-label="Parcelas sem seguro">${formatMoney(initialInstallment)}</td><td data-label="Prazo">${escapeHtml(termLabel)}</td></tr></tbody></table><div class="financial-study-part4-embedded-total"><span>Lance Embutido</span><strong>${formatMoney(totalEmbeddedBid)}</strong></div></div>
       <div class="financial-study-part4-rates-wrap" role="region" aria-label="Taxas e valores totais" tabindex="0"><table class="financial-study-part4-table financial-study-part4-rate-summary"><thead><tr><th scope="col">Encargo</th><th scope="col">Ao ano</th><th scope="col">Total</th><th scope="col">Valor total</th></tr></thead><tbody>${rateRows}</tbody></table></div>
     </div>
-    <details class="financial-study-part4-rates-details"><summary>Ver taxas detalhadas por grupo</summary><div class="financial-study-part4-rates-wrap"><table class="financial-study-part4-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Taxa ADM ao ano</th><th scope="col">Taxa ADM total</th><th scope="col">Fundo reserva ao ano</th><th scope="col">Fundo reserva total</th></tr></thead><tbody>${detailRows}</tbody></table></div></details>
-    <div class="financial-study-part4-scenarios-wrap" role="region" aria-label="Simulação consolidada por modalidade e perfil do Motor 360" tabindex="0"><table class="financial-study-part4-table financial-study-part4-scenarios-table"><colgroup><col style="width:23%"><col style="width:14%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:12%"><col style="width:8%"><col style="width:7%"></colgroup><thead><tr><th scope="col">Perfil · Referência · Situação</th><th scope="col">Cenário</th><th scope="col">Lance próprio ideal</th><th scope="col">Lance total ideal</th><th scope="col">Embutido</th><th scope="col">Crédito disponível</th><th scope="col">Parcela inicial</th><th scope="col">Prazo</th></tr></thead><tbody>${lotteryRow}<tr class="financial-study-part4-category-row"><th scope="row" colspan="8">Lance Livre · perfis de contemplação Motor 360</th></tr>${scenarioEntryRows}</tbody></table></div>
-    <p class="financial-study-part4-source-note">Valores monetários somados uma vez por grupo e quantidade de cotas. Percentuais consolidados são ponderados pelo crédito contratado; encargos em reais são somados grupo a grupo. Perfil e lance ideal vêm das referências atuais do Motor 360; os cenários com e sem embutido são exibidos separadamente. ${historySummary()} ${incompleteGroupCount > 0 ? `Há dados de cenário incompletos em ${incompleteGroupCount} grupo(s); os totais correspondentes são apresentados como não informados.` : ""}</p>`;
+    <div class="financial-study-part4-profile-scenarios"><h3 class="financial-study-part4-profile-scenarios-title">Lance Livre · perfis de contemplação do Motor 360</h3>${scenarioTables}</div>
+    <p class="financial-study-part4-source-note">Valores monetários apresentados como somatória dos grupos e cotas selecionados; o quadro não discrimina grupos individualmente. A referência percentual de cada perfil é ponderada pelo crédito contratado, não somada. As taxas e encargos permanecem consolidados no quadro acima. ${historySummary()} ${incompleteGroupCount > 0 ? `Há dados de cenário incompletos em ${incompleteGroupCount} grupo(s); os totais correspondentes são apresentados como não informados.` : ""}</p>`;
 }
 
 function clearRetiredFinancialStudyState() {

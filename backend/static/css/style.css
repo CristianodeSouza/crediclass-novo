@@ -5498,8 +5498,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-rates-details { margin: 0 0 12px; border: 1px solid #c6cbcd; }
 .financial-study-part4-rates-details > summary { padding: 8px 10px; color: #2e3f47; cursor: pointer; font-size: 0.72rem; font-weight: 700; }
 .financial-study-part4-rates-details .financial-study-part4-rates-wrap { border-top: 1px solid #c6cbcd; }
-.financial-study-part4-scenario-summary { border-bottom: 1px solid #c6cbcd; }
-.financial-study-part4-scenario-summary > h3 { margin: 0; padding: 6px 10px; background: #f3f4f4; font-size: 0.72rem; text-align: center; }
+.financial-study-part4-profile-scenarios { display: grid; gap: 12px; margin-top: 14px; }
+.financial-study-part4-profile-scenarios-title { margin: 0; padding: 9px 10px; background: #2e3f47; color: #fff; font-size: 0.8rem; text-align: center; }
+.financial-study-part4-scenario-summary { min-width: 0; border: 1px solid #c6cbcd; }
+.financial-study-part4-scenario-summary > h3 { margin: 0; padding: 8px 10px; background: #f3f4f4; color: #26383f; font-size: 0.75rem; text-align: left; }
 .financial-study-part4-overview { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid #c6cbcd; }
 .financial-study-part4-overview article { display: grid; align-content: center; gap: 6px; min-height: 66px; padding: 10px; text-align: center; }
 .financial-study-part4-overview article + article { border-left: 1px solid #d4d8da; }
@@ -5511,17 +5513,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-table thead th { background: #e4e1df; font-weight: 700; }
 .financial-study-part4-table tbody th { background: #f3f4f4; }
 .financial-study-part4-scenarios-table { table-layout: fixed; }
-.financial-study-part4-scenarios-table th:first-child,
-.financial-study-part4-scenarios-table td:first-child { width: 7%; }
-.financial-study-part4-scenarios-table th:nth-child(2) { width: 23%; }
+.financial-study-part4-scenarios-table { min-width: 900px; }
 .financial-study-part4-scenarios-table th small { display: block; font-size: .65rem; font-weight: 400; }
 .financial-study-part4-category-row th { background: #bcb9b8 !important; text-align: left; }
-.financial-study-part4-profile-row th small,
-.financial-study-part4-profile-row th strong { display: block; margin-top: 4px; }
-.financial-study-part4-profile-row th small { color: #52636a; font-size: .63rem; font-weight: 400; }
-.financial-study-part4-profile-row th strong { font-size: .72rem; }
-.financial-study-part4-profile-row th strong.is-hit { color: #147a48; }
-.financial-study-part4-profile-row th strong.is-gap { color: #b42318; }
 .financial-study-part4-investments { margin-top: 18px; border: 1px solid #c6cbcd; }
 .financial-study-part4-investments h3 { font-size: 0.82rem; }
 .financial-study-part4-disclaimer, .financial-study-part4-source-note { margin: 0; padding: 8px 10px; color: #65747a; font-size: 0.68rem; font-style: italic; }
