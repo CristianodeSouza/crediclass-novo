@@ -285,6 +285,33 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertNotIn("<img", part)
         self.assertIn(".financial-study-part10-table", css)
 
+    def test_part_eleven_selects_first_future_adhesion_before_installment_due(self):
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+        start = html.index('data-study-part="11"')
+        end = html.index("</section>", start)
+        part = html[start:end]
+        function_start = app_js.index("function financialStudyAssemblyEvent(")
+        function_end = app_js.index("\nfunction renderFinancialStudySummary()", function_start)
+        renderer = app_js[function_start:function_end]
+
+        self.assertIn('data-study-part-name="Data limite de adesão"', part)
+        self.assertIn('id="financialStudyPart11Content"', part)
+        self.assertIn("renderFinancialStudyAdhesionDates();", app_js)
+        self.assertIn('apiGet("/mapa-assembleia"', app_js)
+        self.assertIn("data.group_due_dates", renderer)
+        self.assertIn('"adesao"', renderer)
+        self.assertIn('"vencimento_boleto_adesao"', renderer)
+        self.assertIn('"vencimento_parcela"', renderer)
+        self.assertIn('"assembleia"', renderer)
+        self.assertIn('"pagamento_lance"', renderer)
+        self.assertIn("cycle.adhesion >= reference", renderer)
+        self.assertIn("cycle.adhesion < cycle.firstInstallment", renderer)
+        self.assertIn("assemblyFormatDate(date)", renderer)
+        self.assertIn("new Date()", renderer)
+        self.assertIn(".financial-study-part11-table", css)
+
     def test_legacy_study_backend_modules_are_absent(self):
         backend = ROOT / "backend"
         for module in ("estudos.py", "templates_estudos.py", "financial_study_engine.py", "pdf_bridge.py"):

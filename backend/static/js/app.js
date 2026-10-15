@@ -375,6 +375,7 @@ function activateScreen(screenName) {
     renderFinancialStudyContracting();
     renderFinancialStudyContemplationHistory();
     renderFinancialStudyProjection();
+    renderFinancialStudyAdhesionDates();
   }
   if (screenName === "configuracoes") {
     loadConfiguracoes();
@@ -646,6 +647,83 @@ function renderFinancialStudyProjection() {
     return `<section class="financial-study-part10-profile"><h3>${profile.number}. ${escapeHtml(profile.label)}</h3>${tableFor(rows, `Projeção ${profile.label}`)}</section>`;
   }).join("");
   target.innerHTML = `<section class="financial-study-part10-lottery"><h3>1. Sorteio Geral</h3>${tableFor(lotteryRows, "Projeção de contemplação por sorteio geral")}</section>${profileSections}<p class="financial-study-part10-source-note">Sorteio Geral considera o crédito contratado integral, sem lance próprio e sem lance embutido, conforme a premissa deste estudo. Os lances e percentuais dos demais quadros vêm dos perfis calculados pelo Motor 360; crédito, embutido, parcela inicial e prazo vêm do cenário correspondente. Cenários sem e com embutido são alternativas e seus totais permanecem separados. Parcela exibida é a parcela inicial do cenário, não uma projeção de parcela após contemplação por perfil. A contemplação não é garantida.</p>`;
+}
+
+function financialStudyAssemblyEvent(schedule, month, eventId) {
+  const event = (month?.events || []).find((entry) => entry.id === eventId);
+  const date = assemblyEventDateValue(event, month?.number, assemblyState.data?.metadata);
+  return date && Number.isFinite(date.getTime()) ? date : null;
+}
+
+function financialStudyAssemblyScheduleForGroup(item, data) {
+  const administrator = normalizeFinancialStudyAdministrator(item.administradora);
+  if (!administrator) return null;
+  const schedules = (data.schedules || []).filter((schedule) => {
+    const candidate = normalizeFinancialStudyAdministrator(schedule.administrator);
+    return candidate === administrator || candidate.startsWith(administrator) || administrator.startsWith(candidate);
+  });
+  const groupId = String(item.grupo || item.grupo_id || "").trim();
+  const dueDatesByAdministrator = Object.entries(data.group_due_dates || {}).find(([name]) => {
+    const candidate = normalizeFinancialStudyAdministrator(name);
+    return candidate === administrator || candidate.startsWith(administrator) || administrator.startsWith(candidate);
+  })?.[1] || {};
+  const dueDayEntry = Object.entries(dueDatesByAdministrator).find(([id]) => String(id).trim() === groupId);
+  const dueDay = Number(dueDayEntry?.[1] ?? item.vencimento_parcela);
+  if (!Number.isFinite(dueDay) || dueDay <= 0) return null;
+  return schedules.find((schedule) => (schedule.months || []).some((month) => {
+    const dueDate = financialStudyAssemblyEvent(schedule, month, "vencimento_parcela");
+    return dueDate && dueDate.getDate() === dueDay;
+  })) || schedules.find((schedule) => (schedule.months || []).some((month) => {
+    const dueDate = financialStudyAssemblyEvent(schedule, month, "vencimento_parcela");
+    return dueDate && dueDate.getDate() === Number(item.vencimento_parcela);
+  })) || null;
+}
+
+function financialStudyNextAdhesionCycle(schedule, today = new Date()) {
+  const reference = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const candidates = (schedule?.months || []).map((month) => {
+    const adhesion = financialStudyAssemblyEvent(schedule, month, "adesao");
+    const assemblyAdhesion = financialStudyAssemblyEvent(schedule, month, "vencimento_boleto_adesao");
+    const firstInstallment = financialStudyAssemblyEvent(schedule, month, "vencimento_parcela");
+    const nextAssembly = financialStudyAssemblyEvent(schedule, month, "assembleia");
+    const bidPayment = financialStudyAssemblyEvent(schedule, month, "pagamento_lance");
+    return { month, adhesion, assemblyAdhesion, firstInstallment, nextAssembly, bidPayment };
+  }).filter((cycle) => cycle.adhesion && cycle.firstInstallment
+    && cycle.adhesion >= reference && cycle.adhesion < cycle.firstInstallment)
+    .sort((left, right) => left.adhesion - right.adhesion);
+  return candidates[0] || null;
+}
+
+function renderFinancialStudyAdhesionDates() {
+  const target = document.getElementById("financialStudyPart11Content");
+  if (!target) return;
+  const items = selectedMotor360Items();
+  if (!items.length) {
+    target.innerHTML = '<p class="financial-study-part11-empty">Selecione grupos no Motor 360 para consultar as próximas datas de adesão.</p>';
+    return;
+  }
+  if (!assemblyState.loaded || !assemblyState.data) {
+    target.innerHTML = '<p class="financial-study-part11-empty">Carregando o calendário do Mapa Assembleia…</p>';
+    loadAssemblyMap().then(() => {
+      if (assemblyState.loaded) renderFinancialStudyAdhesionDates();
+      else target.innerHTML = '<p class="financial-study-part11-empty">O calendário do Mapa Assembleia está indisponível. Tente novamente mais tarde.</p>';
+    }).catch(() => {
+      target.innerHTML = '<p class="financial-study-part11-empty">O calendário do Mapa Assembleia está indisponível. Tente novamente mais tarde.</p>';
+    });
+    return;
+  }
+
+  const data = assemblyState.data;
+  const rows = items.map((item) => {
+    const schedule = financialStudyAssemblyScheduleForGroup(item, data);
+    const cycle = schedule ? financialStudyNextAdhesionCycle(schedule) : null;
+    const label = `Grupo ${item.grupo || item.grupo_id || "-"} · ${item.administradora || "Administradora não identificada"}`;
+    return { label, cycle };
+  });
+  const dateText = (date) => date ? assemblyFormatDate(date) : "Não informado";
+  const body = rows.map(({ label, cycle }) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${dateText(cycle?.adhesion)}</td><td>${dateText(cycle?.assemblyAdhesion)}</td><td>${dateText(cycle?.firstInstallment)}</td><td>${dateText(cycle?.nextAssembly)}</td><td>${dateText(cycle?.bidPayment)}</td></tr>`).join("");
+  const noCycle = rows.some(({ cycle }) => !cycle);
+  target.innerHTML = `<div class="financial-study-part11-table-wrap" role="region" aria-label="Próximas datas de adesão dos grupos selecionados" tabindex="0"><table class="financial-study-part11-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Limite Adesão – Reserva Vagas Grupos</th><th scope="col">Limite Adesão – Assembleia</th><th scope="col">Vencimento Primeira Parcela</th><th scope="col">Próxima Assembleia</th><th scope="col">Vencimento Pagamento Lance</th></tr></thead><tbody>${body}</tbody></table></div><p class="financial-study-part11-source-note">Calendário consultado no Mapa Assembleia para a administradora e faixa de vencimento do grupo. A primeira data de adesão exibida é futura e anterior ao vencimento da parcela correspondente. A data considera o calendário carregado e o dia atual do estudo.${noCycle ? " Um grupo sem data disponível está identificado como ‘Não informado’; revise o calendário ou a associação da faixa." : ""}</p>`;
 }
 
 function renderFinancialStudySummary() {
