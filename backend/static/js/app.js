@@ -372,6 +372,7 @@ function activateScreen(screenName) {
     renderFinancialStudySelectedAdministrator();
     renderFinancialStudySummary();
     renderFinancialStudyBenefits();
+    renderFinancialStudyContracting();
   }
   if (screenName === "configuracoes") {
     loadConfiguracoes();
@@ -441,6 +442,60 @@ function renderFinancialStudyBenefits() {
     ? `Os benefícios de ${escapeHtml(administrators[0])} ainda não estão cadastrados.`
     : `Os benefícios para esta seleção combinada ainda não estão cadastrados: ${escapeHtml(administrators.join(" · "))}.`;
   contentTarget.innerHTML = `<p class="financial-study-part6-empty">${label}</p>`;
+}
+
+function renderFinancialStudyContracting() {
+  const target = document.getElementById("financialStudyPart7Content");
+  if (!target) return;
+  const items = selectedMotor360Items();
+  if (!items.length) {
+    target.innerHTML = '<p class="financial-study-part7-empty">Selecione grupos e cenários no Motor 360 para preencher os dados da contratação.</p>';
+    return;
+  }
+
+  const scenarioIds = ["without_embedded", "with_embedded"];
+  const metricsByScenario = Object.fromEntries(scenarioIds.map((id) => [id, selectedCompositionScenarioMetrics(items, id)]));
+  const rows = [];
+  for (const item of items) {
+    const groupKey = motor360GroupKey(item);
+    const chosenScenarioIds = selectedScenarioIdsForGroup(groupKey);
+    for (const scenarioId of scenarioIds) {
+      if (!chosenScenarioIds.has(scenarioId)) continue;
+      const entry = metricsByScenario[scenarioId]?.entries.find((candidate) => motor360GroupKey(candidate.item) === groupKey);
+      if (!entry) continue;
+      const groupLabel = `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"} · ${entry.quotas} ${entry.quotas === 1 ? "cota" : "cotas"} · ${scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}`;
+      const adminRate = entry.item.taxa_adm ?? entry.item.taxa_total;
+      rows.push({
+        scenarioId,
+        label: groupLabel,
+        credit: entry.credit,
+        installment: entry.installment,
+        term: entry.item.prazo_restante,
+        adminRate,
+        annualRate: entry.item.taxa_ano,
+        quotas: entry.quotas,
+      });
+    }
+  }
+
+  if (!rows.length) {
+    target.innerHTML = '<p class="financial-study-part7-empty">Marque ao menos um cenário financeiro nos grupos selecionados no Motor 360.</p>';
+    return;
+  }
+
+  const body = rows.map((row) => `<tr><th scope="row">${escapeHtml(row.label)}</th><td>${formatMoney(row.credit)}</td><td>${formatMoney(row.installment)}</td><td>${row.term == null || row.term === "" ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td><td>${row.adminRate == null || row.adminRate === "" ? "Não informado" : formatPercent(row.adminRate)}</td><td>${row.annualRate == null || row.annualRate === "" ? "Não informado" : formatPercent(row.annualRate)}</td></tr>`).join("");
+  const subtotalRows = scenarioIds.map((scenarioId) => {
+    const scenarioRows = rows.filter((row) => row.scenarioId === scenarioId);
+    if (!scenarioRows.length) return "";
+    const totals = scenarioRows.reduce((sum, row) => ({
+      credit: sum.credit + Number(row.credit || 0),
+      installment: sum.installment + Number(row.installment || 0),
+      quotas: sum.quotas + Number(row.quotas || 0),
+    }), { credit: 0, installment: 0, quotas: 0 });
+    const scenarioLabel = scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido";
+    return `<tr class="financial-study-part7-total"><th scope="row">Subtotal ${scenarioLabel} · ${totals.quotas} ${totals.quotas === 1 ? "cota" : "cotas"}</th><td>${formatMoney(totals.credit)}</td><td>${formatMoney(totals.installment)}</td><td colspan="3">Prazo e taxas discriminados por grupo; não são somados.</td></tr>`;
+  }).join("");
+  target.innerHTML = `<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos grupos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Crédito</th><th scope="col">Parcelas (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Crédito e parcela correspondem aos cenários marcados e às cotas configuradas no Motor 360. Cada subtotal é separado por cenário; cenários alternativos não são somados entre si. A parcela não inclui seguro. Prazo e taxas são exibidos por grupo, conforme os dados do Motor.</p>`;
 }
 
 function renderFinancialStudySummary() {

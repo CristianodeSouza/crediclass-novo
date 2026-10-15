@@ -176,6 +176,33 @@ class FinancialStudyPartsTest(unittest.TestCase):
             self.assertIn(phrase, app_js)
         self.assertIn(".financial-study-part6-content", css)
 
+    def test_part_seven_contracting_uses_selected_motor_scenarios_and_group_rates(self):
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+        start = html.index('data-study-part="7"')
+        end = html.index("</section>", start)
+        part = html[start:end]
+        function_start = app_js.index("function renderFinancialStudyContracting()")
+        function_end = app_js.index("\nfunction renderFinancialStudySummary()", function_start)
+        renderer = app_js[function_start:function_end]
+
+        self.assertIn('data-study-part-name="Contratação"', part)
+        self.assertIn('id="financialStudyPart7Content"', part)
+        self.assertIn("renderFinancialStudyContracting();", app_js)
+        self.assertIn("selectedMotor360Items()", renderer)
+        self.assertIn("selectedScenarioIdsForGroup(groupKey)", renderer)
+        self.assertIn("selectedCompositionScenarioMetrics(items, id)", renderer)
+        self.assertIn("entry.credit", renderer)
+        self.assertIn("entry.installment", renderer)
+        self.assertIn("entry.item.prazo_restante", renderer)
+        self.assertIn("entry.item.taxa_adm ?? entry.item.taxa_total", renderer)
+        self.assertIn("entry.item.taxa_ano", renderer)
+        self.assertIn("Cada subtotal é separado por cenário", renderer)
+        self.assertIn('rows.filter((row) => row.scenarioId === scenarioId)', renderer)
+        self.assertIn("sem seguro", renderer)
+        self.assertIn(".financial-study-part7-table", css)
+
     def test_legacy_study_backend_modules_are_absent(self):
         backend = ROOT / "backend"
         for module in ("estudos.py", "templates_estudos.py", "financial_study_engine.py", "pdf_bridge.py"):
