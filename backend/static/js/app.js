@@ -492,10 +492,22 @@ function renderFinancialStudyContracting() {
       installment: sum.installment + Number(row.installment || 0),
       quotas: sum.quotas + Number(row.quotas || 0),
     }), { credit: 0, installment: 0, quotas: 0 });
+    const average = (field) => {
+      const values = scenarioRows
+        .map((row) => row[field])
+        .filter((value) => value !== null && value !== undefined && value !== "")
+        .map(Number)
+        .filter(Number.isFinite);
+      return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+    };
+    const averageTerm = average("term");
+    const averageAdminRate = average("adminRate");
+    const averageAnnualRate = average("annualRate");
     const scenarioLabel = scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido";
-    return `<tr class="financial-study-part7-total"><th scope="row">Subtotal ${scenarioLabel} · ${totals.quotas} ${totals.quotas === 1 ? "cota" : "cotas"}</th><td>${formatMoney(totals.credit)}</td><td>${formatMoney(totals.installment)}</td><td colspan="3">Prazo e taxas discriminados por grupo; não são somados.</td></tr>`;
+    const termLabel = averageTerm == null ? "Não informado" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(averageTerm)} meses`;
+    return `<tr class="financial-study-part7-total"><th scope="row">Total / média ${scenarioLabel} · ${totals.quotas} ${totals.quotas === 1 ? "cota" : "cotas"}</th><td>${formatMoney(totals.credit)}</td><td>${formatMoney(totals.installment)}</td><td>${termLabel}</td><td>${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td>${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td></tr>`;
   }).join("");
-  target.innerHTML = `<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos grupos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Crédito</th><th scope="col">Parcelas (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Crédito e parcela correspondem aos cenários marcados e às cotas configuradas no Motor 360. Cada subtotal é separado por cenário; cenários alternativos não são somados entre si. A parcela não inclui seguro. Prazo e taxas são exibidos por grupo, conforme os dados do Motor.</p>`;
+  target.innerHTML = `<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos grupos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Crédito</th><th scope="col">Parcelas (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Crédito e parcela são somados por cenário. Prazo e taxas no fechamento são médias aritméticas dos grupos daquele cenário; campos sem valor são ignorados, não tratados como zero. Cenários alternativos não são somados entre si. A parcela não inclui seguro.</p>`;
 }
 
 function renderFinancialStudySummary() {

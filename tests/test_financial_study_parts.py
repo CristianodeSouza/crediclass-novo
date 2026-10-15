@@ -198,10 +198,38 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("entry.item.prazo_restante", renderer)
         self.assertIn("entry.item.taxa_adm ?? entry.item.taxa_total", renderer)
         self.assertIn("entry.item.taxa_ano", renderer)
-        self.assertIn("Cada subtotal é separado por cenário", renderer)
+        self.assertIn("Prazo e taxas no fechamento são médias aritméticas dos grupos daquele cenário", renderer)
+        self.assertIn('average("term")', renderer)
+        self.assertIn('average("adminRate")', renderer)
+        self.assertIn('average("annualRate")', renderer)
+        self.assertIn("return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null", renderer)
         self.assertIn('rows.filter((row) => row.scenarioId === scenarioId)', renderer)
         self.assertIn("sem seguro", renderer)
         self.assertIn(".financial-study-part7-table", css)
+
+    def test_part_eight_contemplation_strategies_are_fixed_copy(self):
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+        start = html.index('data-study-part="8"')
+        end = html.index("</section>", start)
+        part = html[start:end]
+
+        self.assertIn('data-study-part-name="Estratégias de contemplação"', part)
+        self.assertIn("ESTRATÉGIAS DE CONTEMPLAÇÃO", part)
+        self.assertIn("Estratégia 1) Investidor", part)
+        self.assertIn("Sorteio + Lance Fixo 40%", part)
+        self.assertIn("Estratégia 2) Conservadora", part)
+        self.assertIn("Lance Livre Conservador", part)
+        self.assertIn("1 das últimas 11 assembleias", part)
+        self.assertIn("Estratégia 3) Moderada", part)
+        self.assertIn("Lance Livre Moderado", part)
+        self.assertIn("2 das últimas 11 assembleias", part)
+        self.assertIn("não havendo garantia de contemplação", part)
+        self.assertNotIn("<img", part)
+        self.assertNotIn("${", part)
+        self.assertNotIn("financialStudyPart8", app_js)
+        self.assertIn(".financial-study-part8-content", css)
 
     def test_legacy_study_backend_modules_are_absent(self):
         backend = ROOT / "backend"
