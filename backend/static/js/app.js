@@ -373,6 +373,7 @@ function activateScreen(screenName) {
     renderFinancialStudySummary();
     renderFinancialStudyBenefits();
     renderFinancialStudyContracting();
+    renderFinancialStudyContemplationHistory();
   }
   if (screenName === "configuracoes") {
     loadConfiguracoes();
@@ -508,6 +509,63 @@ function renderFinancialStudyContracting() {
     return `<tr class="financial-study-part7-total"><th scope="row">Total / média ${scenarioLabel} · ${totals.quotas} ${totals.quotas === 1 ? "cota" : "cotas"}</th><td>${formatMoney(totals.credit)}</td><td>${formatMoney(totals.installment)}</td><td>${termLabel}</td><td>${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td>${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td></tr>`;
   }).join("");
   target.innerHTML = `<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos grupos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Crédito</th><th scope="col">Parcelas (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Crédito e parcela são somados por cenário. Prazo e taxas no fechamento são médias aritméticas dos grupos daquele cenário; campos sem valor são ignorados, não tratados como zero. Cenários alternativos não são somados entre si. A parcela não inclui seguro.</p>`;
+}
+
+function renderFinancialStudyContemplationHistory() {
+  const target = document.getElementById("financialStudyPart9Content");
+  if (!target) return;
+  const items = selectedMotor360Items();
+  if (!items.length) {
+    target.innerHTML = '<p class="financial-study-part9-empty">Selecione grupos no Motor 360 para exibir o histórico mensal de contemplações.</p>';
+    return;
+  }
+
+  const historyByGroup = items.map((item) => ({
+    item,
+    history: new Map((Array.isArray(item.historico_12_meses) ? item.historico_12_meses : [])
+      .filter((entry) => {
+        const monthKey = String(entry.mes || "");
+        const year = Number(monthKey.slice(0, 4));
+        const month = Number(monthKey.slice(5, 7));
+        return monthKey.length === 7 && monthKey.charAt(4) === "-" && Number.isInteger(year) && month >= 1 && month <= 12;
+      })
+      .map((entry) => [entry.mes, entry])),
+  }));
+  const monthKeys = [...new Set(historyByGroup.flatMap(({ history }) => [...history.keys()]))]
+    .sort((a, b) => b.localeCompare(a))
+    .slice(0, 12);
+  const hasHistory = historyByGroup.some(({ history }) => [...history.values()].some((entry) =>
+    entry.menor_lance !== null && entry.menor_lance !== undefined && entry.menor_lance !== ""
+    || entry.qtd_contemplacoes !== null && entry.qtd_contemplacoes !== undefined && entry.qtd_contemplacoes !== ""));
+  if (!monthKeys.length || !hasHistory) {
+    target.innerHTML = '<p class="financial-study-part9-empty">Os grupos selecionados não possuem histórico mensal de contemplações disponível no Motor 360.</p>';
+    return;
+  }
+
+  const monthNames = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+  const monthLabel = (monthKey) => {
+    const [year, month] = monthKey.split("-");
+    return `${monthNames[Number(month) - 1]}/${year.slice(-2)}`;
+  };
+  const monthHeaders = monthKeys.map((month) => `<th scope="col">${monthLabel(month)}</th>`).join("");
+  const groupRows = historyByGroup.map(({ item, history }) => {
+    const groupLabel = String(item.grupo || item.grupo_id || "-");
+    const adminLabel = String(item.administradora || "");
+    const monthlyValues = monthKeys.map((month) => history.get(month));
+    const bidCells = monthlyValues.map((entry) => `<td>${formatHistoryPercent(entry?.menor_lance)}</td>`).join("");
+    const quantityCells = monthlyValues.map((entry) => `<td>${formatHistoryQuantity(entry?.qtd_contemplacoes)}</td>`).join("");
+    return `<tr><th class="financial-study-part9-group" scope="rowgroup" rowspan="2"><span>Grupo ${escapeHtml(groupLabel)}</span><small>${escapeHtml(adminLabel)}</small></th><th scope="row">Menor Lance</th>${bidCells}</tr><tr><th scope="row">Qtde</th>${quantityCells}</tr>`;
+  }).join("");
+  const totalCells = monthKeys.map((month) => {
+    const reportedCounts = historyByGroup
+      .map(({ history }) => history.get(month)?.qtd_contemplacoes)
+      .filter((value) => value !== null && value !== undefined && value !== "")
+      .map(Number)
+      .filter(Number.isFinite);
+    return `<td>${reportedCounts.length ? reportedCounts.reduce((sum, value) => sum + value, 0) : "-"}</td>`;
+  }).join("");
+
+  target.innerHTML = `<div class="financial-study-part9-table-wrap" role="region" aria-label="Histórico mensal de lances contemplados dos grupos selecionados" tabindex="0"><table class="financial-study-part9-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Últimos Meses</th>${monthHeaders}</tr></thead><tbody>${groupRows}<tr class="financial-study-part9-total"><th scope="row" colspan="2">TOTAL · Qtde</th>${totalCells}</tr></tbody></table></div><p class="financial-study-part9-source-note">Histórico mensal fornecido pelo Motor 360. “Menor Lance” é o percentual registrado no mês; “Qtde” é a quantidade de contemplações informada. “-” indica dado ausente, não valor zero. O total soma apenas quantidades numéricas disponíveis.</p>`;
 }
 
 function renderFinancialStudySummary() {

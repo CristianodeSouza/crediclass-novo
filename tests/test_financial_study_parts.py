@@ -231,6 +231,30 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertNotIn("financialStudyPart8", app_js)
         self.assertIn(".financial-study-part8-content", css)
 
+    def test_part_nine_contemplation_history_uses_selected_motor_monthly_data(self):
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+        start = html.index('data-study-part="9"')
+        end = html.index("</section>", start)
+        part = html[start:end]
+        function_start = app_js.index("function renderFinancialStudyContemplationHistory()")
+        function_end = app_js.index("\nfunction renderFinancialStudySummary()", function_start)
+        renderer = app_js[function_start:function_end]
+
+        self.assertIn('data-study-part-name="Histórico de Contemplações"', part)
+        self.assertIn('id="financialStudyPart9Content"', part)
+        self.assertIn("renderFinancialStudyContemplationHistory();", app_js)
+        self.assertIn("selectedMotor360Items()", renderer)
+        self.assertIn("item.historico_12_meses", renderer)
+        self.assertIn("entry.menor_lance", renderer)
+        self.assertIn("entry.qtd_contemplacoes", renderer)
+        self.assertIn('.slice(0, 12)', renderer)
+        self.assertIn('formatHistoryPercent(entry?.menor_lance)', renderer)
+        self.assertIn("O total soma apenas quantidades numéricas disponíveis.", renderer)
+        self.assertNotIn("<img", part)
+        self.assertIn(".financial-study-part9-table", css)
+
     def test_legacy_study_backend_modules_are_absent(self):
         backend = ROOT / "backend"
         for module in ("estudos.py", "templates_estudos.py", "financial_study_engine.py", "pdf_bridge.py"):
