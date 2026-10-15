@@ -865,6 +865,20 @@
                 <div><h3 id="financialStudyHistoryDetailTitle"></h3><p id="financialStudyHistoryDetailMeta"></p></div>
                 <button id="printFinancialStudyHistoryBtn" class="btn btn-outline-secondary" type="button">Imprimir / Salvar PDF</button>
               </div>
+              <section class="financial-study-share" aria-label="Link público do estudo">
+                <div class="financial-study-share-copy">
+                  <strong>Compartilhar com o cliente</strong>
+                  <p id="financialStudyShareStatus">O link não é criado automaticamente e ficará válido por 30 dias.</p>
+                </div>
+                <div class="financial-study-share-controls">
+                  <button id="generateFinancialStudyShareBtn" class="btn btn-primary" type="button">Gerar link público</button>
+                  <button id="revokeFinancialStudyShareBtn" class="btn btn-outline-secondary d-none" type="button">Revogar link</button>
+                  <div id="financialStudyShareLinkRow" class="financial-study-share-link-row d-none">
+                    <input id="financialStudyShareUrl" class="form-control" type="url" readonly aria-label="Link público gerado">
+                    <button id="copyFinancialStudyShareBtn" class="btn btn-outline-secondary" type="button">Copiar link</button>
+                  </div>
+                </div>
+              </section>
               <iframe id="financialStudyHistoryFrame" title="Snapshot imutável do estudo aprovado" sandbox="allow-modals" loading="lazy"></iframe>
             </section>
           </div>

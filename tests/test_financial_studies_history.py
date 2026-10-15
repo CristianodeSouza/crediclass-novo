@@ -37,19 +37,42 @@ class _FakeSheetValues:
 
     def update(self, spreadsheetId, range, valueInputOption, body):
         import re
-        columns = re.findall(r"[A-Z]+", range.split("!", 1)[1])
-        start = self.parent.column_index(columns[0])
         values = body["values"][0]
+        address = range.split("!", 1)[1]
+        cell = re.fullmatch(r"([A-Z]+)(\d+)(?::([A-Z]+)(\d+))?", address)
         def apply():
-            for offset, value in enumerate(values):
-                while len(self.parent.headers) <= start + offset:
-                    self.parent.headers.append("")
-                self.parent.headers[start + offset] = value
+            if cell and int(cell.group(2)) > 1:
+                column = self.parent.column_index(cell.group(1))
+                row_index = int(cell.group(2)) - 2
+                while len(self.parent.rows[row_index]) <= column:
+                    self.parent.rows[row_index].append("")
+                self.parent.rows[row_index][column] = values[0]
+            else:
+                columns = re.findall(r"[A-Z]+", address)
+                start = self.parent.column_index(columns[0])
+                for offset, value in enumerate(values):
+                    while len(self.parent.headers) <= start + offset:
+                        self.parent.headers.append("")
+                    self.parent.headers[start + offset] = value
             return {"updated": True}
         return _FakeRequest(apply)
 
     def append(self, spreadsheetId, range, valueInputOption, insertDataOption, body):
         return _FakeRequest(lambda: self.parent.rows.append(body["values"][0]) or {"updated": True})
+
+    def batchUpdate(self, spreadsheetId, body):
+        def apply():
+            import re
+            for item in body["data"]:
+                address = item["range"].split("!", 1)[1]
+                match = re.fullmatch(r"([A-Z]+)(\d+)", address)
+                column = self.parent.column_index(match.group(1))
+                row_index = int(match.group(2)) - 2
+                while len(self.parent.rows[row_index]) <= column:
+                    self.parent.rows[row_index].append("")
+                self.parent.rows[row_index][column] = item["values"][0][0]
+            return {"updated": True}
+        return _FakeRequest(apply)
 
     def batchGet(self, spreadsheetId, ranges):
         values = []
@@ -162,6 +185,62 @@ class FinancialStudiesHistoryApiTest(unittest.TestCase):
         client.post("/api/auth/login", json={"usuario": "adm", "senha": "cristiano"})
         response = client.post("/api/financial-studies", json={"client_name": "Cliente", "approval_key": "bad", "snapshot": {"groups": []}, "document_html": "<article></article>"})
         self.assertEqual(response.status_code, 422)
+
+    def test_public_link_is_hashed_expires_and_replacement_invalidates_previous_token(self):
+        fake_service = _FakeSheetService()
+        with patch("backend.financial_studies.get_service", return_value=fake_service), patch("backend.financial_studies.get_settings", return_value=type("Settings", (), {"google_sheets_id": "sheet-1"})()):
+            study = financial_studies.create_study(
+                client_name="Cliente Exemplo", approved_by="Administrador", app_version="4.0.200",
+                snapshot={"groups": [{"group": "40086"}]}, document_html="<article>Estudo protegido</article>",
+                approval_key="00000000-0000-4000-8000-000000000101",
+            )
+            first_link = financial_studies.create_public_link(study["id"])
+            self.assertEqual(first_link["validity_days"], 30)
+            self.assertIsNotNone(financial_studies.get_public_study(first_link["token"]))
+            self.assertNotIn(first_link["token"], " ".join(str(value) for value in fake_service.rows[0]))
+            first_hash = financial_studies.hashlib.sha256(first_link["token"].encode("utf-8")).hexdigest()
+            self.assertIn(first_hash, fake_service.rows[0])
+
+            expires_column = fake_service.headers.index("financial_study_public_expires_at")
+            fake_service.rows[0][expires_column] = "2020-01-01T00:00:00+00:00"
+            self.assertIsNone(financial_studies.get_public_study(first_link["token"]))
+
+            second_link = financial_studies.create_public_link(study["id"])
+            self.assertIsNone(financial_studies.get_public_study(first_link["token"]))
+            self.assertEqual(financial_studies.get_public_study(second_link["token"])["document_html"], "<article>Estudo protegido</article>")
+            financial_studies.revoke_public_link(study["id"])
+            self.assertIsNone(financial_studies.get_public_study(second_link["token"]))
+
+    def test_public_route_is_anonymous_and_invalid_tokens_are_not_found(self):
+        with patch("backend.main.financial_studies.get_public_study", return_value=None):
+            response = TestClient(app).get("/estudo-compartilhado/token-inexistente")
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("noindex", response.headers.get("X-Robots-Tag", ""))
+
+    def test_public_route_renders_archived_study_without_login(self):
+        public_study = {"id": "EF-1", "client_name": "Cliente Exemplo", "document_html": '<article class="financial-study-document"><h1>Snapshot aprovado</h1></article>'}
+        with patch("backend.main.financial_studies.get_public_study", return_value=public_study) as load:
+            response = TestClient(app).get("/estudo-compartilhado/opaque-token")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Snapshot aprovado", response.text)
+        self.assertIn("sandbox='allow-same-origin allow-modals'", response.text)
+        self.assertIn("noindex, nofollow, noarchive", response.headers["X-Robots-Tag"])
+        load.assert_called_once_with("opaque-token")
+
+    def test_share_management_returns_link_only_after_authenticated_operator_action(self):
+        link = {"token": "opaque-generated-token", "expires_at": "2026-11-14T12:00:00+00:00", "validity_days": 30}
+        with patch("backend.main.financial_studies.create_public_link", return_value=link) as create_link:
+            client = TestClient(app)
+            client.post("/api/auth/login", json={"usuario": "operador1", "senha": "teste123"})
+            response = client.post("/api/financial-studies/EF-1/share", json={})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["url"], "http://testserver/estudo-compartilhado/opaque-generated-token")
+        create_link.assert_called_once_with("EF-1")
+
+    def test_share_management_endpoints_require_login(self):
+        client = TestClient(app)
+        self.assertEqual(client.post("/api/financial-studies/EF-1/share").status_code, 401)
+        self.assertEqual(client.delete("/api/financial-studies/EF-1/share").status_code, 401)
 
 
 if __name__ == "__main__":

@@ -528,6 +528,20 @@ async function openFinancialStudyHistoryItem(studyId) {
     const frame = document.getElementById("financialStudyHistoryFrame");
     const documentHtml = study.document_html || `<main style="font:16px system-ui;max-width:720px;margin:40px auto;color:#2e3f47"><h1>Registro legado</h1><p>Este registro já existia na planilha e não possui um snapshot visual arquivado. Os dados originais foram preservados.</p></main>`;
     frame.srcdoc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/static/css/style.css"><style>body{margin:16px;background:#fff}.financial-study-document{max-width:1100px;margin:auto}</style></head><body>${documentHtml}</body></html>`;
+    const shareStatus = document.getElementById("financialStudyShareStatus");
+    const shareLinkRow = document.getElementById("financialStudyShareLinkRow");
+    const shareUrl = document.getElementById("financialStudyShareUrl");
+    const revokeButton = document.getElementById("revokeFinancialStudyShareBtn");
+    shareUrl.value = "";
+    shareLinkRow.classList.add("d-none");
+    revokeButton.classList.toggle("d-none", !study.public_link?.active);
+    shareStatus.textContent = study.public_link?.active
+      ? `Existe um link ativo até ${financialStudyHistoryDate(study.public_link.expires_at)}. Gere outro para substituir o atual e copiar o novo link.`
+      : study.public_link?.expires_at
+        ? "O link anterior está expirado ou revogado. Gere um novo link para compartilhar este estudo."
+        : "O link não é criado automaticamente e ficará válido por 30 dias.";
+    document.getElementById("generateFinancialStudyShareBtn").dataset.studyId = studyId;
+    revokeButton.dataset.studyId = studyId;
     detail.classList.remove("d-none");
     financialStudyHistoryState.selectedId = studyId;
   } catch (error) {
@@ -6431,6 +6445,53 @@ document.getElementById("financialStudyHistorySearch")?.addEventListener("keydow
 document.getElementById("printFinancialStudyHistoryBtn")?.addEventListener("click", () => {
   try { document.getElementById("financialStudyHistoryFrame")?.contentWindow?.print(); }
   catch { showToast("Não foi possível abrir a impressão deste estudo.", "warning"); }
+});
+document.getElementById("generateFinancialStudyShareBtn")?.addEventListener("click", async (event) => {
+  const studyId = event.currentTarget.dataset.studyId;
+  if (!studyId || !window.confirm("Qualquer pessoa com este link poderá visualizar o estudo aprovado. O link expirará em 30 dias. Deseja continuar?")) return;
+  const button = event.currentTarget;
+  button.disabled = true;
+  try {
+    const result = await apiPost(`/financial-studies/${encodeURIComponent(studyId)}/share`, {});
+    document.getElementById("financialStudyShareUrl").value = result.url;
+    document.getElementById("financialStudyShareLinkRow").classList.remove("d-none");
+    document.getElementById("financialStudyShareStatus").textContent = `Link gerado. Válido até ${financialStudyHistoryDate(result.expires_at)}. Gerar outro link substituirá este.`;
+    document.getElementById("revokeFinancialStudyShareBtn").classList.remove("d-none");
+    showToast("Link público gerado. Copie para compartilhar com o cliente.", "success");
+  } catch (error) {
+    showToast(error.message || "Não foi possível gerar o link público.", "danger");
+  } finally {
+    button.disabled = false;
+  }
+});
+document.getElementById("copyFinancialStudyShareBtn")?.addEventListener("click", async () => {
+  const input = document.getElementById("financialStudyShareUrl");
+  try {
+    await navigator.clipboard.writeText(input.value);
+  } catch {
+    input.focus();
+    input.select();
+    document.execCommand("copy");
+  }
+  showToast("Link copiado.", "success");
+});
+document.getElementById("revokeFinancialStudyShareBtn")?.addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  const studyId = button.dataset.studyId;
+  if (!studyId || !window.confirm("Revogar o link? Quem já o recebeu não poderá mais abrir este estudo.")) return;
+  button.disabled = true;
+  try {
+    await apiDelete(`/financial-studies/${encodeURIComponent(studyId)}/share`);
+    document.getElementById("financialStudyShareLinkRow").classList.add("d-none");
+    document.getElementById("financialStudyShareUrl").value = "";
+    document.getElementById("financialStudyShareStatus").textContent = "Link revogado. Gere um novo link se quiser compartilhar novamente.";
+    button.classList.add("d-none");
+    showToast("Link público revogado.", "success");
+  } catch (error) {
+    showToast(error.message || "Não foi possível revogar o link.", "danger");
+  } finally {
+    button.disabled = false;
+  }
 });
 
 document.getElementById("clearMotor360ExecutionLogsBtn")?.addEventListener("click", () => {

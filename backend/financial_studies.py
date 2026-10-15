@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
+import secrets
 import zlib
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from .config import get_settings
@@ -29,6 +31,12 @@ ARCHIVE_COLUMNS = {
     "approval_key": "financial_study_approval_key",
     "archive": "financial_study_archive_v1",
 }
+SHARE_COLUMNS = {
+    "token_hash": "financial_study_public_token_sha256",
+    "expires_at": "financial_study_public_expires_at",
+    "revoked": "financial_study_public_revoked",
+}
+PUBLIC_LINK_VALIDITY_DAYS = 30
 
 
 def _quoted_sheet() -> str:
@@ -84,7 +92,61 @@ def _index(indexes: dict[str, int], field: str) -> int:
 
 
 def _optional_index(indexes: dict[str, int], field: str) -> int | None:
-    return indexes.get(normalize_header(ARCHIVE_COLUMNS.get(field, field)))
+    column_name = ARCHIVE_COLUMNS.get(field, SHARE_COLUMNS.get(field, field))
+    return indexes.get(normalize_header(column_name))
+
+
+def _ensure_share_columns(headers: list[str], indexes: dict[str, int]) -> tuple[list[str], dict[str, int]]:
+    missing = [name for name in SHARE_COLUMNS.values() if normalize_header(name) not in indexes]
+    if not missing:
+        return headers, indexes
+    settings = get_settings()
+    first_column = len(headers) + 1
+    last_column = first_column + len(missing) - 1
+    get_service().spreadsheets().values().update(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"{_quoted_sheet()}!{column_letter(first_column - 1)}1:{column_letter(last_column - 1)}1",
+        valueInputOption="RAW",
+        body={"values": [missing]},
+    ).execute()
+    headers.extend(missing)
+    indexes.update({normalize_header(name): len(headers) - len(missing) + offset for offset, name in enumerate(missing)})
+    return headers, indexes
+
+
+def _update_row_fields(row_number: int, indexes: dict[str, int], values: dict[str, str]) -> None:
+    settings = get_settings()
+    service = get_service()
+    updates = []
+    for field, value in values.items():
+        column = _optional_index(indexes, field)
+        if column is None:
+            raise RuntimeError(f"Coluna {field!r} não encontrada na aba de Histórico de Estudos.")
+        letter = column_letter(column)
+        updates.append({"range": f"{_quoted_sheet()}!{letter}{row_number}", "values": [[value]]})
+    service.spreadsheets().values().batchUpdate(
+        spreadsheetId=settings.google_sheets_id,
+        body={"valueInputOption": "RAW", "data": updates},
+    ).execute()
+
+
+def _find_study_row(study_id: str) -> tuple[list[str], dict[str, int], int] | None:
+    headers, indexes = _headers()
+    ids = _read_column(_index(indexes, "study_id"))
+    row_number = next((index for index, row in enumerate(ids, start=2) if row and str(row[0]).strip() == study_id), None)
+    return (headers, indexes, row_number) if row_number is not None else None
+
+
+def _share_state(row: list[str], indexes: dict[str, int]) -> dict:
+    value = lambda field: str(row[indexes[field]] if indexes.get(field) is not None and indexes[field] < len(row) else "")
+    expires_at = value(normalize_header(SHARE_COLUMNS["expires_at"]))
+    revoked = value(normalize_header(SHARE_COLUMNS["revoked"])).strip().casefold() == "true"
+    try:
+        expires = datetime.fromisoformat(expires_at)
+        active = bool(value(normalize_header(SHARE_COLUMNS["token_hash"]))) and not revoked and expires > datetime.now(timezone.utc)
+    except ValueError:
+        active = False
+    return {"active": active, "expires_at": expires_at or None, "revoked": revoked}
 
 
 def _read_column(index: int) -> list[list[str]]:
@@ -201,12 +263,11 @@ def list_studies(*, query: str = "", limit: int = 100) -> list[dict]:
 
 
 def get_study(study_id: str) -> dict | None:
-    settings = get_settings()
-    headers, indexes = _headers()
-    ids = _read_column(_index(indexes, "study_id"))
-    row_number = next((index for index, row in enumerate(ids, start=2) if row and str(row[0]).strip() == study_id), None)
-    if row_number is None:
+    found = _find_study_row(study_id)
+    if found is None:
         return None
+    _, indexes, row_number = found
+    settings = get_settings()
     row = get_service().spreadsheets().values().get(
         spreadsheetId=settings.google_sheets_id,
         range=f"{_quoted_sheet()}!A{row_number}:ZZ{row_number}",
@@ -218,4 +279,89 @@ def get_study(study_id: str) -> dict | None:
             "approved_by": field("operator"), "status": field("status"),
             "app_version": archive.get("app_version", "") if archive else "",
             "snapshot": archive.get("snapshot") if archive else None,
-            "document_html": archive.get("document_html") if archive else None}
+            "document_html": archive.get("document_html") if archive else None,
+            "public_link": _share_state(row, indexes)}
+
+
+def create_public_link(study_id: str) -> dict | None:
+    found = _find_study_row(study_id)
+    if found is None:
+        return None
+    headers, indexes, row_number = found
+    headers, indexes = _ensure_archive_columns(headers, indexes)
+    headers, indexes = _ensure_share_columns(headers, indexes)
+    settings = get_settings()
+    row = get_service().spreadsheets().values().get(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"{_quoted_sheet()}!A{row_number}:ZZ{row_number}",
+    ).execute().get("values", [[]])[0]
+    archive_index = _optional_index(indexes, "archive")
+    if archive_index is None or archive_index >= len(row) or not row[archive_index]:
+        raise ValueError("Este estudo não possui snapshot completo para compartilhar.")
+    archive = _decompress_archive(str(row[archive_index]))
+    if not archive or not archive.get("document_html"):
+        raise ValueError("Este estudo não possui documento visual para compartilhar.")
+
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.now(timezone.utc) + timedelta(days=PUBLIC_LINK_VALIDITY_DAYS)).isoformat(timespec="seconds")
+    _update_row_fields(row_number, indexes, {
+        "token_hash": hashlib.sha256(token.encode("utf-8")).hexdigest(),
+        "expires_at": expires_at,
+        "revoked": "FALSE",
+    })
+    return {"token": token, "expires_at": expires_at, "validity_days": PUBLIC_LINK_VALIDITY_DAYS}
+
+
+def revoke_public_link(study_id: str) -> dict | None:
+    found = _find_study_row(study_id)
+    if found is None:
+        return None
+    headers, indexes, row_number = found
+    headers, indexes = _ensure_share_columns(headers, indexes)
+    settings = get_settings()
+    row = get_service().spreadsheets().values().get(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"{_quoted_sheet()}!A{row_number}:ZZ{row_number}",
+    ).execute().get("values", [[]])[0]
+    _update_row_fields(row_number, indexes, {"revoked": "TRUE"})
+    return _share_state(row, indexes) | {"active": False, "revoked": True}
+
+
+def get_public_study(token: str) -> dict | None:
+    if not token or len(token) > 256:
+        return None
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    found = _find_study_row_by_token_hash(token_hash)
+    if found is None:
+        return None
+    indexes, row = found
+    if not _share_state(row, indexes)["active"]:
+        return None
+    archive = _decompress_archive(str(row[_index(indexes, "archive")]))
+    if not archive or not archive.get("document_html"):
+        return None
+    return {
+        "id": str(row[_index(indexes, "study_id")]),
+        "client_name": str(row[_index(indexes, "client_name")]),
+        "approved_at": str(row[_index(indexes, "created_at")]),
+        "app_version": archive.get("app_version", ""),
+        "document_html": archive["document_html"],
+    }
+
+
+def _find_study_row_by_token_hash(token_hash: str) -> tuple[dict[str, int], list[str]] | None:
+    headers, indexes = _headers()
+    hash_index = _optional_index(indexes, "token_hash")
+    archive_index = _optional_index(indexes, "archive")
+    if hash_index is None or archive_index is None:
+        return None
+    hashes = _read_column(hash_index)
+    row_number = next((index for index, row in enumerate(hashes, start=2) if row and secrets.compare_digest(str(row[0]).strip(), token_hash)), None)
+    if row_number is None:
+        return None
+    settings = get_settings()
+    row = get_service().spreadsheets().values().get(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"{_quoted_sheet()}!A{row_number}:ZZ{row_number}",
+    ).execute().get("values", [[]])[0]
+    return indexes, row

@@ -19,7 +19,7 @@ from typing import Annotated
 from uuid import uuid4
 
 from fastapi import FastAPI, Query, Request, Response
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -116,6 +116,64 @@ def read_financial_study(study_id: str, request: Request):
     if study is None:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
     return {"success": True, "study": study}
+
+
+@app.post("/api/financial-studies/{study_id}/share")
+def generate_financial_study_share(study_id: str, request: Request):
+    try:
+        link = financial_studies.create_public_link(study_id)
+    except ValueError as error:
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
+    except Exception:
+        logger.exception("Falha ao gerar link público do estudo %s", study_id)
+        return JSONResponse(status_code=503, content={"success": False, "error": "Não foi possível gerar o link público."})
+    if link is None:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
+    return {"success": True, "url": str(request.base_url).rstrip("/") + f"/estudo-compartilhado/{link['token']}",
+            "expires_at": link["expires_at"], "validity_days": link["validity_days"]}
+
+
+@app.delete("/api/financial-studies/{study_id}/share")
+def revoke_financial_study_share(study_id: str, request: Request):
+    try:
+        result = financial_studies.revoke_public_link(study_id)
+    except Exception:
+        logger.exception("Falha ao revogar link público do estudo %s", study_id)
+        return JSONResponse(status_code=503, content={"success": False, "error": "Não foi possível revogar o link público."})
+    if result is None:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
+    return {"success": True, "public_link": result}
+
+
+@app.get("/estudo-compartilhado/{token}")
+def read_public_financial_study(token: str):
+    try:
+        study = financial_studies.get_public_study(token)
+    except Exception:
+        logger.exception("Falha ao carregar estudo financeiro compartilhado")
+        return HTMLResponse(
+            "<!doctype html><html lang='pt-BR'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+            "<title>Estudo temporariamente indisponível | CrediClass</title><body style='font:16px system-ui;color:#2e3f47;max-width:680px;margin:12vh auto;padding:24px'>"
+            "<h1>Estudo temporariamente indisponível</h1><p>Não foi possível carregar o estudo agora. Tente novamente em alguns minutos.</p></body></html>",
+            status_code=503,
+            headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer"},
+        )
+    if study is None:
+        return HTMLResponse(
+            "<!doctype html><html lang='pt-BR'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+            "<title>Estudo indisponível | CrediClass</title><body style='font:16px system-ui;color:#2e3f47;max-width:680px;margin:12vh auto;padding:24px'>"
+            "<h1>Este link não está disponível</h1><p>Ele pode ter expirado, sido revogado ou estar incorreto. Solicite um novo link à CrediClass.</p></body></html>",
+            status_code=404,
+            headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer"},
+        )
+    document = "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+    document += f"<title>{html_escape(study['client_name'])} | Estudo Financeiro CrediClass</title><link rel='stylesheet' href='/static/css/style.css'>"
+    document += "<meta name='robots' content='noindex,nofollow,noarchive'><style>body{margin:0;background:#f7f6f4;color:#2e3f47;font-family:Arial,sans-serif}.shared-study-header{max-width:1180px;margin:20px auto 10px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}.shared-study-brand{font-weight:700;letter-spacing:.04em}.shared-study-actions button{border:1px solid #74818a;background:#fff;border-radius:24px;padding:10px 16px;color:#34434a;font-weight:600;cursor:pointer}.shared-study-frame{display:block;width:100%;min-height:90vh;border:0;background:#fff}@media(max-width:640px){.shared-study-header{margin:10px auto;align-items:flex-start}.shared-study-brand{font-size:14px}.shared-study-actions button{padding:8px 12px}.shared-study-frame{min-height:95vh}}@media print{body{background:#fff}.shared-study-header{display:none}.shared-study-frame{min-height:0}}</style></head><body>"
+    document += "<header class='shared-study-header'><div class='shared-study-brand'>CREDICLASS <span style='font-weight:400'>· Estudo Financeiro</span></div><div class='shared-study-actions'><button id='print-shared-study' type='button'>Imprimir / Salvar PDF</button></div></header>"
+    srcdoc = "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><link rel='stylesheet' href='/static/css/style.css'><style>body{margin:16px;background:#fff}.financial-study-document{max-width:1100px;margin:auto}@media(max-width:640px){body{margin:6px}.financial-study-document{width:100%;overflow-wrap:anywhere}}</style></head><body>" + study["document_html"] + "</body></html>"
+    document += f"<iframe class='shared-study-frame' title='Estudo financeiro aprovado' sandbox='allow-same-origin allow-modals' srcdoc='{html_escape(srcdoc, quote=True)}'></iframe>"
+    document += "<script>const frame=document.querySelector('.shared-study-frame');function resize(){try{frame.style.height=Math.max(frame.contentDocument.documentElement.scrollHeight,window.innerHeight*.9)+'px'}catch(_){}}frame.addEventListener('load',resize);window.addEventListener('resize',resize);document.getElementById('print-shared-study').addEventListener('click',()=>frame.contentWindow.print());</script></body></html>"
+    return HTMLResponse(document, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff"})
 
 
 @app.get("/api/piperun/{opportunity_id}")
