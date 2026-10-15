@@ -91,6 +91,13 @@ const motor360ExecutionLogs = [];
 const clientDiagnosticErrors = [];
 window.addEventListener("error", (event) => clientDiagnosticErrors.push({ type: "error", message: event.message, source: event.filename, line: event.lineno, time: new Date().toISOString() }));
 window.addEventListener("unhandledrejection", (event) => clientDiagnosticErrors.push({ type: "unhandledrejection", message: String(event.reason?.stack || event.reason || ""), time: new Date().toISOString() }));
+document.addEventListener("click", (event) => {
+  if (event.target.closest("#closeFinancialStudyHistoryBtn")) {
+    closeFinancialStudyHistoryItem();
+  } else if (event.target.closest("#printFinancialStudyHistoryBtn")) {
+    printFinancialStudyHistoryItem();
+  }
+});
 const investorPreferenceFlags = [];
 const savedMotor360SelectedGroups = (() => {
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedGroups") || "[]"); } catch { return []; }
@@ -456,6 +463,7 @@ async function approveCurrentFinancialStudy() {
     renderFinancialStudyAdhesionDates();
     const documentNode = document.querySelector(".financial-study-document");
     if (!documentNode) throw new Error("Não foi possível preparar o documento do estudo.");
+    window.prepareFinancialStudyMobileViews?.(documentNode);
     const snapshot = financialStudyApprovalSnapshot(items);
     const documentHtml = documentNode.outerHTML;
     const fingerprint = JSON.stringify(snapshot) + documentHtml;
@@ -567,19 +575,18 @@ function printFinancialStudyHistoryItem() {
     showToast("Abra um estudo antes de imprimir.", "warning");
     return;
   }
-  const printWindow = window.open("", "_blank");
+  const frame = document.getElementById("financialStudyHistoryFrame");
+  const printWindow = frame?.contentWindow;
   if (!printWindow) {
-    showToast("Permita a abertura da janela de impressão para continuar.", "warning");
+    showToast("Não foi possível acessar o documento do estudo para impressão.", "danger");
     return;
   }
-  printWindow.opener = null;
-  printWindow.addEventListener("load", () => {
+  try {
     printWindow.focus();
     printWindow.print();
-  }, { once: true });
-  printWindow.document.open();
-  printWindow.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Estudo Financeiro</title><link rel="stylesheet" href="/static/css/style.css"><style>@page{size:A4 landscape;margin:10mm}html,body{width:auto!important;height:auto!important;margin:0!important;overflow:visible!important;background:#fff!important}.financial-study-document{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important}</style></head><body>${financialStudyHistoryState.documentHtml}</body></html>`);
-  printWindow.document.close();
+  } catch (error) {
+    showToast(error.message || "Não foi possível abrir a impressão deste estudo.", "danger");
+  }
 }
 
 const FINANCIAL_STUDY_ADMINISTRATOR_BENEFITS = {
@@ -6497,8 +6504,6 @@ document.getElementById("searchFinancialStudyHistoryBtn")?.addEventListener("cli
 document.getElementById("financialStudyHistorySearch")?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") loadFinancialStudyHistory();
 });
-document.getElementById("printFinancialStudyHistoryBtn")?.addEventListener("click", printFinancialStudyHistoryItem);
-document.getElementById("closeFinancialStudyHistoryBtn")?.addEventListener("click", closeFinancialStudyHistoryItem);
 document.getElementById("generateFinancialStudyShareBtn")?.addEventListener("click", async (event) => {
   const studyId = event.currentTarget.dataset.studyId;
   if (!studyId || !window.confirm("Qualquer pessoa com este link poderá visualizar o estudo aprovado. O link expirará em 30 dias. Deseja continuar?")) return;

@@ -13,6 +13,7 @@ import os
 import time
 import copy
 import re
+import secrets
 from datetime import date
 from html import escape as html_escape
 from typing import Annotated
@@ -166,14 +167,18 @@ def read_public_financial_study(token: str):
             status_code=404,
             headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer"},
         )
+    nonce = secrets.token_urlsafe(18)
     document = "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-    document += f"<title>{html_escape(study['client_name'])} | Estudo Financeiro CrediClass</title><link rel='stylesheet' href='/static/css/style.css'>"
-    document += "<meta name='robots' content='noindex,nofollow,noarchive'><style>body{margin:0;background:#f7f6f4;color:#2e3f47;font-family:Arial,sans-serif}.shared-study-header{max-width:1180px;margin:20px auto 10px;padding:0 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}.shared-study-brand{font-weight:700;letter-spacing:.04em}.shared-study-actions button{border:1px solid #74818a;background:#fff;border-radius:24px;padding:10px 16px;color:#34434a;font-weight:600;cursor:pointer}.shared-study-frame{display:block;width:100%;min-height:90vh;border:0;background:#fff}@media(max-width:640px){.shared-study-header{margin:10px auto;align-items:flex-start}.shared-study-brand{font-size:14px}.shared-study-actions button{padding:8px 12px}.shared-study-frame{min-height:95vh}}@media print{body{background:#fff}.shared-study-header{display:none}.shared-study-frame{min-height:0}}</style></head><body>"
-    document += "<header class='shared-study-header'><div class='shared-study-brand'>CREDICLASS <span style='font-weight:400'>· Estudo Financeiro</span></div><div class='shared-study-actions'><button id='print-shared-study' type='button'>Imprimir / Salvar PDF</button></div></header>"
-    srcdoc = "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><link rel='stylesheet' href='/static/css/style.css'><style>body{margin:16px;background:#fff}.financial-study-document{max-width:1100px;margin:auto}@media(max-width:640px){body{margin:6px}.financial-study-document{width:100%;overflow-wrap:anywhere}}</style></head><body>" + study["document_html"] + "</body></html>"
-    document += f"<iframe class='shared-study-frame' title='Estudo financeiro aprovado' sandbox='allow-same-origin allow-modals' srcdoc='{html_escape(srcdoc, quote=True)}'></iframe>"
-    document += "<script>const frame=document.querySelector('.shared-study-frame');function resize(){try{frame.style.height=Math.max(frame.contentDocument.documentElement.scrollHeight,window.innerHeight*.9)+'px'}catch(_){}}frame.addEventListener('load',resize);window.addEventListener('resize',resize);document.getElementById('print-shared-study').addEventListener('click',()=>frame.contentWindow.print());</script></body></html>"
-    return HTMLResponse(document, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff"})
+    document += f"<title>{html_escape(study['client_name'])} | Estudo Financeiro CrediClass</title><link rel='stylesheet' href='/static/css/style.css?v=4.0.202'>"
+    document += "<meta name='robots' content='noindex,nofollow,noarchive'></head><body class='shared-study-page'>"
+    document += "<div class='shared-study-shell'>"
+    document += "<header class='shared-study-header'><div class='shared-study-brand'>CREDICLASS <span>· Estudo Financeiro</span></div><button id='printSharedStudy' class='shared-study-print' type='button'>Imprimir / Salvar PDF</button></header>"
+    document += f"<section class='shared-study-summary' aria-labelledby='sharedStudySummaryTitle'><h2 id='sharedStudySummaryTitle'>Resumo do estudo</h2><p>Cliente: <strong>{html_escape(study['client_name'])}</strong><span aria-hidden='true'> · </span>Estudo: <strong>{html_escape(study['id'])}</strong></p><div id='sharedStudyQuickSummary' class='shared-study-quick-summary' aria-live='polite'></div></section>"
+    document += "<nav id='sharedStudyNavigation' class='shared-study-navigation' aria-label='Navegação pelas seções do estudo'></nav>"
+    document += f"<main class='shared-study-content'>{study['document_html']}</main></div>"
+    document += f"<script nonce='{nonce}' src='/static/js/shared-study.js?v=4.0.202' defer></script></body></html>"
+    policy = f"default-src 'none'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    return HTMLResponse(document, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": policy})
 
 
 @app.get("/api/piperun/{opportunity_id}")

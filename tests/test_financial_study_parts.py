@@ -24,9 +24,8 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertLess(study_screen.index('id="approveFinancialStudyBtn"'), study_screen.index('<article class="financial-study-document"'))
         self.assertIn('id="financialStudyHistoryRows"', history_screen)
         self.assertIn('id="financialStudyHistoryFrame"', history_screen)
-        self.assertIn('sandbox="allow-modals"', history_screen)
+        self.assertIn('sandbox="allow-same-origin allow-modals"', history_screen)
         self.assertIn('function printFinancialStudyHistoryItem()', app_js)
-        self.assertIn('window.open("", "_blank")', app_js)
         self.assertIn('id="generateFinancialStudyShareBtn"', history_screen)
         self.assertIn('id="copyFinancialStudyShareBtn"', history_screen)
         self.assertIn('id="revokeFinancialStudyShareBtn"', history_screen)
@@ -372,6 +371,20 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("overflow: visible !important;", css)
         self.assertIn(".financial-study-part9-mobile,\n  .financial-study-part10-mobile { display: none !important; }", css)
 
+    def test_shared_study_mobile_enhancement_preserves_all_content(self):
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        helper = (ROOT / "backend/static/js/shared-study.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+
+        for original_value in ("-R$ 2.599.161,60", "-R$ 25.991,62", "-R$ 1.759.083,35", "-R$ 4.708.694,53"):
+            self.assertIn(original_value, html)
+        self.assertIn("financial-study-part2-mobile", html)
+        self.assertIn("rows.map((row, index)", helper)
+        self.assertIn('headings[4]', helper)
+        self.assertIn("sharedStudyNavigation", helper)
+        self.assertIn("financial-study-part9-mobile-total > div { display: grid", css)
+        self.assertIn("financial-study-part2-table-wrap.has-mobile-cards", css)
+
     def test_study_history_layout_print_and_close_controls(self):
         app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
         html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
@@ -379,8 +392,11 @@ class FinancialStudyPartsTest(unittest.TestCase):
 
         self.assertIn('"Estudo Completo"', app_js)
         self.assertIn('state.hidden = items.length > 0', app_js)
-        self.assertIn('window.open("", "_blank")', app_js)
+        self.assertIn('const printWindow = frame?.contentWindow', app_js)
+        self.assertIn('printWindow.print();', app_js)
+        self.assertIn('document.addEventListener("click", (event) => {', app_js)
         self.assertIn('id="closeFinancialStudyHistoryBtn"', html)
+        self.assertIn('sandbox="allow-same-origin allow-modals"', html)
         self.assertIn('id="printFinancialStudyHistoryBtn" class="btn btn-outline-secondary" type="button">Imprimir</button>', html)
         self.assertIn(".financial-study-history-table .study-col-id", css)
         self.assertIn(".financial-study-history-table tbody tr", css)
