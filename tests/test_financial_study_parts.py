@@ -414,6 +414,8 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn('id="printFinancialStudyHistoryBtn" class="btn btn-outline-secondary" type="button">Imprimir</button>', html)
         self.assertIn(".financial-study-history-table .study-col-id", css)
         self.assertIn(".financial-study-history-table tbody tr", css)
+        self.assertIn("grid-template-columns: minmax(0, 1fr) auto", css)
+        self.assertIn(".financial-study-share-link-row .btn { min-width: 88px; flex: 0 0 auto; white-space: nowrap; }", css)
 
     def test_legacy_study_backend_modules_are_absent(self):
         backend = ROOT / "backend"
