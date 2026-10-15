@@ -386,6 +386,7 @@ function activateScreen(screenName) {
   if (screenName === "estudo") {
     clearRetiredFinancialStudyState();
     renderFinancialStudySelectedAdministrator();
+    renderFinancialStudyInvestment();
     renderFinancialStudySummary();
     renderFinancialStudyBenefits();
     renderFinancialStudyContracting();
@@ -423,7 +424,7 @@ function updateFinancialStudyActionState() {
     : missingScenarios ? "Escolha ao menos um cenário em cada grupo selecionado." : "Salvar uma cópia imutável no Histórico de Estudos.";
 }
 
-function financialStudyApprovalSnapshot(items) {
+function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
   const client = motor360ClientProfile();
   const profile = collectClientProfile?.() || {};
   return {
@@ -433,6 +434,7 @@ function financialStudyApprovalSnapshot(items) {
       objective: client.objetivo || null,
       desired_credit: client.credito_liquido_desejado ?? client.credito_desejado ?? null,
     },
+    investment_simulation: investmentSimulation,
     groups: items.map((item) => ({
       group_key: motor360GroupKey(item),
       group: item.grupo || item.grupo_id || "",
@@ -445,6 +447,54 @@ function financialStudyApprovalSnapshot(items) {
     })),
   };
 }
+
+function renderFinancialStudyInvestment() {
+  const input = document.getElementById("financialStudyPart2AnnualRate");
+  const redemption = document.getElementById("financialStudyPart2Redemption");
+  if (!input || !redemption) return;
+
+  const desiredCredit = Number(parseNumberInput(motor360ClientProfile().credito_liquido_desejado || 0));
+  const principal = desiredCredit > 0 ? -Math.abs(desiredCredit) : null;
+  const groups = selectedMotor360Items();
+  const terms = groups.map((item) => Number(item.prazo_restante)).filter((term) => Number.isFinite(term) && term > 0);
+  const averageTerm = terms.length ? terms.reduce((sum, term) => sum + term, 0) / terms.length : null;
+  const rows = [1, averageTerm == null ? null : averageTerm / 2, averageTerm];
+  const rawRate = String(input.value).trim();
+  const parsedRate = rawRate ? Number(rawRate.replace(",", ".")) : Number.NaN;
+  const rate = Number.isFinite(parsedRate) && parsedRate >= 0 && parsedRate <= 100 ? parsedRate / 100 : 0.12;
+  if (!Number.isFinite(parsedRate) || parsedRate < 0 || parsedRate > 100) input.value = "12";
+
+  redemption.textContent = principal == null ? "Crédito não informado" : formatMoney(principal);
+  const rateLabel = `${new Intl.NumberFormat("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(rate * 100)}%`;
+  document.getElementById("financialStudyPart2Rate").textContent = rateLabel;
+  const costs = rows.map((term, index) => {
+    const termTarget = document.getElementById(`financialStudyPart2Term${index + 1}`);
+    const costTarget = document.getElementById(`financialStudyPart2Cost${index + 1}`);
+    if (!termTarget || !costTarget) return null;
+    termTarget.textContent = term == null ? "Prazo não informado" : new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(term);
+    let cost = null;
+    if (principal != null && term != null) {
+      cost = index === 0
+        ? (rate / 12) * principal
+        : (principal * ((1 + rate) ** (term / 12)) - principal);
+    }
+    costTarget.textContent = cost == null ? "—" : formatMoney(cost);
+    return cost;
+  });
+  const studyPart = document.querySelector('[data-study-part="2"]');
+  if (studyPart) window.prepareFinancialStudyMobileViews?.(studyPart);
+  return {
+    desired_credit: desiredCredit > 0 ? desiredCredit : null,
+    redemption_amount: principal,
+    annual_rate: rate,
+    average_remaining_term_months: averageTerm,
+    terms_months: rows,
+    estimated_costs: costs,
+    formulas: ["(taxa anual / 12) × valor de resgate", "valor de resgate × (1 + taxa anual)^(prazo em meses / 12) − valor de resgate"],
+  };
+}
+
+document.getElementById("financialStudyPart2AnnualRate")?.addEventListener("input", renderFinancialStudyInvestment);
 
 async function approveCurrentFinancialStudy() {
   const items = selectedMotor360Items();
@@ -464,8 +514,19 @@ async function approveCurrentFinancialStudy() {
     const documentNode = document.querySelector(".financial-study-document");
     if (!documentNode) throw new Error("Não foi possível preparar o documento do estudo.");
     window.prepareFinancialStudyMobileViews?.(documentNode);
-    const snapshot = financialStudyApprovalSnapshot(items);
-    const documentHtml = documentNode.outerHTML;
+    const investmentSimulation = renderFinancialStudyInvestment();
+    const snapshot = financialStudyApprovalSnapshot(items, investmentSimulation);
+    const documentCopy = documentNode.cloneNode(true);
+    const rateInput = documentCopy.querySelector("#financialStudyPart2AnnualRate");
+    if (rateInput) {
+      const rateText = documentCopy.querySelector("#financialStudyPart2Rate")?.textContent || "12,00%";
+      const staticRate = document.createElement("span");
+      staticRate.id = rateInput.id;
+      staticRate.className = "financial-study-part2-rate-value";
+      staticRate.textContent = rateText;
+      rateInput.replaceWith(staticRate);
+    }
+    const documentHtml = documentCopy.outerHTML;
     const fingerprint = JSON.stringify(snapshot) + documentHtml;
     if (!financialStudyApprovalState.pendingKey || financialStudyApprovalState.pendingFingerprint !== fingerprint) {
       financialStudyApprovalState.pendingKey = crypto.randomUUID();

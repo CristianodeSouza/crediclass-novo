@@ -5212,6 +5212,30 @@ body[data-theme="escuro"] .btn-outline-secondary {
   text-align: right;
 }
 
+.financial-study-part2-rate-control {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 0 0 8px;
+  color: #40535a;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.financial-study-part2-rate-control input {
+  width: 100px;
+  min-height: 34px;
+  padding: 5px 8px;
+  border: 1px solid #b9c0c3;
+  border-radius: 6px;
+  color: #17272d;
+  font: inherit;
+  text-align: right;
+}
+
+.financial-study-part2-rate-value { font-weight: 700; }
+
 .financial-study-part2-table-wrap {
   max-width: 100%;
   overflow-x: auto;

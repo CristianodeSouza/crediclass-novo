@@ -51,6 +51,9 @@ class Motor360BrowserTest(unittest.TestCase):
                 raise RuntimeError("Chromium/Chrome is required for the Motor 360 browser suite")
             raise unittest.SkipTest("Chromium/Chrome not installed; browser suite is required in CI")
         source = APP_JS.read_text(encoding="utf-8")
+        investment_start = source.index("function renderFinancialStudyInvestment()")
+        investment_end = source.index('\ndocument.getElementById("financialStudyPart2AnnualRate")', investment_start)
+        investment_renderer = source[investment_start:investment_end]
         cls.production_functions = "\n".join((
             _between(source, "function formatMotor360Reason", "function formatMotor360Duration"),
             _between(source, "function motor360CompositionIdealBid", "function motor360ScenarioIdsForSort"),
@@ -61,6 +64,7 @@ class Motor360BrowserTest(unittest.TestCase):
             _between(source, "function motor360ExecutionStepMessage", "async function loadMotor360Audit"),
             _between(source, "function renderMotor360GroupCardUncached", "function renderMotor360GroupCard"),
             _between(source, "function renderMotor360GroupCard(item)", "function selectedMotor360Items"),
+            investment_renderer,
         ))
 
     def test_group_controls_are_grouped_separately_from_summary_metrics(self):
@@ -96,7 +100,7 @@ document.querySelector("#result").textContent = JSON.stringify({
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch", css)
 
     def _run_browser(self, actions: str, extra_functions: str = "") -> dict:
-        fixture = r'''<!doctype html><meta charset="utf-8"><main id="cards"></main><pre id="result">pending</pre>
+        fixture = r'''<!doctype html><meta charset="utf-8"><main id="cards"></main><section data-study-part="2"><input id="financialStudyPart2AnnualRate" value="12"><span id="financialStudyPart2Redemption"></span><span id="financialStudyPart2Rate"></span><span id="financialStudyPart2Term1"></span><span id="financialStudyPart2Term2"></span><span id="financialStudyPart2Term3"></span><span id="financialStudyPart2Cost1"></span><span id="financialStudyPart2Cost2"></span><span id="financialStudyPart2Cost3"></span></section><pre id="result">pending</pre>
 <script>window.addEventListener("error", event => { document.querySelector("#result").textContent = "ERROR: " + event.message; });</script>
 <script>
 const investorState = {
@@ -109,7 +113,8 @@ const groupScenarios = new Map();
 const motor360GroupKey = item => String(item.grupo || item.grupo_id);
 const motor360GroupAnchorId = id => `motor360-group-${id}`;
 const selectedScenarioIdsForGroup = id => groupScenarios.get(id) || new Set();
-const selectedMotor360Items = () => [];
+const studyGroups = [];
+const selectedMotor360Items = () => studyGroups;
 const selectedCompositionScenarioMetrics = () => null;
 const minimumQuotasFor = (item, id) => item.minQuotas?.[id] ?? 1;
 const quotaCountFor = item => item.quotas || 1;
@@ -123,6 +128,7 @@ const allocatedClientBidFor = (item, scenario, profileId) => Number(scenario.per
 const formatGroupDueDate = value => value || "Não informado";
 const formatMoney = value => value == null || !Number.isFinite(Number(value)) ? "-" : `R$ ${Number(value).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const formatPercent = value => `${(Number(value || 0) * 100).toLocaleString("pt-BR", { maximumFractionDigits: 3 })}%`;
+const parseNumberInput = value => String(value || "").replace(/\./g, "").replace(",", ".");
 const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 const motor360HistoricalAverages = () => "";
 const motor360HistoryTrigger = () => "";
@@ -200,6 +206,41 @@ document.querySelector("#result").textContent = JSON.stringify({ beforeHadNoSort
         self.assertIn("Sem embutido", result["cards"][2]["label"])
         self.assertIn("R$ 410.760,00", result["cards"][2]["label"])
         self.assertEqual(result["cards"][2]["label"], result["cards"][2]["aria"])
+
+    def test_investment_simulation_uses_client_credit_rate_and_average_selected_term(self):
+        result = self._run_browser(r'''
+studyGroups.push({ prazo_restante: 55 }, { prazo_restante: 110 });
+const simulation = renderFinancialStudyInvestment();
+const initialRate = document.querySelector("#financialStudyPart2Rate").textContent;
+const rateInput = document.querySelector("#financialStudyPart2AnnualRate");
+rateInput.value = "10";
+const editedSimulation = renderFinancialStudyInvestment();
+document.querySelector("#result").textContent = JSON.stringify({
+  simulation,
+  editedSimulation,
+  redemption: document.querySelector("#financialStudyPart2Redemption").textContent,
+  rate: initialRate,
+  terms: [1, 2, 3].map(index => document.querySelector(`#financialStudyPart2Term${index}`).textContent),
+  costs: [1, 2, 3].map(index => document.querySelector(`#financialStudyPart2Cost${index}`).textContent),
+  editedRate: document.querySelector("#financialStudyPart2Rate").textContent,
+  editedCost1: document.querySelector("#financialStudyPart2Cost1").textContent,
+});
+''')
+        simulation = result["simulation"]
+        self.assertEqual(simulation["redemption_amount"], -600000)
+        self.assertAlmostEqual(simulation["annual_rate"], .12)
+        self.assertEqual(simulation["terms_months"], [1, 41.25, 82.5])
+        self.assertAlmostEqual(simulation["estimated_costs"][0], -6000)
+        self.assertAlmostEqual(simulation["estimated_costs"][1], -600000 * ((1.12 ** (41.25 / 12)) - 1))
+        self.assertAlmostEqual(simulation["estimated_costs"][2], -600000 * ((1.12 ** (82.5 / 12)) - 1))
+        self.assertIn("-", result["redemption"])
+        self.assertEqual(result["rate"], "12,00%")
+        self.assertEqual(result["terms"], ["1", "41,25", "82,5"])
+        self.assertTrue(all("R$" in value and "-" in value for value in result["costs"]))
+        self.assertEqual(result["editedRate"], "10,00%")
+        self.assertAlmostEqual(result["editedSimulation"]["annual_rate"], .10)
+        self.assertAlmostEqual(result["editedSimulation"]["estimated_costs"][0], -5000)
+        self.assertTrue("-" in result["editedCost1"] and "R$" in result["editedCost1"])
 
     def test_real_card_dom_preserves_missing_values_and_status_not_false_approval(self):
         result = self._run_browser(r'''

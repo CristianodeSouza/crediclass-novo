@@ -9,8 +9,8 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <meta name="crediclass-build" content="4.0.207">
-    <link href="/static/css/style.css?v=4.0.207" rel="stylesheet">
+    <meta name="crediclass-build" content="4.0.208">
+    <link href="/static/css/style.css?v=4.0.208" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -677,8 +677,12 @@
             <section class="financial-study-part financial-study-part--investment" aria-labelledby="financialStudyPart2Title" data-study-part="2" data-study-part-name="Simulação de Investimento">
               <h2 id="financialStudyPart2Title" class="financial-study-part2-title">SIMULAÇÃO DE INVESTIMENTO</h2>
               <p class="financial-study-part2-description">Simulação de custo de perda de rendimento ao resgatar dos investimentos e imobilizar na aquisição do imóvel, considerando parâmetros abaixo:</p>
-              <p class="financial-study-part2-disclaimer">Exemplo hipotético reproduzido do HTML de referência; não representa dados do cliente nem cálculo do Motor 360.</p>
-              <div class="financial-study-part2-table-wrap" role="region" aria-label="Tabela hipotética da simulação de investimento" tabindex="0">
+              <p class="financial-study-part2-disclaimer">Estimativa do custo de oportunidade sobre o crédito líquido desejado. A taxa anual é uma premissa editável pelo consultor; não representa garantia de rentabilidade.</p>
+              <div class="financial-study-part2-rate-control">
+                <label for="financialStudyPart2AnnualRate">Rendimento anual simulado (%)</label>
+                <input id="financialStudyPart2AnnualRate" type="number" min="0" max="100" step="0.01" value="12" inputmode="decimal" aria-label="Taxa anual simulada">
+              </div>
+              <div class="financial-study-part2-table-wrap" role="region" aria-label="Tabela de simulação de investimento" tabindex="0">
                 <table class="financial-study-part2-table">
                   <thead>
                     <tr>
@@ -692,18 +696,18 @@
                   <tbody>
                     <tr>
                       <th scope="rowgroup" rowspan="3">À Vista</th>
-                      <td rowspan="3">-R$ 2.599.161,60</td>
-                      <td rowspan="3">12,00%</td>
-                      <td>1</td>
-                      <td class="financial-study-part2-loss">-R$ 25.991,62</td>
+                      <td id="financialStudyPart2Redemption" rowspan="3">—</td>
+                      <td id="financialStudyPart2Rate" rowspan="3">12,00%</td>
+                      <td id="financialStudyPart2Term1">1</td>
+                      <td id="financialStudyPart2Cost1" class="financial-study-part2-loss">—</td>
                     </tr>
                     <tr>
-                      <td>55</td>
-                      <td class="financial-study-part2-loss">-R$ 1.759.083,35</td>
+                      <td id="financialStudyPart2Term2">—</td>
+                      <td id="financialStudyPart2Cost2" class="financial-study-part2-loss">—</td>
                     </tr>
                     <tr>
-                      <td>109</td>
-                      <td class="financial-study-part2-loss">-R$ 4.708.694,53</td>
+                      <td id="financialStudyPart2Term3">—</td>
+                      <td id="financialStudyPart2Cost3" class="financial-study-part2-loss">—</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1132,9 +1136,9 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.207"></script>
-    <script src="/static/js/shared-study.js?v=4.0.207"></script>
-    <script src="/static/js/app.js?v=4.0.207"></script>
+    <script src="/static/js/api.js?v=4.0.208"></script>
+    <script src="/static/js/shared-study.js?v=4.0.208"></script>
+    <script src="/static/js/app.js?v=4.0.208"></script>
   </body>
 </html>
 

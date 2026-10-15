@@ -30,7 +30,7 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn('id="copyFinancialStudyShareBtn"', history_screen)
         self.assertIn('id="revokeFinancialStudyShareBtn"', history_screen)
         self.assertIn("O link expirará em 30 dias", app_js)
-        self.assertIn("financialStudyApprovalSnapshot(items)", app_js)
+        self.assertIn("financialStudyApprovalSnapshot(items, investmentSimulation)", app_js)
         self.assertIn('apiPost("/financial-studies"', app_js)
         self.assertIn('apiGet(`/financial-studies/${encodeURIComponent(studyId)}`)', app_js)
         self.assertIn("A seleção atual será mantida", app_js)
@@ -74,15 +74,17 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertNotIn("saveCurrentStudy", app_js)
         self.assertNotIn("openSharedStudyFromUrl", app_js)
 
-    def test_part_two_is_named_static_hypothetical_table_without_an_image(self):
+    def test_part_two_uses_client_credit_editable_rate_and_motor_average_terms(self):
         html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
         start = html.index('data-study-part="2"')
         end = html.index("</section>", start)
         part = html[start:end]
 
         self.assertIn('data-study-part-name="Simulação de Investimento"', part)
         self.assertIn("SIMULAÇÃO DE INVESTIMENTO", part)
-        self.assertIn("Exemplo hipotético reproduzido do HTML de referência", part)
+        self.assertIn("A taxa anual é uma premissa editável pelo consultor", part)
+        self.assertIn('id="financialStudyPart2AnnualRate"', part)
         for fixed_label in (
             "Uso de Recurso Próprio",
             "Valor Resgate Investimentos",
@@ -91,16 +93,20 @@ class FinancialStudyPartsTest(unittest.TestCase):
             "Custo de Perda de Rendimento no Período",
         ):
             self.assertIn(fixed_label, part)
-        for sample_value in (
-            "À Vista",
-            "-R$ 2.599.161,60",
-            "12,00%",
-            "-R$ 25.991,62",
-            "-R$ 1.759.083,35",
-            "-R$ 4.708.694,53",
-        ):
-            self.assertIn(sample_value, part)
-        self.assertEqual(len(re.findall(r">(?:1|55|109)</td>", part)), 3)
+        self.assertIn("À Vista", part)
+        self.assertIn('id="financialStudyPart2Redemption"', part)
+        self.assertIn('id="financialStudyPart2Cost1"', part)
+        self.assertIn('id="financialStudyPart2Cost2"', part)
+        self.assertIn('id="financialStudyPart2Cost3"', part)
+        renderer_start = app_js.index("function renderFinancialStudyInvestment()")
+        renderer_end = app_js.index("\nasync function approveCurrentFinancialStudy()", renderer_start)
+        renderer = app_js[renderer_start:renderer_end]
+        self.assertIn("selectedMotor360Items()", renderer)
+        self.assertIn("terms.reduce((sum, term) => sum + term, 0) / terms.length", renderer)
+        self.assertIn("(rate / 12) * principal", renderer)
+        self.assertIn("principal * ((1 + rate) ** (term / 12)) - principal", renderer)
+        self.assertIn('financialStudyApprovalSnapshot(items, investmentSimulation)', app_js)
+        self.assertIn('rateInput.replaceWith(staticRate)', app_js)
         self.assertNotIn("<img", part)
         self.assertNotRegex(part, re.compile(r"\{\{|\}\}|\$\{[^}]+\}"))
 
@@ -376,8 +382,6 @@ class FinancialStudyPartsTest(unittest.TestCase):
         helper = (ROOT / "backend/static/js/shared-study.js").read_text(encoding="utf-8")
         css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
 
-        for original_value in ("-R$ 2.599.161,60", "-R$ 25.991,62", "-R$ 1.759.083,35", "-R$ 4.708.694,53"):
-            self.assertIn(original_value, html)
         self.assertIn("financial-study-part2-mobile", html)
         self.assertIn("rows.map((row, index)", helper)
         self.assertIn('headings[4]', helper)
@@ -435,10 +439,11 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("financial-study-part--introduction", smoke)
         self.assertIn("clearRetiredFinancialStudyState", smoke)
 
-    def test_production_smoke_checks_hypothetical_part_two(self):
+    def test_production_smoke_checks_calculated_part_two(self):
         smoke = (ROOT / "scripts/production-smoke-test.mjs").read_text(encoding="utf-8")
         self.assertIn("SIMULAÇÃO DE INVESTIMENTO", smoke)
-        self.assertIn("Exemplo hipotético reproduzido do HTML de referência", smoke)
+        self.assertIn("financialStudyPart2AnnualRate", smoke)
+        self.assertIn("renderFinancialStudyInvestment", smoke)
 
     def test_production_smoke_checks_part_three_and_administrator_binding(self):
         smoke = (ROOT / "scripts/production-smoke-test.mjs").read_text(encoding="utf-8")
