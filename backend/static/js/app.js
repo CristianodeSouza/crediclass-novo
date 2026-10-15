@@ -367,11 +367,25 @@ function activateScreen(screenName) {
     }
   }
   if (screenName === "mapa-assembleia") loadAssemblyMap();
-  if (screenName === "estudo") clearRetiredFinancialStudyState();
+  if (screenName === "estudo") {
+    clearRetiredFinancialStudyState();
+    renderFinancialStudySelectedAdministrator();
+  }
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
   if (screenName === "crm-piperun") resetPipeRunPreview();
+}
+
+function renderFinancialStudySelectedAdministrator() {
+  const target = document.getElementById("financialStudyPart3Administrator");
+  if (!target) return;
+  const administrators = [...new Set(selectedMotor360Items()
+    .map((item) => String(item.administradora || "").trim())
+    .filter(Boolean))];
+  target.textContent = administrators.length
+    ? administrators.join(" · ")
+    : "Nenhuma administradora selecionada";
 }
 
 function clearRetiredFinancialStudyState() {

@@ -28,6 +28,8 @@ const checks = [
   ["versioned app asset reference", new RegExp(`/static/js/app\\.js\\?v=${expectedVersion.replaceAll(".", "\\.")}`).test(index.body)],
   ["versioned API asset reference", new RegExp(`/static/js/api\\.js\\?v=${expectedVersion.replaceAll(".", "\\.")}`).test(index.body)],
   ["financial study fixed introduction is served", index.body.includes("financial-study-part--introduction") && index.body.includes("ESTUDO FINANCEIRO") && index.body.includes("crediclass-logo.png") && app.body.includes("clearRetiredFinancialStudyState") && !app.body.includes("renderEmptyFinancialStudyScreen")],
+  ["financial study hypothetical investment part is served", index.body.includes('data-study-part-name="Simulação de Investimento"') && index.body.includes("SIMULAÇÃO DE INVESTIMENTO") && index.body.includes("Exemplo hipotético reproduzido do HTML de referência") && index.body.includes("-R$ 4.708.694,53")],
+  ["financial study best consortia part and selected administrator binding are served", index.body.includes('data-study-part-name="Simulação dos melhores consórcios"') && index.body.includes("SIMULAÇÃO DOS MELHORES CONSÓRCIOS") && index.body.includes("Critérios de seleção:") && app.body.includes("renderFinancialStudySelectedAdministrator")],
   ["Motor 360 card renderer", app.body.includes("renderMotor360GroupCardUncached") && app.body.includes("motor360BidSortLabel")],
   ["API bundle", api.body.length > 1000],
 ];
