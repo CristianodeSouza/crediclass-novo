@@ -135,6 +135,22 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn(".financial-study-part4-overview", css)
         self.assertIn(".financial-study-part4-table", css)
 
+    def test_part_five_specialists_is_fixed_copy_without_images_or_motor_values(self):
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+        start = html.index('data-study-part="5"')
+        end = html.index("</section>", start)
+        part = html[start:end]
+
+        self.assertIn('data-study-part-name="Especialistas da Jornada"', part)
+        self.assertIn("ESPECIALISTAS EM TODA JORNADA", part)
+        self.assertIn("Gestão da Contemplação:", part)
+        self.assertIn("Consultoria de lances para estratégias assertivas, apoio operacional em oferta e acompanhamento resultado assembleia.", part)
+        self.assertIn("Gestão da Utilização do Crédito:", part)
+        self.assertIn("Trâmites com a administradora, vendedores, prefeitura, cartório de imóveis, certidões, contrato de compromisso de venda e compra, entre outros.", part)
+        self.assertNotIn("<img", part)
+        self.assertIn(".financial-study-part5-grid", css)
+
     def test_legacy_study_backend_modules_are_absent(self):
         backend = ROOT / "backend"
         for module in ("estudos.py", "templates_estudos.py", "financial_study_engine.py", "pdf_bridge.py"):

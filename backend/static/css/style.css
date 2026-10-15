@@ -5220,6 +5220,37 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .financial-study-part--summary { margin-top: 26px; }
+.financial-study-part--specialists { margin-top: 26px; }
+.financial-study-part5-title {
+  margin: 0;
+  padding: 8px 14px;
+  background: #2e3f47;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+}
+.financial-study-part5-grid {
+  display: grid;
+  grid-template-columns: minmax(190px, 28%) minmax(0, 1fr);
+  border: 1px solid #b9c0c3;
+  border-top: 0;
+}
+.financial-study-part5-grid h3,
+.financial-study-part5-grid p {
+  margin: 0;
+  padding: 10px 12px;
+  border-bottom: 1px solid #c6cbcd;
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+.financial-study-part5-grid h3 {
+  background: #f1f1f1;
+  font-weight: 700;
+}
+.financial-study-part5-grid p:last-child,
+.financial-study-part5-grid h3:nth-last-child(2) { border-bottom: 0; }
 .financial-study-part4-title,
 .financial-study-part4-investments h3 {
   margin: 0;
@@ -5287,6 +5318,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
     padding: 11px 12px;
   }
 
+  .financial-study-part5-grid { grid-template-columns: minmax(0, 1fr); }
+  .financial-study-part5-grid h3:nth-last-child(2) { border-bottom: 1px solid #c6cbcd; }
+
   .financial-study-part4-overview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .financial-study-part4-overview article + article { border-left: 0; }
   .financial-study-part4-overview article:nth-child(even) { border-left: 1px solid #d4d8da; }
@@ -5315,4 +5349,6 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .financial-study-part--summary { break-inside: auto; }
+
+  .financial-study-part--specialists { break-inside: avoid; }
 }
