@@ -116,6 +116,10 @@ def read_financial_study(study_id: str, request: Request):
         return JSONResponse(status_code=503, content={"success": False, "error": "Não foi possível carregar o estudo."})
     if study is None:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
+    public_link = study.get("public_link") or {}
+    token = public_link.pop("token", None)
+    if public_link.get("active") and token:
+        public_link["url"] = str(request.base_url).rstrip("/") + f"/estudo-compartilhado/{token}"
     return {"success": True, "study": study}
 
 
@@ -169,14 +173,14 @@ def read_public_financial_study(token: str):
         )
     nonce = secrets.token_urlsafe(18)
     document = "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-    document += f"<title>{html_escape(study['client_name'])} | Estudo Financeiro CrediClass</title><link rel='stylesheet' href='/static/css/style.css?v=4.0.202'>"
+    document += f"<title>{html_escape(study['client_name'])} | Estudo Financeiro CrediClass</title><link rel='stylesheet' href='/static/css/style.css?v=4.0.203'>"
     document += "<meta name='robots' content='noindex,nofollow,noarchive'></head><body class='shared-study-page'>"
     document += "<div class='shared-study-shell'>"
     document += "<header class='shared-study-header'><div class='shared-study-brand'>CREDICLASS <span>· Estudo Financeiro</span></div><button id='printSharedStudy' class='shared-study-print' type='button'>Imprimir / Salvar PDF</button></header>"
     document += f"<section class='shared-study-summary' aria-labelledby='sharedStudySummaryTitle'><h2 id='sharedStudySummaryTitle'>Resumo do estudo</h2><p>Cliente: <strong>{html_escape(study['client_name'])}</strong><span aria-hidden='true'> · </span>Estudo: <strong>{html_escape(study['id'])}</strong></p><div id='sharedStudyQuickSummary' class='shared-study-quick-summary' aria-live='polite'></div></section>"
     document += "<nav id='sharedStudyNavigation' class='shared-study-navigation' aria-label='Navegação pelas seções do estudo'></nav>"
     document += f"<main class='shared-study-content'>{study['document_html']}</main></div>"
-    document += f"<script nonce='{nonce}' src='/static/js/shared-study.js?v=4.0.202' defer></script></body></html>"
+    document += f"<script nonce='{nonce}' src='/static/js/shared-study.js?v=4.0.203' defer></script></body></html>"
     policy = f"default-src 'none'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     return HTMLResponse(document, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": policy})
 

@@ -2,6 +2,7 @@ fastapi==0.115.0
 uvicorn==0.30.6
 pydantic>=2.7.1
 python-dotenv==1.0.1
+cryptography>=42.0.8,<47
 google-api-python-client==2.139.0
 google-auth==2.33.0
 google-auth-httplib2==0.2.0

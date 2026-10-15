@@ -544,16 +544,22 @@ async function openFinancialStudyHistoryItem(studyId) {
     const shareStatus = document.getElementById("financialStudyShareStatus");
     const shareLinkRow = document.getElementById("financialStudyShareLinkRow");
     const shareUrl = document.getElementById("financialStudyShareUrl");
+    const generateButton = document.getElementById("generateFinancialStudyShareBtn");
     const revokeButton = document.getElementById("revokeFinancialStudyShareBtn");
-    shareUrl.value = "";
-    shareLinkRow.classList.add("d-none");
+    const activeShare = study.public_link?.active === true;
+    const activeShareUrl = activeShare ? String(study.public_link?.url || "") : "";
+    shareUrl.value = activeShareUrl;
+    shareLinkRow.classList.toggle("d-none", !activeShareUrl);
     revokeButton.classList.toggle("d-none", !study.public_link?.active);
-    shareStatus.textContent = study.public_link?.active
-      ? `Existe um link ativo até ${financialStudyHistoryDate(study.public_link.expires_at)}. Gere outro para substituir o atual e copiar o novo link.`
+    generateButton.textContent = activeShare ? "Gerar outro link" : "Gerar link público";
+    shareStatus.textContent = activeShareUrl
+      ? `Link ativo até ${financialStudyHistoryDate(study.public_link.expires_at)}. Copie e compartilhe o link abaixo; não é necessário gerar outro.`
+      : activeShare
+        ? `Existe um link ativo até ${financialStudyHistoryDate(study.public_link.expires_at)}, mas ele foi criado antes da recuperação segura da URL. O endereço original não pode ser recuperado; se precisar de um link visível aqui, gere outro para substituí-lo.`
       : study.public_link?.expires_at
         ? "O link anterior está expirado ou revogado. Gere um novo link para compartilhar este estudo."
         : "O link não é criado automaticamente e ficará válido por 30 dias.";
-    document.getElementById("generateFinancialStudyShareBtn").dataset.studyId = studyId;
+    generateButton.dataset.studyId = studyId;
     revokeButton.dataset.studyId = studyId;
     detail.classList.remove("d-none");
     financialStudyHistoryState.selectedId = studyId;
@@ -6513,7 +6519,7 @@ document.getElementById("generateFinancialStudyShareBtn")?.addEventListener("cli
     const result = await apiPost(`/financial-studies/${encodeURIComponent(studyId)}/share`, {});
     document.getElementById("financialStudyShareUrl").value = result.url;
     document.getElementById("financialStudyShareLinkRow").classList.remove("d-none");
-    document.getElementById("financialStudyShareStatus").textContent = `Link gerado. Válido até ${financialStudyHistoryDate(result.expires_at)}. Gerar outro link substituirá este.`;
+    document.getElementById("financialStudyShareStatus").textContent = `Link ativo até ${financialStudyHistoryDate(result.expires_at)}. Copie e compartilhe o link abaixo; não é necessário gerar outro.`;
     document.getElementById("revokeFinancialStudyShareBtn").classList.remove("d-none");
     showToast("Link público gerado. Copie para compartilhar com o cliente.", "success");
   } catch (error) {

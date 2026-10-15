@@ -146,7 +146,7 @@ class FinancialStudiesHistoryApiTest(unittest.TestCase):
             self.assertEqual(response.status_code, 200, response.text)
             self.assertEqual(response.json()["study"]["id"], created["id"])
             self.assertEqual(save.call_args.kwargs["approved_by"], "Administrador")
-            self.assertEqual(save.call_args.kwargs["app_version"], "4.0.202")
+            self.assertEqual(save.call_args.kwargs["app_version"], "4.0.203")
 
     def test_history_can_search_and_open_archived_record(self):
         item = {"id": "EF-1", "client_name": "Cliente", "approved_at": "2026-10-15T12:00:00+00:00", "approved_by": "Operador 1", "group_count": 2, "has_snapshot": True}
@@ -220,13 +220,17 @@ class FinancialStudiesHistoryApiTest(unittest.TestCase):
                 approval_key="00000000-0000-4000-8000-000000000101",
             )
             first_link = financial_studies.create_public_link(study["id"])
-            self.assertEqual(fake_service.grid_column_count, 31)
-            self.assertEqual(fake_service.grid_expansions, [31])
+            self.assertEqual(fake_service.grid_column_count, 32)
+            self.assertEqual(fake_service.grid_expansions, [32])
             self.assertEqual(first_link["validity_days"], 30)
             self.assertIsNotNone(financial_studies.get_public_study(first_link["token"]))
             self.assertNotIn(first_link["token"], " ".join(str(value) for value in fake_service.rows[0]))
             first_hash = financial_studies.hashlib.sha256(first_link["token"].encode("utf-8")).hexdigest()
             self.assertIn(first_hash, fake_service.rows[0])
+            encrypted_column = fake_service.headers.index("financial_study_public_token_encrypted")
+            encrypted_token = fake_service.rows[0][encrypted_column]
+            self.assertNotEqual(encrypted_token, first_link["token"])
+            self.assertEqual(financial_studies._share_state(fake_service.rows[0], {financial_studies.normalize_header(name): index for index, name in enumerate(fake_service.headers)})["token"], first_link["token"])
 
             expires_column = fake_service.headers.index("financial_study_public_expires_at")
             fake_service.rows[0][expires_column] = "2020-01-01T00:00:00+00:00"
@@ -253,7 +257,7 @@ class FinancialStudiesHistoryApiTest(unittest.TestCase):
         self.assertNotIn("<iframe", response.text)
         self.assertIn("sharedStudyNavigation", response.text)
         self.assertIn("sharedStudyQuickSummary", response.text)
-        self.assertIn("/static/js/shared-study.js?v=4.0.202", response.text)
+        self.assertIn("/static/js/shared-study.js?v=4.0.203", response.text)
         self.assertIn("Content-Security-Policy", response.headers)
         self.assertIn("noindex, nofollow, noarchive", response.headers["X-Robots-Tag"])
         load.assert_called_once_with("opaque-token")
@@ -267,6 +271,20 @@ class FinancialStudiesHistoryApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["url"], "http://testserver/estudo-compartilhado/opaque-generated-token")
         create_link.assert_called_once_with("EF-1")
+
+    def test_study_detail_returns_active_share_url_to_authenticated_operator(self):
+        study = {
+            "id": "EF-1", "client_name": "Cliente", "approved_at": "2026-10-15T12:00:00+00:00",
+            "approved_by": "Administrador", "app_version": "4.0.203", "document_html": "<article></article>",
+            "public_link": {"active": True, "expires_at": "2026-11-14T12:00:00+00:00", "revoked": False, "token": "recoverable-token"},
+        }
+        with patch("backend.main.financial_studies.get_study", return_value=study):
+            client = TestClient(app)
+            client.post("/api/auth/login", json={"usuario": "operador1", "senha": "teste123"})
+            response = client.get("/api/financial-studies/EF-1")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["study"]["public_link"]["url"], "http://testserver/estudo-compartilhado/recoverable-token")
+        self.assertNotIn("token", response.json()["study"]["public_link"])
 
     def test_share_management_endpoints_require_login(self):
         client = TestClient(app)

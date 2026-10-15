@@ -5,12 +5,15 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
 import re
 import secrets
 import threading
 import zlib
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
+
+from cryptography.fernet import Fernet, InvalidToken
 
 from .config import get_settings
 from .sheets_client import column_letter, get_service, normalize_header
@@ -35,6 +38,7 @@ ARCHIVE_COLUMNS = {
 }
 SHARE_COLUMNS = {
     "token_hash": "financial_study_public_token_sha256",
+    "token_encrypted": "financial_study_public_token_encrypted",
     "expires_at": "financial_study_public_expires_at",
     "revoked": "financial_study_public_revoked",
 }
@@ -183,7 +187,20 @@ def _share_state(row: list[str], indexes: dict[str, int]) -> dict:
         active = bool(value(normalize_header(SHARE_COLUMNS["token_hash"]))) and not revoked and expires > datetime.now(timezone.utc)
     except ValueError:
         active = False
-    return {"active": active, "expires_at": expires_at or None, "revoked": revoked}
+    token = None
+    token_ciphertext = value(normalize_header(SHARE_COLUMNS["token_encrypted"]))
+    if active and token_ciphertext:
+        try:
+            token = _share_cipher().decrypt(token_ciphertext.encode("ascii")).decode("utf-8")
+        except (InvalidToken, UnicodeDecodeError, ValueError):
+            token = None
+    return {"active": active, "expires_at": expires_at or None, "revoked": revoked, "token": token}
+
+
+def _share_cipher() -> Fernet:
+    secret = os.getenv("SHARE_TOKEN_SECRET") or os.getenv("AUTH_SECRET") or "crediclass-dashboard-v3-local-login"
+    key = base64.urlsafe_b64encode(hashlib.sha256(secret.encode("utf-8")).digest())
+    return Fernet(key)
 
 
 def _read_column(index: int) -> list[list[str]]:
@@ -359,6 +376,7 @@ def create_public_link(study_id: str) -> dict | None:
     expires_at = (datetime.now(timezone.utc) + timedelta(days=PUBLIC_LINK_VALIDITY_DAYS)).isoformat(timespec="seconds")
     _update_row_fields(row_number, indexes, {
         "token_hash": hashlib.sha256(token.encode("utf-8")).hexdigest(),
+        "token_encrypted": _share_cipher().encrypt(token.encode("utf-8")).decode("ascii"),
         "expires_at": expires_at,
         "revoked": "FALSE",
     })
