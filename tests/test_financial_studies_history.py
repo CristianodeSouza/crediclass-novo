@@ -81,6 +81,10 @@ class _FakeSheetService:
 
 
 class FinancialStudiesHistoryApiTest(unittest.TestCase):
+    def test_persistence_targets_the_existing_sheet_tab_title_exactly(self):
+        self.assertEqual(financial_studies.SHEET_NAME, "Historico de Estudos")
+        self.assertEqual(financial_studies._quoted_sheet(), "'Historico de Estudos'")
+
     def test_api_requires_authenticated_session(self):
         client = TestClient(app)
         self.assertEqual(client.get("/api/financial-studies").status_code, 401)

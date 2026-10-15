@@ -12,7 +12,8 @@ from .config import get_settings
 from .sheets_client import column_letter, get_service, normalize_header
 
 
-SHEET_NAME = "Histórico de Estudos"
+# Keep this byte-for-byte aligned with the existing Google Sheets tab title.
+SHEET_NAME = "Historico de Estudos"
 ARCHIVE_LIMIT = 45_000  # Google Sheets limits a single cell to 50,000 characters.
 REQUIRED_COLUMNS = {
     "study_id": ("estudo id", "study id", "estudo"),
