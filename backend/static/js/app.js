@@ -371,6 +371,7 @@ function activateScreen(screenName) {
     clearRetiredFinancialStudyState();
     renderFinancialStudySelectedAdministrator();
     renderFinancialStudySummary();
+    renderFinancialStudyBenefits();
   }
   if (screenName === "configuracoes") {
     loadConfiguracoes();
@@ -387,6 +388,59 @@ function renderFinancialStudySelectedAdministrator() {
   target.textContent = administrators.length
     ? administrators.join(" · ")
     : "Nenhuma administradora selecionada";
+}
+
+const FINANCIAL_STUDY_ADMINISTRATOR_BENEFITS = {
+  itau: {
+    name: "ITAÚ CONSÓRCIOS",
+    benefits: [
+      "Grupos em andamento, com ótima saúde financeira, grande quantidade de contemplações por mês, facilitando a liberação de todas as cartas para utilização rapidamente;",
+      "As contemplações ocorrem todos os meses: Sorteio e Lances Livres;",
+      "É possível utilizar até 30% do crédito para pagar o lance ofertado;",
+      "É permitido reduzir 100% do lance no valor da parcela para obter o menor custo/mês possível;",
+      "A correção das cartas de créditos ocorre anualmente pelo INCC (Índice Nacional da Construção Civil) para manutenção do poder de compra das cartas de crédito do grupo frente ao mercado;",
+      "Fundo de reserva: 2% em média no total, diluído no prazo do grupo. Saldo remanescente é devolvido no término do grupo;",
+      "Seguro prestamista 0,06% sob o saldo devedor - opcional; a simulação não contempla inclusão do seguro.",
+      "Débito automático das prestações em contas Itaú.",
+    ],
+  },
+};
+
+function normalizeFinancialStudyAdministrator(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+function renderFinancialStudyBenefits() {
+  const nameTarget = document.getElementById("financialStudyPart6AdministratorName");
+  const contentTarget = document.getElementById("financialStudyPart6Content");
+  if (!nameTarget || !contentTarget) return;
+
+  const administrators = [...new Set(selectedMotor360Items()
+    .map((item) => String(item.administradora || "").trim())
+    .filter(Boolean))];
+  if (!administrators.length) {
+    nameTarget.textContent = "ADMINISTRADORA NÃO IDENTIFICADA";
+    contentTarget.innerHTML = '<p class="financial-study-part6-empty">Selecione grupos no Motor 360 para exibir os benefícios da administradora correspondente.</p>';
+    return;
+  }
+
+  const keys = [...new Set(administrators.map(normalizeFinancialStudyAdministrator))];
+  if (keys.length === 1 && keys[0].includes("itau")) {
+    const config = FINANCIAL_STUDY_ADMINISTRATOR_BENEFITS.itau;
+    nameTarget.textContent = config.name;
+    contentTarget.innerHTML = `<ul>${config.benefits.map((benefit) => `<li>${escapeHtml(benefit)}</li>`).join("")}</ul>`;
+    return;
+  }
+
+  nameTarget.textContent = administrators.length === 1 ? administrators[0] : "MÚLTIPLAS ADMINISTRADORAS";
+  const label = administrators.length === 1
+    ? `Os benefícios de ${escapeHtml(administrators[0])} ainda não estão cadastrados.`
+    : `Os benefícios para esta seleção combinada ainda não estão cadastrados: ${escapeHtml(administrators.join(" · "))}.`;
+  contentTarget.innerHTML = `<p class="financial-study-part6-empty">${label}</p>`;
 }
 
 function renderFinancialStudySummary() {

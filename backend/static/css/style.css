@@ -5221,6 +5221,24 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .financial-study-part--summary { margin-top: 26px; }
 .financial-study-part--specialists { margin-top: 26px; }
+.financial-study-part--benefits { margin-top: 26px; }
+.financial-study-part6-administrator,
+.financial-study-part6-title {
+  margin: 0;
+  padding: 7px 14px;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+}
+.financial-study-part6-administrator { background: #2e3f47; }
+.financial-study-part6-title { background: #858585; }
+.financial-study-part6-content { padding: 8px 12px; border: 1px solid #b9c0c3; border-top: 0; }
+.financial-study-part6-content ul { margin: 0; padding-left: 1.2rem; }
+.financial-study-part6-content li { font-size: 0.74rem; line-height: 1.5; }
+.financial-study-part6-content li + li { margin-top: 3px; }
+.financial-study-part6-empty { margin: 0; color: #52636a; font-size: 0.76rem; line-height: 1.5; }
 .financial-study-part5-title {
   margin: 0;
   padding: 8px 14px;

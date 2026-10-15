@@ -151,6 +151,31 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertNotIn("<img", part)
         self.assertIn(".financial-study-part5-grid", css)
 
+    def test_part_six_benefits_are_bound_to_itau_without_logo_or_cross_admin_leak(self):
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+        start = html.index('data-study-part="6"')
+        end = html.index("</section>", start)
+        part = html[start:end]
+
+        self.assertIn('data-study-part-name="Principais Benefícios Itaú"', part)
+        self.assertIn('id="financialStudyPart6AdministratorName"', part)
+        self.assertIn('id="financialStudyPart6Content"', part)
+        self.assertNotIn("<img", part)
+        self.assertIn("renderFinancialStudyBenefits();", app_js)
+        self.assertIn("FINANCIAL_STUDY_ADMINISTRATOR_BENEFITS", app_js)
+        self.assertIn('keys.length === 1 && keys[0].includes("itau")', app_js)
+        self.assertIn("Os benefícios de ${escapeHtml(administrators[0])} ainda não estão cadastrados.", app_js)
+        for phrase in (
+            "As contemplações ocorrem todos os meses: Sorteio e Lances Livres;",
+            "É possível utilizar até 30% do crédito para pagar o lance ofertado;",
+            "Seguro prestamista 0,06% sob o saldo devedor - opcional;",
+            "Débito automático das prestações em contas Itaú.",
+        ):
+            self.assertIn(phrase, app_js)
+        self.assertIn(".financial-study-part6-content", css)
+
     def test_legacy_study_backend_modules_are_absent(self):
         backend = ROOT / "backend"
         for module in ("estudos.py", "templates_estudos.py", "financial_study_engine.py", "pdf_bridge.py"):
@@ -178,6 +203,12 @@ class FinancialStudyPartsTest(unittest.TestCase):
         smoke = (ROOT / "scripts/production-smoke-test.mjs").read_text(encoding="utf-8")
         self.assertIn("SIMULAÇÃO DOS MELHORES CONSÓRCIOS", smoke)
         self.assertIn("renderFinancialStudySelectedAdministrator", smoke)
+
+    def test_production_smoke_checks_part_six_administrator_benefits(self):
+        smoke = (ROOT / "scripts/production-smoke-test.mjs").read_text(encoding="utf-8")
+        self.assertIn("financial study administrator-specific benefits part is served", smoke)
+        self.assertIn("PRINCIPAIS BENEFÍCIOS", smoke)
+        self.assertIn("renderFinancialStudyBenefits", smoke)
 
 
 if __name__ == "__main__":
