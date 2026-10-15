@@ -1074,12 +1074,24 @@ function renderFinancialStudySummary() {
     if (!entries.length) return "";
     const sum = (field) => entries.reduce((value, entry) => value + Number(entry[field] || 0), 0);
     const title = id === "with_embedded" ? "Com embutido" : "Sem embutido";
-    return `<section class="financial-study-part4-scenario-summary" aria-label="Resumo da composição ${title}"><h3>${title}</h3><div class="financial-study-part4-overview"><article><small>Crédito líquido projetado</small><strong>${formatMoney(sum("credit"))}</strong></article><article><small>Crédito contratado</small><strong>${formatMoney(sum("contractedCredit"))}</strong></article><article><small>Parcelas iniciais</small><strong>${formatMoney(sum("installment"))}</strong></article><article><small>Prazo restante</small><strong>${escapeHtml(termLabel)}</strong></article><article><small>Lance embutido</small><strong>${formatMoney(sum("embedded"))}</strong></article></div></section>`;
+    return `<tr><th scope="row" data-label="Composição">${title}</th><td data-label="Carta de crédito">${formatMoney(sum("contractedCredit"))}</td><td data-label="Parcelas sem seguro">${formatMoney(sum("installment"))}</td><td data-label="Prazo">${escapeHtml(termLabel)}</td><td data-label="Lance embutido">${formatMoney(sum("embedded"))}</td></tr>`;
   }).join("");
+  const rateSummary = (field, fallbackField = null) => {
+    const values = groupTerms.map((item) => {
+      const raw = item[field] ?? (fallbackField ? item[fallbackField] : null);
+      return raw === null || raw === undefined || raw === "" || !Number.isFinite(Number(raw))
+        ? "Não informado"
+        : formatPercent(Number(raw));
+    });
+    return [...new Set(values)].join(" · ") || "Não informado";
+  };
   target.innerHTML = `<p class="financial-study-part4-administrator">Administradora(s): <strong>${escapeHtml(adminLabel)}</strong></p>
-    ${scenarioSummaries}
-    <div class="financial-study-part4-rates-wrap"><table class="financial-study-part4-table"><thead><tr><th scope="col">Taxas por grupo</th><th scope="col">Taxa administrativa anual</th><th scope="col">Taxa administrativa total</th><th scope="col">Fundo de reserva</th></tr></thead><tbody>${rateRows || '<tr><td colspan="4">Taxas não informadas nos dados selecionados.</td></tr>'}</tbody></table></div>
-    <div class="financial-study-part4-scenarios-wrap" role="region" aria-label="Cenários e perfis da composição" tabindex="0"><table class="financial-study-part4-table"><thead><tr><th scope="col">Simulação</th><th scope="col">Referência do perfil</th><th scope="col">Lance próprio ideal</th><th scope="col">Crédito disponível</th><th scope="col">Parcela inicial</th><th scope="col">Prazo</th></tr></thead><tbody>${rows.length ? rows.join("") : '<tr><td colspan="6">Os cenários selecionados não têm referências de perfil calculáveis.</td></tr>'}</tbody></table></div>
+    <div class="financial-study-part4-top-grid">
+      <div class="financial-study-part4-rates-wrap" role="region" aria-label="Resumo de crédito e parcelas" tabindex="0"><table class="financial-study-part4-table financial-study-part4-overview-table"><thead><tr><th scope="col">Composição</th><th scope="col">Carta de crédito</th><th scope="col">Parcelas (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Lance embutido</th></tr></thead><tbody>${scenarioSummaries}</tbody></table></div>
+      <div class="financial-study-part4-rates-wrap" role="region" aria-label="Taxas da administradora" tabindex="0"><table class="financial-study-part4-table financial-study-part4-rate-summary"><thead><tr><th scope="col" colspan="2">Taxas da administradora · ${escapeHtml(adminLabel)}</th></tr></thead><tbody><tr><th scope="row">Taxa administrativa anual (por grupo)</th><td>${escapeHtml(rateSummary("taxa_ano"))}</td></tr><tr><th scope="row">Taxa administrativa total (por grupo)</th><td>${escapeHtml(rateSummary("taxa_adm", "taxa_total"))}</td></tr><tr><th scope="row">Fundo de reserva (por grupo)</th><td>${escapeHtml(rateSummary("fundo_reserva"))}</td></tr></tbody></table></div>
+    </div>
+    <details class="financial-study-part4-rates-details"><summary>Ver taxas detalhadas por grupo</summary><div class="financial-study-part4-rates-wrap"><table class="financial-study-part4-table"><thead><tr><th scope="col">Taxas por grupo</th><th scope="col">Taxa administrativa anual</th><th scope="col">Taxa administrativa total</th><th scope="col">Fundo de reserva</th></tr></thead><tbody>${rateRows || '<tr><td colspan="4">Taxas não informadas nos dados selecionados.</td></tr>'}</tbody></table></div></details>
+    <div class="financial-study-part4-scenarios-wrap" role="region" aria-label="Cenários e perfis da composição" tabindex="0"><table class="financial-study-part4-table"><thead><tr><th scope="col">Simulação</th><th scope="col">Referência do perfil</th><th scope="col">Lance próprio ideal</th><th scope="col">Crédito disponível</th><th scope="col">Parcela reduzida (sem seguro)</th><th scope="col">Prazo</th></tr></thead><tbody>${rows.length ? rows.join("") : '<tr><td colspan="6">Os cenários selecionados não têm referências de perfil calculáveis.</td></tr>'}</tbody></table></div>
     <p class="financial-study-part4-source-note">Valores do consórcio derivados dos grupos, cotas e cenários selecionados no Motor 360. Taxas e prazos são discriminados por grupo; não foram somados nem convertidos em uma taxa única.</p>`;
 }
 
