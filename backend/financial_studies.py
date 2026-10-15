@@ -38,7 +38,6 @@ ARCHIVE_COLUMNS = {
 }
 SHARE_COLUMNS = {
     "token_hash": "financial_study_public_token_sha256",
-    "token_encrypted": "financial_study_public_token_encrypted",
     "expires_at": "financial_study_public_expires_at",
     "revoked": "financial_study_public_revoked",
 }
@@ -180,16 +179,17 @@ def _find_study_row(study_id: str) -> tuple[list[str], dict[str, int], int] | No
 
 def _share_state(row: list[str], indexes: dict[str, int]) -> dict:
     value = lambda field: str(row[indexes[field]] if indexes.get(field) is not None and indexes[field] < len(row) else "")
+    token_storage = value(normalize_header(SHARE_COLUMNS["token_hash"]))
+    token_hash, separator, token_ciphertext = token_storage.partition(".")
     expires_at = value(normalize_header(SHARE_COLUMNS["expires_at"]))
     revoked = value(normalize_header(SHARE_COLUMNS["revoked"])).strip().casefold() == "true"
     try:
         expires = datetime.fromisoformat(expires_at)
-        active = bool(value(normalize_header(SHARE_COLUMNS["token_hash"]))) and not revoked and expires > datetime.now(timezone.utc)
+        active = bool(token_hash) and not revoked and expires > datetime.now(timezone.utc)
     except ValueError:
         active = False
     token = None
-    token_ciphertext = value(normalize_header(SHARE_COLUMNS["token_encrypted"]))
-    if active and token_ciphertext:
+    if active and separator and token_ciphertext:
         try:
             token = _share_cipher().decrypt(token_ciphertext.encode("ascii")).decode("utf-8")
         except (InvalidToken, UnicodeDecodeError, ValueError):
@@ -374,9 +374,12 @@ def create_public_link(study_id: str) -> dict | None:
 
     token = secrets.token_urlsafe(32)
     expires_at = (datetime.now(timezone.utc) + timedelta(days=PUBLIC_LINK_VALIDITY_DAYS)).isoformat(timespec="seconds")
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    token_ciphertext = _share_cipher().encrypt(token.encode("utf-8")).decode("ascii")
     _update_row_fields(row_number, indexes, {
-        "token_hash": hashlib.sha256(token.encode("utf-8")).hexdigest(),
-        "token_encrypted": _share_cipher().encrypt(token.encode("utf-8")).decode("ascii"),
+        # Keep the validator and encrypted recovery token in the existing field.
+        # Legacy rows contain only the digest and remain valid as-is.
+        "token_hash": f"{token_hash}.{token_ciphertext}",
         "expires_at": expires_at,
         "revoked": "FALSE",
     })
@@ -427,7 +430,10 @@ def _find_study_row_by_token_hash(token_hash: str) -> tuple[dict[str, int], list
     if hash_index is None or archive_index is None:
         return None
     hashes = _read_column(hash_index)
-    row_number = next((index for index, row in enumerate(hashes, start=2) if row and secrets.compare_digest(str(row[0]).strip(), token_hash)), None)
+    row_number = next((
+        index for index, row in enumerate(hashes, start=2)
+        if row and secrets.compare_digest(str(row[0]).strip().partition(".")[0], token_hash)
+    ), None)
     if row_number is None:
         return None
     settings = get_settings()
