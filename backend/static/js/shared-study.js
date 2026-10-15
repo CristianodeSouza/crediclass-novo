@@ -58,27 +58,37 @@
   function buildPublicStudyNavigation() {
     const documentNode = document.querySelector(".financial-study-document");
     const nav = document.getElementById("sharedStudyNavigation");
-    const quickSummary = document.getElementById("sharedStudyQuickSummary");
-    if (!documentNode || !nav || !quickSummary) return;
+    if (!documentNode || !nav) return;
 
     const sections = [...documentNode.querySelectorAll(":scope > .financial-study-part")];
-    nav.innerHTML = `<strong class="shared-study-navigation-label">Neste estudo</strong><div class="shared-study-navigation-links">${sections.map((section, index) => {
+    nav.innerHTML = `<strong class="shared-study-navigation-label">Navegar pelo estudo</strong><div class="shared-study-navigation-links">${sections.map((section, index) => {
       const heading = section.querySelector("h1, h2, h3");
       if (!heading) return "";
       if (!heading.id) heading.id = `shared-study-section-${index + 1}`;
-      return `<a href="#${escapeMarkup(heading.id)}">${escapeMarkup(heading.textContent.trim())}</a>`;
+      return `<a class="shared-study-navigation-button" href="#${escapeMarkup(heading.id)}" aria-label="Ir para ${escapeMarkup(heading.textContent.trim())}">${escapeMarkup(heading.textContent.trim())}</a>`;
     }).join("")}</div>`;
-
-    const summaries = [...documentNode.querySelectorAll(".financial-study-part4-scenario-summary")];
-    if (summaries.length) {
-      quickSummary.innerHTML = summaries.map((summary) => {
-        const title = summary.querySelector("h3")?.textContent.trim() || "Cenário";
-        const values = [...summary.querySelectorAll(".financial-study-part4-overview article")];
-        return `<section class="shared-study-summary-scenario"><h3>${escapeMarkup(title)}</h3><dl>${values.map((item) => `<div><dt>${escapeMarkup(item.querySelector("small")?.textContent.trim() || "")}</dt><dd>${escapeMarkup(item.querySelector("strong")?.textContent.trim() || "")}</dd></div>`).join("")}</dl></section>`;
-      }).join("");
-    } else {
-      quickSummary.textContent = "Consulte o quadro-resumo completo na seção correspondente deste estudo.";
+    const links = [...nav.querySelectorAll(".shared-study-navigation-button")];
+    const markActive = (activeLink) => {
+      links.forEach((link) => {
+        if (link === activeLink) {
+          link.setAttribute("aria-current", "location");
+          if (window.matchMedia("(max-width: 760px)").matches) link.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+        } else {
+          link.removeAttribute("aria-current");
+        }
+      });
+    };
+    links.forEach((link) => link.addEventListener("click", () => markActive(link)));
+    if ("IntersectionObserver" in window) {
+      const observer = new IntersectionObserver((entries) => {
+        const visible = entries.filter((entry) => entry.isIntersecting).sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
+        if (!visible) return;
+        const activeLink = links.find((link) => link.hash === `#${visible.target.id}`);
+        if (activeLink) markActive(activeLink);
+      }, { rootMargin: "-15% 0px -70% 0px", threshold: [0, 0.15, 0.4] });
+      sections.forEach((section) => observer.observe(section));
     }
+
   }
 
   window.prepareFinancialStudyMobileViews = function (root = document) {

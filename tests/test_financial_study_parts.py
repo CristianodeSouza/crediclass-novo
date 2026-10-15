@@ -385,6 +385,20 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("financial-study-part9-mobile-total > div { display: grid", css)
         self.assertIn("financial-study-part2-table-wrap.has-mobile-cards", css)
 
+    def test_public_study_navigation_uses_section_buttons_without_repeated_summary(self):
+        helper = (ROOT / "backend/static/js/shared-study.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn('class="shared-study-navigation-button" href=', helper)
+        self.assertIn('setAttribute("aria-current", "location")', helper)
+        self.assertIn('new IntersectionObserver(', helper)
+        self.assertIn(".shared-study-navigation-links { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap;", css)
+        self.assertIn(".shared-study-navigation-button { min-height: 44px;", css)
+        main = (ROOT / "backend/main.py").read_text(encoding="utf-8")
+        self.assertNotIn("sharedStudyQuickSummary", helper)
+        self.assertNotIn("shared-study-summary", main)
+        self.assertIn("@media screen and (max-width: 420px)", css)
+
     def test_study_history_layout_print_and_close_controls(self):
         app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
         html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
