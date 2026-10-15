@@ -125,7 +125,7 @@ class Motor360RfcTest(unittest.TestCase):
         ), [group(
             "20370", administradora="AUTO-ITAÚ", credito_minimo=63230,
             credito_maximo=63230, prazo_restante=30, vencimento_parcela="15",
-            taxa_adm="24%", fundo_reserva="2%", lance_super_agressivo_3m="30.25%",
+            taxa_adm="24%", fundo_reserva="2%", taxa_adm_ano="2%", fundo_reserva_ano="0.5%", lance_super_agressivo_3m="30.25%",
             lance_agressivo_6m="30.25%", lance_moderado_12m="30.25%",
             lance_conservador_24m="30.25%", lance_investidor="30.25%",
             historico_12_meses=history, source_row=308, mapeamento_origem=source_map,
@@ -139,6 +139,8 @@ class Motor360RfcTest(unittest.TestCase):
         self.assertEqual(item["vencimento_parcela"], "15")
         self.assertEqual(item["taxa_adm"], 0.24)
         self.assertEqual(item["fundo_reserva"], 0.02)
+        self.assertEqual(item["taxa_ano"], 0.02)
+        self.assertEqual(item["fundo_reserva_ano"], 0.005)
         self.assertEqual(item["historico_12_meses"], history)
         self.assertEqual(item["source_row"], 308)
         self.assertEqual(item["mapeamento_origem"]["credito_maximo"]["column"], "V")

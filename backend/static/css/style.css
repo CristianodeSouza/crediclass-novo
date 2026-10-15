@@ -5484,11 +5484,17 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 .financial-study-part4-subtitle { margin: 0; padding: 9px 12px; border: 1px solid #c6cbcd; text-align: center; font-size: 0.78rem; }
 .financial-study-part4-administrator { margin: 0; padding: 9px 12px; background: #f1f1f1; text-align: center; font-size: 0.76rem; }
-.financial-study-part4-top-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(220px, 0.9fr); gap: 12px; align-items: start; margin: 8px 0 14px; }
+.financial-study-part4-top-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(280px, 1fr); gap: 12px; align-items: start; margin: 8px 0 14px; }
+.financial-study-part4-overview-wrap { min-width: 0; max-width: 100%; overflow-x: auto; }
 .financial-study-part4-overview-table th, .financial-study-part4-overview-table td { white-space: nowrap; }
-.financial-study-part4-overview-table tbody th { text-align: left; }
+.financial-study-part4-overview-table td { font-weight: 700; }
+.financial-study-part4-embedded-total { display: flex; justify-content: flex-end; gap: 14px; padding: 7px 10px; border: 1px solid #c6cbcd; border-top: 0; color: #147a48; font-size: .72rem; }
+.financial-study-part4-embedded-total strong { white-space: nowrap; }
+.financial-study-part4-rates-wrap { min-width: 0; }
+.financial-study-part4-rate-summary { font-size: .68rem; }
 .financial-study-part4-rate-summary th { text-align: left; }
 .financial-study-part4-rate-summary td { white-space: nowrap; }
+.financial-study-part4-rate-summary tbody th { white-space: nowrap; }
 .financial-study-part4-rates-details { margin: 0 0 12px; border: 1px solid #c6cbcd; }
 .financial-study-part4-rates-details > summary { padding: 8px 10px; color: #2e3f47; cursor: pointer; font-size: 0.72rem; font-weight: 700; }
 .financial-study-part4-rates-details .financial-study-part4-rates-wrap { border-top: 1px solid #c6cbcd; }
@@ -5504,6 +5510,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-table th, .financial-study-part4-table td { padding: 7px 9px; border: 1px solid #c6cbcd; vertical-align: middle; }
 .financial-study-part4-table thead th { background: #e4e1df; font-weight: 700; }
 .financial-study-part4-table tbody th { background: #f3f4f4; }
+.financial-study-part4-scenarios-table { table-layout: fixed; }
+.financial-study-part4-scenarios-table th:first-child,
+.financial-study-part4-scenarios-table td:first-child { width: 7%; }
+.financial-study-part4-scenarios-table th:nth-child(2) { width: 23%; }
+.financial-study-part4-scenarios-table th small { display: block; font-size: .65rem; font-weight: 400; }
+.financial-study-part4-category-row th { background: #bcb9b8 !important; text-align: left; }
+.financial-study-part4-profile-row th small,
+.financial-study-part4-profile-row th strong { display: block; margin-top: 4px; }
+.financial-study-part4-profile-row th small { color: #52636a; font-size: .63rem; font-weight: 400; }
+.financial-study-part4-profile-row th strong { font-size: .72rem; }
 .financial-study-part4-investments { margin-top: 18px; border: 1px solid #c6cbcd; }
 .financial-study-part4-investments h3 { font-size: 0.82rem; }
 .financial-study-part4-disclaimer, .financial-study-part4-source-note { margin: 0; padding: 8px 10px; color: #65747a; font-size: 0.68rem; font-style: italic; }
@@ -5554,6 +5570,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-part4-overview article:nth-child(even) { border-left: 1px solid #d4d8da; }
   .financial-study-part4-top-grid { grid-template-columns: minmax(0, 1fr); }
   .financial-study-part4-overview-table th, .financial-study-part4-overview-table td { white-space: normal; }
+  .financial-study-part4-rate-summary { font-size: .8rem; }
+  .financial-study-part4-scenarios-table { table-layout: auto; }
+  .financial-study-part4-scenarios-table tbody tr.financial-study-part4-category-row { grid-template-columns: 56px minmax(0, 1fr); }
+  .financial-study-part4-category-row th { grid-column: auto !important; }
+  .financial-study-part4-embedded-total { font-size: .8rem; }
 }
 
 @media print {

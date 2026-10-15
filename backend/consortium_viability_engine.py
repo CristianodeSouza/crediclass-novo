@@ -18,11 +18,11 @@ from typing import Any
 
 from .config import get_settings
 from .motor360_auditoria import new_audit_id
-from .motor360_math import ScenarioInput, calculate_scenario, money, normalize_percent, parse_decimal
+from .motor360_math import ScenarioInput, calculate_scenario, decimal_value, money, normalize_percent, parse_decimal
 from .viabilidade import compatible_tipo_bem, normalize_text
 
 
-MOTOR_VERSION = "4.0.208"
+MOTOR_VERSION = "4.0.209"
 RULES_VERSION = "RFC-001-architecture-v4.0"
 STRATEGY_TARGETS = (
     ("urgent", "lance_super_agressivo_3m", "BQ", "Urgente - 3 meses"),
@@ -465,6 +465,8 @@ def analyze_client_consortium_viability(
             "credito_maximo": money(maximum),
             "taxa_adm": money(fee),
             "fundo_reserva": money(fund),
+            "taxa_ano": decimal_value(normalize_percent(group.get("taxa_adm_ano"))),
+            "fundo_reserva_ano": decimal_value(normalize_percent(group.get("fundo_reserva_ano"))),
             "vencimento_parcela": str(group.get("vencimento_parcela") or ""),
             "percentual_lance_embutido": money(embedded),
             "faixas_lance": ranges,
@@ -484,6 +486,8 @@ def analyze_client_consortium_viability(
             "prazo_remanescente": remaining_term,
             "taxa_adm": money(fee),
             "fundo_reserva": money(fund),
+            "taxa_ano": decimal_value(normalize_percent(group.get("taxa_adm_ano"))),
+            "fundo_reserva_ano": decimal_value(normalize_percent(group.get("fundo_reserva_ano"))),
             "historico_12_meses": list(group.get("historico_12_meses") or []),
             "capacidade_contemplacoes": contemplation_capacities,
             "mapeamento_origem": group.get("mapeamento_origem") or {},
@@ -650,7 +654,8 @@ def analyze_client_consortium_viability(
                     "taxa_adm": money(fee),
                     "fundo_reserva": money(fund),
                     "taxa_total": money(fee),
-                    "taxa_ano": money(normalize_percent(group.get("taxa_adm_ano"))),
+                    "taxa_ano": decimal_value(normalize_percent(group.get("taxa_adm_ano"))),
+                    "fundo_reserva_ano": decimal_value(normalize_percent(group.get("fundo_reserva_ano"))),
                     "lance_embutido": money(embedded),
                     "cenarios": composition_scenarios,
                     "capacidade_contemplacoes": contemplation_capacities,
@@ -723,7 +728,8 @@ def analyze_client_consortium_viability(
                 "taxa_adm": money(fee),
                 "fundo_reserva": money(fund),
                 "taxa_total": money(fee),
-                "taxa_ano": money(normalize_percent(group.get("taxa_adm_ano"))),
+                "taxa_ano": decimal_value(normalize_percent(group.get("taxa_adm_ano"))),
+                "fundo_reserva_ano": decimal_value(normalize_percent(group.get("fundo_reserva_ano"))),
                 "lance_embutido": money(embedded),
                 "parcela_reduzida": money(parse_decimal(group.get("parcela_reduzida"))),
                 "reference_installment": parcelas_iniciais.get("without_embedded"),
@@ -812,7 +818,8 @@ def analyze_client_consortium_viability(
             "taxa_adm": money(fee),
             "fundo_reserva": money(fund),
             "taxa_total": money(fee),
-            "taxa_ano": money(normalize_percent(group.get("taxa_adm_ano"))),
+            "taxa_ano": decimal_value(normalize_percent(group.get("taxa_adm_ano"))),
+            "fundo_reserva_ano": decimal_value(normalize_percent(group.get("fundo_reserva_ano"))),
             "lance_embutido": money(embedded),
             "parcela_reduzida": money(parse_decimal(group.get("parcela_reduzida"))),
             "reference_installment": parcelas_iniciais.get("without_embedded"),

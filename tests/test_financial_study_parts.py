@@ -141,7 +141,7 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn('target.textContent = administrators.length', app_js)
         self.assertIn('renderFinancialStudySelectedAdministrator();', app_js)
 
-    def test_part_four_quadro_resumo_uses_motor_composition_and_hypothetical_html_values(self):
+    def test_part_four_quadro_resumo_consolidates_motor_groups_and_preserves_reference_content(self):
         html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
         css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
@@ -162,14 +162,20 @@ class FinancialStudyPartsTest(unittest.TestCase):
         summary_renderer = app_js[function_start:function_end]
         self.assertIn("selectedMotor360Items()", summary_renderer)
         self.assertIn("selectedCompositionScenarioMetrics(items, id)", summary_renderer)
-        self.assertIn("selectedScenarioIdsForGroup(key)", summary_renderer)
         self.assertIn("financial-study-part4-top-grid", summary_renderer)
-        self.assertIn("Carta de crédito", summary_renderer)
-        self.assertIn("Parcelas (sem seguro)", summary_renderer)
-        self.assertIn("(por grupo)", summary_renderer)
-        self.assertNotIn("(média)", summary_renderer)
+        self.assertIn("Somatória dos grupos selecionados", summary_renderer)
+        self.assertIn("Parcelas<br>sem seguro", summary_renderer)
+        self.assertIn("totalContractedCredit", summary_renderer)
+        self.assertIn("chargeTotal", summary_renderer)
+        self.assertIn("weightedRate", summary_renderer)
+        self.assertIn("Lance Livre", summary_renderer)
+        self.assertIn("Math.max(0, term - 1)", summary_renderer)
+        self.assertIn("historicalHits(embeddedEntries)", summary_renderer)
+        self.assertNotIn("selectedScenarioIdsForGroup", summary_renderer)
         self.assertIn("renderFinancialStudySummary();", app_js)
-        self.assertIn(".financial-study-part4-overview", css)
+        self.assertIn(".financial-study-part4-overview-table", css)
+        self.assertIn(".financial-study-part4-embedded-total", css)
+        self.assertIn(".financial-study-part4-category-row", css)
         self.assertIn(".financial-study-part4-table", css)
 
     def test_part_five_specialists_is_fixed_copy_without_images_or_motor_values(self):

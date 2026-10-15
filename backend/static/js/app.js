@@ -1013,7 +1013,7 @@ function renderFinancialStudyAdhesionDates() {
 function renderFinancialStudySummary() {
   const target = document.getElementById("financialStudyPart4Content");
   if (!target) return;
-  const items = selectedMotor360Items();
+  const items = [...new Map(selectedMotor360Items().map((item) => [motor360GroupKey(item), item])).values()];
   if (!items.length) {
     target.innerHTML = '<p class="financial-study-part4-empty">Selecione grupos e cenários no Motor 360 para preencher este quadro.</p>';
     return;
@@ -1021,78 +1021,94 @@ function renderFinancialStudySummary() {
 
   const scenarioIds = ["without_embedded", "with_embedded"];
   const metricsByScenario = Object.fromEntries(scenarioIds.map((id) => [id, selectedCompositionScenarioMetrics(items, id)]));
-  const rows = [];
-  const chosenEntries = [];
-  for (const item of items) {
-    const key = motor360GroupKey(item);
-    const selectedIds = selectedScenarioIdsForGroup(key);
-    const selectedIdsToUse = selectedIds.size ? [...selectedIds] : [];
-    for (const scenarioId of selectedIdsToUse) {
-      const metrics = metricsByScenario[scenarioId];
-      const entry = metrics?.entries.find((candidate) => motor360GroupKey(candidate.item) === key);
-      if (!entry) continue;
-      chosenEntries.push({ ...entry, scenarioId });
-    }
-  }
-  if (!chosenEntries.length) {
-    target.innerHTML = '<p class="financial-study-part4-empty">Escolha ao menos um cenário em cada grupo selecionado no Motor 360.</p>';
-    return;
-  }
-
-  const selectedScenarioEntries = Object.fromEntries(scenarioIds.map((id) => [id, chosenEntries.filter((entry) => entry.scenarioId === id)]));
-  const terms = chosenEntries.map((entry) => Number(entry.item.prazo_restante)).filter((value) => Number.isFinite(value) && value > 0);
-  const termLabel = terms.length ? (Math.min(...terms) === Math.max(...terms) ? `${Math.min(...terms)} meses` : `${Math.min(...terms)} a ${Math.max(...terms)} meses`) : "Não informado";
-  const groupTerms = [...new Map(items.map((item) => [motor360GroupKey(item), item])).values()];
-  const rateRows = groupTerms.map((item) => `<tr><th scope="row" data-label="Grupo">${escapeHtml(String(item.administradora || "Administradora"))} · Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</th><td data-label="Taxa administrativa anual">${formatPercent(item.taxa_ano)}</td><td data-label="Taxa administrativa total">${formatPercent(item.taxa_adm ?? item.taxa_total)}</td><td data-label="Fundo de reserva">${formatPercent(item.fundo_reserva)}</td></tr>`).join("");
-  const profileLabels = { conservative: "Conservador", moderate: "Moderado" };
-  for (const profileId of Object.keys(profileLabels)) {
-    for (const scenarioId of scenarioIds) {
-      const scenarioItems = chosenEntries.filter((entry) => entry.scenarioId === scenarioId);
-      if (!scenarioItems.length) continue;
-      const ideal = scenarioItems.reduce((sum, entry) => sum + Number(entry.profiles[profileId]?.ideal || 0), 0);
-      const rowCredit = scenarioItems.reduce((sum, entry) => sum + Number(entry.credit || 0), 0);
-      const rowInstallment = scenarioItems.reduce((sum, entry) => sum + Number(entry.installment || 0), 0);
-      const references = scenarioItems.map((entry) => {
-        const reference = entry.profiles[profileId]?.percentual_referencia;
-        if (reference === null || reference === undefined) return null;
-        const group = String(entry.item.grupo || entry.item.grupo_id || "-");
-        return `${escapeHtml(group)}: ${formatPercent(reference)}`;
-      }).filter(Boolean).join(" · ") || "Sem referência";
-      const title = scenarioId === "without_embedded" ? `Lance Livre · ${profileLabels[profileId]}` : `Lance Livre · ${profileLabels[profileId]} · com embutido`;
-      rows.push(`<tr><th scope="row" data-label="Simulação">${escapeHtml(title)}</th><td data-label="Referência do perfil">${references}</td><td data-label="Lance próprio ideal">${ideal > 0 ? formatMoney(ideal) : "Não exige lance"}</td><td data-label="Crédito disponível">${formatMoney(rowCredit)}</td><td data-label="Parcela inicial">${formatMoney(rowInstallment)}</td><td data-label="Prazo">${termLabel}</td></tr>`);
-    }
-  }
-  const lotteryEntries = chosenEntries.filter((entry) => entry.scenarioId === "without_embedded");
-  if (lotteryEntries.length) {
-    rows.unshift(`<tr><th scope="row" data-label="Simulação">Sorteio · sem lance ofertado</th><td data-label="Referência do perfil">Não se aplica</td><td data-label="Lance próprio ideal">Não exige lance</td><td data-label="Crédito disponível">${formatMoney(lotteryEntries.reduce((sum, entry) => sum + entry.credit, 0))}</td><td data-label="Parcela inicial">${formatMoney(lotteryEntries.reduce((sum, entry) => sum + entry.installment, 0))}</td><td data-label="Prazo">${termLabel}</td></tr>`);
-  }
-
+  const baseEntries = metricsByScenario.without_embedded?.entries || [];
+  const embeddedEntries = metricsByScenario.with_embedded?.entries || [];
   const admins = [...new Set(items.map((item) => String(item.administradora || "").trim()).filter(Boolean))];
   const adminLabel = admins.length ? admins.join(" · ") : "Não informada";
-  const scenarioSummaries = scenarioIds.map((id) => {
-    const entries = selectedScenarioEntries[id];
-    if (!entries.length) return "";
-    const sum = (field) => entries.reduce((value, entry) => value + Number(entry[field] || 0), 0);
-    const title = id === "with_embedded" ? "Com embutido" : "Sem embutido";
-    return `<tr><th scope="row" data-label="Composição">${title}</th><td data-label="Carta de crédito">${formatMoney(sum("contractedCredit"))}</td><td data-label="Parcelas sem seguro">${formatMoney(sum("installment"))}</td><td data-label="Prazo">${escapeHtml(termLabel)}</td><td data-label="Lance embutido">${formatMoney(sum("embedded"))}</td></tr>`;
-  }).join("");
-  const rateSummary = (field, fallbackField = null) => {
-    const values = groupTerms.map((item) => {
-      const raw = item[field] ?? (fallbackField ? item[fallbackField] : null);
-      return raw === null || raw === undefined || raw === "" || !Number.isFinite(Number(raw))
-        ? "Não informado"
-        : formatPercent(Number(raw));
-    });
-    return [...new Set(values)].join(" · ") || "Não informado";
+  const allGroupsHave = (entries, field) => entries.length === items.length
+    && entries.every((entry) => entry[field] !== null && entry[field] !== undefined && entry[field] !== "" && Number.isFinite(Number(entry[field])));
+  const sumField = (entries, field) => allGroupsHave(entries, field)
+    ? entries.reduce((sum, entry) => sum + Number(entry[field]), 0)
+    : null;
+  const terms = items.map((item) => Number(item.prazo_restante ?? item.prazo_remanescente))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  const rangeLabel = (values) => {
+    if (!values.length) return "Não informado";
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    return min === max ? `${min} meses` : `${min} a ${max} meses`;
   };
-  target.innerHTML = `<p class="financial-study-part4-administrator">Administradora(s): <strong>${escapeHtml(adminLabel)}</strong></p>
+  const termLabel = terms.length === items.length ? rangeLabel(terms) : "Prazo incompleto";
+  const scenarioTermLabel = terms.length === items.length ? rangeLabel(terms.map((term) => Math.max(0, term - 1))) : "Prazo incompleto";
+  const totalContractedCredit = sumField(baseEntries, "contractedCredit");
+  const initialInstallment = sumField(baseEntries, "installment");
+  const totalEmbeddedBid = sumField(embeddedEntries, "embedded");
+  const rateFor = (item, field) => {
+    const value = item[field];
+    return value === null || value === undefined || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
+  };
+  const weightedRate = (field) => {
+    if (baseEntries.length !== items.length || baseEntries.some((entry) => rateFor(entry.item, field) === null)) return null;
+    const base = sumField(baseEntries, "contractedCredit");
+    if (!(base > 0)) return null;
+    return baseEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit) * rateFor(entry.item, field), 0) / base;
+  };
+  const chargeTotal = (field) => {
+    if (baseEntries.length !== items.length || baseEntries.some((entry) => rateFor(entry.item, field) === null || !Number.isFinite(Number(entry.contractedCredit)))) return null;
+    return baseEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit) * rateFor(entry.item, field), 0);
+  };
+  const rateRows = [
+    { label: "Taxa administrativa", annual: weightedRate("taxa_ano"), total: weightedRate("taxa_adm"), amount: chargeTotal("taxa_adm") },
+    { label: "Fundo de reserva", annual: weightedRate("fundo_reserva_ano"), total: weightedRate("fundo_reserva"), amount: chargeTotal("fundo_reserva") },
+  ].map((row) => `<tr><th scope="row" data-label="Encargo">${row.label}</th><td data-label="Ao ano">${formatPercent(row.annual)}</td><td data-label="Total (%)">${formatPercent(row.total)}</td><td data-label="Valor total">${formatMoney(row.amount)}</td></tr>`).join("");
+  const detailRows = items.map((item) => {
+    const label = `${item.administradora || "Administradora"} · Grupo ${item.grupo || item.grupo_id || "-"}`;
+    return `<tr><th scope="row" data-label="Grupo">${escapeHtml(label)}</th><td data-label="Taxa administrativa anual">${formatPercent(item.taxa_ano)}</td><td data-label="Taxa administrativa total">${formatPercent(item.taxa_adm ?? item.taxa_total)}</td><td data-label="Fundo de reserva anual">${formatPercent(item.fundo_reserva_ano)}</td><td data-label="Fundo de reserva total">${formatPercent(item.fundo_reserva)}</td></tr>`;
+  }).join("");
+  const sumProfile = (entries, profileId, field = "ideal") => {
+    if (entries.length !== items.length || entries.some((entry) => !entry.profiles?.[profileId] || entry.profiles[profileId][field] === null || entry.profiles[profileId][field] === undefined || !Number.isFinite(Number(entry.profiles[profileId][field])))) return null;
+    return entries.reduce((sum, entry) => sum + Number(entry.profiles[profileId][field]), 0);
+  };
+  const historicalHits = (entries) => {
+    let hitCount = 0;
+    let groupsWithHistory = 0;
+    for (const entry of entries) {
+      const months = [...(entry.item.historico_12_meses || [])]
+        .sort((left, right) => String(left.mes || "").localeCompare(String(right.mes || "")))
+        .slice(-11);
+      let groupHasHistory = false;
+      for (const month of months) {
+        if (month.qtd_contemplacoes === null || month.qtd_contemplacoes === undefined || month.qtd_contemplacoes === "") continue;
+        const quantity = Number(month.qtd_contemplacoes);
+        if (!Number.isFinite(quantity) || quantity < 0) continue;
+        groupHasHistory = true;
+        hitCount += quantity;
+      }
+      if (groupHasHistory) groupsWithHistory += 1;
+    }
+    if (!groupsWithHistory) return "Histórico não informado";
+    const partial = groupsWithHistory < entries.length ? " · dados parciais" : "";
+    return `Contemplado ${hitCount} ${hitCount === 1 ? "vez" : "vezes"} nos últimos 11 meses${partial}`;
+  };
+  const scenarioEntryRows = ["conservative", "moderate"].map((profileId) => {
+    const idealBid = sumProfile(embeddedEntries, profileId);
+    const availableCredit = sumField(embeddedEntries, "credit");
+    const reducedInstallment = sumField(embeddedEntries, "installment");
+    const percent = idealBid !== null && availableCredit > 0 ? idealBid / availableCredit : null;
+    const label = profileId === "conservative" ? "Conservador" : "Moderado";
+    return `<tr class="financial-study-part4-profile-row"><td data-label="Modalidade"></td><th scope="row" data-label="Perfil">${label}<small>${historicalHits(embeddedEntries)}</small><strong>${formatPercent(percent)}</strong></th><td data-label="Lance recurso próprio">${formatMoney(idealBid)}</td><td data-label="Carta de crédito disponível">${formatMoney(availableCredit)}</td><td data-label="Parcelas reduzidas sem correção">${formatMoney(reducedInstallment)}</td><td data-label="Prazo">${escapeHtml(scenarioTermLabel)}</td></tr>`;
+  }).join("");
+  const lotteryRow = `<tr class="financial-study-part4-lottery-row"><td data-label="Número">1</td><th scope="row" data-label="Modalidade">Sorteio Geral</th><td data-label="Lance recurso próprio">Não necessita</td><td data-label="Carta de crédito disponível">${formatMoney(totalContractedCredit)}</td><td data-label="Parcelas reduzidas sem correção">${formatMoney(initialInstallment)}</td><td data-label="Prazo">${escapeHtml(scenarioTermLabel)}</td></tr>`;
+  const incompleteGroupCount = items.length - Math.min(baseEntries.length, embeddedEntries.length);
+  const adminsText = escapeHtml(adminLabel);
+  target.innerHTML = `<p class="financial-study-part4-administrator">Administradora(s): <strong>${adminsText}</strong></p>
     <div class="financial-study-part4-top-grid">
-      <div class="financial-study-part4-rates-wrap" role="region" aria-label="Resumo de crédito e parcelas" tabindex="0"><table class="financial-study-part4-table financial-study-part4-overview-table"><thead><tr><th scope="col">Composição</th><th scope="col">Carta de crédito</th><th scope="col">Parcelas (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Lance embutido</th></tr></thead><tbody>${scenarioSummaries}</tbody></table></div>
-      <div class="financial-study-part4-rates-wrap" role="region" aria-label="Taxas da administradora" tabindex="0"><table class="financial-study-part4-table financial-study-part4-rate-summary"><thead><tr><th scope="col" colspan="2">Taxas da administradora · ${escapeHtml(adminLabel)}</th></tr></thead><tbody><tr><th scope="row">Taxa administrativa anual (por grupo)</th><td>${escapeHtml(rateSummary("taxa_ano"))}</td></tr><tr><th scope="row">Taxa administrativa total (por grupo)</th><td>${escapeHtml(rateSummary("taxa_adm", "taxa_total"))}</td></tr><tr><th scope="row">Fundo de reserva (por grupo)</th><td>${escapeHtml(rateSummary("fundo_reserva"))}</td></tr></tbody></table></div>
+      <div class="financial-study-part4-overview-wrap" role="region" aria-label="Somatória dos grupos selecionados" tabindex="0"><table class="financial-study-part4-table financial-study-part4-overview-table"><thead><tr><th scope="col">Carta de Crédito</th><th scope="col">Parcelas<br>sem seguro</th><th scope="col">Prazo<br>meses</th></tr></thead><tbody><tr><td data-label="Carta de Crédito">${formatMoney(totalContractedCredit)}</td><td data-label="Parcelas sem seguro">${formatMoney(initialInstallment)}</td><td data-label="Prazo">${escapeHtml(termLabel)}</td></tr></tbody></table><div class="financial-study-part4-embedded-total"><span>Lance Embutido</span><strong>${formatMoney(totalEmbeddedBid)}</strong></div></div>
+      <div class="financial-study-part4-rates-wrap" role="region" aria-label="Taxas e valores totais" tabindex="0"><table class="financial-study-part4-table financial-study-part4-rate-summary"><thead><tr><th scope="col">Encargo</th><th scope="col">Ao ano</th><th scope="col">Total</th><th scope="col">Valor total</th></tr></thead><tbody>${rateRows}</tbody></table></div>
     </div>
-    <details class="financial-study-part4-rates-details"><summary>Ver taxas detalhadas por grupo</summary><div class="financial-study-part4-rates-wrap"><table class="financial-study-part4-table"><thead><tr><th scope="col">Taxas por grupo</th><th scope="col">Taxa administrativa anual</th><th scope="col">Taxa administrativa total</th><th scope="col">Fundo de reserva</th></tr></thead><tbody>${rateRows || '<tr><td colspan="4">Taxas não informadas nos dados selecionados.</td></tr>'}</tbody></table></div></details>
-    <div class="financial-study-part4-scenarios-wrap" role="region" aria-label="Cenários e perfis da composição" tabindex="0"><table class="financial-study-part4-table"><thead><tr><th scope="col">Simulação</th><th scope="col">Referência do perfil</th><th scope="col">Lance próprio ideal</th><th scope="col">Crédito disponível</th><th scope="col">Parcela reduzida (sem seguro)</th><th scope="col">Prazo</th></tr></thead><tbody>${rows.length ? rows.join("") : '<tr><td colspan="6">Os cenários selecionados não têm referências de perfil calculáveis.</td></tr>'}</tbody></table></div>
-    <p class="financial-study-part4-source-note">Valores do consórcio derivados dos grupos, cotas e cenários selecionados no Motor 360. Taxas e prazos são discriminados por grupo; não foram somados nem convertidos em uma taxa única.</p>`;
+    <details class="financial-study-part4-rates-details"><summary>Ver taxas detalhadas por grupo</summary><div class="financial-study-part4-rates-wrap"><table class="financial-study-part4-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Taxa ADM ao ano</th><th scope="col">Taxa ADM total</th><th scope="col">Fundo reserva ao ano</th><th scope="col">Fundo reserva total</th></tr></thead><tbody>${detailRows}</tbody></table></div></details>
+    <div class="financial-study-part4-scenarios-wrap" role="region" aria-label="Simulação consolidada por modalidade" tabindex="0"><table class="financial-study-part4-table financial-study-part4-scenarios-table"><colgroup><col style="width:7%"><col style="width:20%"><col style="width:18%"><col style="width:20%"><col style="width:23%"><col style="width:12%"></colgroup><thead><tr><th scope="col" colspan="2">Simulação<br><small>Modalidades de Contemplação</small></th><th scope="col">Lance<br><small>Recurso Próprio</small></th><th scope="col">Carta de Crédito<br><small>Disponível</small></th><th scope="col">Parcelas Reduzidas<br><small>Sem Correção</small></th><th scope="col">Prazo<br><small>Meses</small></th></tr></thead><tbody>${lotteryRow}<tr class="financial-study-part4-category-row"><td data-label="Número">2</td><th scope="row" colspan="5">Lance Livre</th></tr>${scenarioEntryRows}</tbody></table></div>
+    <p class="financial-study-part4-source-note">Valores monetários somados uma vez por grupo e quantidade de cotas. Percentuais consolidados são ponderados pelo crédito contratado; encargos em reais são somados grupo a grupo. As modalidades de lance usam o crédito líquido do cenário com embutido, sem duplicar o embutido. ${incompleteGroupCount > 0 ? `Há dados de cenário incompletos em ${incompleteGroupCount} grupo(s); os totais correspondentes são apresentados como não informados.` : ""}</p>`;
 }
 
 function clearRetiredFinancialStudyState() {
