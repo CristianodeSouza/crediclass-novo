@@ -257,6 +257,8 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("entry.item.prazo_restante", renderer)
         self.assertIn("numericValue(entry.item.taxa_adm) ?? numericValue(entry.item.taxa_total)", renderer)
         self.assertIn("entry.item.taxa_ano", renderer)
+        self.assertIn("sourceAnnualRate ?? (adminRate !== null && term > 0 ? (adminRate * 12) / term : null)", renderer)
+        self.assertIn('financial-study-part7-scenario-emphasis">${row.scenarioWord}</strong> embutido', renderer)
         self.assertIn("const sumAvailable = (field)", renderer)
         self.assertIn("entry.scenario.credito_liquido_projetado ?? entry.scenario.credito_contratado", renderer)
         self.assertIn('rows.filter((row) => row.scenarioId === scenarioId)', renderer)

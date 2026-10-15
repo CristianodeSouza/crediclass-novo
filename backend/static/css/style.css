@@ -5384,6 +5384,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part7-table th, .financial-study-part7-table td { padding: 7px 9px; border: 1px solid #c6cbcd; vertical-align: middle; }
 .financial-study-part7-table thead th { background: #f1f1f1; font-weight: 700; }
 .financial-study-part7-table tbody th { text-align: left; }
+.financial-study-part7-scenario-emphasis { color: #111; font-weight: 800; }
 .financial-study-part7-total { background: #f1f1f1; font-weight: 800; }
 .financial-study-part7-total td[colspan] { font-weight: 500; }
 .financial-study-part7-empty, .financial-study-part7-source-note { margin: 0; padding: 9px 12px; color: #52636a; font-size: 0.74rem; line-height: 1.5; }

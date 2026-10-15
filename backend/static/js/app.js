@@ -729,18 +729,22 @@ function renderFinancialStudyContracting() {
       if (!chosenScenarioIds.has(scenarioId)) continue;
       const entry = metricsByScenario[scenarioId]?.entries.find((candidate) => motor360GroupKey(candidate.item) === groupKey);
       if (!entry) continue;
-      const groupLabel = `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"} · ${entry.quotas} ${entry.quotas === 1 ? "cota" : "cotas"} · ${scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}`;
+      const groupLabel = `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"} · ${entry.quotas} ${entry.quotas === 1 ? "cota" : "cotas"}`;
       const sourceCredit = numericValue(entry.scenario.credito_liquido_projetado ?? entry.scenario.credito_contratado);
       const sourceInstallment = numericValue(entry.scenario.parcela_inicial);
       const adminRate = numericValue(entry.item.taxa_adm) ?? numericValue(entry.item.taxa_total);
+      const term = numericValue(entry.item.prazo_restante);
+      const sourceAnnualRate = numericValue(entry.item.taxa_ano);
+      const annualRate = sourceAnnualRate ?? (adminRate !== null && term > 0 ? (adminRate * 12) / term : null);
       rows.push({
         scenarioId,
         label: groupLabel,
+        scenarioWord: scenarioId === "with_embedded" ? "Com" : "Sem",
         credit: sourceCredit === null ? null : entry.credit,
         installment: sourceInstallment === null ? null : entry.installment,
-        term: numericValue(entry.item.prazo_restante),
+        term,
         adminRate,
-        annualRate: numericValue(entry.item.taxa_ano),
+        annualRate,
         quotas: entry.quotas,
       });
     }
@@ -751,7 +755,7 @@ function renderFinancialStudyContracting() {
     return;
   }
 
-  const body = rows.map((row) => `<tr><th scope="row" data-label="Grupo">${escapeHtml(row.label)}</th><td data-label="Crédito">${formatMoney(row.credit)}</td><td data-label="Parcelas (sem seguro)">${formatMoney(row.installment)}</td><td data-label="Prazo">${row.term == null ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td><td data-label="Tx ADM total">${row.adminRate == null ? "Não informado" : formatPercent(row.adminRate)}</td><td data-label="Tx ADM ao ano">${row.annualRate == null ? "Não informado" : formatPercent(row.annualRate)}</td></tr>`).join("");
+  const body = rows.map((row) => `<tr><th scope="row" data-label="Grupo">${escapeHtml(row.label)} · <strong class="financial-study-part7-scenario-emphasis">${row.scenarioWord}</strong> embutido</th><td data-label="Crédito">${formatMoney(row.credit)}</td><td data-label="Parcelas (sem seguro)">${formatMoney(row.installment)}</td><td data-label="Prazo">${row.term == null ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td><td data-label="Tx ADM total">${row.adminRate == null ? "Não informado" : formatPercent(row.adminRate)}</td><td data-label="Tx ADM ao ano">${row.annualRate == null ? "Não informado" : formatPercent(row.annualRate)}</td></tr>`).join("");
   const subtotalRows = scenarioIds.map((scenarioId) => {
     const scenarioRows = rows.filter((row) => row.scenarioId === scenarioId);
     if (!scenarioRows.length) return "";
@@ -771,10 +775,13 @@ function renderFinancialStudyContracting() {
     const averageAdminRate = average("adminRate");
     const averageAnnualRate = average("annualRate");
     const scenarioLabel = scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido";
+    const scenarioTitle = scenarioId === "with_embedded"
+      ? '<strong class="financial-study-part7-scenario-emphasis">Com</strong> embutido'
+      : '<strong class="financial-study-part7-scenario-emphasis">Sem</strong> embutido';
     const termLabel = averageTerm == null ? "Não informado" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(averageTerm)} meses`;
-    return `<tr class="financial-study-part7-total"><th scope="row" data-label="Grupo">Total / média ${scenarioLabel} · ${totals.groups} ${totals.groups === 1 ? "grupo" : "grupos"}</th><td data-label="Crédito">${formatMoney(totals.credit)}</td><td data-label="Parcelas (sem seguro)">${formatMoney(totals.installment)}</td><td data-label="Prazo">${termLabel}</td><td data-label="Tx ADM total">${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td data-label="Tx ADM ao ano">${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td></tr>`;
+    return `<tr class="financial-study-part7-total"><th scope="row" data-label="Grupo">Total / média ${scenarioTitle} · ${totals.groups} ${totals.groups === 1 ? "grupo" : "grupos"}</th><td data-label="Crédito">${formatMoney(totals.credit)}</td><td data-label="Parcelas (sem seguro)">${formatMoney(totals.installment)}</td><td data-label="Prazo">${termLabel}</td><td data-label="Tx ADM total">${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td data-label="Tx ADM ao ano">${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td></tr>`;
   }).join("");
-  target.innerHTML = `<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos grupos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Crédito</th><th scope="col">Parcelas (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Como no modelo de referência, cada cenário tem seu próprio fechamento: crédito e parcela são somados; prazo e taxas são médias aritméticas dos grupos daquele cenário. Campos sem valor são ignorados, não tratados como zero. Cenários alternativos não são somados entre si. A parcela não inclui seguro.</p>`;
+  target.innerHTML = `<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos grupos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Crédito</th><th scope="col">Parcelas (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Como no modelo de referência, cada cenário tem seu próprio fechamento: crédito e parcela são somados; prazo e taxas são médias aritméticas dos grupos daquele cenário. A taxa anual usa o valor informado pelo Motor 360; quando ausente, é estimada pela taxa total dividida pelo prazo em anos. Campos indisponíveis são ignorados, não tratados como zero. Cenários alternativos não são somados entre si. A parcela não inclui seguro.</p>`;
 }
 
 function renderFinancialStudyContemplationHistory() {
