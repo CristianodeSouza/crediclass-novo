@@ -5520,6 +5520,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-profile-row th strong { display: block; margin-top: 4px; }
 .financial-study-part4-profile-row th small { color: #52636a; font-size: .63rem; font-weight: 400; }
 .financial-study-part4-profile-row th strong { font-size: .72rem; }
+.financial-study-part4-profile-row th strong.is-hit { color: #147a48; }
+.financial-study-part4-profile-row th strong.is-gap { color: #b42318; }
 .financial-study-part4-investments { margin-top: 18px; border: 1px solid #c6cbcd; }
 .financial-study-part4-investments h3 { font-size: 0.82rem; }
 .financial-study-part4-disclaimer, .financial-study-part4-source-note { margin: 0; padding: 8px 10px; color: #65747a; font-size: 0.68rem; font-style: italic; }
