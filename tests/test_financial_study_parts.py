@@ -357,6 +357,20 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertNotIn("financialStudyPart12", app_js)
         self.assertIn(".financial-study-part12-content", css)
 
+    def test_shared_study_has_mobile_cards_and_unclipped_print_tables(self):
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn('class="financial-study-part9-mobile"', app_js)
+        self.assertIn('class="financial-study-part10-card"', app_js)
+        self.assertIn('data-label="Crédito"', app_js)
+        self.assertIn(".financial-study-part4-table tbody tr {", css)
+        self.assertIn(".financial-study-part9-group-card", css)
+        self.assertIn(".financial-study-part10-card dl", css)
+        self.assertIn("@page { size: A4 landscape; margin: 10mm; }", css)
+        self.assertIn("overflow: visible !important;", css)
+        self.assertIn(".financial-study-part9-mobile,\n  .financial-study-part10-mobile { display: none !important; }", css)
+
     def test_legacy_study_backend_modules_are_absent(self):
         backend = ROOT / "backend"
         for module in ("estudos.py", "templates_estudos.py", "financial_study_engine.py", "pdf_bridge.py"):

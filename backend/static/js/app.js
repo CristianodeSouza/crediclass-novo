@@ -641,7 +641,7 @@ function renderFinancialStudyContracting() {
     return;
   }
 
-  const body = rows.map((row) => `<tr><th scope="row">${escapeHtml(row.label)}</th><td>${formatMoney(row.credit)}</td><td>${formatMoney(row.installment)}</td><td>${row.term == null || row.term === "" ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td><td>${row.adminRate == null || row.adminRate === "" ? "Não informado" : formatPercent(row.adminRate)}</td><td>${row.annualRate == null || row.annualRate === "" ? "Não informado" : formatPercent(row.annualRate)}</td></tr>`).join("");
+  const body = rows.map((row) => `<tr><th scope="row" data-label="Grupo">${escapeHtml(row.label)}</th><td data-label="Crédito">${formatMoney(row.credit)}</td><td data-label="Parcelas (sem seguro)">${formatMoney(row.installment)}</td><td data-label="Prazo">${row.term == null || row.term === "" ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td><td data-label="Tx ADM total">${row.adminRate == null || row.adminRate === "" ? "Não informado" : formatPercent(row.adminRate)}</td><td data-label="Tx ADM ao ano">${row.annualRate == null || row.annualRate === "" ? "Não informado" : formatPercent(row.annualRate)}</td></tr>`).join("");
   const subtotalRows = scenarioIds.map((scenarioId) => {
     const scenarioRows = rows.filter((row) => row.scenarioId === scenarioId);
     if (!scenarioRows.length) return "";
@@ -663,7 +663,7 @@ function renderFinancialStudyContracting() {
     const averageAnnualRate = average("annualRate");
     const scenarioLabel = scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido";
     const termLabel = averageTerm == null ? "Não informado" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(averageTerm)} meses`;
-    return `<tr class="financial-study-part7-total"><th scope="row">Total / média ${scenarioLabel} · ${totals.quotas} ${totals.quotas === 1 ? "cota" : "cotas"}</th><td>${formatMoney(totals.credit)}</td><td>${formatMoney(totals.installment)}</td><td>${termLabel}</td><td>${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td>${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td></tr>`;
+    return `<tr class="financial-study-part7-total"><th scope="row" data-label="Grupo">Total / média ${scenarioLabel} · ${totals.quotas} ${totals.quotas === 1 ? "cota" : "cotas"}</th><td data-label="Crédito">${formatMoney(totals.credit)}</td><td data-label="Parcelas (sem seguro)">${formatMoney(totals.installment)}</td><td data-label="Prazo">${termLabel}</td><td data-label="Tx ADM total">${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td data-label="Tx ADM ao ano">${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td></tr>`;
   }).join("");
   target.innerHTML = `<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos grupos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Crédito</th><th scope="col">Parcelas (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Crédito e parcela são somados por cenário. Prazo e taxas no fechamento são médias aritméticas dos grupos daquele cenário; campos sem valor são ignorados, não tratados como zero. Cenários alternativos não são somados entre si. A parcela não inclui seguro.</p>`;
 }
@@ -722,7 +722,21 @@ function renderFinancialStudyContemplationHistory() {
     return `<td>${reportedCounts.length ? reportedCounts.reduce((sum, value) => sum + value, 0) : "-"}</td>`;
   }).join("");
 
-  target.innerHTML = `<div class="financial-study-part9-table-wrap" role="region" aria-label="Histórico mensal de lances contemplados dos grupos selecionados" tabindex="0"><table class="financial-study-part9-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Últimos Meses</th>${monthHeaders}</tr></thead><tbody>${groupRows}<tr class="financial-study-part9-total"><th scope="row" colspan="2">TOTAL · Qtde</th>${totalCells}</tr></tbody></table></div><p class="financial-study-part9-source-note">Histórico mensal fornecido pelo Motor 360. “Menor Lance” é o percentual registrado no mês; “Qtde” é a quantidade de contemplações informada. “-” indica dado ausente, não valor zero. O total soma apenas quantidades numéricas disponíveis.</p>`;
+  const mobileGroups = historyByGroup.map(({ item, history }, index) => {
+    const groupLabel = String(item.grupo || item.grupo_id || "-");
+    const adminLabel = String(item.administradora || "");
+    const monthRows = monthKeys.map((month) => {
+      const entry = history.get(month);
+      return `<div class="financial-study-part9-month"><strong>${monthLabel(month)}</strong><span><small>Menor lance</small><b>${formatHistoryPercent(entry?.menor_lance)}</b></span><span><small>Contemplações</small><b>${formatHistoryQuantity(entry?.qtd_contemplacoes)}</b></span></div>`;
+    }).join("");
+    return `<details class="financial-study-part9-group-card"${index === 0 ? " open" : ""}><summary><span>Grupo ${escapeHtml(groupLabel)}</span><small>${escapeHtml(adminLabel)}</small></summary><div class="financial-study-part9-month-list">${monthRows}</div></details>`;
+  }).join("");
+  const mobileTotals = monthKeys.map((month) => {
+    const reportedCounts = historyByGroup.map(({ history }) => history.get(month)?.qtd_contemplacoes)
+      .filter((value) => value !== null && value !== undefined && value !== "").map(Number).filter(Number.isFinite);
+    return `<span><small>${monthLabel(month)}</small><b>${reportedCounts.length ? reportedCounts.reduce((sum, value) => sum + value, 0) : "-"}</b></span>`;
+  }).join("");
+  target.innerHTML = `<div class="financial-study-part9-table-wrap" role="region" aria-label="Histórico mensal de lances contemplados dos grupos selecionados" tabindex="0"><table class="financial-study-part9-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Últimos Meses</th>${monthHeaders}</tr></thead><tbody>${groupRows}<tr class="financial-study-part9-total"><th scope="row" colspan="2">TOTAL · Qtde</th>${totalCells}</tr></tbody></table></div><div class="financial-study-part9-mobile" aria-label="Histórico mensal por grupo">${mobileGroups}<section class="financial-study-part9-mobile-total"><h4>Total de contemplações por mês</h4><div>${mobileTotals}</div></section></div><p class="financial-study-part9-source-note">Histórico mensal fornecido pelo Motor 360. “Menor Lance” é o percentual registrado no mês; “Qtde” é a quantidade de contemplações informada. “-” indica dado ausente, não valor zero. O total soma apenas quantidades numéricas disponíveis.</p>`;
 }
 
 const FINANCIAL_STUDY_CONTEMPLATION_PROFILES = [
@@ -787,7 +801,8 @@ function renderFinancialStudyProjection() {
   });
   const tableFor = (rows, label) => {
     if (!rows.length) return '<p class="financial-study-part10-empty">Não há dados do Motor 360 para esta seleção.</p>';
-    const rowMarkup = rows.map((row) => `<tr><th scope="row">${escapeHtml(row.groupLabel)}</th><td>${formatPercent(row.percentage)}</td><td>${formatMoney(row.totalBid)}</td><td>${row.embedded > 0 ? formatMoney(row.embedded) : "-"}</td><td>${formatMoney(row.clientResources)}</td><td>${formatMoney(row.credit)}</td><td>${formatMoney(row.installment)}</td><td>${row.term == null || row.term === "" ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td></tr>`).join("");
+    const rowMarkup = rows.map((row) => `<tr><th scope="row" data-label="Grupo">${escapeHtml(row.groupLabel)}</th><td data-label="Percentual">${formatPercent(row.percentage)}</td><td data-label="Lance total ideal">${formatMoney(row.totalBid)}</td><td data-label="Pago carta">${row.embedded > 0 ? formatMoney(row.embedded) : "-"}</td><td data-label="Pago recurso próprio">${formatMoney(row.clientResources)}</td><td data-label="Crédito líquido">${formatMoney(row.credit)}</td><td data-label="Parcela inicial (sem seguro)">${formatMoney(row.installment)}</td><td data-label="Prazo restante">${row.term == null || row.term === "" ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td></tr>`).join("");
+    const mobileRows = rows.map((row) => `<article class="financial-study-part10-card"><h4>${escapeHtml(row.groupLabel)}<small>${row.scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}</small></h4><dl><div><dt>Percentual</dt><dd>${formatPercent(row.percentage)}</dd></div><div><dt>Lance total ideal</dt><dd>${formatMoney(row.totalBid)}</dd></div><div><dt>Pago carta</dt><dd>${row.embedded > 0 ? formatMoney(row.embedded) : "-"}</dd></div><div><dt>Pago recurso próprio</dt><dd>${formatMoney(row.clientResources)}</dd></div><div><dt>Crédito líquido</dt><dd>${formatMoney(row.credit)}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(row.installment)}</dd></div><div><dt>Prazo restante</dt><dd>${row.term == null || row.term === "" ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</dd></div></dl></article>`).join("");
     const subtotalRows = scenarioIds.map((scenarioId) => {
       const scenarioRows = rows.filter((row) => row.scenarioId === scenarioId);
       if (!scenarioRows.length) return "";
@@ -795,7 +810,14 @@ function renderFinancialStudyProjection() {
       const scenarioLabel = scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido";
       return `<tr class="financial-study-part10-total"><th scope="row">Total ${scenarioLabel} · ${scenarioRows.length} ${scenarioRows.length === 1 ? "item" : "itens"}</th><td>—</td><td>${formatMoney(totals.bid)}</td><td>${formatMoney(totals.embedded)}</td><td>${formatMoney(totals.own)}</td><td>${formatMoney(totals.credit)}</td><td>${formatMoney(totals.installment)}</td><td>—</td></tr>`;
     }).join("");
-    return `<div class="financial-study-part10-table-wrap" role="region" aria-label="${escapeHtml(label)}" tabindex="0"><table class="financial-study-part10-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Percentual</th><th scope="col">Lance total ideal</th><th scope="col">Pago carta</th><th scope="col">Pago recurso próprio</th><th scope="col">Crédito líquido</th><th scope="col">Parcela inicial (sem seguro)</th><th scope="col">Prazo restante</th></tr></thead><tbody>${rowMarkup}${subtotalRows}</tbody></table></div>`;
+    const mobileTotals = scenarioIds.map((scenarioId) => {
+      const scenarioRows = rows.filter((row) => row.scenarioId === scenarioId);
+      if (!scenarioRows.length) return "";
+      const totals = scenarioRows.reduce((sum, row) => ({ bid: sum.bid + row.totalBid, embedded: sum.embedded + row.embedded, own: sum.own + row.clientResources, credit: sum.credit + row.credit, installment: sum.installment + row.installment }), { bid: 0, embedded: 0, own: 0, credit: 0, installment: 0 });
+      const scenarioLabel = scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido";
+      return `<article class="financial-study-part10-card financial-study-part10-card-total"><h4>Total ${scenarioLabel} · ${scenarioRows.length} ${scenarioRows.length === 1 ? "item" : "itens"}</h4><dl><div><dt>Lance total</dt><dd>${formatMoney(totals.bid)}</dd></div><div><dt>Pago carta</dt><dd>${formatMoney(totals.embedded)}</dd></div><div><dt>Recurso próprio</dt><dd>${formatMoney(totals.own)}</dd></div><div><dt>Crédito líquido</dt><dd>${formatMoney(totals.credit)}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(totals.installment)}</dd></div></dl></article>`;
+    }).join("");
+    return `<div class="financial-study-part10-table-wrap" role="region" aria-label="${escapeHtml(label)}" tabindex="0"><table class="financial-study-part10-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Percentual</th><th scope="col">Lance total ideal</th><th scope="col">Pago carta</th><th scope="col">Pago recurso próprio</th><th scope="col">Crédito líquido</th><th scope="col">Parcela inicial (sem seguro)</th><th scope="col">Prazo restante</th></tr></thead><tbody>${rowMarkup}${subtotalRows}</tbody></table></div><div class="financial-study-part10-mobile">${mobileRows}${mobileTotals}</div>`;
   };
   const profileSections = FINANCIAL_STUDY_CONTEMPLATION_PROFILES.map((profile) => {
     const rows = profileProjectionRows(profile.id);
@@ -876,7 +898,7 @@ function renderFinancialStudyAdhesionDates() {
     return { label, cycle };
   });
   const dateText = (date) => date ? assemblyFormatDate(date) : "Não informado";
-  const body = rows.map(({ label, cycle }) => `<tr><th scope="row">${escapeHtml(label)}</th><td>${dateText(cycle?.adhesion)}</td><td>${dateText(cycle?.assemblyAdhesion)}</td><td>${dateText(cycle?.firstInstallment)}</td><td>${dateText(cycle?.nextAssembly)}</td><td>${dateText(cycle?.bidPayment)}</td></tr>`).join("");
+  const body = rows.map(({ label, cycle }) => `<tr><th scope="row" data-label="Grupo">${escapeHtml(label)}</th><td data-label="Limite adesão – Reserva de vagas">${dateText(cycle?.adhesion)}</td><td data-label="Limite adesão – Assembleia">${dateText(cycle?.assemblyAdhesion)}</td><td data-label="Vencimento primeira parcela">${dateText(cycle?.firstInstallment)}</td><td data-label="Próxima assembleia">${dateText(cycle?.nextAssembly)}</td><td data-label="Vencimento pagamento lance">${dateText(cycle?.bidPayment)}</td></tr>`).join("");
   const noCycle = rows.some(({ cycle }) => !cycle);
   target.innerHTML = `<div class="financial-study-part11-table-wrap" role="region" aria-label="Próximas datas de adesão dos grupos selecionados" tabindex="0"><table class="financial-study-part11-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Limite Adesão – Reserva Vagas Grupos</th><th scope="col">Limite Adesão – Assembleia</th><th scope="col">Vencimento Primeira Parcela</th><th scope="col">Próxima Assembleia</th><th scope="col">Vencimento Pagamento Lance</th></tr></thead><tbody>${body}</tbody></table></div><p class="financial-study-part11-source-note">Calendário consultado no Mapa Assembleia para a administradora e faixa de vencimento do grupo. A primeira data de adesão exibida é futura e anterior ao vencimento da parcela correspondente. A data considera o calendário carregado e o dia atual do estudo.${noCycle ? " Um grupo sem data disponível está identificado como ‘Não informado’; revise o calendário ou a associação da faixa." : ""}</p>`;
 }
@@ -914,7 +936,7 @@ function renderFinancialStudySummary() {
   const terms = chosenEntries.map((entry) => Number(entry.item.prazo_restante)).filter((value) => Number.isFinite(value) && value > 0);
   const termLabel = terms.length ? (Math.min(...terms) === Math.max(...terms) ? `${Math.min(...terms)} meses` : `${Math.min(...terms)} a ${Math.max(...terms)} meses`) : "Não informado";
   const groupTerms = [...new Map(items.map((item) => [motor360GroupKey(item), item])).values()];
-  const rateRows = groupTerms.map((item) => `<tr><th scope="row">${escapeHtml(String(item.administradora || "Administradora"))} · Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</th><td>${formatPercent(item.taxa_ano)}</td><td>${formatPercent(item.taxa_adm ?? item.taxa_total)}</td><td>${formatPercent(item.fundo_reserva)}</td></tr>`).join("");
+  const rateRows = groupTerms.map((item) => `<tr><th scope="row" data-label="Grupo">${escapeHtml(String(item.administradora || "Administradora"))} · Grupo ${escapeHtml(String(item.grupo || item.grupo_id || "-"))}</th><td data-label="Taxa administrativa anual">${formatPercent(item.taxa_ano)}</td><td data-label="Taxa administrativa total">${formatPercent(item.taxa_adm ?? item.taxa_total)}</td><td data-label="Fundo de reserva">${formatPercent(item.fundo_reserva)}</td></tr>`).join("");
   const profileLabels = { conservative: "Conservador", moderate: "Moderado" };
   for (const profileId of Object.keys(profileLabels)) {
     for (const scenarioId of scenarioIds) {
@@ -930,12 +952,12 @@ function renderFinancialStudySummary() {
         return `${escapeHtml(group)}: ${formatPercent(reference)}`;
       }).filter(Boolean).join(" · ") || "Sem referência";
       const title = scenarioId === "without_embedded" ? `Lance Livre · ${profileLabels[profileId]}` : `Lance Livre · ${profileLabels[profileId]} · com embutido`;
-      rows.push(`<tr><th scope="row">${escapeHtml(title)}</th><td>${references}</td><td>${ideal > 0 ? formatMoney(ideal) : "Não exige lance"}</td><td>${formatMoney(rowCredit)}</td><td>${formatMoney(rowInstallment)}</td><td>${termLabel}</td></tr>`);
+      rows.push(`<tr><th scope="row" data-label="Simulação">${escapeHtml(title)}</th><td data-label="Referência do perfil">${references}</td><td data-label="Lance próprio ideal">${ideal > 0 ? formatMoney(ideal) : "Não exige lance"}</td><td data-label="Crédito disponível">${formatMoney(rowCredit)}</td><td data-label="Parcela inicial">${formatMoney(rowInstallment)}</td><td data-label="Prazo">${termLabel}</td></tr>`);
     }
   }
   const lotteryEntries = chosenEntries.filter((entry) => entry.scenarioId === "without_embedded");
   if (lotteryEntries.length) {
-    rows.unshift(`<tr><th scope="row">Sorteio · sem lance ofertado</th><td>Não se aplica</td><td>Não exige lance</td><td>${formatMoney(lotteryEntries.reduce((sum, entry) => sum + entry.credit, 0))}</td><td>${formatMoney(lotteryEntries.reduce((sum, entry) => sum + entry.installment, 0))}</td><td>${termLabel}</td></tr>`);
+    rows.unshift(`<tr><th scope="row" data-label="Simulação">Sorteio · sem lance ofertado</th><td data-label="Referência do perfil">Não se aplica</td><td data-label="Lance próprio ideal">Não exige lance</td><td data-label="Crédito disponível">${formatMoney(lotteryEntries.reduce((sum, entry) => sum + entry.credit, 0))}</td><td data-label="Parcela inicial">${formatMoney(lotteryEntries.reduce((sum, entry) => sum + entry.installment, 0))}</td><td data-label="Prazo">${termLabel}</td></tr>`);
   }
 
   const admins = [...new Set(items.map((item) => String(item.administradora || "").trim()).filter(Boolean))];
