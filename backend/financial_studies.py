@@ -43,6 +43,38 @@ def _quoted_sheet() -> str:
     return "'" + SHEET_NAME.replace("'", "''") + "'"
 
 
+def _ensure_sheet_grid_columns(required_column_count: int) -> None:
+    """Expand the history tab grid before writing new columns past its current edge."""
+    settings = get_settings()
+    service = get_service()
+    spreadsheet = service.spreadsheets().get(
+        spreadsheetId=settings.google_sheets_id,
+        fields="sheets(properties(sheetId,title,gridProperties(columnCount)))",
+    ).execute()
+    sheet = next(
+        (item.get("properties", {}) for item in spreadsheet.get("sheets", [])
+         if item.get("properties", {}).get("title") == SHEET_NAME),
+        None,
+    )
+    if sheet is None:
+        raise RuntimeError(f"A aba {SHEET_NAME!r} não foi encontrada.")
+    current_count = int(sheet.get("gridProperties", {}).get("columnCount", 0))
+    if required_column_count <= current_count:
+        return
+    service.spreadsheets().batchUpdate(
+        spreadsheetId=settings.google_sheets_id,
+        body={"requests": [{
+            "updateSheetProperties": {
+                "properties": {
+                    "sheetId": sheet["sheetId"],
+                    "gridProperties": {"columnCount": required_column_count},
+                },
+                "fields": "gridProperties.columnCount",
+            }
+        }]},
+    ).execute()
+
+
 def _headers() -> tuple[list[str], dict[str, int]]:
     settings = get_settings()
     response = get_service().spreadsheets().values().get(
@@ -67,6 +99,7 @@ def _ensure_archive_columns(headers: list[str], indexes: dict[str, int]) -> tupl
     settings = get_settings()
     first_column = len(headers) + 1
     last_column = first_column + len(missing) - 1
+    _ensure_sheet_grid_columns(last_column)
     get_service().spreadsheets().values().update(
         spreadsheetId=settings.google_sheets_id,
         range=f"{_quoted_sheet()}!{column_letter(first_column - 1)}1:{column_letter(last_column - 1)}1",
@@ -103,6 +136,7 @@ def _ensure_share_columns(headers: list[str], indexes: dict[str, int]) -> tuple[
     settings = get_settings()
     first_column = len(headers) + 1
     last_column = first_column + len(missing) - 1
+    _ensure_sheet_grid_columns(last_column)
     get_service().spreadsheets().values().update(
         spreadsheetId=settings.google_sheets_id,
         range=f"{_quoted_sheet()}!{column_letter(first_column - 1)}1:{column_letter(last_column - 1)}1",

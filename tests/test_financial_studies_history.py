@@ -87,7 +87,10 @@ class _FakeSheetValues:
 class _FakeSheetService:
     def __init__(self):
         self.headers = ["estudo_id", "proposta_id", "criado_em", "status", "operador", "grupo_id", "cliente_nome", "administradora", "tipo_bem", "estrategia", "cliente_json", "grupo_json"]
+        self.headers.extend(f"coluna_legada_{index}" for index in range(13, 26))
         self.rows = []
+        self.grid_column_count = 28
+        self.grid_expansions = []
 
     @staticmethod
     def column_index(column):
@@ -98,6 +101,21 @@ class _FakeSheetService:
 
     def spreadsheets(self):
         return self
+
+    def get(self, spreadsheetId, fields):
+        return _FakeRequest(lambda: {"sheets": [{"properties": {
+            "sheetId": 123,
+            "title": financial_studies.SHEET_NAME,
+            "gridProperties": {"columnCount": self.grid_column_count},
+        }}]})
+
+    def batchUpdate(self, spreadsheetId, body):
+        def apply():
+            request = body["requests"][0]["updateSheetProperties"]
+            self.grid_column_count = request["properties"]["gridProperties"]["columnCount"]
+            self.grid_expansions.append(self.grid_column_count)
+            return {"replies": [{}]}
+        return _FakeRequest(apply)
 
     def values(self):
         return _FakeSheetValues(self)
@@ -195,6 +213,8 @@ class FinancialStudiesHistoryApiTest(unittest.TestCase):
                 approval_key="00000000-0000-4000-8000-000000000101",
             )
             first_link = financial_studies.create_public_link(study["id"])
+            self.assertEqual(fake_service.grid_column_count, 31)
+            self.assertEqual(fake_service.grid_expansions, [31])
             self.assertEqual(first_link["validity_days"], 30)
             self.assertIsNotNone(financial_studies.get_public_study(first_link["token"]))
             self.assertNotIn(first_link["token"], " ".join(str(value) for value in fake_service.rows[0]))
