@@ -312,6 +312,25 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("new Date()", renderer)
         self.assertIn(".financial-study-part11-table", css)
 
+    def test_part_twelve_important_considerations_is_fixed_text_without_images_or_variables(self):
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+        start = html.index('data-study-part="12"')
+        end = html.index("</section>", start)
+        part = html[start:end]
+
+        self.assertIn('data-study-part-name="Considerações importantes"', part)
+        self.assertIn("CONSIDERAÇÕES IMPORTANTES", part)
+        self.assertIn("informações fornecidas pelo cliente", part)
+        self.assertIn("caráter exclusivamente informativo e ilustrativo", part)
+        self.assertIn("A CrediClass não garante rentabilidade", part)
+        self.assertIn("responsabilidade exclusiva do cliente", part)
+        self.assertNotIn("<img", part)
+        self.assertNotIn("${", part)
+        self.assertNotIn("financialStudyPart12", app_js)
+        self.assertIn(".financial-study-part12-content", css)
+
     def test_legacy_study_backend_modules_are_absent(self):
         backend = ROOT / "backend"
         for module in ("estudos.py", "templates_estudos.py", "financial_study_engine.py", "pdf_bridge.py"):

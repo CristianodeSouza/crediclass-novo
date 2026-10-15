@@ -5299,6 +5299,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part11-table tbody th { background: #f1f1f1; text-align: center; }
 .financial-study-part11-empty, .financial-study-part11-source-note { margin: 0; padding: 9px 12px; color: #52636a; font-size: 0.73rem; line-height: 1.5; }
 .financial-study-part11-source-note { border-top: 1px solid #d6dadd; }
+.financial-study-part--important-considerations { margin-top: 26px; }
+.financial-study-part12-title { margin: 0; padding: 8px 14px; border: 1px solid #aeb6ba; border-bottom: 0; color: #17272d; font-size: 0.78rem; font-weight: 800; line-height: 1.4; }
+.financial-study-part12-content { padding: 8px 12px; border: 1px solid #aeb6ba; color: #17272d; font-size: 0.74rem; line-height: 1.55; }
+.financial-study-part12-content p { margin: 0; }
+.financial-study-part12-content p + p { margin-top: 10px; }
 .financial-study-part5-title {
   margin: 0;
   padding: 8px 14px;
