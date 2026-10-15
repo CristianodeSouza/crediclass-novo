@@ -9,8 +9,8 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <meta name="crediclass-build" content="4.0.186">
-    <link href="/static/css/style.css?v=4.0.186" rel="stylesheet">
+    <meta name="crediclass-build" content="4.0.187">
+    <link href="/static/css/style.css?v=4.0.187" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -49,7 +49,7 @@
 
         <nav class="nav-menu" aria-label="Navegacao principal">
           <div class="nav-section nav-section-flow">
-            <span class="nav-section-title">Fluxo do Estudo</span>
+            <span class="nav-section-title">Jornada do Cliente</span>
             <button class="nav-item active" type="button" data-screen="perfil">
               <span class="nav-icon">PC</span>
               <span>Perfil do Cliente</span>
@@ -61,10 +61,6 @@
             <button class="nav-item" type="button" data-screen="estudo">
               <span class="nav-icon">EF</span>
               <span>Estudo Financeiro</span>
-            </button>
-            <button class="nav-item" type="button" data-screen="historico">
-              <span class="nav-icon">HE</span>
-              <span>Histórico de Estudos</span>
             </button>
           </div>
 
@@ -85,10 +81,6 @@
             <button class="nav-item" type="button" data-screen="crm-piperun">
               <span class="nav-icon">CR</span>
               <span>CRM PipeRun</span>
-            </button>
-            <button class="nav-item" type="button" data-screen="templates-estudos">
-              <span class="nav-icon">TE</span>
-              <span>Templates de Estudos</span>
             </button>
           </div>
         </nav>
@@ -439,7 +431,7 @@
                 <select id="investorAdministratorFilter" class="form-select" aria-label="Selecionar administradora">
                   <option value="">Aguardando grupos</option>
                 </select>
-                <small>O estudo utiliza grupos de uma única administradora por vez.</small>
+                <small>A composição utiliza grupos de uma única administradora por vez.</small>
               </div>
               <div class="investor-scenario-filter" role="group" aria-label="Filtro de cenário de lance">
                 <span>Filtrar cenário</span>
@@ -641,7 +633,7 @@
                   </div>
                   <ul id="operationalLogsList" class="log-list"></ul>
                 </div>
-                <div class="content-card study-actions">
+                <div class="content-card config-actions">
                   <button id="clearSystemCacheBtn" class="btn btn-outline-secondary" type="button">Limpar Cache do Sistema</button>
                   <button id="reindexSystemBtn" class="btn btn-outline-secondary" type="button">Reindexar Dados</button>
                   <button id="validateSystemBtn" class="btn btn-outline-primary" type="button">Validar Integridade dos Dados</button>
@@ -652,42 +644,7 @@
           </div>
         </section>
 
-        <section id="screen-estudo" class="screen-panel">
-          <div class="content-card"><div class="placeholder-card compact-placeholder"><span class="state-badge">Estudo Financeiro</span><h2>Carregando estudo...</h2><p>O template será preenchido com os grupos selecionados e os dados do cliente.</p></div></div>
-        </section>
-
-        <section id="screen-historico" class="screen-panel">
-          <div class="content-card">
-            <div class="table-toolbar"><div><h2>Histórico de Estudos</h2><p>Links compartilháveis e snapshots dos estudos gerados.</p></div><div><button class="btn btn-outline-danger" type="button" data-clear-history>Limpar estudos antigos</button><button class="btn btn-outline-primary" type="button" data-history-reload>Atualizar</button></div></div>
-            <div class="history-filter-grid" role="search" aria-label="Filtros do histórico de estudos">
-              <label><span>Cliente</span><input id="historyCliente" class="form-control" type="search" placeholder="Nome do cliente"></label>
-              <label><span>Administradora</span><input id="historyAdministradora" class="form-control" type="search" placeholder="Itaú"></label>
-              <label><span>Data inicial</span><input id="historyStartDate" class="form-control" type="date"></label>
-              <label><span>Data final</span><input id="historyEndDate" class="form-control" type="date"></label>
-              <button class="btn btn-outline-secondary history-filter-submit" type="button" data-history-filter>Filtrar</button>
-            </div>
-            <p id="historySubtitle" class="text-muted mb-3">Links públicos gerados pela Crediclass</p><div id="historyLoading" class="table-state d-none">Carregando histórico...</div><div id="historyError" class="table-state table-state-error d-none">Não foi possível carregar o histórico.</div><div id="historyEmpty" class="table-state d-none">Nenhum estudo encontrado.</div>
-            <div id="historyTableWrap" class="table-responsive"><table class="table table-hover align-middle viability-table"><thead><tr><th>Estudo</th><th>Data</th><th>Cliente</th><th>Administradora</th><th>Grupo</th><th>Crédito</th><th>Versão</th><th>Status</th><th>Link compartilhável</th></tr></thead><tbody id="historyTableBody"></tbody></table></div>
-            <div class="d-none"><strong id="historyTotal">0</strong><strong id="historyDone">0</strong><strong id="historyOpen">0</strong><strong id="historyCanceled">0</strong><strong id="historyUpdated"></strong><canvas id="historyStrategyChart"></canvas><canvas id="historyEvolutionChart"></canvas></div>
-          </div>
-        </section>
-
-        <section id="screen-templates-estudos" class="screen-panel">
-          <div class="content-card templates-study-card">
-            <div class="table-toolbar">
-              <div><h2>Templates de Estudos</h2><p>Modelos administrativos carregados da aba Templates do Google Sheets.</p></div>
-              <button id="reloadStudyTemplatesBtn" class="btn btn-outline-primary" type="button">Recarregar templates</button>
-            </div>
-            <div id="studyTemplatesState" class="table-state">Clique em Templates de Estudos para carregar os modelos.</div>
-            <div id="studyTemplatesTableWrap" class="table-responsive d-none">
-              <table class="table table-hover align-middle viability-table">
-                <thead><tr><th>Administradora</th><th>Slug</th><th>Status</th><th>Versão</th><th>Atualizado em</th><th>Validação</th><th>Origem</th></tr></thead>
-                <tbody id="studyTemplatesBody"></tbody>
-              </table>
-            </div>
-          </div>
-          <div id="studyTemplateDetails" class="content-card d-none"></div>
-          <div id="studyTemplatePreview" class="content-card d-none"></div>
+        <section id="screen-estudo" class="screen-panel" aria-label="Estudo Financeiro">
         </section>
 
         <section id="screen-crm-piperun" class="screen-panel">
@@ -933,8 +890,8 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.186"></script>
-    <script src="/static/js/app.js?v=4.0.186"></script>
+    <script src="/static/js/api.js?v=4.0.187"></script>
+    <script src="/static/js/app.js?v=4.0.187"></script>
   </body>
 </html>
 

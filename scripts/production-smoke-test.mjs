@@ -27,7 +27,7 @@ const checks = [
   ["version marker", index.body.includes(expectedVersion)],
   ["versioned app asset reference", new RegExp(`/static/js/app\\.js\\?v=${expectedVersion.replaceAll(".", "\\.")}`).test(index.body)],
   ["versioned API asset reference", new RegExp(`/static/js/api\\.js\\?v=${expectedVersion.replaceAll(".", "\\.")}`).test(index.body)],
-  ["financial study renderer", app.body.includes("renderFinancialStudyScreen") && app.body.includes("financial-study-document")],
+  ["financial study legacy renderer retired", app.body.includes("renderEmptyFinancialStudyScreen") && !app.body.includes("renderFinancialStudyScreen") && !app.body.includes("financial-study-document")],
   ["Motor 360 card renderer", app.body.includes("renderMotor360GroupCardUncached") && app.body.includes("motor360BidSortLabel")],
   ["API bundle", api.body.length > 1000],
 ];

@@ -9,13 +9,12 @@ load_dotenv()
 
 class Settings(BaseModel):
     app_name: str = "Crediclass Dashboard V3"
-    version: str = "4.0.186"
+    version: str = "4.0.187"
     environment: str = "development"
     debug: bool = False
     google_sheets_id: str = ""
     google_service_account_json: str = ""
     google_sheet_name: str = "Tabela de Grupos 3.0"
-    financial_editor_enabled: bool = True
 
 
 @lru_cache
@@ -23,11 +22,10 @@ def get_settings() -> Settings:
     return Settings(
         # O release exibido deve acompanhar o código publicado; uma variável
         # antiga no ambiente do provedor não pode mascarar a versão atual.
-        version="4.0.186",
+        version="4.0.187",
         environment=os.getenv("ENVIRONMENT", "development"),
         debug=os.getenv("DEBUG", "false").lower() == "true",
         google_sheets_id=os.getenv("GOOGLE_SHEETS_ID", ""),
         google_service_account_json=os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON", ""),
         google_sheet_name=os.getenv("GOOGLE_SHEET_NAME", "Tabela de Grupos 3.0"),
-        financial_editor_enabled=os.getenv("FINANCIAL_EDITOR_ENABLED", "true").lower() == "true",
     )

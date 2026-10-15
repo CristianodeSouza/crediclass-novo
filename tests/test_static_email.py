@@ -12,21 +12,15 @@ ROOT = Path(__file__).resolve().parents[1]
 class StaticEmailTest(unittest.TestCase):
     def test_release_version_matches_backend_render_and_front_assets(self):
         config_py = (ROOT / "backend" / "config.py").read_text(encoding="utf-8")
+        engine_py = (ROOT / "backend" / "consortium_viability_engine.py").read_text(encoding="utf-8")
         render_yaml = (ROOT / "render.yaml").read_text(encoding="utf-8")
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         build_version = re.search(r'<meta name="crediclass-build" content="([^"]+)"', index_html).group(1)
 
         self.assertIn(f'version: str = "{build_version}"', config_py)
         self.assertIn(f'version="{build_version}"', config_py)
+        self.assertIn(f'MOTOR_VERSION = "{build_version}"', engine_py)
         self.assertRegex(render_yaml, rf"(?m)^\s+value: {re.escape(build_version)}$")
-
-    def test_estudos_email_usa_cliente_de_email(self):
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-
-        self.assertIn("function emailCurrentStudy()", app_js)
-        self.assertIn("function emailHistoryStudy(studyId)", app_js)
-        self.assertIn("mailto:?subject=", app_js)
-        self.assertNotIn("Envio por e-mail depende de SMTP configurado.", app_js)
 
     def test_index_referencia_app_js_atualizado(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -40,16 +34,6 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn(f"/static/js/api.js?v={build_version}", index_html)
         self.assertIn('<button class="nav-item active" type="button" data-screen="perfil">', index_html)
         self.assertIn('<section id="screen-perfil" class="screen-panel active">', index_html)
-
-    def test_estudo_financeiro_expoe_resumo_executivo_e_rastreabilidade(self):
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-
-        self.assertIn("Opção em destaque", app_js)
-        self.assertIn("financialStudyPortfolioSummary", app_js)
-        self.assertIn("Crédito, parcela, saldo, prazo e custos reunidos em uma única visão", app_js)
-        self.assertIn("Comparativo dos grupos selecionados", app_js)
-        self.assertIn("Conclusão e observações", app_js)
-        self.assertIn("Identificador", app_js)
 
     def test_motor360_alerta_cotas_acima_da_media_historica(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
@@ -502,7 +486,7 @@ console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Durati
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
 
         self.assertLess(index_html.index('data-screen="perfil"'), index_html.index('data-screen="mapa"'))
-        self.assertIn("Fluxo do Estudo", index_html)
+        self.assertIn("Jornada do Cliente", index_html)
         self.assertIn("Administrativo", index_html)
         self.assertIn('id="screen-perfil"', index_html)
         self.assertIn("Perfil do Cliente", index_html)
@@ -607,7 +591,7 @@ console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Durati
         self.assertIn("function collectBusinessRuleFeedbacks", app_js)
         self.assertIn("async function saveBusinessRuleFeedbacks", app_js)
         self.assertIn("regras_negocio_feedbacks", app_js)
-        for etapa in ["Perfil do Cliente", "Estrategia", "Fase 1 - Calculadora de Grupos", "Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance", "Estudo Financeiro"]:
+        for etapa in ["Perfil do Cliente", "Estrategia", "Fase 1 - Calculadora de Grupos", "Fase 2 - Selecao Melhores Grupos por Prazo Remanescente e Compatibilidade Menor Lance"]:
             self.assertIn(etapa, app_js)
         for exemplo in [
             "credito_liquido_desejado",
@@ -616,7 +600,6 @@ console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Durati
             "Super Agressivo",
             "cartas candidatas",
             "FGTS so entra quando permitido",
-            "formulas financeiras ficam centralizadas no backend",
         ]:
             self.assertIn(exemplo, app_js)
         self.assertIn("business-rule-note-input", style_css)
@@ -677,21 +660,6 @@ console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Durati
         self.assertIn("Preencha somente os dados que deseja salvar", group_form)
         self.assertNotIn("Preencha os campos obrigatorios do grupo.", app_js)
         self.assertIn("function optionalNumber(value)", app_js)
-
-    def test_exportacao_csv_disponivel_para_grupos_e_estudos(self):
-        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-
-        self.assertNotIn('id="exportGroupsCsvBtn"', index_html)
-        self.assertIn("exportStudiesCsv", app_js)
-        self.assertIn("function downloadCsv(filename, rows)", app_js)
-        self.assertIn("function downloadBlob(filename, blob)", app_js)
-        self.assertIn("function exportGroupsCsv()", app_js)
-        self.assertIn("function exportStudiesCsv()", app_js)
-        self.assertIn("text/csv;charset=utf-8", app_js)
-        self.assertIn("/api/grupos/exportar-planilha", app_js)
-        self.assertIn("crediclass-planilha-oficial-", app_js)
-        self.assertIn("crediclass-estudos-", app_js)
 
     def test_backup_logs_disponivel_em_configuracoes(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -788,21 +756,6 @@ console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Durati
         self.assertNotIn('data-map-action="duplicar"', app_js)
         self.assertNotIn('data-map-action="excluir"', app_js)
 
-    def test_acao_principal_salva_estudo_financeiro(self):
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-
-        self.assertIn('document.getElementById("screen-estudo").classList.contains("active")', app_js)
-        self.assertIn("saveCurrentStudy().catch(() => setStudyState(\"error\"))", app_js)
-        self.assertNotIn("Funcionalidade sera implementada na etapa correspondente.", app_js)
-
-    def test_estudo_financeiro_preserva_data_nascimento_conjuge(self):
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-
-        self.assertIn("data_nascimento_conjuge: summary.data_nascimento_conjuge", app_js)
-        self.assertIn('data_nascimento_conjuge: currentStudy.payload.data_nascimento_conjuge', app_js)
-        self.assertIn('["Data nascimento conjuge", payload.data_nascimento_conjuge || "-"]', app_js)
-        self.assertIn('["Data nascimento conjuge", cliente.data_nascimento_conjuge || "-"]', app_js)
-
     def test_viabilidade_alinha_perfis_tipo_bem_e_lance_zero(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
@@ -841,117 +794,7 @@ console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Durati
         self.assertIn("renderClientProfileTitulares", app_js)
         self.assertIn("summarizeClientTitulares", app_js)
         self.assertIn("titulares: totals.titulares", app_js)
-        self.assertIn("titulares: currentStudy.payload.titulares", app_js)
-
-    def test_estudo_financeiro_exibe_metricas_historico_12_meses(self):
-        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-        source = index_html + app_js
-
-        for field_id in [
-            "studyAvgMaiorLance",
-            "studyAvgMenorLance",
-            "studyAvgContemplacoes",
-            "studyTotalContemplacoes",
-        ]:
-            self.assertIn(field_id, source)
-            self.assertIn(field_id, app_js)
-
-        self.assertIn("function averageNumber(values)", app_js)
-        self.assertIn("const entries = Object.entries(group.historico || {}).slice(-12)", app_js)
-
-    def test_estudo_financeiro_exibe_resumo_financeiro_completo(self):
-        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-
-        source = index_html + app_js
-        for field_id in [
-            "studyRecursoProprio",
-            "studyPercentualLanceTotal",
-            "studyParcelaApos",
-            "studyPrazoApos",
-            "studyCustoTotal",
-            "studySeguroGarantia",
-            "studyProximaAssembleia",
-            "studyChanceContemplacao",
-            "studyRankingPosition",
-        ]:
-            self.assertIn(field_id, source)
-            self.assertIn(field_id, app_js)
-
-        self.assertIn("function renderStudySummary(financial, group, viabilityItem)", app_js)
-        self.assertIn("percentualLanceTotal", app_js)
-        self.assertIn("renderStudySummary(financial, group, viabilityItem)", app_js)
-
-    def test_estudo_financeiro_usa_layout_v4_da_referencia(self):
-        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
-        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-
-        for label in [
-            "1. Dados do Cliente",
-            "2. Cenario Financeiro",
-            "3. Grupo Selecionado",
-            "4. Estrategia Recomendada",
-            "5. Simulacao Financeira da Estrategia Recomendada",
-            "6. Historico do Grupo",
-            "7. Datas Operacionais",
-            "8. Motivos da Recomendacao",
-            "9. Campos Pendentes",
-            "Status do Preenchimento",
-            "Versoes do Estudo",
-        ]:
-            self.assertIn(label, index_html + app_js)
-        self.assertIn(".study-v4-shell", style_css)
-        self.assertIn("studyScenarioGrid", index_html + app_js)
-        self.assertIn("studyOperationalDates", index_html + app_js)
-        self.assertIn('document.getElementById("studyDisplayId").textContent', app_js)
-
-    def test_estudo_financeiro_campos_do_template_sao_editaveis(self):
-        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
-
-        source = index_html + app_js
-        for field_id in [
-            "studyFieldObservacoes",
-            "studyFieldComentario",
-            "studyFieldBeneficios",
-            "studyFieldCondicoes",
-            "studyPendingFields",
-            "studyCompletionPercent",
-            "studyTemplateTechnicalGrid",
-        ]:
-            self.assertIn(field_id, source)
-        self.assertIn("const studyOperatorFields", app_js)
-        self.assertIn("function collectStudyOperatorFields()", app_js)
-        self.assertIn("template_campos: collectStudyOperatorFields()", app_js)
-        self.assertIn("function activateStudyTemplateTab(tabName)", app_js)
-        self.assertIn(".study-template-panel.active", style_css)
-
-    def test_estudo_financeiro_exibe_abas_de_estrategias(self):
-        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-
-        self.assertIn("studyStrategyTabs", index_html + app_js)
-        self.assertIn("let currentStudyStrategies", app_js)
-        self.assertIn("let currentStudyStrategyTab", app_js)
-        self.assertIn("function renderStudyStrategyTabs()", app_js)
-        self.assertIn("function renderStudyStrategyTable()", app_js)
-        for label in ["Investidor", "Super Conservador", "Conservador", "Moderado", "Agressivo"]:
-            self.assertIn(label, app_js)
-        self.assertIn('data-study-strategy', app_js)
-
-    def test_estudo_financeiro_exibe_recomendacoes_automaticas_completas(self):
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-
-        self.assertIn("function renderStudyRecommendations(viabilityItem, financial, group)", app_js)
-        self.assertIn("totalContemplacoes", app_js)
-        self.assertIn("Grupo com bom historico", app_js)
-        self.assertIn("Estrategia recomendada", app_js)
-        self.assertIn("Prazo operacional do perfil", app_js)
-        self.assertIn("Necessidade de acompanhamento semanal", app_js)
-        self.assertIn("A analise nao garante contemplacao", app_js)
+        self.assertNotIn("currentStudy.payload.titulares", app_js)
 
     def test_tema_configurado_aplica_aparencia(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
@@ -1001,17 +844,6 @@ console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Durati
         self.assertIn(".login-screen", style_css)
         self.assertIn(".logout-btn", style_css)
 
-    def test_estudo_financeiro_exibe_logo_da_administradora(self):
-        index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-        style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
-
-        self.assertIn("studyAdminLogo", index_html + app_js)
-        self.assertIn("studyAdminName", index_html + app_js)
-        self.assertIn("function initialsFromName(value)", app_js)
-        self.assertIn('document.getElementById("studyAdminLogo").textContent', app_js)
-        self.assertIn(".admin-logo", style_css)
-
     def test_configuracoes_remove_aba_geral(self):
         index_html = (ROOT / "backend" / "static" / "index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
@@ -1049,7 +881,7 @@ console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Durati
         self.assertNotIn("function isNotificationEnabled", app_js)
         self.assertNotIn("function notifyWhen", app_js)
         self.assertIn("function showToast(message, type = \"success\")", app_js)
-        self.assertIn('showToast(`Estudo salvo: ${result.estudo_id}`, "success")', app_js)
+        self.assertNotIn("Estudo salvo:", app_js)
         self.assertIn('showToast(`Google Sheets sincronizado: ${result.total} linhas.`, "success")', app_js)
         self.assertIn('showToast("Nao foi possivel reindexar os dados.", "danger")', app_js)
 
@@ -1081,16 +913,6 @@ console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Durati
         self.assertIn('data-config-user-action="status"', app_js)
         self.assertIn('data-config-user-action="remover"', app_js)
         self.assertIn('apiPut("/configuracoes", { usuarios })', app_js)
-
-    def test_estudo_itau_formata_taxas_e_totaliza_credito_contratado(self):
-        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
-        self.assertIn('formatPercent(item.taxa_adm)', app_js)
-        self.assertIn('const annualAdminRate = (item) => item.taxa_adm_ano ?? item.taxa_ano ?? item.source_values?.taxa_adm_ano ?? item.source_values?.taxa_ano;', app_js)
-        self.assertIn('formatPercent(annualAdminRate(item))', app_js)
-        self.assertIn('withEmbedded.credito_contratado ?? without.credito_contratado', app_js)
-        self.assertIn('totalCredit = items.reduce', app_js)
-        self.assertNotIn('sum + Number(item.credito_maximo || 0) * qty(item)', app_js)
-
 
 if __name__ == "__main__":
     unittest.main()

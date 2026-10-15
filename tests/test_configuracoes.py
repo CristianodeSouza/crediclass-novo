@@ -66,7 +66,6 @@ class ConfiguracoesTest(unittest.TestCase):
         result = configuracoes_salvar({
             "notificacoes": {
                 "alertar_sincronizacao": False,
-                "alertar_estudo_salvo": False,
                 "alertar_historico_atualizado": False,
                 "alertar_falha_integracao": False,
             }
@@ -75,7 +74,7 @@ class ConfiguracoesTest(unittest.TestCase):
 
         self.assertTrue(result["success"])
         self.assertFalse(config["notificacoes"]["alertar_sincronizacao"])
-        self.assertFalse(config["notificacoes"]["alertar_estudo_salvo"])
+        self.assertNotIn("alertar_estudo_salvo", config["notificacoes"])
         self.assertFalse(config["notificacoes"]["alertar_historico_atualizado"])
         self.assertFalse(config["notificacoes"]["alertar_falha_integracao"])
 

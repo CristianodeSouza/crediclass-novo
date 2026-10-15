@@ -348,7 +348,6 @@ DEFAULT_CONFIG = {
     },
     "notificacoes": {
         "alertar_sincronizacao": True,
-        "alertar_estudo_salvo": True,
         "alertar_historico_atualizado": True,
         "alertar_falha_integracao": True,
     },
@@ -433,7 +432,10 @@ def get_configuracoes() -> dict:
 def update_configuracoes(payload: dict) -> dict:
     for section in ["empresa", "preferencias", "parametros_financeiros", "integracoes", "notificacoes"]:
         if section in payload and isinstance(payload[section], dict):
-            _settings[section].update(payload[section])
+            values = dict(payload[section])
+            if section == "notificacoes":
+                values.pop("alertar_estudo_salvo", None)
+            _settings[section].update(values)
     if "administradoras_regras" in payload and isinstance(payload["administradoras_regras"], list) and payload["administradoras_regras"]:
         _settings["administradoras_regras"] = payload["administradoras_regras"]
     ensure_administrator_rules(_settings)
