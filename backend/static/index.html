@@ -9,8 +9,8 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <meta name="crediclass-build" content="4.0.199">
-    <link href="/static/css/style.css?v=4.0.199" rel="stylesheet">
+    <meta name="crediclass-build" content="4.0.200">
+    <link href="/static/css/style.css?v=4.0.200" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -61,6 +61,10 @@
             <button class="nav-item" type="button" data-screen="estudo">
               <span class="nav-icon">EF</span>
               <span>Estudo Financeiro</span>
+            </button>
+            <button class="nav-item" type="button" data-screen="historico-estudos">
+              <span class="nav-icon">HE</span>
+              <span>Histórico de Estudos</span>
             </button>
           </div>
 
@@ -645,6 +649,17 @@
         </section>
 
         <section id="screen-estudo" class="screen-panel" aria-label="Estudo Financeiro">
+          <header class="financial-study-actions" aria-label="Ações do estudo financeiro">
+            <div>
+              <span class="financial-study-review-status">Em revisão</span>
+              <h2>Estudo Financeiro</h2>
+              <p>Aprove para guardar esta versão no histórico ou reprove para voltar à seleção de grupos.</p>
+            </div>
+            <div class="financial-study-actions-buttons">
+              <button id="rejectFinancialStudyBtn" class="btn btn-outline-secondary" type="button">Reprovar e escolher novos grupos</button>
+              <button id="approveFinancialStudyBtn" class="btn btn-primary" type="button">Aprovar estudo</button>
+            </div>
+          </header>
           <article class="financial-study-document" aria-label="Estudo Financeiro">
             <section class="financial-study-part financial-study-part--introduction" aria-labelledby="financialStudyPart1Title" data-study-part="1" data-study-part-name="Titulo Estudo Financeiro">
               <header class="financial-study-part1-header">
@@ -822,6 +837,37 @@
               </div>
             </section>
           </article>
+        </section>
+
+        <section id="screen-historico-estudos" class="screen-panel" aria-label="Histórico de Estudos">
+          <div class="content-card financial-study-history">
+            <div class="financial-study-history-toolbar">
+              <div>
+                <h2>Estudos aprovados</h2>
+                <p>Versões imutáveis dos estudos aprovados, preservadas como foram apresentadas.</p>
+              </div>
+              <button id="reloadFinancialStudyHistoryBtn" class="btn btn-outline-secondary" type="button">Atualizar</button>
+            </div>
+            <label class="financial-study-history-search" for="financialStudyHistorySearch">Buscar por cliente ou número do estudo</label>
+            <div class="financial-study-history-search-row">
+              <input id="financialStudyHistorySearch" class="form-control" type="search" maxlength="180" placeholder="Nome do cliente ou EF-…">
+              <button id="searchFinancialStudyHistoryBtn" class="btn btn-primary" type="button">Buscar</button>
+            </div>
+            <div id="financialStudyHistoryState" class="table-state" aria-live="polite">Carregando histórico…</div>
+            <div class="table-wrap financial-study-history-list-wrap">
+              <table class="data-table financial-study-history-table">
+                <thead><tr><th>Estudo</th><th>Cliente</th><th>Aprovado em</th><th>Responsável</th><th>Grupos</th><th>Arquivo</th><th></th></tr></thead>
+                <tbody id="financialStudyHistoryRows"></tbody>
+              </table>
+            </div>
+            <section id="financialStudyHistoryDetail" class="financial-study-history-detail d-none" aria-label="Estudo selecionado">
+              <div class="financial-study-history-detail-heading">
+                <div><h3 id="financialStudyHistoryDetailTitle"></h3><p id="financialStudyHistoryDetailMeta"></p></div>
+                <button id="printFinancialStudyHistoryBtn" class="btn btn-outline-secondary" type="button">Imprimir / Salvar PDF</button>
+              </div>
+              <iframe id="financialStudyHistoryFrame" title="Snapshot imutável do estudo aprovado" sandbox="" loading="lazy"></iframe>
+            </section>
+          </div>
         </section>
 
         <section id="screen-crm-piperun" class="screen-panel">
@@ -1067,8 +1113,8 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.199"></script>
-    <script src="/static/js/app.js?v=4.0.199"></script>
+    <script src="/static/js/api.js?v=4.0.200"></script>
+    <script src="/static/js/app.js?v=4.0.200"></script>
   </body>
 </html>
 

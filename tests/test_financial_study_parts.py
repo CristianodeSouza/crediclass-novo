@@ -9,6 +9,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class FinancialStudyPartsTest(unittest.TestCase):
+    def test_new_history_screen_uses_separate_actions_and_sandboxed_snapshot(self):
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        study_start = html.index('<section id="screen-estudo"')
+        history_start = html.index('<section id="screen-historico-estudos"')
+        crm_start = html.index('<section id="screen-crm-piperun"')
+        study_screen = html[study_start:history_start]
+        history_screen = html[history_start:crm_start]
+
+        self.assertIn('data-screen="historico-estudos"', html)
+        self.assertIn('id="approveFinancialStudyBtn"', study_screen)
+        self.assertIn('id="rejectFinancialStudyBtn"', study_screen)
+        self.assertLess(study_screen.index('id="approveFinancialStudyBtn"'), study_screen.index('<article class="financial-study-document"'))
+        self.assertIn('id="financialStudyHistoryRows"', history_screen)
+        self.assertIn('id="financialStudyHistoryFrame"', history_screen)
+        self.assertIn('sandbox=""', history_screen)
+        self.assertIn("financialStudyApprovalSnapshot(items)", app_js)
+        self.assertIn('apiPost("/financial-studies"', app_js)
+        self.assertIn('apiGet(`/financial-studies/${encodeURIComponent(studyId)}`)', app_js)
+        self.assertIn("A seleção atual será mantida", app_js)
+
     def test_old_study_apis_and_public_routes_remain_unregistered(self):
         paths = {route.path for route in app.routes}
         self.assertFalse(any(path.startswith("/api/estudos") for path in paths))

@@ -537,6 +537,57 @@ body[data-theme="escuro"] .btn-outline-secondary {
   display: block;
 }
 
+.financial-study-actions,
+.financial-study-history-toolbar,
+.financial-study-history-detail-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.financial-study-actions {
+  margin: 0 auto 16px;
+  max-width: 1120px;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.financial-study-actions h2,
+.financial-study-history-toolbar h2,
+.financial-study-history-detail h3 { margin: 0; color: var(--brand-navy); }
+.financial-study-actions p,
+.financial-study-history-toolbar p,
+.financial-study-history-detail-heading p { margin: 4px 0 0; color: var(--muted); }
+.financial-study-review-status {
+  display: inline-block;
+  margin-bottom: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  color: #8a4b00;
+  background: #fff4df;
+  font-size: .75rem;
+  font-weight: 700;
+}
+.financial-study-actions-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
+.financial-study-history { padding: 22px; }
+.financial-study-history-toolbar { margin-bottom: 20px; }
+.financial-study-history-search { display: block; margin-bottom: 6px; font-weight: 700; }
+.financial-study-history-search-row { display: flex; max-width: 620px; gap: 8px; margin-bottom: 14px; }
+.financial-study-history-list-wrap { margin-top: 10px; }
+.financial-study-history-table td { vertical-align: middle; }
+.financial-study-history-detail { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
+.financial-study-history-detail-heading { margin-bottom: 14px; }
+.financial-study-history-detail iframe { display: block; width: 100%; min-height: 78vh; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+@media (max-width: 760px) {
+  .financial-study-actions,
+  .financial-study-history-toolbar,
+  .financial-study-history-detail-heading { align-items: stretch; flex-direction: column; }
+  .financial-study-actions-buttons { justify-content: stretch; }
+  .financial-study-actions-buttons .btn { flex: 1 1 auto; }
+  .financial-study-history { padding: 14px; }
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

@@ -53,7 +53,16 @@ const screens = {
     subtitle: "Área reservada para a reconstrução do modelo de estudo financeiro",
     action: "",
   },
+  "historico-estudos": {
+    letter: "F) HISTÓRICO DE ESTUDOS",
+    title: "Histórico de Estudos",
+    subtitle: "Estudos aprovados e snapshots preservados",
+    action: "",
+  },
 };
+
+const financialStudyHistoryState = { items: [], selectedId: null, loaded: false, loading: false };
+const financialStudyApprovalState = { pendingKey: null, pendingFingerprint: null };
 
 const mapState = {
   page: 1,
@@ -356,7 +365,7 @@ function activateScreen(screenName) {
   document.querySelector(".page-header")?.classList.toggle("d-none", ["perfil", "motor360", "grupos-selecionados", "crm-piperun", "estudo"].includes(screenName));
   const primaryAction = document.getElementById("primaryAction");
   primaryAction.textContent = meta.action;
-  primaryAction.classList.toggle("d-none", ["motor360", "estudo", "mapa-assembleia"].includes(screenName));
+  primaryAction.classList.toggle("d-none", !meta.action);
   document.getElementById("reloadMapDataBtn").classList.toggle("d-none", screenName !== "mapa");
 
   if (screenName === "motor360") {
@@ -376,7 +385,9 @@ function activateScreen(screenName) {
     renderFinancialStudyContemplationHistory();
     renderFinancialStudyProjection();
     renderFinancialStudyAdhesionDates();
+    updateFinancialStudyActionState();
   }
+  if (screenName === "historico-estudos") loadFinancialStudyHistory();
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
@@ -392,6 +403,136 @@ function renderFinancialStudySelectedAdministrator() {
   target.textContent = administrators.length
     ? administrators.join(" · ")
     : "Nenhuma administradora selecionada";
+}
+
+function updateFinancialStudyActionState() {
+  const button = document.getElementById("approveFinancialStudyBtn");
+  if (!button) return;
+  const items = selectedMotor360Items();
+  const missingScenarios = items.some((item) => !item.cenarios?.length);
+  button.disabled = !items.length || missingScenarios;
+  button.title = !items.length
+    ? "Selecione grupos no Motor 360 antes de aprovar."
+    : missingScenarios ? "Escolha ao menos um cenário em cada grupo selecionado." : "Salvar uma cópia imutável no Histórico de Estudos.";
+}
+
+function financialStudyApprovalSnapshot(items) {
+  const client = motor360ClientProfile();
+  const profile = collectClientProfile?.() || {};
+  return {
+    motor360_audit_id: investorState.result?.audit_id || null,
+    client: {
+      name: String(client.nome || profile.nome || "").trim(),
+      objective: client.objetivo || null,
+      desired_credit: client.credito_liquido_desejado ?? client.credito_desejado ?? null,
+    },
+    groups: items.map((item) => ({
+      group_key: motor360GroupKey(item),
+      group: item.grupo || item.grupo_id || "",
+      administrator: item.administradora || "",
+      quotas: quotaCountFor(item),
+      credit_max: item.credito_maximo ?? null,
+      remaining_term: item.prazo_restante ?? null,
+      due_day: item.vencimento_parcela ?? null,
+      selected_scenarios: (item.cenarios || []).map((scenario) => ({ ...scenario })),
+    })),
+  };
+}
+
+async function approveCurrentFinancialStudy() {
+  const items = selectedMotor360Items();
+  if (!items.length || items.some((item) => !item.cenarios?.length)) {
+    updateFinancialStudyActionState();
+    showToast("Selecione grupos e ao menos um cenário em cada grupo antes de aprovar.", "warning");
+    return;
+  }
+  if (!window.confirm("Aprovar este estudo e salvar uma cópia imutável no Histórico de Estudos?")) return;
+  const button = document.getElementById("approveFinancialStudyBtn");
+  button.disabled = true;
+  button.textContent = "Salvando…";
+  try {
+    if (assemblyState.loadingPromise) await assemblyState.loadingPromise;
+    if (!assemblyState.loaded) await loadAssemblyMap();
+    renderFinancialStudyAdhesionDates();
+    const documentNode = document.querySelector(".financial-study-document");
+    if (!documentNode) throw new Error("Não foi possível preparar o documento do estudo.");
+    const snapshot = financialStudyApprovalSnapshot(items);
+    const documentHtml = documentNode.outerHTML;
+    const fingerprint = JSON.stringify(snapshot) + documentHtml;
+    if (!financialStudyApprovalState.pendingKey || financialStudyApprovalState.pendingFingerprint !== fingerprint) {
+      financialStudyApprovalState.pendingKey = crypto.randomUUID();
+      financialStudyApprovalState.pendingFingerprint = fingerprint;
+    }
+    const payload = await apiPost("/financial-studies", {
+      client_name: snapshot.client.name || "Cliente sem nome informado",
+      approval_key: financialStudyApprovalState.pendingKey,
+      snapshot,
+      document_html: documentHtml,
+    });
+    financialStudyApprovalState.pendingKey = null;
+    financialStudyApprovalState.pendingFingerprint = null;
+    showToast(`Estudo ${payload.study.id} aprovado e salvo no histórico.`, "success");
+    financialStudyHistoryState.loaded = false;
+    activateScreen("historico-estudos");
+  } catch (error) {
+    showToast(error.message || "Não foi possível salvar o estudo aprovado.", "danger");
+  } finally {
+    button.textContent = "Aprovar estudo";
+    updateFinancialStudyActionState();
+  }
+}
+
+function rejectCurrentFinancialStudy() {
+  if (!window.confirm("Reprovar este estudo e voltar ao Motor 360? A seleção atual será mantida para você editar os grupos e cenários.")) return;
+  activateScreen("motor360");
+  showToast("Estudo reprovado. A seleção atual foi mantida para edição no Motor 360.", "warning");
+}
+
+function financialStudyHistoryDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Data indisponível" : date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
+}
+
+function renderFinancialStudyHistory(items) {
+  const rows = document.getElementById("financialStudyHistoryRows");
+  const state = document.getElementById("financialStudyHistoryState");
+  if (!rows || !state) return;
+  rows.innerHTML = items.map((item) => `<tr><td><strong>${escapeHtml(item.id)}</strong></td><td>${escapeHtml(item.client_name)}</td><td>${escapeHtml(financialStudyHistoryDate(item.approved_at))}</td><td>${escapeHtml(item.approved_by)}</td><td>${Number(item.group_count) || 0}</td><td>${item.has_snapshot ? "Snapshot completo" : "Registro legado"}</td><td><button class="btn btn-outline-secondary btn-sm" type="button" data-financial-study-open="${escapeHtml(item.id)}">Visualizar</button></td></tr>`).join("");
+  state.textContent = items.length ? `${items.length} estudo(s) aprovado(s).` : "Nenhum estudo aprovado encontrado.";
+  rows.querySelectorAll("[data-financial-study-open]").forEach((button) => button.addEventListener("click", () => openFinancialStudyHistoryItem(button.dataset.financialStudyOpen)));
+}
+
+async function loadFinancialStudyHistory() {
+  const state = document.getElementById("financialStudyHistoryState");
+  const search = document.getElementById("financialStudyHistorySearch");
+  if (!state) return;
+  state.textContent = "Carregando histórico…";
+  try {
+    const query = new URLSearchParams({ query: search?.value.trim() || "", limit: "200" });
+    const payload = await apiGet(`/financial-studies?${query.toString()}`);
+    financialStudyHistoryState.items = payload.items || [];
+    financialStudyHistoryState.loaded = true;
+    renderFinancialStudyHistory(financialStudyHistoryState.items);
+  } catch (error) {
+    state.textContent = error.message || "Não foi possível carregar o histórico.";
+  }
+}
+
+async function openFinancialStudyHistoryItem(studyId) {
+  const detail = document.getElementById("financialStudyHistoryDetail");
+  try {
+    const payload = await apiGet(`/financial-studies/${encodeURIComponent(studyId)}`);
+    const study = payload.study;
+    document.getElementById("financialStudyHistoryDetailTitle").textContent = `${study.id} · ${study.client_name}`;
+    document.getElementById("financialStudyHistoryDetailMeta").textContent = `Aprovado em ${financialStudyHistoryDate(study.approved_at)} por ${study.approved_by} · versão ${study.app_version}`;
+    const frame = document.getElementById("financialStudyHistoryFrame");
+    const documentHtml = study.document_html || `<main style="font:16px system-ui;max-width:720px;margin:40px auto;color:#2e3f47"><h1>Registro legado</h1><p>Este registro já existia na planilha e não possui um snapshot visual arquivado. Os dados originais foram preservados.</p></main>`;
+    frame.srcdoc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/static/css/style.css"><style>body{margin:16px;background:#fff}.financial-study-document{max-width:1100px;margin:auto}</style></head><body>${documentHtml}</body></html>`;
+    detail.classList.remove("d-none");
+    financialStudyHistoryState.selectedId = studyId;
+  } catch (error) {
+    showToast(error.message || "Não foi possível abrir o estudo.", "danger");
+  }
 }
 
 const FINANCIAL_STUDY_ADMINISTRATOR_BENEFITS = {
@@ -6280,6 +6421,17 @@ document.getElementById("configUsersBody").addEventListener("click", (event) => 
 });
 
 document.getElementById("clearSystemCacheBtn").addEventListener("click", clearSystemCache);
+document.getElementById("approveFinancialStudyBtn")?.addEventListener("click", approveCurrentFinancialStudy);
+document.getElementById("rejectFinancialStudyBtn")?.addEventListener("click", rejectCurrentFinancialStudy);
+document.getElementById("reloadFinancialStudyHistoryBtn")?.addEventListener("click", loadFinancialStudyHistory);
+document.getElementById("searchFinancialStudyHistoryBtn")?.addEventListener("click", loadFinancialStudyHistory);
+document.getElementById("financialStudyHistorySearch")?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") loadFinancialStudyHistory();
+});
+document.getElementById("printFinancialStudyHistoryBtn")?.addEventListener("click", () => {
+  try { document.getElementById("financialStudyHistoryFrame")?.contentWindow?.print(); }
+  catch { showToast("Não foi possível abrir a impressão deste estudo.", "warning"); }
+});
 
 document.getElementById("clearMotor360ExecutionLogsBtn")?.addEventListener("click", () => {
   motor360ExecutionLogs.length = 0;

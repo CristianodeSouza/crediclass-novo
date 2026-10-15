@@ -21,6 +21,7 @@ from uuid import uuid4
 from fastapi import FastAPI, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, Field
 
 from .auditoria import list_auditoria, record_auditoria
 from .motor360_auditoria import audit_to_markdown, audit_to_pdf, get_motor360_audit, save_motor360_audit
@@ -29,6 +30,7 @@ from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
 from .consortium_viability_engine import analyze_client_consortium_viability
 from .defasagem import build_defasagem_report, update_defasagem_task
+from . import financial_studies
 from .piperun import fetch_opportunities_preview, fetch_opportunity_notes
 from .models import GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
@@ -60,6 +62,60 @@ async def app_lifespan(_app: FastAPI):
 
 app = FastAPI(title="Crediclass Dashboard V3", lifespan=app_lifespan)
 PIPERUN_EXECUTIONS: set[str] = set()
+
+
+class FinancialStudyApprovalRequest(BaseModel):
+    client_name: str = Field(min_length=1, max_length=180)
+    approval_key: str = Field(min_length=36, max_length=36)
+    snapshot: dict
+    document_html: str = Field(min_length=1, max_length=2_000_000)
+
+
+@app.post("/api/financial-studies")
+def approve_financial_study(payload: FinancialStudyApprovalRequest, request: Request):
+    username = request.state.auth_user
+    try:
+        created = financial_studies.create_study(
+            client_name=payload.client_name,
+            approved_by=AUTH_USERS[username]["name"],
+            app_version=get_settings().version,
+            snapshot=payload.snapshot,
+            document_html=payload.document_html,
+            approval_key=payload.approval_key,
+        )
+        return {"success": True, "study": created}
+    except ValueError as error:
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
+    except RuntimeError as error:
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+    except Exception:
+        logger.exception("Falha ao persistir estudo financeiro aprovado")
+        return JSONResponse(status_code=503, content={"success": False, "error": "Não foi possível salvar o estudo aprovado."})
+
+
+@app.get("/api/financial-studies")
+def list_financial_studies(request: Request, query: str = Query(default="", max_length=180), limit: int = Query(default=100, ge=1, le=200)):
+    try:
+        return {"success": True, "items": financial_studies.list_studies(query=query, limit=limit)}
+    except RuntimeError as error:
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+    except Exception:
+        logger.exception("Falha ao listar estudos financeiros")
+        return JSONResponse(status_code=503, content={"success": False, "error": "Não foi possível carregar o histórico de estudos."})
+
+
+@app.get("/api/financial-studies/{study_id}")
+def read_financial_study(study_id: str, request: Request):
+    try:
+        study = financial_studies.get_study(study_id)
+    except RuntimeError as error:
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+    except Exception:
+        logger.exception("Falha ao carregar estudo financeiro %s", study_id)
+        return JSONResponse(status_code=503, content={"success": False, "error": "Não foi possível carregar o estudo."})
+    if study is None:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
+    return {"success": True, "study": study}
 
 
 @app.get("/api/piperun/{opportunity_id}")
