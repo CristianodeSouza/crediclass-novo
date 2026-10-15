@@ -61,7 +61,7 @@ const screens = {
   },
 };
 
-const financialStudyHistoryState = { items: [], selectedId: null, loaded: false, loading: false };
+const financialStudyHistoryState = { items: [], selectedId: null, documentHtml: "", loaded: false, loading: false };
 const financialStudyApprovalState = { pendingKey: null, pendingFingerprint: null };
 
 const mapState = {
@@ -497,8 +497,10 @@ function renderFinancialStudyHistory(items) {
   const rows = document.getElementById("financialStudyHistoryRows");
   const state = document.getElementById("financialStudyHistoryState");
   if (!rows || !state) return;
-  rows.innerHTML = items.map((item) => `<tr><td><strong>${escapeHtml(item.id)}</strong></td><td>${escapeHtml(item.client_name)}</td><td>${escapeHtml(financialStudyHistoryDate(item.approved_at))}</td><td>${escapeHtml(item.approved_by)}</td><td>${Number(item.group_count) || 0}</td><td>${item.has_snapshot ? "Snapshot completo" : "Registro legado"}</td><td><button class="btn btn-outline-secondary btn-sm" type="button" data-financial-study-open="${escapeHtml(item.id)}">Visualizar</button></td></tr>`).join("");
-  state.textContent = items.length ? `${items.length} estudo(s) aprovado(s).` : "Nenhum estudo aprovado encontrado.";
+  rows.innerHTML = items.map((item) => `<tr><td data-label="Estudo"><strong>${escapeHtml(item.id)}</strong></td><td data-label="Cliente">${escapeHtml(item.client_name)}</td><td data-label="Aprovado em">${escapeHtml(financialStudyHistoryDate(item.approved_at))}</td><td data-label="Responsável">${escapeHtml(item.approved_by)}</td><td data-label="Grupos">${Number(item.group_count) || 0}</td><td data-label="Arquivo"><span class="financial-study-history-file ${item.has_snapshot ? "is-complete" : ""}">${item.has_snapshot ? "Estudo Completo" : "Registro legado"}</span></td><td data-label="Ação"><button class="btn btn-outline-secondary btn-sm" type="button" data-financial-study-open="${escapeHtml(item.id)}">Visualizar</button></td></tr>`).join("");
+  state.hidden = items.length > 0;
+  state.textContent = "Nenhum estudo aprovado encontrado.";
+  document.querySelector(".financial-study-history-list-wrap")?.classList.toggle("d-none", items.length === 0);
   rows.querySelectorAll("[data-financial-study-open]").forEach((button) => button.addEventListener("click", () => openFinancialStudyHistoryItem(button.dataset.financialStudyOpen)));
 }
 
@@ -506,7 +508,9 @@ async function loadFinancialStudyHistory() {
   const state = document.getElementById("financialStudyHistoryState");
   const search = document.getElementById("financialStudyHistorySearch");
   if (!state) return;
+  state.hidden = false;
   state.textContent = "Carregando histórico…";
+  document.querySelector(".financial-study-history-list-wrap")?.classList.add("d-none");
   try {
     const query = new URLSearchParams({ query: search?.value.trim() || "", limit: "200" });
     const payload = await apiGet(`/financial-studies?${query.toString()}`);
@@ -527,6 +531,7 @@ async function openFinancialStudyHistoryItem(studyId) {
     document.getElementById("financialStudyHistoryDetailMeta").textContent = `Aprovado em ${financialStudyHistoryDate(study.approved_at)} por ${study.approved_by} · versão ${study.app_version}`;
     const frame = document.getElementById("financialStudyHistoryFrame");
     const documentHtml = study.document_html || `<main style="font:16px system-ui;max-width:720px;margin:40px auto;color:#2e3f47"><h1>Registro legado</h1><p>Este registro já existia na planilha e não possui um snapshot visual arquivado. Os dados originais foram preservados.</p></main>`;
+    financialStudyHistoryState.documentHtml = documentHtml;
     frame.srcdoc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/static/css/style.css"><style>body{margin:16px;background:#fff}.financial-study-document{max-width:1100px;margin:auto}</style></head><body>${documentHtml}</body></html>`;
     const shareStatus = document.getElementById("financialStudyShareStatus");
     const shareLinkRow = document.getElementById("financialStudyShareLinkRow");
@@ -547,6 +552,34 @@ async function openFinancialStudyHistoryItem(studyId) {
   } catch (error) {
     showToast(error.message || "Não foi possível abrir o estudo.", "danger");
   }
+}
+
+function closeFinancialStudyHistoryItem() {
+  document.getElementById("financialStudyHistoryDetail")?.classList.add("d-none");
+  const frame = document.getElementById("financialStudyHistoryFrame");
+  if (frame) frame.srcdoc = "";
+  financialStudyHistoryState.selectedId = null;
+  financialStudyHistoryState.documentHtml = "";
+}
+
+function printFinancialStudyHistoryItem() {
+  if (!financialStudyHistoryState.documentHtml) {
+    showToast("Abra um estudo antes de imprimir.", "warning");
+    return;
+  }
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    showToast("Permita a abertura da janela de impressão para continuar.", "warning");
+    return;
+  }
+  printWindow.opener = null;
+  printWindow.addEventListener("load", () => {
+    printWindow.focus();
+    printWindow.print();
+  }, { once: true });
+  printWindow.document.open();
+  printWindow.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Estudo Financeiro</title><link rel="stylesheet" href="/static/css/style.css"><style>@page{size:A4 landscape;margin:10mm}html,body{width:auto!important;height:auto!important;margin:0!important;overflow:visible!important;background:#fff!important}.financial-study-document{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;box-shadow:none!important}</style></head><body>${financialStudyHistoryState.documentHtml}</body></html>`);
+  printWindow.document.close();
 }
 
 const FINANCIAL_STUDY_ADMINISTRATOR_BENEFITS = {
@@ -6464,10 +6497,8 @@ document.getElementById("searchFinancialStudyHistoryBtn")?.addEventListener("cli
 document.getElementById("financialStudyHistorySearch")?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") loadFinancialStudyHistory();
 });
-document.getElementById("printFinancialStudyHistoryBtn")?.addEventListener("click", () => {
-  try { document.getElementById("financialStudyHistoryFrame")?.contentWindow?.print(); }
-  catch { showToast("Não foi possível abrir a impressão deste estudo.", "warning"); }
-});
+document.getElementById("printFinancialStudyHistoryBtn")?.addEventListener("click", printFinancialStudyHistoryItem);
+document.getElementById("closeFinancialStudyHistoryBtn")?.addEventListener("click", closeFinancialStudyHistoryItem);
 document.getElementById("generateFinancialStudyShareBtn")?.addEventListener("click", async (event) => {
   const studyId = event.currentTarget.dataset.studyId;
   if (!studyId || !window.confirm("Qualquer pessoa com este link poderá visualizar o estudo aprovado. O link expirará em 30 dias. Deseja continuar?")) return;

@@ -853,17 +853,21 @@
               <input id="financialStudyHistorySearch" class="form-control" type="search" maxlength="180" placeholder="Nome do cliente ou EF-…">
               <button id="searchFinancialStudyHistoryBtn" class="btn btn-primary" type="button">Buscar</button>
             </div>
-            <div id="financialStudyHistoryState" class="table-state" aria-live="polite">Carregando histórico…</div>
+            <div id="financialStudyHistoryState" class="financial-study-history-state" aria-live="polite">Carregando histórico…</div>
             <div class="table-wrap financial-study-history-list-wrap">
               <table class="data-table financial-study-history-table">
-                <thead><tr><th>Estudo</th><th>Cliente</th><th>Aprovado em</th><th>Responsável</th><th>Grupos</th><th>Arquivo</th><th></th></tr></thead>
+                <colgroup><col class="study-col-id"><col class="study-col-client"><col class="study-col-date"><col class="study-col-operator"><col class="study-col-groups"><col class="study-col-file"><col class="study-col-action"></colgroup>
+                <thead><tr><th>Estudo</th><th>Cliente</th><th>Aprovado em</th><th>Responsável</th><th>Grupos</th><th>Arquivo</th><th>Ação</th></tr></thead>
                 <tbody id="financialStudyHistoryRows"></tbody>
               </table>
             </div>
             <section id="financialStudyHistoryDetail" class="financial-study-history-detail d-none" aria-label="Estudo selecionado">
               <div class="financial-study-history-detail-heading">
                 <div><h3 id="financialStudyHistoryDetailTitle"></h3><p id="financialStudyHistoryDetailMeta"></p></div>
-                <button id="printFinancialStudyHistoryBtn" class="btn btn-outline-secondary" type="button">Imprimir / Salvar PDF</button>
+                <div class="financial-study-history-detail-actions">
+                  <button id="closeFinancialStudyHistoryBtn" class="btn btn-outline-secondary" type="button" aria-label="Fechar estudo aberto">Fechar estudo</button>
+                  <button id="printFinancialStudyHistoryBtn" class="btn btn-outline-secondary" type="button">Imprimir</button>
+                </div>
               </div>
               <section class="financial-study-share" aria-label="Link público do estudo">
                 <div class="financial-study-share-copy">

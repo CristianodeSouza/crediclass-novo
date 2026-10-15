@@ -25,7 +25,8 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn('id="financialStudyHistoryRows"', history_screen)
         self.assertIn('id="financialStudyHistoryFrame"', history_screen)
         self.assertIn('sandbox="allow-modals"', history_screen)
-        self.assertIn('contentWindow?.print()', app_js)
+        self.assertIn('function printFinancialStudyHistoryItem()', app_js)
+        self.assertIn('window.open("", "_blank")', app_js)
         self.assertIn('id="generateFinancialStudyShareBtn"', history_screen)
         self.assertIn('id="copyFinancialStudyShareBtn"', history_screen)
         self.assertIn('id="revokeFinancialStudyShareBtn"', history_screen)
@@ -370,6 +371,19 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("@page { size: A4 landscape; margin: 10mm; }", css)
         self.assertIn("overflow: visible !important;", css)
         self.assertIn(".financial-study-part9-mobile,\n  .financial-study-part10-mobile { display: none !important; }", css)
+
+    def test_study_history_layout_print_and_close_controls(self):
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn('"Estudo Completo"', app_js)
+        self.assertIn('state.hidden = items.length > 0', app_js)
+        self.assertIn('window.open("", "_blank")', app_js)
+        self.assertIn('id="closeFinancialStudyHistoryBtn"', html)
+        self.assertIn('id="printFinancialStudyHistoryBtn" class="btn btn-outline-secondary" type="button">Imprimir</button>', html)
+        self.assertIn(".financial-study-history-table .study-col-id", css)
+        self.assertIn(".financial-study-history-table tbody tr", css)
 
     def test_legacy_study_backend_modules_are_absent(self):
         backend = ROOT / "backend"

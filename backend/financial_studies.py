@@ -5,7 +5,9 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 import secrets
+import threading
 import zlib
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
@@ -37,6 +39,7 @@ SHARE_COLUMNS = {
     "revoked": "financial_study_public_revoked",
 }
 PUBLIC_LINK_VALIDITY_DAYS = 30
+_study_id_lock = threading.Lock()
 
 
 def _quoted_sheet() -> str:
@@ -201,6 +204,19 @@ def _compress_archive(snapshot: dict, document_html: str, app_version: str) -> s
     return encoded
 
 
+def _next_study_id(now: datetime, approval_key: str, existing_ids: list[list[str]]) -> str:
+    sequence = 999
+    for row in existing_ids:
+        if not row:
+            continue
+        match = re.match(r"^EF-(\d+)(0[1-9]|1[0-2])(\d{4})-", str(row[0]).strip(), re.IGNORECASE)
+        if match:
+            sequence = max(sequence, int(match.group(1)))
+    # Brazil has observed UTC-03:00 year-round since the 2019 DST change.
+    local_date = now.astimezone(timezone(timedelta(hours=-3)))
+    return f"EF-{sequence + 1:04d}{local_date:%m%Y}-{approval_key[:10].upper()}"
+
+
 def _decompress_archive(value: str) -> dict | None:
     if not value:
         return None
@@ -225,30 +241,14 @@ def create_study(*, client_name: str, approved_by: str, app_version: str, snapsh
     headers, indexes = _headers()
     headers, indexes = _ensure_archive_columns(headers, indexes)
 
-    key_column = _index(indexes, "approval_key")
-    existing_keys = _read_column(key_column)
-    for row_number, row in enumerate(existing_keys, start=2):
-        if row and str(row[0]).strip() == approval_key:
-            row_values = get_service().spreadsheets().values().get(
-                spreadsheetId=settings.google_sheets_id,
-                range=f"{_quoted_sheet()}!A{row_number}:ZZ{row_number}",
-            ).execute().get("values", [[]])[0]
-            return {
-                "id": str(row_values[_index(indexes, "study_id")] or ""),
-                "client_name": client_name,
-                "approved_at": str(row_values[_index(indexes, "created_at")] or ""),
-                "approved_by": str(row_values[_index(indexes, "operator")] or ""),
-                "app_version": app_version,
-            }
-
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    study_id = f"EF-{now[:10].replace('-', '')}-{approval_key[:10].upper()}"
+    created_at = datetime.fromisoformat(now)
     groups = snapshot["groups"]
     group_ids = list(dict.fromkeys(str(group.get("group") or group.get("group_key") or "").strip() for group in groups))
     administrators = list(dict.fromkeys(str(group.get("administrator") or "").strip() for group in groups if str(group.get("administrator") or "").strip()))
     values = [""] * len(headers)
     field_values = {
-        "study_id": study_id,
+        "study_id": "",
         "created_at": now,
         "status": "Aprovado",
         "operator": approved_by,
@@ -259,15 +259,34 @@ def create_study(*, client_name: str, approved_by: str, app_version: str, snapsh
         "approval_key": approval_key,
         "archive": archive,
     }
-    for field, value in field_values.items():
-        values[_index(indexes, field)] = value
-    get_service().spreadsheets().values().append(
-        spreadsheetId=settings.google_sheets_id,
-        range=f"{_quoted_sheet()}!A:ZZ",
-        valueInputOption="RAW",
-        insertDataOption="INSERT_ROWS",
-        body={"values": [values]},
-    ).execute()
+    with _study_id_lock:
+        key_column = _index(indexes, "approval_key")
+        existing_keys = _read_column(key_column)
+        for row_number, row in enumerate(existing_keys, start=2):
+            if row and str(row[0]).strip() == approval_key:
+                row_values = get_service().spreadsheets().values().get(
+                    spreadsheetId=settings.google_sheets_id,
+                    range=f"{_quoted_sheet()}!A{row_number}:ZZ{row_number}",
+                ).execute().get("values", [[]])[0]
+                return {
+                    "id": str(row_values[_index(indexes, "study_id")] or ""),
+                    "client_name": client_name,
+                    "approved_at": str(row_values[_index(indexes, "created_at")] or ""),
+                    "approved_by": str(row_values[_index(indexes, "operator")] or ""),
+                    "app_version": app_version,
+                }
+
+        study_ids = _read_column(_index(indexes, "study_id"))
+        study_id = _next_study_id(created_at, approval_key, study_ids)
+        for field, value in field_values.items():
+            values[_index(indexes, field)] = study_id if field == "study_id" else value
+        get_service().spreadsheets().values().append(
+            spreadsheetId=settings.google_sheets_id,
+            range=f"{_quoted_sheet()}!A:ZZ",
+            valueInputOption="RAW",
+            insertDataOption="INSERT_ROWS",
+            body={"values": [values]},
+        ).execute()
     return {"id": study_id, "client_name": client_name, "approved_at": now, "approved_by": approved_by, "app_version": app_version}
 
 

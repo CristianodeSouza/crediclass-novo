@@ -166,6 +166,13 @@ class FinancialStudiesHistoryApiTest(unittest.TestCase):
         self.assertEqual(decoded["document_html"], document)
         self.assertEqual(decoded["app_version"], "4.0.200")
 
+    def test_study_id_uses_sequential_number_and_brazil_month_year(self):
+        approval_key = "c5b649db06114abd8be30cb8a9f4c6f0"
+        now = financial_studies.datetime(2026, 10, 15, 14, 0, tzinfo=financial_studies.timezone.utc)
+        self.assertEqual(financial_studies._next_study_id(now, approval_key, []), "EF-1000102026-C5B649DB06")
+        ids = [["EF-20261015-OLDIDENTIFIER"], ["EF-1000102026-C5B649DB06"]]
+        self.assertEqual(financial_studies._next_study_id(now, approval_key, ids), "EF-1001102026-C5B649DB06")
+
     def test_sheet_persistence_appends_without_overwriting_legacy_columns_and_is_idempotent(self):
         fake_service = _FakeSheetService()
         approval_key = "00000000-0000-4000-8000-000000000002"
