@@ -4871,13 +4871,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 /* Motor 360: cabeçalhos dos grupos com colunas estáveis e leitura alinhada. */
 .motor360-group-card-header {
-  align-items: stretch;
-  gap: 22px;
+  display: grid;
+  grid-template-columns: minmax(310px, .85fr) minmax(0, 1.5fr);
+  align-items: center;
+  gap: 18px;
 }
 .motor360-group-identity {
   grid-template-columns: auto minmax(180px, 1fr) minmax(205px, 240px);
   align-items: center;
-  flex: 1 1 42%;
+  min-width: 0;
 }
 .motor360-group-identity > div { display: contents; }
 .motor360-group-title,
@@ -4891,33 +4893,50 @@ body[data-theme="escuro"] .btn-outline-secondary {
   box-sizing: border-box;
 }
 .motor360-group-summary {
-  flex: 1 1 58%;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
-  flex-wrap: wrap;
-  row-gap: 8px;
+  gap: 10px 8px;
 }
-.motor360-group-summary > div { min-width: 100px; }
+.motor360-group-summary > div:nth-child(-n+3) { min-width: 0; }
+.motor360-group-summary .motor360-group-actions { display: flex; grid-column: 1 / -1; min-width: 0; align-items: center; justify-content: flex-end; gap: 8px; justify-items: initial; text-align: left; }
 .motor360-group-summary .motor360-group-select,
 .motor360-group-summary .motor360-group-status,
 .motor360-group-summary .motor360-quota-area,
 .motor360-group-summary .motor360-group-audit-btn { flex: 0 0 auto; }
+.motor360-group-actions .motor360-group-select,
+.motor360-scenario-title > label { white-space: nowrap; }
+.motor360-scenario-title { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 5px 10px; }
+.motor360-scenario-title strong { grid-column: 1; grid-row: 1; min-width: 0; line-height: 1.35; }
+.motor360-scenario-title > span { grid-column: 1; grid-row: 2; min-width: 0; line-height: 1.35; }
+.motor360-scenario-title > label { display: inline-flex; grid-column: 2; grid-row: 1 / span 2; min-height: 34px; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: #f7f9f9; color: var(--brand-navy); font-size: .68rem; font-weight: 700; cursor: pointer; }
+.motor360-scenario-title > label input { flex: 0 0 auto; margin: 0; }
 
 @media (max-width: 1100px) and (min-width: 901px) {
-  .motor360-group-card-header { gap: 14px; }
+  .motor360-group-card-header { grid-template-columns: minmax(260px, .78fr) minmax(0, 1.4fr); gap: 14px; }
   .motor360-group-identity { grid-template-columns: auto minmax(145px, 1fr) 190px; }
-  .motor360-group-summary { gap: 8px; }
-  .motor360-group-summary > div { min-width: 82px; }
+  .motor360-group-summary { gap: 8px 6px; }
 }
 
 @media (max-width: 900px) {
-  .motor360-group-card-header { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .motor360-group-card-header { display: flex; align-items: flex-start; flex-direction: column; gap: 12px; }
   .motor360-group-identity { display: flex; width: 100%; align-items: center; gap: 11px; }
   .motor360-group-identity > div { display: block; }
   .motor360-group-title,
   .motor360-group-identity p { grid-column: auto; }
-.motor360-history-averages { width: auto; }
-  .motor360-group-summary { width: 100%; justify-content: flex-start; }
+  .motor360-history-averages { width: auto; }
+  .motor360-group-summary { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); justify-content: flex-start; }
+  .motor360-group-summary .motor360-group-actions { justify-content: flex-start; flex-wrap: wrap; }
+}
+
+@media (max-width: 560px) {
+  .motor360-group-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .motor360-group-summary > div:nth-child(3) { grid-column: 1 / -1; }
+  .motor360-group-summary .motor360-group-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; justify-items: stretch; }
+  .motor360-group-actions .motor360-group-status { grid-column: 1 / -1; text-align: center; }
+  .motor360-group-actions .motor360-quota-area { justify-self: start; }
+  .motor360-scenario-title { grid-template-columns: minmax(0, 1fr); }
+  .motor360-scenario-title > label { grid-column: 1; grid-row: 3; justify-self: start; }
 }
 
 /* Comparativo analítico: os gráficos são renderizados por Apache ECharts. */

@@ -19,6 +19,7 @@ from urllib.parse import quote
 
 ROOT = Path(__file__).resolve().parents[1]
 APP_JS = ROOT / "backend" / "static" / "js" / "app.js"
+STYLE_CSS = ROOT / "backend" / "static" / "css" / "style.css"
 
 
 def _chrome_binary() -> str | None:
@@ -61,6 +62,38 @@ class Motor360BrowserTest(unittest.TestCase):
             _between(source, "function renderMotor360GroupCardUncached", "function renderMotor360GroupCard"),
             _between(source, "function renderMotor360GroupCard(item)", "function selectedMotor360Items"),
         ))
+
+    def test_group_controls_are_grouped_separately_from_summary_metrics(self):
+        result = self._run_browser(r'''
+document.querySelector("#cards").innerHTML = renderMotor360GroupCard(groups[2]);
+const card = document.querySelector(".motor360-group-card");
+const summary = card.querySelector(".motor360-group-summary");
+const actions = summary.querySelector(".motor360-group-actions");
+document.querySelector("#result").textContent = JSON.stringify({
+  metrics: [...summary.children].slice(0, 3).map(node => node.querySelector("small")?.textContent),
+  actionsPresent: Boolean(actions),
+  actionControls: [...(actions?.children || [])].map(node => node.textContent.trim().replace(/\\s+/g, " ")),
+});
+''')
+        self.assertEqual(len(result["metrics"]), 3)
+        self.assertEqual(result["metrics"][0], "Data de Venc.")
+        self.assertTrue(result["metrics"][1].startswith("Cr"))
+        self.assertEqual(result["metrics"][2], "Prazo restante")
+        self.assertTrue(result["actionsPresent"])
+        self.assertIn("Selecionar grupo", " ".join(result["actionControls"]))
+        self.assertIn("Ver", result["actionControls"][-1])
+
+    def test_group_and_scenario_controls_have_nonbreaking_responsive_layout_rules(self):
+        css = STYLE_CSS.read_text(encoding="utf-8")
+        self.assertIn(".motor360-group-summary .motor360-group-actions", css)
+        self.assertIn(".motor360-group-actions .motor360-group-select,", css)
+        self.assertIn(".motor360-scenario-title > label { display: inline-flex", css)
+        self.assertIn(
+            ".motor360-group-actions .motor360-group-select,\n.motor360-scenario-title > label { white-space: nowrap; }",
+            css,
+        )
+        self.assertIn("@media (max-width: 560px)", css)
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch", css)
 
     def _run_browser(self, actions: str, extra_functions: str = "") -> dict:
         fixture = r'''<!doctype html><meta charset="utf-8"><main id="cards"></main><pre id="result">pending</pre>
