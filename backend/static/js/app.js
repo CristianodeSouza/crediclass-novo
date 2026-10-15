@@ -374,6 +374,7 @@ function activateScreen(screenName) {
     renderFinancialStudyBenefits();
     renderFinancialStudyContracting();
     renderFinancialStudyContemplationHistory();
+    renderFinancialStudyProjection();
   }
   if (screenName === "configuracoes") {
     loadConfiguracoes();
@@ -566,6 +567,85 @@ function renderFinancialStudyContemplationHistory() {
   }).join("");
 
   target.innerHTML = `<div class="financial-study-part9-table-wrap" role="region" aria-label="Histórico mensal de lances contemplados dos grupos selecionados" tabindex="0"><table class="financial-study-part9-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Últimos Meses</th>${monthHeaders}</tr></thead><tbody>${groupRows}<tr class="financial-study-part9-total"><th scope="row" colspan="2">TOTAL · Qtde</th>${totalCells}</tr></tbody></table></div><p class="financial-study-part9-source-note">Histórico mensal fornecido pelo Motor 360. “Menor Lance” é o percentual registrado no mês; “Qtde” é a quantidade de contemplações informada. “-” indica dado ausente, não valor zero. O total soma apenas quantidades numéricas disponíveis.</p>`;
+}
+
+const FINANCIAL_STUDY_CONTEMPLATION_PROFILES = [
+  { id: "conservative", number: 2, label: "Lance Conservador" },
+  { id: "moderate", number: 3, label: "Lance Moderado" },
+  { id: "aggressive", number: 4, label: "Lance Agressivo / Rápido" },
+  { id: "super_aggressive", number: 5, label: "Lance Superagressivo / Urgente" },
+];
+
+function renderFinancialStudyProjection() {
+  const target = document.getElementById("financialStudyPart10Content");
+  if (!target) return;
+  const items = selectedMotor360Items();
+  if (!items.length) {
+    target.innerHTML = '<p class="financial-study-part10-empty">Selecione grupos no Motor 360 para exibir a projeção de contemplação.</p>';
+    return;
+  }
+
+  const scenarioIds = ["without_embedded", "with_embedded"];
+  const metricsByScenario = Object.fromEntries(scenarioIds.map((id) => [id, selectedCompositionScenarioMetrics(items, id)]));
+  const entryFor = (item, scenarioId) => metricsByScenario[scenarioId]?.entries.find((entry) => motor360GroupKey(entry.item) === motor360GroupKey(item));
+  const profileProjectionRows = (profileId) => items.flatMap((item) => {
+    const groupKey = motor360GroupKey(item);
+    const chosenScenarios = selectedScenarioIdsForGroup(groupKey);
+    return scenarioIds.flatMap((scenarioId) => {
+      if (!chosenScenarios.has(scenarioId)) return [];
+      const entry = entryFor(item, scenarioId);
+      const profile = entry?.profiles[profileId];
+      const percentage = Number(profile?.percentual_referencia);
+      const totalBid = Number(profile?.lance_ideal_total);
+      if (!entry || !profile || !Number.isFinite(percentage) || !Number.isFinite(totalBid)) return [];
+      const embedded = entry.embedded;
+      const clientResources = Number(profile.ideal || 0);
+      const groupLabel = `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"} · ${entry.quotas} ${entry.quotas === 1 ? "cota" : "cotas"} · ${scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}`;
+      return [{
+        scenarioId,
+        groupLabel,
+        percentage,
+        totalBid: totalBid * entry.ratio * entry.quotas,
+        embedded,
+        clientResources,
+        credit: entry.credit,
+        installment: entry.installment,
+        term: entry.item.prazo_restante,
+      }];
+    });
+  });
+  const lotteryRows = items.flatMap((item) => {
+    const entry = entryFor(item, "without_embedded");
+    if (!entry) return [];
+    return [{
+      scenarioId: "without_embedded",
+      groupLabel: `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"} · ${entry.quotas} ${entry.quotas === 1 ? "cota" : "cotas"}`,
+      percentage: 0,
+      totalBid: 0,
+      embedded: 0,
+      clientResources: 0,
+      credit: entry.contractedCredit,
+      installment: entry.installment,
+      term: entry.item.prazo_restante,
+    }];
+  });
+  const tableFor = (rows, label) => {
+    if (!rows.length) return '<p class="financial-study-part10-empty">Não há dados do Motor 360 para esta seleção.</p>';
+    const rowMarkup = rows.map((row) => `<tr><th scope="row">${escapeHtml(row.groupLabel)}</th><td>${formatPercent(row.percentage)}</td><td>${formatMoney(row.totalBid)}</td><td>${row.embedded > 0 ? formatMoney(row.embedded) : "-"}</td><td>${formatMoney(row.clientResources)}</td><td>${formatMoney(row.credit)}</td><td>${formatMoney(row.installment)}</td><td>${row.term == null || row.term === "" ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td></tr>`).join("");
+    const subtotalRows = scenarioIds.map((scenarioId) => {
+      const scenarioRows = rows.filter((row) => row.scenarioId === scenarioId);
+      if (!scenarioRows.length) return "";
+      const totals = scenarioRows.reduce((sum, row) => ({ bid: sum.bid + row.totalBid, embedded: sum.embedded + row.embedded, own: sum.own + row.clientResources, credit: sum.credit + row.credit, installment: sum.installment + row.installment }), { bid: 0, embedded: 0, own: 0, credit: 0, installment: 0 });
+      const scenarioLabel = scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido";
+      return `<tr class="financial-study-part10-total"><th scope="row">Total ${scenarioLabel} · ${scenarioRows.length} ${scenarioRows.length === 1 ? "item" : "itens"}</th><td>—</td><td>${formatMoney(totals.bid)}</td><td>${formatMoney(totals.embedded)}</td><td>${formatMoney(totals.own)}</td><td>${formatMoney(totals.credit)}</td><td>${formatMoney(totals.installment)}</td><td>—</td></tr>`;
+    }).join("");
+    return `<div class="financial-study-part10-table-wrap" role="region" aria-label="${escapeHtml(label)}" tabindex="0"><table class="financial-study-part10-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Percentual</th><th scope="col">Lance total ideal</th><th scope="col">Pago carta</th><th scope="col">Pago recurso próprio</th><th scope="col">Crédito líquido</th><th scope="col">Parcela inicial (sem seguro)</th><th scope="col">Prazo restante</th></tr></thead><tbody>${rowMarkup}${subtotalRows}</tbody></table></div>`;
+  };
+  const profileSections = FINANCIAL_STUDY_CONTEMPLATION_PROFILES.map((profile) => {
+    const rows = profileProjectionRows(profile.id);
+    return `<section class="financial-study-part10-profile"><h3>${profile.number}. ${escapeHtml(profile.label)}</h3>${tableFor(rows, `Projeção ${profile.label}`)}</section>`;
+  }).join("");
+  target.innerHTML = `<section class="financial-study-part10-lottery"><h3>1. Sorteio Geral</h3>${tableFor(lotteryRows, "Projeção de contemplação por sorteio geral")}</section>${profileSections}<p class="financial-study-part10-source-note">Sorteio Geral considera o crédito contratado integral, sem lance próprio e sem lance embutido, conforme a premissa deste estudo. Os lances e percentuais dos demais quadros vêm dos perfis calculados pelo Motor 360; crédito, embutido, parcela inicial e prazo vêm do cenário correspondente. Cenários sem e com embutido são alternativas e seus totais permanecem separados. Parcela exibida é a parcela inicial do cenário, não uma projeção de parcela após contemplação por perfil. A contemplação não é garantida.</p>`;
 }
 
 function renderFinancialStudySummary() {

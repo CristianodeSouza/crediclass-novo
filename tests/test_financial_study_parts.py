@@ -255,6 +255,36 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertNotIn("<img", part)
         self.assertIn(".financial-study-part9-table", css)
 
+    def test_part_ten_projection_uses_motor_profiles_and_lottery_full_credit(self):
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+        start = html.index('data-study-part="10"')
+        end = html.index("</section>", start)
+        part = html[start:end]
+        function_start = app_js.index("function renderFinancialStudyProjection()")
+        function_end = app_js.index("\nfunction renderFinancialStudySummary()", function_start)
+        renderer = app_js[function_start:function_end]
+
+        self.assertIn('data-study-part-name="Projeção de Contemplação"', part)
+        self.assertIn('id="financialStudyPart10Content"', part)
+        self.assertIn("renderFinancialStudyProjection();", app_js)
+        self.assertIn("selectedCompositionScenarioMetrics(items, id)", renderer)
+        for profile_id in ("conservative", "moderate", "aggressive", "super_aggressive"):
+            self.assertIn(f'id: "{profile_id}"', app_js)
+        self.assertIn('entryFor(item, "without_embedded")', renderer)
+        self.assertIn("credit: entry.contractedCredit", renderer)
+        self.assertIn("percentage: 0", renderer)
+        self.assertIn("clientResources: 0", renderer)
+        self.assertIn("profile?.lance_ideal_total", renderer)
+        self.assertIn("Number(profile.ideal || 0)", renderer)
+        self.assertIn("entry.embedded", renderer)
+        self.assertIn("entry.installment", renderer)
+        self.assertIn("Cenários sem e com embutido são alternativas", renderer)
+        self.assertIn("não uma projeção de parcela após contemplação por perfil", renderer)
+        self.assertNotIn("<img", part)
+        self.assertIn(".financial-study-part10-table", css)
+
     def test_legacy_study_backend_modules_are_absent(self):
         backend = ROOT / "backend"
         for module in ("estudos.py", "templates_estudos.py", "financial_study_engine.py", "pdf_bridge.py"):
