@@ -91,7 +91,7 @@ document.querySelector("#result").textContent = JSON.stringify({
         css = STYLE_CSS.read_text(encoding="utf-8")
         self.assertIn(".motor360-group-summary .motor360-group-actions", css)
         self.assertIn(".motor360-group-actions .motor360-group-select,", css)
-        self.assertIn(".motor360-scenario-title > label { display: inline-flex", css)
+        self.assertIn(".motor360-scenario-title > label.motor360-scenario-quota { display: flex", css)
         self.assertIn(
             ".motor360-group-actions .motor360-group-select,\n.motor360-scenario-title > label { white-space: nowrap; }",
             css,

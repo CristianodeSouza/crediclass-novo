@@ -174,6 +174,32 @@ const until = async (predicate, timeout = 15000) => {
   withScenario.checked = false;
   withScenario.dispatchEvent(new Event("change", { bubbles: true }));
   const withoutCount = document.querySelectorAll(".motor360-group-card").length;
+  withoutScenario.checked = false;
+  withoutScenario.dispatchEvent(new Event("change", { bubbles: true }));
+  let firstCard = document.querySelector(".motor360-group-card");
+  const groupSelect = firstCard.querySelector(".motor360-group-select-input");
+  groupSelect.checked = true;
+  groupSelect.dispatchEvent(new Event("change", { bubbles: true }));
+  await until(() => document.querySelector('.motor360-group-card [data-quota-action="scenario"][data-scenario-id="without_embedded"]'));
+  firstCard = document.querySelector(".motor360-group-card");
+  const noEmbeddedQuota = firstCard.querySelector('[data-quota-action="scenario"][data-scenario-id="without_embedded"]');
+  noEmbeddedQuota.value = "2";
+  noEmbeddedQuota.dispatchEvent(new Event("change", { bubbles: true }));
+  await until(() => document.querySelector('.motor360-group-card [data-quota-action="scenario"][data-scenario-id="with_embedded"]'));
+  const currentCard = document.querySelector(".motor360-group-card");
+  const embeddedQuota = currentCard.querySelector('[data-quota-action="scenario"][data-scenario-id="with_embedded"]');
+  embeddedQuota.value = "1";
+  embeddedQuota.dispatchEvent(new Event("change", { bubbles: true }));
+  const selectedKey = currentCard.querySelector(".motor360-group-select-input").dataset.groupId;
+  const scenarioCounts = investorState.quotaCounts.get(selectedKey);
+  const noEmbeddedMetrics = selectedCompositionScenarioMetrics(selectedMotor360Items(), "without_embedded");
+  const embeddedMetrics = selectedCompositionScenarioMetrics(selectedMotor360Items(), "with_embedded");
+  const selectedGroupItem = selectedMotor360Items()[0];
+  const noEmbeddedUnit = selectedGroupItem.cenarios.find(scenario => scenario.id === "without_embedded");
+  const embeddedUnit = selectedGroupItem.cenarios.find(scenario => scenario.id === "with_embedded");
+  const deselectGroup = document.querySelector(`.motor360-group-select-input[data-group-id="${selectedKey}"]`);
+  deselectGroup.checked = false;
+  deselectGroup.dispatchEvent(new Event("change", { bubbles: true }));
 
   const term = document.querySelector('[data-motor360-advanced="maxTerm"]');
   const removedFilterKeys = ["minCredit", "maxInstallment", "maxBid", "minHistory", "maxCommitment"];
@@ -188,7 +214,7 @@ const until = async (predicate, timeout = 15000) => {
 
   const layout = { viewport: innerWidth, document: document.documentElement.scrollWidth, results: document.getElementById("investorAnalysisResults").scrollWidth };
   window.__motor360E2E.outcome = {
-    initialGroups, sortedCards, withCount, bothCount, withoutCount, termFilteredGroups, cleared, removedFiltersAbsent, dynamicTypes, typeRequired: typeSelect.required, blockedWithoutType,
+    initialGroups, sortedCards, withCount, bothCount, withoutCount, scenarioCounts, noEmbeddedMetricQuotas: noEmbeddedMetrics.totalQuotas, embeddedMetricQuotas: embeddedMetrics.totalQuotas, noEmbeddedCredit: noEmbeddedMetrics.credit, expectedNoEmbeddedCredit: Number(noEmbeddedUnit.credito_liquido_projetado ?? noEmbeddedUnit.credito_contratado) * 2, embeddedCredit: embeddedMetrics.credit, expectedEmbeddedCredit: Number(embeddedUnit.credito_liquido_projetado ?? embeddedUnit.credito_contratado), termFilteredGroups, cleared, removedFiltersAbsent, dynamicTypes, typeRequired: typeSelect.required, blockedWithoutType,
     analysisCalls: window.__motor360E2E.analysisCalls, errors: window.__motor360E2E.errors, layout,
   };
   document.getElementById("motor360-e2e-result").textContent = JSON.stringify(window.__motor360E2E.outcome);
@@ -292,6 +318,11 @@ const until = async (predicate, timeout = 15000) => {
         self.assertEqual(outcome["withCount"], 2)
         self.assertEqual(outcome["bothCount"], 4)
         self.assertEqual(outcome["withoutCount"], 4)
+        self.assertEqual(outcome["scenarioCounts"], {"without_embedded": 2, "with_embedded": 1})
+        self.assertEqual(outcome["noEmbeddedMetricQuotas"], 2)
+        self.assertEqual(outcome["embeddedMetricQuotas"], 1)
+        self.assertAlmostEqual(outcome["noEmbeddedCredit"], outcome["expectedNoEmbeddedCredit"])
+        self.assertAlmostEqual(outcome["embeddedCredit"], outcome["expectedEmbeddedCredit"])
         self.assertEqual(outcome["termFilteredGroups"], ["Grupo 20399", "Grupo 1011", "Grupo NO-BID"])
         self.assertTrue(outcome["cleared"])
         self.assertTrue(outcome["removedFiltersAbsent"])

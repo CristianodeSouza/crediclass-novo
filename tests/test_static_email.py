@@ -83,7 +83,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn('showPortfolioLabels ? "Lance total da composição" : "Lance total do cenário"', card_renderer)
         self.assertIn('item.requires_composition === true', card_renderer)
         self.assertIn('`Possível em composição · mín. ${visibleMinimum} cotas`', card_renderer)
-        self.assertIn(': "Escolha um cenário"', card_renderer)
+        self.assertIn(': "Defina cotas por cenário"', card_renderer)
         self.assertIn(': "Requer ajuste"', card_renderer)
         self.assertIn('class="motor360-group-status is-${displayStatusTone}"', card_renderer)
         self.assertIn('title="${escapeHtml(displayStatusDetail)}"', card_renderer)
