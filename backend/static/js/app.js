@@ -4999,6 +4999,8 @@ function setInvestorAnalysisState(state) {
   const normalizedState = ["loading", "error", "results", "empty"].includes(state) ? state : "empty";
 
   loading?.classList.toggle("d-none", normalizedState !== "loading");
+  const resultsRegion = document.getElementById("investorAnalysisResults");
+  resultsRegion?.setAttribute("aria-busy", normalizedState === "loading" ? "true" : "false");
   error?.classList.toggle("d-none", normalizedState !== "error");
   empty?.classList.toggle("d-none", normalizedState !== "empty");
   results?.classList.toggle("d-none", normalizedState !== "results");
@@ -5070,6 +5072,8 @@ async function loadInvestorAnalysis() {
     return;
   }
   status.textContent = "Processando...";
+  const loadingMessage = document.getElementById("investorAnalysisLoadingMessage");
+  if (loadingMessage) loadingMessage.textContent = "Consultando a base e analisando grupos. Aguarde…";
   setInvestorAnalysisState("loading");
   addMotor360ExecutionLog("Requisição enviada", `Crédito ${formatMoney(profile.credito_desejado)} · parcela ${formatMoney(profile.parcela_desejada)} · RP ${formatMoney(profile.lance_recursos_proprios ?? profile.lance_maximo_recursos_proprios)} · FGTS ${formatMoney(profile.fgts_total)} · renda ${formatMoney(profile.renda_total)}.`);
   try {
@@ -5091,7 +5095,8 @@ async function loadInvestorAnalysis() {
       const serverTiming = formatMotor360ServerTiming(response.headers.get("Server-Timing"));
       if (serverTiming) addMotor360ExecutionLog("Tempos detalhados do servidor", serverTiming);
       if (response.ok || !retryableStatuses.has(response.status) || attempt === maxAttempts) break;
-      status.textContent = `Sincronizando base... ${attempt + 1}/${maxAttempts}`;
+      status.textContent = `Nova tentativa ${attempt + 1}/${maxAttempts}`;
+      if (loadingMessage) loadingMessage.textContent = `A conexão está demorando. Tentando novamente (${attempt + 1} de ${maxAttempts})…`;
       addMotor360ExecutionLog("Nova tentativa programada", `Serviço temporariamente indisponível (HTTP ${response.status}).`, "warning");
       await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
     }

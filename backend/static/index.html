@@ -456,7 +456,6 @@
               <ul id="motor360ExecutionLogsList" class="motor360-execution-logs"></ul>
             </details>
             <div id="investorAnalysisSummary" class="smart-engine-phase-two-summary d-none" aria-hidden="true"></div>
-            <div id="investorAnalysisLoading" class="table-state d-none">Calculando grupos para o Motor 360...</div>
             <div id="investorAnalysisError" class="table-state table-state-error d-none">Não foi possível calcular os grupos do Motor 360.</div>
             <div id="investorAnalysisEmpty" class="placeholder-card compact-placeholder">
               <p>Salve o Perfil do Cliente para analisar todas as estratégias de consórcio.</p>
@@ -467,6 +466,13 @@
               <div class="selected-groups-workspace-dialog">
                 <header class="selected-groups-workspace-header"><div><span>Análise da seleção</span><h2 id="selectedGroupsWorkspaceTitle">Grupos selecionados <small id="selectedGroupsWorkspaceCompositionSummary"></small></h2><p>Compare os grupos escolhidos sem sair do Motor 360.</p></div><div class="selected-groups-workspace-header-actions"><button id="selectedGroupsWorkspaceStudy" class="btn btn-primary" type="button">Avançar para o Estudo Financeiro</button><button id="closeSelectedGroupsWorkspace" class="btn btn-outline-secondary" type="button">Fechar</button></div></header>
                 <div id="selectedGroupsWorkspaceBody" class="selected-groups-workspace-body"><div id="selectedGroupsWorkspaceProfileSummary"></div><div id="selectedGroupsEmpty" class="placeholder-card compact-placeholder"><p>Nenhum grupo selecionado.</p></div><div id="selectedGroupsResults" class="selected-groups-list d-none"></div></div>
+              </div>
+            </div>
+            <div id="investorAnalysisLoading" class="motor360-loading-overlay d-none" role="status" aria-live="polite" aria-atomic="true">
+              <div class="motor360-loading-panel">
+                <span class="motor360-loading-icon" aria-hidden="true">◷</span>
+                <span class="motor360-loading-spinner" aria-hidden="true"></span>
+                <strong id="investorAnalysisLoadingMessage">Consultando a base e analisando grupos. Aguarde…</strong>
               </div>
             </div>
           </div>
