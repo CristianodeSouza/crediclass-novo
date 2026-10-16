@@ -10,6 +10,28 @@ from backend.models import ViabilidadeRequest
 
 
 class Motor360ApiContractTest(unittest.TestCase):
+    def test_endpoint_filters_asset_type_before_passing_groups_to_engine(self):
+        property_group = {"grupo": "126", "administradora": "ITAÚ", "tipo_bem": "Imóvel"}
+        auto_group = {"grupo": "A1", "administradora": "ITAÚ", "tipo_bem": "Automóvel"}
+        request = ViabilidadeRequest(
+            objetivo="Contemplar - urgente - 3 meses", credito_desejado=600000,
+            prazo_desejado=3, lance_proprio=460000, fgts=0, renda_total=40000,
+            parcela_desejada=4500, parcela_limite=12000,
+            tipo_bem="Imóvel", tipo_bem_explicit=True,
+        )
+        analysis = {"audit": {"metadata": {}, "data_source": {}, "summary": {}, "execution_steps": []}}
+        with patch("backend.main.list_grupos", return_value=[property_group, auto_group]), patch(
+            "backend.main.analyze_client_consortium_viability", return_value=analysis
+        ) as analyze, patch(
+            "backend.main.save_motor360_audit", return_value={"metadata": {"audit_id": "AUD-TYPE-FILTER"}}
+        ):
+            result = viabilidade_360_analisar(request, Response())
+
+        self.assertEqual(analyze.call_args.args[1], [property_group])
+        self.assertEqual(result["grupos_na_base"], 2)
+        self.assertEqual(result["grupos_filtrados_por_tipo_bem"], 1)
+        self.assertEqual(result["grupos_ignorados_por_tipo_bem"], 1)
+
     def test_source_row_fields_survive_analysis_and_endpoint_serialization(self):
         source_row = {
             "grupo_id": "1011", "grupo": "1011", "grupo_raw": "1011", "source_row": 59,

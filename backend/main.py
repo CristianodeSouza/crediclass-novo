@@ -35,6 +35,7 @@ from . import financial_studies
 from .piperun import fetch_opportunities_preview, fetch_opportunity_notes
 from .models import GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
+from .viabilidade import compatible_tipo_bem
 
 # Uvicorn's default configuration does not attach a handler to the root
 # logger. Configure application logs explicitly so Render captures them.
@@ -659,6 +660,16 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response):
         # ao Google Sheets para cada grupo exibido.
         source_started = time.perf_counter()
         groups = list_grupos(include_history=True)
+        total_groups_in_base = len(groups)
+        requested_type = str(payload.tipo_bem or "").strip()
+        if payload.tipo_bem_explicit and requested_type:
+            # Reduzir a entrada do motor antes de qualquer cálculo de cenário,
+            # matriz de contemplação, crédito e composição. O campo tipo_bem
+            # já vem mapeado da coluna C da planilha.
+            groups = [
+                group for group in groups
+                if compatible_tipo_bem("", str(group.get("tipo_bem") or ""), requested_type)
+            ]
         source_duration_ms = (time.perf_counter() - source_started) * 1000
         administrators_analyzed = sorted(
             {str(group.get("administradora") or "").strip() for group in groups if str(group.get("administradora") or "").strip()},
@@ -672,6 +683,9 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response):
         engine_duration_ms = (time.perf_counter() - engine_started) * 1000
         result["administradoras_analisadas"] = administrators_analyzed
         result["administradora_selecionada"] = selected_administrator or None
+        result["grupos_na_base"] = total_groups_in_base
+        result["grupos_filtrados_por_tipo_bem"] = len(groups) if payload.tipo_bem_explicit and requested_type else None
+        result["grupos_ignorados_por_tipo_bem"] = total_groups_in_base - len(groups) if payload.tipo_bem_explicit and requested_type else None
         audit_payload = result.pop("audit")
         audit_payload.setdefault("data_source", {})["load_duration_ms"] = round(source_duration_ms, 2)
         audit_payload["metadata"]["engine_duration_ms"] = round(engine_duration_ms, 2)
