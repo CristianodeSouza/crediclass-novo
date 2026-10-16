@@ -77,7 +77,7 @@ class Motor360ApplicationBrowserTest(unittest.TestCase):
                     self._json({"status": "ok", "version": "e2e-fixture", "environment": "test"})
                     return
                 if path == "/api/grupos":
-                    self._json({"items": [], "total": 0, "total_administradoras": 0, "administradoras": [], "tipos_bem": []})
+                    self._json({"items": [], "total": 0, "total_administradoras": 0, "administradoras": [], "tipos_bem": ["Imovel", "Novo tipo da planilha"]})
                     return
                 if path.startswith("/static/"):
                     file_path = (STATIC / path.removeprefix("/static/")).resolve()
@@ -138,11 +138,18 @@ const until = async (predicate, timeout = 15000) => {
 };
 (async () => {
   await until(() => document.body.classList.contains("authenticated"));
+  await until(() => document.getElementById("clientProfileTipoBem").options.length === 3);
+  const typeSelect = document.getElementById("clientProfileTipoBem");
+  const dynamicTypes = [...typeSelect.options].slice(1).map(option => option.textContent);
+  document.getElementById("advanceClientProfileBtn").click();
+  const blockedWithoutType = !document.getElementById("screen-motor360").classList.contains("active");
+  typeSelect.value = "Novo tipo da planilha";
+  typeSelect.dispatchEvent(new Event("change", { bubbles: true }));
   document.getElementById("clientProfileCredito").value = "600000";
   document.getElementById("clientProfileParcelaIdeal").value = "12000";
   document.getElementById("clientProfileParcelaLimite").value = "12000";
   updateClientProfileTotals();
-  document.querySelector('[data-screen="motor360"]').click();
+  document.getElementById("advanceClientProfileBtn").click();
   await until(() => document.querySelectorAll("#investorAnalysisResults .motor360-group-card").length === 4);
   const initialGroups = [...document.querySelectorAll(".motor360-group-card h3")].map(node => node.textContent.trim());
 
@@ -179,7 +186,7 @@ const until = async (predicate, timeout = 15000) => {
 
   const layout = { viewport: innerWidth, document: document.documentElement.scrollWidth, results: document.getElementById("investorAnalysisResults").scrollWidth };
   window.__motor360E2E.outcome = {
-    initialGroups, sortedCards, withCount, bothCount, withoutCount, termFilteredGroups, cleared,
+    initialGroups, sortedCards, withCount, bothCount, withoutCount, termFilteredGroups, cleared, dynamicTypes, typeRequired: typeSelect.required, blockedWithoutType,
     analysisCalls: window.__motor360E2E.analysisCalls, errors: window.__motor360E2E.errors, layout,
   };
   document.getElementById("motor360-e2e-result").textContent = JSON.stringify(window.__motor360E2E.outcome);
@@ -213,11 +220,15 @@ const until = async (predicate, timeout = 15000) => {
 };
 (async () => {
   await until(() => document.body.classList.contains("authenticated"));
+  await until(() => document.getElementById("clientProfileTipoBem").options.length === 3);
+  const typeSelect = document.getElementById("clientProfileTipoBem");
+  typeSelect.value = "Novo tipo da planilha";
+  typeSelect.dispatchEvent(new Event("change", { bubbles: true }));
   document.getElementById("clientProfileCredito").value = "600000";
   document.getElementById("clientProfileParcelaIdeal").value = "12000";
   document.getElementById("clientProfileParcelaLimite").value = "12000";
   updateClientProfileTotals();
-  document.querySelector('[data-screen="motor360"]').click();
+  document.getElementById("advanceClientProfileBtn").click();
   await until(() => document.querySelector("#investorAnalysisResults .motor360-group-list"));
   await sleep(250);
   const result = investorState.result;
@@ -260,6 +271,9 @@ const until = async (predicate, timeout = 15000) => {
         serialized = completed.stdout.split(marker, 1)[1].split("</pre>", 1)[0]
         outcome = json.loads(serialized)
         self.assertFalse(outcome.get("errors"), outcome.get("errors"))
+        self.assertEqual(outcome["dynamicTypes"], ["Imovel", "Novo tipo da planilha"])
+        self.assertTrue(outcome["typeRequired"])
+        self.assertTrue(outcome["blockedWithoutType"])
         self.assertEqual(outcome["initialGroups"], [f"Grupo {group}" for group in expected["expected_visible_groups_per_scenario"]["per_group"]])
         self.assertEqual([row["group"].removeprefix("Grupo ") for row in outcome["sortedCards"]], expected["expected_bid_order"])
         parsed_bids = []

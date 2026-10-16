@@ -1521,6 +1521,40 @@ function updateSelectOptions(id, values, defaultLabel) {
 function updateFilterOptions(administradoras = [], tipos = []) {
   updateSelectOptions("filterAdministradora", administradoras, "Todas");
   updateSelectOptions("filterTipoBem", tipos, "Todos");
+  updateClientProfileTipoBemOptions(tipos);
+}
+
+function updateClientProfileTipoBemOptions(values = []) {
+  const select = document.getElementById("clientProfileTipoBem");
+  if (!select) return;
+  const selected = select.dataset.pendingType || select.value;
+  const uniqueTypes = [...new Map(values
+    .map((value) => String(value || "").trim())
+    .filter(Boolean)
+    .map((value) => [value.toLocaleLowerCase("pt-BR"), value])).values()]
+    .sort((a, b) => a.localeCompare(b, "pt-BR", { sensitivity: "base" }));
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = uniqueTypes.length ? "Selecione o tipo de bem" : "Nenhum tipo cadastrado na planilha";
+  select.replaceChildren(placeholder);
+  uniqueTypes.forEach((value) => {
+    const option = document.createElement("option");
+    option.value = value;
+    option.textContent = value;
+    select.appendChild(option);
+  });
+  const nextValue = uniqueTypes.some((value) => value === selected) ? selected : "";
+  const selectionChanged = select.value !== nextValue;
+  select.value = nextValue;
+  delete select.dataset.pendingType;
+  if (!select.dataset.validityHandler) {
+    select.addEventListener("change", () => {
+      delete select.dataset.pendingType;
+      select.setCustomValidity("");
+    });
+    select.dataset.validityHandler = "true";
+  }
+  if (selectionChanged) updateClientProfileTotals();
 }
 
 function renderSummary(items, total, totalAdministradoras = null) {
@@ -5005,6 +5039,12 @@ async function loadInvestorAnalysis() {
   // Administradora e cenário são filtros locais do Motor 360. Pedir todos os
   // grupos e cenários uma vez permite alterná-los sem nova análise no servidor.
   const profile = { ...collectClientProfile(), administradora: null, filtro_lance_embutido: null };
+  if (!profile.tipo_bem) {
+    addMotor360ExecutionLog("Análise aguardando perfil", "Selecione um tipo de bem cadastrado na planilha.", "warning");
+    status.textContent = "Selecione o tipo de bem no Perfil do Cliente";
+    setInvestorAnalysisState("empty");
+    return;
+  }
   const analysisKey = investorAnalysisCacheKey(profile);
   if (investorState.result && investorState.analysisKey === analysisKey) {
     renderInvestorAnalysis(investorState.result);
@@ -5464,6 +5504,11 @@ function applyImportedCrmData(data, opportunityId) {
   setMoneyInputValue("clientProfileCredito", imported.credito_desejado ?? "");
   setMoneyInputValue("clientProfileParcelaIdeal", imported.parcela_desejada ?? "");
   setMoneyInputValue("clientProfileLanceProprio", imported.lance_proprio ?? "");
+  const tipoBem = document.getElementById("clientProfileTipoBem");
+  if (tipoBem) {
+    tipoBem.dataset.pendingType = profile.tipo_bem || "";
+    tipoBem.value = profile.tipo_bem || "";
+  }
   setInputValue("clientProfileCrmOpportunityId", opportunityId);
   updateClientProfileTotals();
   saveClientProfile({ silent: true });
@@ -5511,11 +5556,12 @@ function applyClientProfileToFlow(profile) {
     if (viabilityTarget) viabilityTarget.value = profile[key] ?? "";
   });
   const viabilityTipo = document.getElementById("viabilityTipoBem");
-  if (viabilityTipo) viabilityTipo.value = profile.tipo_bem || "Imovel";
+  if (viabilityTipo) viabilityTipo.value = profile.tipo_bem || "";
   updateViabilityTotals();
 }
 
 function saveClientProfile({ silent = false } = {}) {
+  if (!validateClientProfileTipoBem({ report: !silent })) return null;
   const profile = collectClientProfile();
   window.localStorage.setItem(CLIENT_PROFILE_STORAGE_KEY, JSON.stringify(profile));
   applyClientProfileToFlow(profile);
@@ -5539,6 +5585,11 @@ function loadClientProfile() {
   setMoneyInputValue("clientProfileCredito", profile.credito_desejado);
   setMoneyInputValue("clientProfileLanceProprio", profile.lance_proprio);
   setMoneyInputValue("clientProfileParcelaIdeal", profile.parcela_ideal ?? profile.parcela_desejada);
+  const tipoBem = document.getElementById("clientProfileTipoBem");
+  if (tipoBem) {
+    tipoBem.dataset.pendingType = profile.tipo_bem || "";
+    tipoBem.value = profile.tipo_bem || "";
+  }
   const objective = CLIENT_OBJECTIVE_RULES[profile.objetivo] ? profile.objetivo : "Contemplar - urgente - 3 meses";
   setInputValue("clientProfileObjetivo", objective);
   updateClientProfileTotals();
@@ -5559,8 +5610,24 @@ function resetClientProfile() {
 }
 
 function advanceClientProfile() {
-  saveClientProfile({ silent: true });
+  if (!validateClientProfileTipoBem()) return;
+  if (!saveClientProfile({ silent: true })) return;
   activateScreen("motor360");
+}
+
+function validateClientProfileTipoBem({ report = true } = {}) {
+  const select = document.getElementById("clientProfileTipoBem");
+  if (!select) return false;
+  const valid = select.value !== "" && select.checkValidity();
+  if (!valid) {
+    select.setCustomValidity(select.options.length <= 1
+      ? "Não há tipos de bem cadastrados na planilha. Verifique a coluna C."
+      : "Selecione um tipo de bem cadastrado na planilha.");
+    if (report) select.reportValidity();
+    return false;
+  }
+  select.setCustomValidity("");
+  return true;
 }
 
 function setConfigState(state) {
