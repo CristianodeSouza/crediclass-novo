@@ -382,7 +382,7 @@ class Motor360RfcTest(unittest.TestCase):
         ])
         self.assertEqual([item["grupo"] for item in result["items"]], ["auto"])
 
-    def test_orders_matrix_groups_by_compatible_scenario_before_admin(self):
+    def test_original_order_prioritizes_single_quota_then_contemplation_matrix(self):
         result = analyze_client_consortium_viability(payload(
             credito_desejado=600000,
             lance_proprio=460000,
@@ -398,9 +398,9 @@ class Motor360RfcTest(unittest.TestCase):
 
         self.assertEqual([item["grupo"] for item in result["items"]], ["900", "100"])
         self.assertEqual(result["audit"]["final_ordering"]["rules"][:3], [
-            "Cenário sem lance embutido com crédito, prazo/renda e contemplação compatíveis",
-            "Cenário com lance embutido com crédito, prazo/renda e contemplação compatíveis",
-            "Demais grupos aprovados na matriz para análise do operador",
+            "Tipo de bem informado no perfil, comparado ao tipo da coluna C da base",
+            "Grupos aprovados no perfil da matriz e que atendem o crédito em cota única",
+            "Opções aprovadas que dependem de composição",
         ])
 
     def test_participant_resources_are_used_when_manual_field_is_zero(self):
