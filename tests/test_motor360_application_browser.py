@@ -176,6 +176,8 @@ const until = async (predicate, timeout = 15000) => {
   const withoutCount = document.querySelectorAll(".motor360-group-card").length;
 
   const term = document.querySelector('[data-motor360-advanced="maxTerm"]');
+  const removedFilterKeys = ["minCredit", "maxInstallment", "maxBid", "minHistory", "maxCommitment"];
+  const removedFiltersAbsent = removedFilterKeys.every(key => !document.querySelector(`[data-motor360-advanced="${key}"]`));
   term.value = "100";
   term.dispatchEvent(new Event("input", { bubbles: true }));
   await sleep(900);
@@ -186,7 +188,7 @@ const until = async (predicate, timeout = 15000) => {
 
   const layout = { viewport: innerWidth, document: document.documentElement.scrollWidth, results: document.getElementById("investorAnalysisResults").scrollWidth };
   window.__motor360E2E.outcome = {
-    initialGroups, sortedCards, withCount, bothCount, withoutCount, termFilteredGroups, cleared, dynamicTypes, typeRequired: typeSelect.required, blockedWithoutType,
+    initialGroups, sortedCards, withCount, bothCount, withoutCount, termFilteredGroups, cleared, removedFiltersAbsent, dynamicTypes, typeRequired: typeSelect.required, blockedWithoutType,
     analysisCalls: window.__motor360E2E.analysisCalls, errors: window.__motor360E2E.errors, layout,
   };
   document.getElementById("motor360-e2e-result").textContent = JSON.stringify(window.__motor360E2E.outcome);
@@ -292,6 +294,7 @@ const until = async (predicate, timeout = 15000) => {
         self.assertEqual(outcome["withoutCount"], 4)
         self.assertEqual(outcome["termFilteredGroups"], ["Grupo 20399", "Grupo 1011", "Grupo NO-BID"])
         self.assertTrue(outcome["cleared"])
+        self.assertTrue(outcome["removedFiltersAbsent"])
         self.assertEqual(outcome["analysisCalls"], 1, "filtros/ordenação locais não podem repetir o POST de análise")
         self.assertLessEqual(outcome["layout"]["results"], outcome["layout"]["viewport"] + 2)
 
