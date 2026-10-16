@@ -4488,7 +4488,7 @@ function profileBidGap(item, scenario, profile) {
 }
 
 function selectedScenariosForItem(item) {
-  const ids = [...selectedScenarioIdsForGroup(motor360GroupKey(item))].filter((id) => quotaCountFor(item, id) > 0);
+  const ids = new Set([...selectedScenarioIdsForGroup(motor360GroupKey(item))].filter((id) => quotaCountFor(item, id) > 0));
   return (item?.cenarios || [])
     .filter((scenario) => ids.has(scenario.id) && quotaCountFor(item, scenario.id) > 0)
     .map((scenario) => ({ ...scenario, selected_quota_count: quotaCountFor(item, scenario.id) }));

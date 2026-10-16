@@ -64,6 +64,7 @@ class Motor360BrowserTest(unittest.TestCase):
             _between(source, "function motor360ExecutionStepMessage", "async function loadMotor360Audit"),
             _between(source, "function renderMotor360GroupCardUncached", "function renderMotor360GroupCard"),
             _between(source, "function renderMotor360GroupCard(item)", "function selectedMotor360Items"),
+            _between(source, "function selectedScenariosForItem", "function updateMotor360SelectionSummary"),
             investment_renderer,
         ))
 
@@ -99,6 +100,23 @@ document.querySelector("#result").textContent = JSON.stringify({
         self.assertIn("@media (max-width: 560px)", css)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch", css)
 
+    def test_selected_scenarios_support_persisted_group_selection(self):
+        result = self._run_browser(r'''
+const item = {
+  grupo: "1019",
+  quotasByScenario: { without_embedded: 2, with_embedded: 1 },
+  cenarios: [scenario("without_embedded", 150000), scenario("with_embedded", 175000)],
+};
+groupScenarios.set("1019", new Set(["without_embedded", "with_embedded"]));
+document.querySelector("#result").textContent = JSON.stringify(
+  selectedScenariosForItem(item).map(row => ({ id: row.id, quotas: row.selected_quota_count }))
+);
+''')
+        self.assertEqual(result, [
+            {"id": "without_embedded", "quotas": 2},
+            {"id": "with_embedded", "quotas": 1},
+        ])
+
     def _run_browser(self, actions: str, extra_functions: str = "") -> dict:
         fixture = r'''<!doctype html><meta charset="utf-8"><main id="cards"></main><section data-study-part="2"><input id="financialStudyPart2AnnualRate" value="12"><span id="financialStudyPart2Redemption"></span><span id="financialStudyPart2Rate"></span><span id="financialStudyPart2Term1"></span><span id="financialStudyPart2Term2"></span><span id="financialStudyPart2Term3"></span><span id="financialStudyPart2Cost1"></span><span id="financialStudyPart2Cost2"></span><span id="financialStudyPart2Cost3"></span></section><pre id="result">pending</pre>
 <script>window.addEventListener("error", event => { document.querySelector("#result").textContent = "ERROR: " + event.message; });</script>
@@ -119,7 +137,7 @@ const selectedMotor360Items = () => studyGroups;
 const selectedCompositionScenarioMetrics = () => null;
 const selectedPortfolioTotals = () => ({ credit: 0, installment: 0, availableBidByProfile: {}, portfolioProfileRequirements: {} });
 const minimumQuotasFor = (item, id) => item.minQuotas?.[id] ?? 1;
-const quotaCountFor = item => item.quotas || 1;
+const quotaCountFor = (item, scenarioId = null) => scenarioId ? (item.quotasByScenario?.[scenarioId] || 0) : (item.quotas || 1);
 const motor360ClientProfile = () => ({ credito_liquido_desejado: 600000 });
 const motor360ClientProfileId = () => "moderate";
 const motor360FocusedProfileId = () => "moderate";
