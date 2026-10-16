@@ -5137,6 +5137,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-filter-notice { display:flex; flex-wrap:wrap; gap:5px 12px; margin:0 0 12px; padding:10px 12px; border-left:3px solid var(--brand-orange); border-radius:6px; background:#fff7ef; color:var(--brand-navy); font-size:.72rem; }
 .motor360-filter-notice strong { color:var(--brand-orange); }
 .motor360-selection-filters > summary { padding:10px 14px; cursor:pointer; color:var(--brand-navy); font-size:.78rem; font-weight:800; }
+.motor360-quick-filters { display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; padding:2px 14px 0; }
+.motor360-quick-filters label { display:inline-flex; align-items:center; gap:6px; color:var(--brand-navy); font-size:.74rem; font-weight:700; cursor:pointer; }
+.motor360-quick-filters input { width:15px; height:15px; margin:0; accent-color:var(--brand-orange); }
+.motor360-quick-filters-hint { margin:5px 14px 10px; color:var(--muted); font-size:.68rem; }
 .motor360-selection-filter-grid { display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:10px; padding:0 14px 14px; }
 .motor360-selection-filter-grid label { display:flex; flex-direction:column; gap:4px; color:var(--brand-navy); font-size:.66rem; font-weight:700; }
 .motor360-selection-filter-grid input,.motor360-selection-filter-grid select { min-height:34px; padding:7px 9px; border:1px solid #cfdbdf; border-radius:6px; background:#fff; color:var(--brand-navy); }
