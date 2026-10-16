@@ -108,6 +108,7 @@ const investorState = {
   selectedGroupProfile: "all", quotaCounts: new Map(), selectedGroupData: new Map(),
   result: { cliente: { credito_liquido_desejado: 600000 } },
 };
+const motor360QuotaReview = new Map();
 const motor360GroupCardCache = new Map();
 const groupScenarios = new Map();
 const motor360GroupKey = item => String(item.grupo || item.grupo_id);
@@ -116,6 +117,7 @@ const selectedScenarioIdsForGroup = id => groupScenarios.get(id) || new Set();
 const studyGroups = [];
 const selectedMotor360Items = () => studyGroups;
 const selectedCompositionScenarioMetrics = () => null;
+const selectedPortfolioTotals = () => ({ credit: 0, installment: 0, availableBidByProfile: {}, portfolioProfileRequirements: {} });
 const minimumQuotasFor = (item, id) => item.minQuotas?.[id] ?? 1;
 const quotaCountFor = item => item.quotas || 1;
 const motor360ClientProfile = () => ({ credito_liquido_desejado: 600000 });

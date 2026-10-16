@@ -86,6 +86,31 @@ class MapaGruposTest(unittest.TestCase):
         self.assertIn("error_type=OSError", log_text)
         self.assertNotIn("sensitive-sheet-id-and-token", log_text)
 
+    def test_leitura_google_sheets_tenta_novamente_apos_falha_transitoria(self):
+        calls = 0
+
+        class SometimesFailingRequest:
+            def execute(self):
+                nonlocal calls
+                calls += 1
+                if calls == 1:
+                    raise sheets_client.httplib2.ServerNotFoundError("temporary connection failure")
+                return {"values": [["ready"]]}
+
+        with (
+            patch("backend.sheets_client.time.sleep"),
+            patch("backend.sheets_client.get_service") as get_service,
+            self.assertLogs("crediclass.sheets", level="WARNING"),
+        ):
+            result = sheets_client.execute_sheets_read(
+                lambda: SometimesFailingRequest(),
+                "ler a base resumida",
+            )
+
+        self.assertEqual(result, {"values": [["ready"]]})
+        self.assertEqual(calls, 2)
+        get_service.cache_clear.assert_called_once()
+
     def test_log_de_leitura_registra_status_http_e_segundos_pt(self):
         class SuccessfulRequest:
             def __init__(self):

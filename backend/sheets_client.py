@@ -12,8 +12,10 @@ from typing import Any
 
 from google.oauth2.service_account import Credentials
 from google.auth.exceptions import GoogleAuthError
+from google_auth_httplib2 import AuthorizedHttp
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+import httplib2
 
 from .config import get_settings
 
@@ -22,7 +24,8 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 CACHE_TTL_SECONDS = 300
 CACHE_REFRESH_INTERVAL_SECONDS = 240
 METADATA_CACHE_TTL_SECONDS = 900
-SHEETS_READ_ATTEMPTS = 3
+SHEETS_READ_ATTEMPTS = 4
+SHEETS_HTTP_TIMEOUT_SECONDS = 45
 MAX_CREDIT_VALUE = 100_000_000
 _grupos_cache: dict[str, Any] = {
     "with_history": {"expires_at": 0.0, "items": None},
@@ -298,7 +301,11 @@ def get_service():
 
     credentials_info = json.loads(settings.google_service_account_json)
     credentials = Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
-    return build("sheets", "v4", credentials=credentials, cache_discovery=False)
+    authorized_http = AuthorizedHttp(
+        credentials,
+        http=httplib2.Http(timeout=SHEETS_HTTP_TIMEOUT_SECONDS),
+    )
+    return build("sheets", "v4", http=authorized_http, cache_discovery=False)
 
 
 def format_duration_seconds_pt(duration_ms: float) -> str:
@@ -334,7 +341,7 @@ def execute_sheets_read(request_factory, operation: str) -> dict[str, Any]:
                 format_duration_seconds_pt(duration_ms),
             )
             return result
-        except (AttributeError, OSError, TimeoutError, GoogleAuthError, HttpError) as error:
+        except (AttributeError, OSError, TimeoutError, GoogleAuthError, HttpError, httplib2.HttpLib2Error) as error:
             last_error = error
             http_status = getattr(error.resp, "status", 0) if isinstance(error, HttpError) else 0
             is_transient = not isinstance(error, HttpError) or http_status == 429 or http_status >= 500
@@ -357,7 +364,7 @@ def execute_sheets_read(request_factory, operation: str) -> dict[str, Any]:
                 type(error).__name__,
             )
             get_service.cache_clear()
-            time.sleep(0.25 * attempt)
+            time.sleep(min(0.5 * (2 ** (attempt - 1)), 4.0))
     if last_error:
         raise last_error
     raise RuntimeError(f"Falha inesperada ao {operation} na planilha")
@@ -1384,7 +1391,7 @@ def list_grupos(include_history: bool = True, force_reload: bool = False) -> lis
                 include_history=include_history,
             )
             read_ms = (time.perf_counter() - read_started) * 1000
-        except (AttributeError, OSError, TimeoutError, HttpError, GoogleAuthError, RuntimeError, ValueError) as error:
+        except (AttributeError, OSError, TimeoutError, HttpError, GoogleAuthError, httplib2.HttpLib2Error, RuntimeError, ValueError) as error:
             if cached_items is None:
                 refresh_duration_ms = (time.perf_counter() - refresh_started) * 1000
                 logger.error(

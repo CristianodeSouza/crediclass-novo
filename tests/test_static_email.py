@@ -71,6 +71,22 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("motor360-floating-summary", style_css)
         self.assertIn("--brand-orange: var(--primary)", style_css)
 
+    def test_motor360_legacy_quota_review_and_shared_resources_are_explicit(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        screen = app_js.split("function renderSelectedGroupsScreen()", 1)[1].split("function persistMotor360Selection()", 1)[0]
+        quota_update = app_js.split("function setScenarioQuotaCount(", 1)[1].split("function minimumQuotasFor(", 1)[0]
+        metrics = app_js.split("function selectedCompositionScenarioMetrics(", 1)[1].split("function selectedCompositionAssessment(", 1)[0]
+        portfolio = app_js.split("function selectedPortfolioTotals(", 1)[1].split("function selectedCompositionAssessment(", 1)[0]
+
+        self.assertIn("empty.classList.toggle(\"d-none\", allItems.length > 0)", screen)
+        self.assertIn("results.classList.toggle(\"d-none\", allItems.length === 0)", screen)
+        self.assertIn("new Set(investorState.selectedScenarioIds.get(key) || [])", quota_update)
+        self.assertIn("quotaCountFor(key) <= 0", quota_update)
+        self.assertIn('for (const selectedScenarioId of ["without_embedded", "with_embedded"])', metrics)
+        self.assertIn("allocatedPool * profile.ideal / portfolioRequired", metrics)
+        self.assertIn("active[0]?.availableBidByProfile", portfolio)
+        self.assertIn("creditCapacityIssues: active.flatMap", portfolio)
+
     def test_motor360_rotulos_e_selo_de_status_coerentes_com_a_composicao(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
@@ -419,8 +435,13 @@ console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Durati
         self.assertIn('renderInvestorAnalysis(investorState.result);', app_js)
         self.assertIn('/api/viabilidade-360/analisar', app_js)
         self.assertIn("const controller = new AbortController();", app_js)
-        self.assertIn("signal: controller.signal", app_js)
+        self.assertIn("signal: attemptController.signal", app_js)
         self.assertIn('if (error.name === "AbortError" || requestId !== investorAnalysisRequestId) return;', app_js)
+        self.assertIn("const MOTOR360_ANALYSIS_REQUEST_TIMEOUT_MS = 60000;", app_js)
+        self.assertIn("const MOTOR360_ANALYSIS_MAX_ATTEMPTS = 5;", app_js)
+        self.assertIn("const retryableStatuses = new Set([408, 425, 429, 500, 502, 503, 504]);", app_js)
+        self.assertIn("falha temporária de conexão", app_js)
+        self.assertIn("a tela de consulta permanece ativa", app_js)
         self.assertNotIn('data-screen="viabilidade"', index_html)
         self.assertNotIn('id="screen-viabilidade"', index_html)
         self.assertNotIn('screenName === "viabilidade"', app_js)
@@ -818,10 +839,11 @@ console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Durati
 
         self.assertIn("contractedCredit: entries.reduce((sum, entry) => sum + entry.contractedCredit, 0)", app_js)
         self.assertIn("embedded: entries.reduce((sum, entry) => sum + entry.embedded, 0)", app_js)
-        self.assertIn("const cardClientBid = metrics ? clientResourceTotal()", app_js)
+        self.assertIn("const cardClientBid = metrics ? Number(metricEntry?.profiles[focusProfileId]?.available || 0)", app_js)
         self.assertIn("const cardScenarioBid = metrics ? cardClientBid + cardEmbedded", app_js)
-        self.assertIn("cardClientBid / metrics.contractedCredit", app_js)
-        self.assertIn("cardScenarioBid / metrics.contractedCredit", app_js)
+        self.assertIn("const cardContractedCredit = Number(metricEntry?.contractedCredit || 0)", app_js)
+        self.assertIn("cardClientBid / cardContractedCredit", app_js)
+        self.assertIn("cardScenarioBid / cardContractedCredit", app_js)
         self.assertNotIn("cells[1].innerHTML", app_js)
         self.assertNotIn("cells[3].innerHTML", app_js)
 
