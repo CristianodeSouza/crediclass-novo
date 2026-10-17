@@ -92,11 +92,11 @@ class StaticEmailTest(unittest.TestCase):
         style_css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
         card_renderer = app_js.split("function renderMotor360GroupCardUncached", 1)[1].split("function renderMotor360GroupCard(", 1)[0]
 
-        self.assertIn("const showPortfolioLabels = Boolean((metrics && metrics.totalQuotas > 1) || (aggregate && Number(aggregate.cotas_minimas) > 1))", card_renderer)
+        self.assertIn("const showPortfolioLabels = Boolean((selected && scenarioQuotaCount > 1) || (aggregate && Number(aggregate.cotas_minimas) > 1))", card_renderer)
         self.assertIn("scenario.composition_totals", card_renderer)
         self.assertIn("scenario.profile_compatible_in_composition", card_renderer)
-        self.assertIn('showPortfolioLabels ? "Lance do cliente na composição" : "Lance do cliente"', card_renderer)
-        self.assertIn('showPortfolioLabels ? "Lance total da composição" : "Lance total do cenário"', card_renderer)
+        self.assertIn('showPortfolioLabels ? "Lance próprio atribuído ao grupo" : "Lance do cliente"', card_renderer)
+        self.assertIn('showPortfolioLabels ? "Lance total no grupo" : "Lance total do cenário"', card_renderer)
         self.assertIn('item.requires_composition === true', card_renderer)
         self.assertIn('`Possível em composição · mín. ${visibleMinimum} cotas`', card_renderer)
         self.assertIn(': "Defina cotas por cenário"', card_renderer)
@@ -140,7 +140,7 @@ class StaticEmailTest(unittest.TestCase):
 
         self.assertIn("const motor360GroupAnalyticsCache = new Map()", app_js)
         self.assertIn("const cached = motor360GroupAnalyticsCache.get(cacheKey)", app_js)
-        self.assertIn("if (sort === \"credit\") return analyticsFor(b).groupMaxCredit", sort_function)
+        self.assertIn('investorState.selectedGroupIds.has(motor360GroupKey(a)) ? selectedValueFor(a, "credit") : analyticsFor(a).groupMaxCredit', sort_function)
         self.assertIn("investorState.selectedGroupSort || \"original\"", card_renderer)
 
     def test_motor360_menor_lance_usa_o_mesmo_total_de_composicao_do_card(self):
@@ -156,10 +156,12 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("motor360FocusedProfileId()", ideal_helper)
         self.assertIn("motor360CompositionIdealBid(item, scenario, value.id)", card_renderer)
         self.assertIn("motor360CompositionIdealBid(item, scenario, profileId)", bid_sort_helper)
-        self.assertIn('if (sort === "bid") return sortMotor360ItemsByBid(filtered)', sort_function)
+        self.assertIn('if (sort === "bid") return retainSelected(sortMotor360ItemsByBid(filtered))', sort_function)
         self.assertIn("Sem seleção: exibe grupos disponíveis, inclusive opções viáveis em composição.", index_html)
         self.assertIn("numericIdeal >= 0", ideal_helper)
-        self.assertIn('if (sort === "bid") return sortMotor360ItemsByBid(filtered)', sort_function)
+        self.assertIn('if (sort === "bid") return retainSelected(sortMotor360ItemsByBid(filtered))', sort_function)
+        self.assertIn('script.src = "https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js"', app_js)
+        self.assertIn("Não foi possível carregar os gráficos", app_js)
         self.assertNotIn("motor360HasHistoryEvidence", app_js)
         self.assertIn("motor360BidSortLabel(item)", card_renderer)
         self.assertIn("investorState.selectedGroupSort || \"original\"", app_js.split("function renderMotor360GroupCard(item)", 1)[1].split("function selectedMotor360Items", 1)[0])

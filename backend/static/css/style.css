@@ -2023,6 +2023,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-quota-review-alert strong { flex: 0 0 100%; }
 .motor360-quota-review-alert span { flex: 1 1 400px; }
 .motor360-quota-review-alert .btn { flex: 0 0 auto; }
+.motor360-credit-excess-alert { margin: 6px 0 10px; padding: 8px 10px; border-left: 3px solid #d98312; border-radius: 4px; background: #fff8e8; color: #573b13; font-size: .78rem; }
+.motor360-credit-excess-alert strong { display: block; }
 .financial-study-portfolio-totals { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; }
 .financial-study-portfolio-totals > div { padding: 10px; border: 1px solid var(--line); border-radius: 5px; }
 .financial-study-portfolio-totals dt { color: var(--muted); font-size: .75rem; }

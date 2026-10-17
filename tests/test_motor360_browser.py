@@ -65,6 +65,7 @@ class Motor360BrowserTest(unittest.TestCase):
             _between(source, "function renderMotor360GroupCardUncached", "function renderMotor360GroupCard"),
             _between(source, "function renderMotor360GroupCard(item)", "function selectedMotor360Items"),
             _between(source, "function selectedScenariosForItem", "function updateMotor360SelectionSummary"),
+            _between(source, "function groupHasPositiveScenarioQuota", "function motor360FocusSelector"),
             investment_renderer,
         ))
 
@@ -117,9 +118,64 @@ document.querySelector("#result").textContent = JSON.stringify(
             {"id": "with_embedded", "quotas": 1},
         ])
 
+    def test_selected_group_requires_positive_quota_in_at_least_one_scenario(self):
+        result = self._run_browser(r'''
+groupScenarios.set("1026", new Set(["without_embedded"]));
+investorState.quotaCounts.set("1026", { without_embedded: 0, with_embedded: 0 });
+const zeroIsInvalid = groupHasPositiveScenarioQuota("1026");
+investorState.quotaCounts.set("1026", { without_embedded: 1, with_embedded: 0 });
+const positiveIsValid = groupHasPositiveScenarioQuota("1026");
+document.querySelector("#result").textContent = JSON.stringify({ zeroIsInvalid, positiveIsValid });
+''')
+        self.assertEqual(result, {"zeroIsInvalid": False, "positiveIsValid": True})
+
+    def test_quota_review_card_refreshes_after_confirmation_without_quantity_change(self):
+        result = self._run_browser(r'''
+const item = groups[2];
+const groupId = motor360GroupKey(item);
+investorState.selectedGroupIds.add(groupId);
+investorState.quotaCounts.set(groupId, { without_embedded: 0, with_embedded: 0 });
+motor360QuotaReview.set(groupId, { legacyCount: 2, selectedScenarios: ["without_embedded", "with_embedded"] });
+const before = renderMotor360GroupCard(item);
+motor360QuotaReview.delete(groupId);
+const after = renderMotor360GroupCard(item);
+document.querySelector("#result").textContent = JSON.stringify({
+  showedReviewBefore: before.includes("Revisar quantidades salvas na versão anterior"),
+  removedReviewAfter: !after.includes("Revisar quantidades salvas na versão anterior"),
+  statusAfter: after.includes("Defina cotas por cenário"),
+});
+''')
+        self.assertEqual(result, {
+            "showedReviewBefore": True,
+            "removedReviewAfter": True,
+            "statusAfter": True,
+        })
+
+    def test_selected_group_keeps_base_scenario_values_before_quotas_are_chosen(self):
+        result = self._run_browser(r'''
+const item = {
+  grupo: "1026", administradora: "CNP", matrix_approved: true,
+  credito_maximo: 1089870.45, prazo_restante: 88,
+  cenarios: [scenario("without_embedded", 31790), scenario("with_embedded", 114142.86)],
+};
+investorState.selectedGroupIds.add("1026");
+groupScenarios.set("1026", new Set());
+document.querySelector("#cards").innerHTML = renderMotor360GroupCard(item);
+const cards = [...document.querySelectorAll(".motor360-scenario-card")];
+document.querySelector("#result").textContent = JSON.stringify({
+  values: cards.map(card => card.querySelector(".motor360-scenario-grid")?.textContent.replace(/\\s+/g, " ")),
+  quotas: [...document.querySelectorAll(".motor360-quota-input")].map(input => input.value),
+  statuses: cards.map(card => card.querySelector(".motor360-scenario-title span")?.textContent),
+});
+''')
+        self.assertEqual(result["quotas"], ["0", "0"])
+        self.assertTrue(all("R$ 600.000,00" in value for value in result["values"]))
+        self.assertTrue(all("R$ 4.500,00" in value for value in result["values"]))
+        self.assertTrue(all("0 cotas" in status for status in result["statuses"]))
+
     def _run_browser(self, actions: str, extra_functions: str = "") -> dict:
         fixture = r'''<!doctype html><meta charset="utf-8"><main id="cards"></main><section data-study-part="2"><input id="financialStudyPart2AnnualRate" value="12"><span id="financialStudyPart2Redemption"></span><span id="financialStudyPart2Rate"></span><span id="financialStudyPart2Term1"></span><span id="financialStudyPart2Term2"></span><span id="financialStudyPart2Term3"></span><span id="financialStudyPart2Cost1"></span><span id="financialStudyPart2Cost2"></span><span id="financialStudyPart2Cost3"></span></section><pre id="result">pending</pre>
-<script>window.addEventListener("error", event => { document.querySelector("#result").textContent = "ERROR: " + event.message; });</script>
+<script>window.addEventListener("error", event => { document.querySelector("#result").textContent = "ERROR: " + (event.error?.stack || event.message); });</script>
 <script>
 const investorState = {
   selectedGroupIds: new Set(), selectedGroupScenario: "per_group", selectedGroupSort: "original",
@@ -134,10 +190,14 @@ const motor360GroupAnchorId = id => `motor360-group-${id}`;
 const selectedScenarioIdsForGroup = id => groupScenarios.get(id) || new Set();
 const studyGroups = [];
 const selectedMotor360Items = () => studyGroups;
-const selectedCompositionScenarioMetrics = () => null;
+const selectedCompositionScenarioMetrics = () => ({ entries: [], totalQuotas: 0, credit: 0, installment: 0, installmentAfter: 0 });
 const selectedPortfolioTotals = () => ({ credit: 0, installment: 0, availableBidByProfile: {}, portfolioProfileRequirements: {} });
 const minimumQuotasFor = (item, id) => item.minQuotas?.[id] ?? 1;
-const quotaCountFor = (item, scenarioId = null) => scenarioId ? (item.quotasByScenario?.[scenarioId] || 0) : (item.quotas || 1);
+const quotaCountFor = (item, scenarioId = null) => {
+  if (!scenarioId) return item.quotas || 1;
+  if (typeof item === "string") return investorState.quotaCounts.get(item)?.[scenarioId] || 0;
+  return item.quotasByScenario?.[scenarioId] || 0;
+};
 const motor360ClientProfile = () => ({ credito_liquido_desejado: 600000 });
 const motor360ClientProfileId = () => "moderate";
 const motor360FocusedProfileId = () => "moderate";
