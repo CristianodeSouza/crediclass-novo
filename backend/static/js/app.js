@@ -5991,9 +5991,68 @@ function resetClientProfile() {
 }
 
 function advanceClientProfile() {
+  if (!validateClientProfileRequiredFields()) return;
   if (!validateClientProfileTipoBem()) return;
   if (!saveClientProfile({ silent: true })) return;
   activateScreen("motor360");
+}
+
+function validateClientProfileRequiredFields({ report = true } = {}) {
+  const missing = [];
+  const firstInvalid = [];
+  const requireValue = (id, label, predicate = (value) => String(value || "").trim() !== "") => {
+    const input = document.getElementById(id);
+    const value = input?.value;
+    const valid = Boolean(input) && predicate(value);
+    if (!valid) {
+      missing.push(label);
+      if (input) {
+        input.setCustomValidity(`${label} é obrigatório.`);
+        firstInvalid.push(input);
+      }
+    } else if (input) {
+      input.setCustomValidity("");
+    }
+    return valid;
+  };
+
+  requireValue("clientProfileCredito", "Crédito desejado", (value) => toNumber(value) > 0);
+  requireValue("clientProfileParcelaIdeal", "Parcela máxima desejada", (value) => toNumber(value) > 0);
+  requireValue("clientProfileObjetivo", "Objetivo do consórcio");
+  requireValue("clientProfileContemplacaoPerfil", "Perfil de contemplação");
+  requireValue("clientProfileTipoBem", "Tipo de bem");
+
+  const titulares = collectClientTitularesFromForm();
+  const tipo = titulares.tipo_contratacao;
+  if (tipo === "pj") {
+    const empresa = titulares.pessoa_juridica?.empresa || {};
+    const socio = titulares.pessoa_juridica?.socios?.[0] || {};
+    if (!String(empresa.nome || "").trim()) missing.push("Nome da empresa");
+    if (!String(empresa.cnpj || "").trim()) missing.push("CNPJ");
+    if (!String(empresa.data_constituicao || "").trim()) missing.push("Data de constituição");
+    if (!(Number(empresa.faturamento_mensal) > 0)) missing.push("Faturamento mensal");
+    if (!String(socio.nome || "").trim()) missing.push("Nome do sócio administrador");
+    if (!String(socio.nascimento || "").trim()) missing.push("Nascimento do sócio administrador");
+    if (!(Number(socio.renda) > 0)) missing.push("Renda do sócio administrador");
+  } else {
+    const count = CLIENT_CONTRACTING_MODES[tipo]?.pfCount || 1;
+    const pessoas = (titulares.pessoas_fisicas || []).slice(0, count);
+    pessoas.forEach((person, index) => {
+      const label = index === 0 ? "Titular" : `Titular ${index + 1}`;
+      if (!String(person.nome || "").trim()) missing.push(`Nome do ${label.toLowerCase()}`);
+      if (!String(person.nascimento || "").trim()) missing.push(`Nascimento do ${label.toLowerCase()}`);
+      if (!(Number(person.renda) > 0)) missing.push(`Renda do ${label.toLowerCase()}`);
+    });
+  }
+
+  if (!missing.length) return true;
+  if (report) {
+    const uniqueMissing = [...new Set(missing)];
+    showToast(`Preencha os campos obrigatórios: ${uniqueMissing.join(", ")}.`, "warning");
+    firstInvalid[0]?.reportValidity();
+    if (!firstInvalid.length) document.querySelector("[data-holder-field]")?.focus();
+  }
+  return false;
 }
 
 function validateClientProfileTipoBem({ report = true } = {}) {
