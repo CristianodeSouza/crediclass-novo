@@ -3113,8 +3113,9 @@ function renderMotor360GroupCardUncached(item) {
       ? { ok: true, failed: [], title: "Cenário sem cotas selecionadas; não entra nos totais." }
       : scenarioRequirementStatus(scenario);
     const compositionQuotaLabel = item.composition_candidate === true ? ` · mínimo de ${Number(scenario.cotas_minimas || minimumQuotasFor(item, scenario.id))} cotas` : "";
-    const statusLabel = selected && scenarioQuotaCount === 0
-      ? "Não selecionado · 0 cotas"
+    const analysisOnly = selected && scenarioQuotaCount === 0;
+    const statusLabel = analysisOnly
+      ? "Disponível para análise · 0 cotas selecionadas"
       : item.composition_candidate === true
       ? requirement.ok ? requirement.profilePending ? `Possível em composição · perfil pendente${compositionQuotaLabel}` : `Viável em composição${compositionQuotaLabel}` : "Composição não viável neste cenário"
       : requirement.ok ? `Requisitos atendidos${requirement.parcelWarning ? ` · ${requirement.parcelWarning}` : ""}` : "Requisitos não atendidos";
@@ -3129,8 +3130,15 @@ function renderMotor360GroupCardUncached(item) {
     const cardBalance = metric("balance") ?? aggregate?.saldo_devedor ?? scaleMoney(scenario.saldo_devedor, scenario.id);
     const cardClientBid = metrics ? Number(metricEntry?.profiles[focusProfileId]?.available || 0) : Number(aggregate?.lance_cliente_total ?? scenario.lance_cliente_total ?? 0);
     const cardEmbedded = metricEntry?.embedded ?? aggregate?.lance_embutido ?? scaleMoney(scenario.lance_embutido, scenario.id);
-    const cardScenarioBid = metrics ? cardClientBid + cardEmbedded : Number(aggregate?.lance_total_cenario ?? scaleMoney(scenario.lance_total_cenario, scenario.id));
-    const cardLabel = metrics ? `<small class="motor360-scenario-note">Subtotal ${scenario.id === "with_embedded" ? "com" : "sem"} embutido: ${formatMoney(metrics.credit)} · Consolidado da carteira: ${formatMoney(selectedPortfolioTotals(selectedCompositionItems).credit)} de ${formatMoney(desiredCompositionCredit)}</small>` : "";
+    const baseScenarioBid = scenario.lance_total_cenario == null
+      ? cardClientBid + cardEmbedded
+      : scaleMoney(scenario.lance_total_cenario, scenario.id);
+    const cardScenarioBid = metrics ? cardClientBid + cardEmbedded : Number(aggregate?.lance_total_cenario ?? baseScenarioBid);
+    const cardLabel = metrics
+      ? `<small class="motor360-scenario-note">Subtotal ${scenario.id === "with_embedded" ? "com" : "sem"} embutido: ${formatMoney(metrics.credit)} · Consolidado da carteira: ${formatMoney(selectedPortfolioTotals(selectedCompositionItems).credit)} de ${formatMoney(desiredCompositionCredit)}</small>`
+      : analysisOnly
+        ? `<small class="motor360-scenario-note">Valores exibidos por cota para análise. Este cenário não entra nos totais enquanto permanecer com 0 cotas.</small>`
+        : "";
     const cardContractedCredit = Number(metricEntry?.contractedCredit || 0);
     const clientBidPercent = cardContractedCredit > 0
       ? cardClientBid / cardContractedCredit
@@ -3161,7 +3169,7 @@ function renderMotor360GroupCardUncached(item) {
     const failureMessage = compositionCreditGuidance || readableFailures.join(" · ") || requirement.title;
     const visibleFailure = !requirement.ok ? `<p class="motor360-scenario-failure" role="status">${escapeHtml(failureMessage)}</p>` : "";
     const quotaInput = selected ? `<label class="motor360-scenario-quota"><span>Cotas neste cenário</span><input class="motor360-quota-input" type="number" min="0" max="50" step="1" value="${scenarioQuotaCount}" data-quota-action="scenario" data-group-id="${auditId}" data-scenario-id="${scenario.id}" aria-label="Quantidade de cotas do cenário ${scenario.id === "with_embedded" ? "com lance embutido" : "sem lance embutido"} no grupo ${auditId}"></label>${quotaLimit !== null && scenarioQuotaCount > quotaLimit ? `<small class="motor360-quota-warning" role="status"><strong>Acima da média histórica:</strong> ${scenarioQuotaCount} cotas; referência de ${quotaLimit}.</small>` : ""}` : "";
-    return `<article class="motor360-scenario-card ${requirement.ok ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusLabel} ${info}</span>${quotaInput}</div>${visibleFailure}<div class="motor360-scenario-grid"><div><small>Crédito contratado${showPortfolioLabels ? " (total das cotas do grupo)" : " (por cota)"}</small><b>${formatMoney(cardCredit)}</b></div><div><small>${showPortfolioLabels ? "Lance próprio atribuído ao grupo" : "Lance do cliente"}</small><b>${formatMoney(cardClientBid)} <em>(${formatPercent(clientBidPercent)})</em></b></div><div><small>Lance embutido${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${formatMoney(cardEmbedded)}</b></div><div><small>${showPortfolioLabels ? "Lance total no grupo" : "Lance total do cenário"}</small><b>${formatMoney(cardScenarioBid)} <em>(${formatPercent(scenarioBidPercent)})</em></b></div><div><small>Saldo devedor${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${formatMoney(cardBalance)}</b></div><div><small>Parcela inicial${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${formatMoney(cardInstallment)}</b></div><div><small>Parcela pós-contemplação${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${cardAfter == null ? "Não calculada" : formatMoney(cardAfter)}</b></div></div>${cardLabel}<small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small>${renderScenarioProfiles(scenario)}</article>`;
+    return `<article class="motor360-scenario-card ${analysisOnly ? "is-analysis-only" : requirement.ok ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusLabel} ${info}</span>${quotaInput}</div>${visibleFailure}<div class="motor360-scenario-grid"><div><small>Crédito contratado${showPortfolioLabels ? " (total das cotas do grupo)" : " (por cota)"}</small><b>${formatMoney(cardCredit)}</b></div><div><small>${showPortfolioLabels ? "Lance próprio atribuído ao grupo" : "Lance do cliente"}</small><b>${formatMoney(cardClientBid)} <em>(${formatPercent(clientBidPercent)})</em></b></div><div><small>Lance embutido${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${formatMoney(cardEmbedded)}</b></div><div><small>${showPortfolioLabels ? "Lance total no grupo" : "Lance total do cenário"}</small><b>${formatMoney(cardScenarioBid)} <em>(${formatPercent(scenarioBidPercent)})</em></b></div><div><small>Saldo devedor${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${formatMoney(cardBalance)}</b></div><div><small>Parcela inicial${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${formatMoney(cardInstallment)}</b></div><div><small>Parcela pós-contemplação${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${cardAfter == null ? "Não calculada" : formatMoney(cardAfter)}</b></div></div>${cardLabel}<small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small>${renderScenarioProfiles(scenario)}</article>`;
   }).join("");
   const selectedScenarioIds = selectedScenarioIdsForGroup(groupKey);
   const activeSelectedScenarioIds = [...selectedScenarioIds].filter((id) => quotaCountFor(groupKey, id) > 0);
