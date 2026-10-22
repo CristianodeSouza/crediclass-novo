@@ -448,13 +448,13 @@ function updateFinancialStudyActionState() {
   const button = document.getElementById("approveFinancialStudyBtn");
   if (!button) return;
   const items = selectedMotor360Items();
-  const activeItems = items.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
-  const missingScenarios = items.some((item) => !item.cenarios?.length);
+  const activeItems = activeStudyItems();
+  const missingScenarios = items.some((item) => !motor360QuotaReview.has(motor360GroupKey(item)) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)));
   const pendingReview = selectedMotor360Items().some((item) => motor360QuotaReview.has(motor360GroupKey(item)));
-  button.disabled = !items.length || missingScenarios || pendingReview;
+  button.disabled = !activeItems.length || missingScenarios || pendingReview;
   button.title = pendingReview
     ? "Revise as quantidades migradas no Motor 360 antes de aprovar o estudo."
-    : !items.length
+    : !activeItems.length
     ? "Selecione grupos no Motor 360 antes de aprovar."
     : missingScenarios ? "Informe pelo menos uma cota em um cenário de cada grupo selecionado." : "Salvar uma cópia imutável no Histórico de Estudos.";
 }

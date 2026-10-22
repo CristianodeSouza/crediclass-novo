@@ -93,6 +93,32 @@ def _positive_integer(value: Any) -> int | None:
     return int(parsed)
 
 
+def _credit_range_validation(group: dict[str, Any]) -> dict[str, Any]:
+    minimum = parse_decimal(group.get("credito_minimo"))
+    maximum = parse_decimal(group.get("credito_maximo"))
+    intermediates = {
+        field: parse_decimal(group.get(field))
+        for field in ("credito_intermediario_1", "credito_intermediario_2", "credito_intermediario_3")
+    }
+    issues = []
+    if minimum is not None and maximum is not None and minimum > maximum:
+        issues.append("menor_credito_maior_que_maior_credito")
+    for field, value in intermediates.items():
+        if value is None:
+            continue
+        if minimum is not None and value < minimum:
+            issues.append(f"{field}_abaixo_do_menor_credito")
+        if maximum is not None and value > maximum:
+            issues.append(f"{field}_acima_do_maior_credito")
+    return {
+        "valid": not issues,
+        "issues": issues,
+        "minimum": money(minimum),
+        "maximum": money(maximum),
+        "intermediates": {field: money(value) for field, value in intermediates.items()},
+    }
+
+
 def _ranges(group: dict[str, Any]) -> tuple[dict[str, Any], dict[str, float | None]]:
     raw = {key: group.get(field) for key, field, _, _ in STRATEGY_TARGETS}
     return raw, {key: (float(normalize_percent(raw[key])) if normalize_percent(raw[key]) is not None else None) for key in raw}
@@ -476,6 +502,7 @@ def analyze_client_consortium_viability(
             "capacidade_contemplacoes": contemplation_capacities,
             "historico_12_meses": list(group.get("historico_12_meses") or []),
             "mapeamento_origem": group.get("mapeamento_origem") or {},
+            "credit_range_validation": _credit_range_validation(group),
         }
         # Keep the normalized source record attached to the matrix result even
         # when the financial/composition path rejects the richer result item.
@@ -499,6 +526,7 @@ def analyze_client_consortium_viability(
             "capacidade_contemplacoes": contemplation_capacities,
             "mapeamento_origem": group.get("mapeamento_origem") or {},
             "source_values": source_values,
+            "credit_range_validation": _credit_range_validation(group),
         })
         for strategy_key, field, _, _ in STRATEGY_TARGETS:
             group_ref[field] = ranges.get(strategy_key)
