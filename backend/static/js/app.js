@@ -451,10 +451,20 @@ function updateFinancialStudyActionState() {
   const activeItems = activeStudyItems();
   const missingScenarios = items.some((item) => !motor360QuotaReview.has(motor360GroupKey(item)) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)));
   const pendingReview = selectedMotor360Items().some((item) => motor360QuotaReview.has(motor360GroupKey(item)));
-  button.disabled = !activeItems.length || missingScenarios || pendingReview;
+  const missingCurrentMotor = !investorState.result?.audit_id;
+  button.disabled = !activeItems.length || missingScenarios || pendingReview || missingCurrentMotor;
+  const excludedNoQuota = items.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)));
+  const exclusions = excludedNoQuota.map((item) => `Grupo ${item.grupo || item.grupo_id || "-"} selecionado sem cotas; fora do estudo.`);
+  document.querySelectorAll("[data-financial-study-exclusions]").forEach((node) => {
+    node.innerHTML = exclusions.length
+      ? `<div class="motor360-quota-review-alert" role="status"><strong>Grupos fora dos cálculos</strong><span>${exclusions.map(escapeHtml).join("<br>")}</span></div>`
+      : "";
+  });
   const missingLabels = items.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)))
     .map((item) => `Grupo ${item.grupo || item.grupo_id || "-"}`);
-  button.title = pendingReview
+  button.title = missingCurrentMotor
+    ? "Execute o Motor 360 nesta sessão para vincular o estudo à auditoria atual."
+    : pendingReview
     ? "Revise as quantidades migradas no Motor 360 antes de aprovar o estudo."
     : !activeItems.length
     ? "Selecione grupos no Motor 360 antes de aprovar."
@@ -466,6 +476,7 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
   const profile = collectClientProfile?.() || {};
   return {
     motor360_audit_id: investorState.result?.audit_id || null,
+    motor360_base_fingerprint: investorState.audit?.data_source?.base_snapshot?.fingerprint || null,
     study_contract_rule: "Cada cota selecionada representa um contrato independente; cenários com e sem embutido são alternativas.",
     study_steps: [
       "introducao", "simulacao_investimento", "melhores_consorcios", "quadro_resumo",
@@ -491,7 +502,9 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
       credit_max: item.credito_maximo ?? null,
       percentual_lance_embutido: item.percentual_lance_embutido ?? null,
       taxa_adm: item.taxa_adm ?? null,
-      taxa_adm_ano: item.taxa_ano ?? item.taxa_adm_ano ?? null,
+      taxa_adm_ano: financialStudyAnnualRate(item).value,
+      taxa_adm_ano_displayed: financialStudyAnnualRate(item).value,
+      taxa_adm_ano_source: financialStudyAnnualRate(item).source,
       fundo_reserva: item.fundo_reserva ?? null,
       fundo_reserva_ano: item.fundo_reserva_ano ?? null,
       remaining_term: item.prazo_restante ?? null,
@@ -571,6 +584,11 @@ document.getElementById("financialStudyPart2AnnualRate")?.addEventListener("inpu
 
 async function approveCurrentFinancialStudy() {
   const items = activeStudyItems();
+  if (!investorState.result?.audit_id) {
+    updateFinancialStudyActionState();
+    showToast("Execute o Motor 360 nesta sessão antes de aprovar, para vincular o estudo à auditoria e à base atuais.", "warning");
+    return;
+  }
   if (!items.length || items.some((item) => !item.cenarios?.length) || selectedMotor360Items().some((item) => motor360QuotaReview.has(motor360GroupKey(item)))) {
     updateFinancialStudyActionState();
     showToast("Revise quantidades pendentes e selecione ao menos uma cota por grupo antes de aprovar.", "warning");
@@ -813,8 +831,7 @@ function renderFinancialStudyContracting() {
       const reserveRate = numericValue(entry.item.fundo_reserva);
       const reserveAnnualRate = financialStudyReserveAnnualRate(entry.item);
       const term = numericValue(entry.item.prazo_restante);
-      const sourceAnnualRate = financialStudyAnnualRate(entry.item);
-      const annualRate = sourceAnnualRate ?? (adminRate !== null && term > 0 ? (adminRate * 12) / term : null);
+      const annualRate = financialStudyAnnualRate(entry.item).value;
       for (let contractIndex = 1; contractIndex <= entry.quotas; contractIndex += 1) {
         rows.push({
           scenarioId,
@@ -1161,29 +1178,24 @@ function renderFinancialStudySummary() {
   };
   const termLabel = terms.length === items.length ? rangeLabel(terms) : "Prazo incompleto";
   const scenarioTermLabel = termLabel;
-  const primaryEntries = baseEntries.length ? baseEntries : embeddedEntries;
-  const primaryScenarioLabel = baseEntries.length ? "sem embutido" : "com embutido";
-  const totalContractedCredit = sumField(primaryEntries, "contractedCredit");
-  const initialInstallment = sumField(primaryEntries, "installment");
-  const totalEmbeddedBid = sumField(embeddedEntries, "embedded");
   const rateFor = (item, field) => {
-    const value = field === "taxa_ano" ? financialStudyAnnualRate(item) : field === "fundo_reserva_ano" ? financialStudyReserveAnnualRate(item) : item[field];
+    const value = field === "taxa_ano" ? financialStudyAnnualRate(item).value : field === "fundo_reserva_ano" ? financialStudyReserveAnnualRate(item) : item[field];
     return value === null || value === undefined || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
   };
-  const weightedRate = (field) => {
-    if (primaryEntries.length !== items.length || primaryEntries.some((entry) => rateFor(entry.item, field) === null)) return null;
-    const base = sumField(primaryEntries, "contractedCredit");
+  const weightedRate = (entries, field) => {
+    if (!entries.length || entries.some((entry) => rateFor(entry.item, field) === null)) return null;
+    const base = sumField(entries, "contractedCredit");
     if (!(base > 0)) return null;
-    return primaryEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit) * rateFor(entry.item, field), 0) / base;
+    return entries.reduce((sum, entry) => sum + Number(entry.contractedCredit) * rateFor(entry.item, field), 0) / base;
   };
-  const chargeTotal = (field) => {
-    if (primaryEntries.length !== items.length || primaryEntries.some((entry) => rateFor(entry.item, field) === null || !Number.isFinite(Number(entry.contractedCredit)))) return null;
-    return primaryEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit) * rateFor(entry.item, field), 0);
+  const chargeTotal = (entries, field) => {
+    if (!entries.length || entries.some((entry) => rateFor(entry.item, field) === null || !Number.isFinite(Number(entry.contractedCredit)))) return null;
+    return entries.reduce((sum, entry) => sum + Number(entry.contractedCredit) * rateFor(entry.item, field), 0);
   };
-  const rateRows = [
-    { label: "Taxa administrativa", annual: weightedRate("taxa_ano"), total: weightedRate("taxa_adm"), amount: chargeTotal("taxa_adm") },
-    { label: "Fundo de reserva", annual: weightedRate("fundo_reserva_ano"), total: weightedRate("fundo_reserva"), amount: chargeTotal("fundo_reserva") },
-  ].map((row) => `<tr><th scope="row" data-label="Encargo">${row.label}</th><td data-label="Ao ano">${formatPercent(row.annual)}</td><td data-label="Total (%)">${formatPercent(row.total)}</td><td data-label="Valor total">${formatMoney(row.amount)}</td></tr>`).join("");
+  const scenarioRateRows = (entries) => [
+    { label: "Taxa administrativa", annual: weightedRate(entries, "taxa_ano"), total: weightedRate(entries, "taxa_adm"), amount: chargeTotal(entries, "taxa_adm") },
+    { label: "Fundo de reserva", annual: weightedRate(entries, "fundo_reserva_ano"), total: weightedRate(entries, "fundo_reserva"), amount: chargeTotal(entries, "fundo_reserva") },
+  ].map((row) => `<tr><th scope="row">${row.label}</th><td>${formatPercent(row.annual)}</td><td>${formatPercent(row.total)}</td><td>${formatMoney(row.amount)}</td></tr>`).join("");
   const sumProfile = (entries, profileId, field = "ideal") => {
     if (entries.length !== items.length || entries.some((entry) => !entry.profiles?.[profileId] || entry.profiles[profileId][field] === null || entry.profiles[profileId][field] === undefined || !Number.isFinite(Number(entry.profiles[profileId][field])))) return null;
     return entries.reduce((sum, entry) => sum + Number(entry.profiles[profileId][field]), 0);
@@ -1234,22 +1246,23 @@ function renderFinancialStudySummary() {
       ? '<strong class="financial-study-part4-scenario-emphasis">Com</strong> lance embutido'
       : '<strong class="financial-study-part4-scenario-emphasis">Sem</strong> lance embutido';
     const entries = metricsByScenario[scenarioId]?.entries || [];
+    const scenarioCredit = sumField(entries, "contractedCredit");
+    const scenarioInstallment = sumField(entries, "installment");
+    const scenarioEmbedded = sumField(entries, "embedded");
+    const scenarioTerms = entries.map((entry) => Number(entry.item.prazo_restante)).filter((value) => Number.isFinite(value) && value > 0);
+    const scenarioTerm = scenarioTerms.length === entries.length ? rangeLabel(scenarioTerms) : "Prazo incompleto";
+    const scenarioRates = `<div class="financial-study-part4-rates-wrap"><table class="financial-study-part4-table financial-study-part4-rate-summary"><thead><tr><th>Encargo</th><th>Ao ano</th><th>Total</th><th>Valor total</th></tr></thead><tbody>${scenarioRateRows(entries)}</tbody></table></div>`;
     const lotteryRow = scenarioId === "without_embedded"
-      ? `<tr class="financial-study-part4-lottery-row"><th scope="row" data-label="Perfil">Sorteio Geral<small>Não exige lance</small></th><td data-label="Lance próprio ideal somado">${formatMoney(0)}</td><td data-label="Lance total ideal somado">${formatMoney(0)}</td><td data-label="Lance embutido somado">${formatMoney(0)}</td><td data-label="Crédito disponível somado">${formatMoney(totalContractedCredit)}</td><td data-label="Parcela inicial somada">${formatMoney(initialInstallment)}</td><td data-label="Prazo">${escapeHtml(scenarioTermLabel)}</td></tr>`
+      ? `<tr class="financial-study-part4-lottery-row"><th scope="row" data-label="Perfil">Sorteio Geral<small>Não exige lance</small></th><td>${formatMoney(0)}</td><td>${formatMoney(0)}</td><td>${formatMoney(0)}</td><td>${formatMoney(scenarioCredit)}</td><td>${formatMoney(scenarioInstallment)}</td><td>${escapeHtml(scenarioTerm)}</td></tr>`
       : "";
     const emptyRow = entries.length ? "" : '<tr><td colspan="7">Dados somados deste cenário não disponíveis no Motor 360.</td></tr>';
-    return `<section class="financial-study-part4-scenario-summary"><h3>${scenarioTitle} · somatória dos grupos selecionados</h3><div class="financial-study-part4-scenarios-wrap" role="region" aria-label="${scenarioLabel}: perfis somados do Motor 360" tabindex="0"><table class="financial-study-part4-table financial-study-part4-scenarios-table"><colgroup><col style="width:32%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:14%"><col style="width:10%"><col style="width:6%"></colgroup><thead><tr><th scope="col">Perfil</th><th scope="col">Lance próprio ideal somado</th><th scope="col">Lance total ideal somado</th><th scope="col">Embutido somado</th><th scope="col">Crédito disponível somado</th><th scope="col">Parcela inicial somada</th><th scope="col">Prazo</th></tr></thead><tbody>${entries.length ? lotteryRow : ""}${profileRowsForScenario(scenarioId).join("")}${emptyRow}</tbody></table></div></section>`;
+    return `<section class="financial-study-part4-scenario-summary"><h3>${scenarioTitle} · ${entries.reduce((count, entry) => count + entry.quotas, 0)} contratos independentes</h3><div class="financial-study-part4-overview-wrap"><table class="financial-study-part4-table financial-study-part4-overview-table"><thead><tr><th>Carta contratada</th><th>Crédito líquido</th><th>Parcela total</th><th>Prazo</th><th>Lance embutido</th></tr></thead><tbody><tr><td>${formatMoney(scenarioCredit)}</td><td>${formatMoney(sumField(entries, "credit"))}</td><td>${formatMoney(scenarioInstallment)}</td><td>${escapeHtml(scenarioTerm)}</td><td>${formatMoney(scenarioEmbedded)}</td></tr></tbody></table></div>${scenarioRates}<div class="financial-study-part4-scenarios-wrap" role="region" aria-label="${scenarioLabel}: perfis somados do Motor 360" tabindex="0"><table class="financial-study-part4-table financial-study-part4-scenarios-table"><colgroup><col style="width:32%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:14%"><col style="width:10%"><col style="width:6%"></colgroup><thead><tr><th scope="col">Perfil</th><th scope="col">Lance próprio ideal somado</th><th scope="col">Lance total ideal somado</th><th scope="col">Embutido somado</th><th scope="col">Crédito disponível somado</th><th scope="col">Parcela inicial somada</th><th scope="col">Prazo</th></tr></thead><tbody>${entries.length ? lotteryRow : ""}${profileRowsForScenario(scenarioId).join("")}${emptyRow}</tbody></table></div></section>`;
   };
   const scenarioTables = scenarioIds.map(profileTable).join("");
   const incompleteGroupCount = items.length - Math.min(baseEntries.length, embeddedEntries.length);
   const adminsText = escapeHtml(adminLabel);
-  target.innerHTML = `${renderQuotaReviewBannerForStudy(selectedItems)}<p class="financial-study-part4-administrator">Administradora(s): <strong>${adminsText}</strong></p>
-    <div class="financial-study-part4-top-grid">
-      <div class="financial-study-part4-overview-wrap" role="region" aria-label="Somatória dos grupos selecionados" tabindex="0"><table class="financial-study-part4-table financial-study-part4-overview-table"><thead><tr><th scope="col">Carta de Crédito</th><th scope="col">Parcelas<br>sem seguro</th><th scope="col">Prazo<br>meses</th></tr></thead><tbody><tr><td data-label="Carta de Crédito">${formatMoney(totalContractedCredit)}</td><td data-label="Parcelas sem seguro">${formatMoney(initialInstallment)}</td><td data-label="Prazo">${escapeHtml(termLabel)}</td></tr></tbody></table><div class="financial-study-part4-embedded-total"><span>Lance Embutido</span><strong>${formatMoney(totalEmbeddedBid)}</strong></div></div>
-      <div class="financial-study-part4-rates-wrap" role="region" aria-label="Taxas e valores totais" tabindex="0"><table class="financial-study-part4-table financial-study-part4-rate-summary"><thead><tr><th scope="col">Encargo</th><th scope="col">Ao ano</th><th scope="col">Total</th><th scope="col">Valor total</th></tr></thead><tbody>${rateRows}</tbody></table></div>
-    </div>
-    <div class="financial-study-part4-profile-scenarios"><h3 class="financial-study-part4-profile-scenarios-title">Lance Livre · perfis de contemplação do Motor 360</h3>${scenarioTables}</div>
-    <p class="financial-study-part4-source-note">Valores monetários apresentados como somatória dos contratos independentes do cenário ${primaryScenarioLabel}; o cenário alternativo não é somado. A referência percentual de cada perfil é ponderada pelo crédito contratado, não somada. As taxas e encargos permanecem consolidados no quadro acima. ${historySummary()} ${incompleteGroupCount > 0 ? `Há dados de cenário incompletos em ${incompleteGroupCount} grupo(s); os totais correspondentes são apresentados como não informados.` : ""}</p>`;
+  const excluded = selectedItems.filter((item) => !pendingReviewItems.includes(item) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)));
+  target.innerHTML = `${renderQuotaReviewBannerForStudy(selectedItems)}<div data-financial-study-exclusions>${excluded.length ? `<div class="motor360-quota-review-alert" role="status"><strong>Grupos fora do estudo</strong><span>${excluded.map((item) => `Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")} selecionado sem cotas; fora dos cálculos.`).join("<br>")}</span></div>` : ""}</div><p class="financial-study-part4-administrator">Administradora(s): <strong>${adminsText}</strong></p><div class="financial-study-part4-profile-scenarios"><h3 class="financial-study-part4-profile-scenarios-title">Cenários e perfis de contemplação do Motor 360</h3>${scenarioTables}</div><p class="financial-study-part4-source-note">Cada cenário possui resumo e totais próprios. Cenários com e sem embutido são alternativas e não são somados. A referência percentual de cada perfil é ponderada pelo crédito contratado. ${historySummary()} ${incompleteGroupCount > 0 ? `Há grupos sem dados naquele cenário; cada resumo inclui somente contratos ativos do próprio cenário.` : ""}</p>`;
 }
 
 function clearRetiredFinancialStudyState() {
@@ -3304,7 +3317,13 @@ function financialStudyNumericValue(value) {
 }
 
 function financialStudyAnnualRate(item) {
-  return financialStudyNumericValue(item?.taxa_ano ?? item?.taxa_adm_ano);
+  const declared = financialStudyNumericValue(item?.taxa_adm_ano ?? item?.taxa_ano);
+  if (declared !== null) return { value: declared, source: item?.taxa_adm_ano != null ? "planilha:AE" : "Motor 360:taxa_ano" };
+  const total = financialStudyNumericValue(item?.taxa_adm ?? item?.taxa_total);
+  const term = financialStudyNumericValue(item?.prazo_restante ?? item?.prazo_remanescente);
+  return total !== null && term > 0
+    ? { value: total * 12 / term, source: "estimado:taxa total × 12 ÷ prazo" }
+    : { value: null, source: "indisponível" };
 }
 
 function financialStudyReserveAnnualRate(item) {
