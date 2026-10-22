@@ -494,6 +494,7 @@ def analyze_client_consortium_viability(
             "fundo_reserva": money(fund),
             "taxa_ano": decimal_value(normalize_percent(group.get("taxa_adm_ano"))),
             "fundo_reserva_ano": decimal_value(normalize_percent(group.get("fundo_reserva_ano"))),
+            "percentual_lance_embutido": money(embedded),
             "historico_12_meses": list(group.get("historico_12_meses") or []),
             "capacidade_contemplacoes": contemplation_capacities,
             "mapeamento_origem": group.get("mapeamento_origem") or {},
