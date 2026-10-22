@@ -142,7 +142,9 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("const motor360GroupAnalyticsCache = new Map()", app_js)
         self.assertIn("const cached = motor360GroupAnalyticsCache.get(cacheKey)", app_js)
         self.assertIn('investorState.selectedGroupIds.has(motor360GroupKey(a)) ? selectedValueFor(a, "credit") : analyticsFor(a).groupMaxCredit', sort_function)
-        self.assertIn("investorState.selectedGroupSort || \"original\"", card_renderer)
+        self.assertIn('investorState.selectedGroupSort || "credit_by_admin"', card_renderer)
+        self.assertIn('if (sort === "credit_by_admin")', sort_function)
+        self.assertIn('return creditB - creditA || Number(a.ranking || 0) - Number(b.ranking || 0)', sort_function)
 
     def test_motor360_menor_lance_usa_o_mesmo_total_de_composicao_do_card(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
@@ -165,7 +167,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("Não foi possível carregar os gráficos", app_js)
         self.assertNotIn("motor360HasHistoryEvidence", app_js)
         self.assertIn("motor360BidSortLabel(item)", card_renderer)
-        self.assertIn("investorState.selectedGroupSort || \"original\"", app_js.split("function renderMotor360GroupCard(item)", 1)[1].split("function selectedMotor360Items", 1)[0])
+        self.assertIn('investorState.selectedGroupSort || "credit_by_admin"', app_js.split("function renderMotor360GroupCard(item)", 1)[1].split("function selectedMotor360Items", 1)[0])
         self.assertIn("R$ 0 é válido", app_js)
         self.assertIn("crédito e histórico não alteram a posição", app_js)
 
