@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import math
 import os
 import re
 import secrets
@@ -243,6 +244,51 @@ def _decompress_archive(value: str) -> dict | None:
     return json.loads(raw.decode("utf-8"))
 
 
+def _validate_selected_credit_basis(snapshot: dict) -> None:
+    """Reject new-format studies with incomplete or inconsistent credit selections."""
+    for group in snapshot.get("groups", []):
+        if group.get("study_credit_basis") != "credito_escolhido_por_cenario":
+            continue
+        quotas = group.get("quotas_by_scenario") or {}
+        selected = group.get("selected_credit_by_scenario") or {}
+        options = group.get("available_credit_options") or []
+        allowed_values = set()
+        for option in options:
+            raw_value = option.get("value") if isinstance(option, dict) else option
+            try:
+                value = float(raw_value)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(value) and value > 0:
+                allowed_values.add(round(value, 2))
+        scenarios = {str(item.get("id")): item for item in group.get("selected_scenarios") or []}
+        contracts = group.get("contracts") or []
+        for scenario_id in ("without_embedded", "with_embedded"):
+            try:
+                count = max(0, int(quotas.get(scenario_id, 0)))
+            except (TypeError, ValueError):
+                raise ValueError("A quantidade de cotas do estudo é inválida.") from None
+            if count <= 0:
+                continue
+            try:
+                credit = float(selected.get(scenario_id))
+            except (TypeError, ValueError):
+                credit = math.nan
+            if not math.isfinite(credit) or credit <= 0:
+                raise ValueError("Escolha um crédito válido para cada cenário com cotas antes de aprovar o estudo.")
+            if not allowed_values or round(credit, 2) not in allowed_values:
+                raise ValueError("O crédito escolhido não corresponde às opções carregadas do grupo.")
+            maximum = group.get("credit_max")
+            if maximum is not None and float(maximum) > 0 and credit > float(maximum) + 0.01:
+                raise ValueError("O crédito escolhido excede o Maior Crédito informado para o grupo.")
+            scenario = scenarios.get(scenario_id)
+            if not scenario or abs(float(scenario.get("selected_credit") or 0) - credit) > 0.01:
+                raise ValueError("Os dados financeiros do cenário não correspondem ao crédito selecionado.")
+            scenario_contracts = [contract for contract in contracts if contract.get("scenario") == scenario_id]
+            if len(scenario_contracts) != count or any(abs(float(contract.get("contracted_credit") or 0) - credit) > 0.01 for contract in scenario_contracts):
+                raise ValueError("A quantidade ou o crédito dos contratos do cenário não corresponde à seleção.")
+
+
 def create_study(*, client_name: str, approved_by: str, app_version: str, snapshot: dict, document_html: str, approval_key: str) -> dict:
     try:
         approval_key = UUID(approval_key).hex
@@ -253,6 +299,7 @@ def create_study(*, client_name: str, approved_by: str, app_version: str, snapsh
         raise ValueError("Informe o nome do cliente para aprovar o estudo.")
     if not isinstance(snapshot, dict) or not isinstance(snapshot.get("groups"), list) or not snapshot["groups"]:
         raise ValueError("O estudo precisa conter ao menos um grupo selecionado.")
+    _validate_selected_credit_basis(snapshot)
     archive = _compress_archive(snapshot, document_html, app_version)
     settings = get_settings()
     headers, indexes = _headers()

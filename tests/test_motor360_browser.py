@@ -63,6 +63,8 @@ class Motor360BrowserTest(unittest.TestCase):
             _between(source, "function sortMotor360ItemsByBid", "function selectedGroupAnalytics"),
             _between(source, "function motor360ExecutionStepMessage", "async function loadMotor360Audit"),
             _between(source, "function renderMotor360GroupCardUncached", "function renderMotor360GroupCard"),
+            _between(source, "function motor360CreditOptions", "function setScenarioCredit"),
+            _between(source, "function motor360ScenarioForSelectedCredit", "function selectedScenarioIdsForGroup"),
             _between(source, "function renderMotor360GroupCard(item)", "function selectedMotor360Items"),
             _between(source, "function selectedScenariosForItem", "function updateMotor360SelectionSummary"),
             _between(source, "function groupHasPositiveScenarioQuota", "function motor360FocusSelector"),
@@ -76,15 +78,16 @@ const card = document.querySelector(".motor360-group-card");
 const summary = card.querySelector(".motor360-group-summary");
 const actions = summary.querySelector(".motor360-group-actions");
 document.querySelector("#result").textContent = JSON.stringify({
-  metrics: [...summary.children].slice(0, 3).map(node => node.querySelector("small")?.textContent),
+  metrics: [...summary.children].filter(node => node.querySelector("small")).map(node => node.querySelector("small")?.textContent),
   actionsPresent: Boolean(actions),
   actionControls: [...(actions?.children || [])].map(node => node.textContent.trim().replace(/\\s+/g, " ")),
 });
 ''')
-        self.assertEqual(len(result["metrics"]), 3)
+        self.assertEqual(len(result["metrics"]), 4)
         self.assertEqual(result["metrics"][0], "Data de Venc.")
         self.assertTrue(result["metrics"][1].startswith("Cr"))
-        self.assertEqual(result["metrics"][2], "Prazo restante")
+        self.assertEqual(result["metrics"][2], "Lance embutido")
+        self.assertEqual(result["metrics"][3], "Prazo restante")
         self.assertTrue(result["actionsPresent"])
         self.assertIn("Selecionar grupo", " ".join(result["actionControls"]))
         self.assertIn("Ver", result["actionControls"][-1])
@@ -106,8 +109,10 @@ document.querySelector("#result").textContent = JSON.stringify({
 const item = {
   grupo: "1019",
   quotasByScenario: { without_embedded: 2, with_embedded: 1 },
+  credito_minimo: 100000, credito_maximo: 300000,
   cenarios: [scenario("without_embedded", 150000), scenario("with_embedded", 175000)],
 };
+investorState.selectedCredits.set("1019", { without_embedded: 300000, with_embedded: 200000 });
 groupScenarios.set("1019", new Set(["without_embedded", "with_embedded"]));
 document.querySelector("#result").textContent = JSON.stringify(
   selectedScenariosForItem(item).map(row => ({ id: row.id, quotas: row.selected_quota_count }))
@@ -124,10 +129,66 @@ groupScenarios.set("1026", new Set(["without_embedded"]));
 investorState.quotaCounts.set("1026", { without_embedded: 0, with_embedded: 0 });
 const zeroIsInvalid = groupHasPositiveScenarioQuota("1026");
 investorState.quotaCounts.set("1026", { without_embedded: 1, with_embedded: 0 });
+investorState.selectedCredits.set("1026", { without_embedded: 100000, with_embedded: null });
 const positiveIsValid = groupHasPositiveScenarioQuota("1026");
 document.querySelector("#result").textContent = JSON.stringify({ zeroIsInvalid, positiveIsValid });
 ''')
         self.assertEqual(result, {"zeroIsInvalid": False, "positiveIsValid": True})
+
+    def test_selected_group_credit_options_are_scenario_specific_and_gate_quota(self):
+        result = self._run_browser(r'''
+const item = {
+  grupo: "40135", administradora: "ITAÚ", credito_minimo: 100000,
+  credito_intermediario_1: 200000, credito_intermediario_2: 300000,
+  credito_intermediario_3: 400000, credito_maximo: 500000,
+  taxa_adm: .15, fundo_reserva: .02, percentual_lance_embutido: .3,
+  prazo_restante: 100, cenarios: [scenario("without_embedded", 250000), scenario("with_embedded", 250000)],
+};
+investorState.selectedGroupIds.add("40135");
+document.querySelector("#cards").innerHTML = renderMotor360GroupCard(item);
+const selectors = [...document.querySelectorAll('[data-credit-action="scenario"]')];
+const quotas = [...document.querySelectorAll('[data-quota-action="scenario"]')];
+const options = selectors.map(select => [...select.options].slice(1).map(option => Number(option.value)));
+document.querySelector("#result").textContent = JSON.stringify({
+  options, quotaDisabled: quotas.map(input => input.disabled),
+  scenarioNames: selectors.map(select => select.getAttribute("aria-label")),
+});
+''')
+        expected = [100000, 200000, 300000, 400000, 500000]
+        self.assertEqual(result["options"], [expected, expected])
+        self.assertEqual(result["quotaDisabled"], [True, True])
+        self.assertIn("sem lance embutido", result["scenarioNames"][0])
+        self.assertIn("com lance embutido", result["scenarioNames"][1])
+
+    def test_selected_credit_recalculates_financial_values_independently_by_scenario(self):
+        result = self._run_browser(r'''
+const item = {
+  grupo: "40135", credito_minimo: 100000, credito_maximo: 500000,
+  taxa_adm: .15, fundo_reserva: .02, percentual_lance_embutido: .3,
+  prazo_restante: 100,
+  quotasByScenario: { without_embedded: 2, with_embedded: 3 },
+  cenarios: [scenario("without_embedded", 250000), scenario("with_embedded", 250000)],
+};
+investorState.selectedGroupIds.add("40135");
+investorState.result.final_items = [item];
+investorState.selectedCredits.set("40135", { without_embedded: 300000, with_embedded: 400000 });
+const without = motor360ScenarioForSelectedCredit(item, item.cenarios[0]);
+const withEmbedded = motor360ScenarioForSelectedCredit(item, item.cenarios[1]);
+document.querySelector("#result").textContent = JSON.stringify({
+  without: { gross: without.credito_contratado, liquid: without.credito_liquido_projetado,
+    embedded: without.lance_embutido, balance: without.saldo_devedor, installment: without.parcela_inicial },
+  withEmbedded: { gross: withEmbedded.credito_contratado, liquid: withEmbedded.credito_liquido_projetado,
+    embedded: withEmbedded.lance_embutido, balance: withEmbedded.saldo_devedor, installment: withEmbedded.parcela_inicial },
+});
+''')
+        self.assertEqual(result["without"], {
+            "gross": 300000, "liquid": 300000, "embedded": 0,
+            "balance": 351000, "installment": 3510,
+        })
+        self.assertEqual(result["withEmbedded"], {
+            "gross": 400000, "liquid": 280000, "embedded": 120000,
+            "balance": 468000, "installment": 4680,
+        })
 
     def test_quota_review_card_refreshes_after_confirmation_without_quantity_change(self):
         result = self._run_browser(r'''
@@ -169,8 +230,7 @@ document.querySelector("#result").textContent = JSON.stringify({
 });
 ''')
         self.assertEqual(result["quotas"], ["0", "0"])
-        self.assertTrue(all("R$ 600.000,00" in value for value in result["values"]))
-        self.assertTrue(all("R$ 4.500,00" in value for value in result["values"]))
+        self.assertTrue(all("-" in value for value in result["values"]))
         self.assertTrue(all("0 cotas" in status for status in result["statuses"]))
 
     def _run_browser(self, actions: str, extra_functions: str = "") -> dict:
@@ -179,7 +239,7 @@ document.querySelector("#result").textContent = JSON.stringify({
 <script>
 const investorState = {
   selectedGroupIds: new Set(), selectedGroupScenario: "per_group", selectedGroupSort: "original",
-  selectedGroupProfile: "all", quotaCounts: new Map(), selectedGroupData: new Map(),
+  selectedGroupProfile: "all", quotaCounts: new Map(), selectedGroupData: new Map(), selectedCredits: new Map(),
   result: { cliente: { credito_liquido_desejado: 600000 } },
 };
 const motor360QuotaReview = new Map();
@@ -189,6 +249,7 @@ const motor360GroupKey = item => String(item.grupo || item.grupo_id);
 const motor360GroupAnchorId = id => `motor360-group-${id}`;
 const selectedScenarioIdsForGroup = id => groupScenarios.get(id) || new Set();
 const studyGroups = [];
+const activeStudyItems = () => studyGroups;
 const selectedMotor360Items = () => studyGroups;
 const selectedCompositionScenarioMetrics = () => ({ entries: [], totalQuotas: 0, credit: 0, installment: 0, installmentAfter: 0 });
 const selectedPortfolioTotals = () => ({ credit: 0, installment: 0, availableBidByProfile: {}, portfolioProfileRequirements: {} });

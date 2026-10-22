@@ -10,6 +10,21 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class StaticEmailTest(unittest.TestCase):
+    def test_motor360_credit_is_selected_per_scenario_before_quota_count(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
+
+        self.assertIn('data-credit-action="scenario"', app_js)
+        self.assertIn('data-quota-action="scenario"', app_js)
+        self.assertIn('${chosenCredit === null ? "disabled" : ""}', app_js)
+        self.assertIn('"credito_minimo", "Menor Crédito"', app_js)
+        self.assertIn('"credito_intermediario_3", "Créd. Inter. 3"', app_js)
+        self.assertIn('"credito_maximo", "Maior Crédito"', app_js)
+        self.assertIn('without_embedded: selectedCreditFor(item, "without_embedded")', app_js)
+        self.assertIn('with_embedded: selectedCreditFor(item, "with_embedded")', app_js)
+        self.assertIn('study_credit_basis: "credito_escolhido_por_cenario"', app_js)
+        self.assertIn(".motor360-scenario-credit select", css)
+
     def test_release_version_matches_backend_render_and_front_assets(self):
         config_py = (ROOT / "backend" / "config.py").read_text(encoding="utf-8")
         engine_py = (ROOT / "backend" / "consortium_viability_engine.py").read_text(encoding="utf-8")

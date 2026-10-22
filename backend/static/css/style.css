@@ -5039,7 +5039,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-scenario-title strong { grid-column: 1; grid-row: 1; min-width: 0; line-height: 1.35; }
 .motor360-scenario-title > span { grid-column: 1; grid-row: 2; min-width: 0; line-height: 1.35; }
 .motor360-scenario-title > label.motor360-scenario-quota { display: flex; grid-column: 2; grid-row: 1 / span 2; min-width: 112px; flex-direction: column; align-items: flex-start; gap: 3px; padding: 4px 6px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-navy); font-size: .62rem; font-weight: 700; }
+.motor360-scenario-title > label.motor360-scenario-credit { display: flex; grid-column: 1 / -1; grid-row: 3; min-width: 0; flex-direction: column; align-items: flex-start; gap: 3px; padding: 4px 6px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-navy); font-size: .62rem; font-weight: 700; }
 .motor360-scenario-quota span { color: var(--brand-navy) !important; font-size: .62rem !important; }
+.motor360-scenario-credit span { color: var(--brand-navy) !important; font-size: .62rem !important; }
+.motor360-scenario-credit select { width: 100%; min-height: 30px; border: 1px solid #d7dfe3; border-radius: 5px; padding: 3px 6px; color: var(--brand-navy); background: #fff; font-size: .7rem; }
 .motor360-scenario-quota .motor360-quota-input { width: 66px; height: 30px; font-size: .9rem; }
 .motor360-scenario-card .motor360-quota-warning { display: block; margin: 0 0 6px; color: #9a5300; font-size: .65rem; font-weight: 700; }
 
@@ -5068,6 +5071,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .motor360-group-actions .motor360-quota-area { justify-self: start; }
   .motor360-scenario-title { grid-template-columns: minmax(0, 1fr); }
   .motor360-scenario-title > label.motor360-scenario-quota { grid-column: 1; grid-row: 3; justify-self: start; }
+  .motor360-scenario-title > label.motor360-scenario-credit { grid-column: 1; grid-row: 4; }
 }
 
 /* Comparativo analítico: os gráficos são renderizados por Apache ECharts. */

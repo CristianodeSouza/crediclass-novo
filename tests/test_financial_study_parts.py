@@ -285,7 +285,7 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn('class="financial-study-fixed-copy">Texto fixo', html)
         self.assertIn('class="financial-study-motor-value">Dados do Motor 360', html)
         self.assertIn('class="financial-study-external-value">Perfil do cliente / calendário', html)
-        self.assertIn('study_credit_basis: "credito_maximo"', app_js)
+        self.assertIn('study_credit_basis: "credito_escolhido_por_cenario"', app_js)
         self.assertIn("Menor Crédito e créditos intermediários são referências visuais", app_js)
         self.assertIn(".financial-study-fixed-copy { color: #1f5da8", css)
         self.assertIn(".financial-study-motor-value { color: #147a48", css)
