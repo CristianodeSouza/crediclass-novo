@@ -4777,7 +4777,7 @@ function formatMotor360ServerTiming(header) {
 }
 
 function renderMotor360Audit(audit) {
-  if (!audit) return "";
+  if (!audit) return '<div data-motor360-audit></div>';
   const metadata = audit.metadata || {};
   const summary = audit.summary || {};
   const client = audit.client_snapshot || {};
@@ -4801,7 +4801,9 @@ function renderMotor360Audit(audit) {
     const mark = (stage) => stages[stage]?.approved ? "Aprovado" : "Reprovado";
     const resultLabel = item.matrix_approved ? "Aprovado individualmente no perfil" : formatMotor360Result(item.result);
     const approvedScenarios = stages.contemplacao?.scenario_ids || [];
-    return `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${formatMoney(scenario.credito_contratado)}</td><td>${formatMoney(scenario.credito_minimo)} a ${formatMoney(scenario.credito_maximo)}</td><td>${mark("credito")}</td><td>${formatMoney(scenario.parcela_inicial)}<br><small>com emb.: ${formatMoney(embeddedScenario.parcela_inicial)}</small></td><td>${escapeHtml(String(scenario.prazo_apos_lance_limite_renda_meses ?? "-"))} / ${escapeHtml(String(item.source_values?.prazo_restante ?? "-"))}</td><td>${mark("prazo")}</td><td>${mark("contemplacao")}<br><small>${escapeHtml(approvedScenarios.length ? `cenário(s): ${approvedScenarios.join(", ")}` : "nenhum cenário aprovado")}</small></td><td>${resultLabel}</td></tr>`;
+    const source = item.source_values || {};
+    const sourceSummary = `P ${formatMoney(source.credito_minimo)} · R ${formatMoney(source.credito_intermediario_1)} · S ${formatMoney(source.credito_intermediario_2)} · T ${formatMoney(source.credito_intermediario_3)} · V ${formatMoney(source.credito_maximo)} · Y ${formatPercent(source.percentual_lance_embutido)} · AC ${formatPercent(source.fundo_reserva_ano)} · AE ${formatPercent(source.taxa_ano)}`;
+    return `<tr><td>${escapeHtml(item.grupo)}</td><td>${escapeHtml(item.administradora)}</td><td>${formatMoney(scenario.credito_contratado)}</td><td>${formatMoney(scenario.credito_minimo)} a ${formatMoney(scenario.credito_maximo)}</td><td>${mark("credito")}</td><td>${formatMoney(scenario.parcela_inicial)}<br><small>com emb.: ${formatMoney(embeddedScenario.parcela_inicial)}</small></td><td>${escapeHtml(String(scenario.prazo_apos_lance_limite_renda_meses ?? "-"))} / ${escapeHtml(String(item.source_values?.prazo_restante ?? "-"))}</td><td>${mark("prazo")}</td><td>${mark("contemplacao")}<br><small>${escapeHtml(approvedScenarios.length ? `cenário(s): ${approvedScenarios.join(", ")}` : "nenhum cenário aprovado")}</small></td><td title="${escapeHtml(sourceSummary)}">${resultLabel}<br><small>${escapeHtml(sourceSummary)}</small></td></tr>`;
   }).join("");
   const warnings = (audit.warnings || []).map((warning) => `<li class="audit-warning-${escapeHtml(warning.level || "info")}">${escapeHtml(warning.message)}</li>`).join("");
   return `
