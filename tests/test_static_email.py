@@ -76,16 +76,16 @@ class StaticEmailTest(unittest.TestCase):
         screen = app_js.split("function renderSelectedGroupsScreen()", 1)[1].split("function persistMotor360Selection()", 1)[0]
         quota_update = app_js.split("function setScenarioQuotaCount(", 1)[1].split("function minimumQuotasFor(", 1)[0]
         metrics = app_js.split("function selectedCompositionScenarioMetrics(", 1)[1].split("function selectedCompositionAssessment(", 1)[0]
-        portfolio = app_js.split("function selectedPortfolioTotals(", 1)[1].split("function selectedCompositionAssessment(", 1)[0]
 
         self.assertIn("empty.classList.toggle(\"d-none\", allItems.length > 0)", screen)
         self.assertIn("results.classList.toggle(\"d-none\", allItems.length === 0)", screen)
         self.assertIn("new Set(investorState.selectedScenarioIds.get(key) || [])", quota_update)
         self.assertIn("quotaCountFor(key) <= 0", quota_update)
-        self.assertIn('for (const selectedScenarioId of ["without_embedded", "with_embedded"])', metrics)
+        self.assertIn("const quotas = quotaCountFor(groupId, scenarioId)", metrics)
+        self.assertIn("quotas_by_scenario", app_js)
+        self.assertIn("cenários alternativos", app_js)
         self.assertIn("allocatedPool * profile.ideal / portfolioRequired", metrics)
-        self.assertIn("active[0]?.availableBidByProfile", portfolio)
-        self.assertIn("creditCapacityIssues: active.flatMap", portfolio)
+        self.assertNotIn("selectedPortfolioTotals", app_js)
 
     def test_motor360_rotulos_e_selo_de_status_coerentes_com_a_composicao(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
@@ -97,6 +97,7 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("scenario.profile_compatible_in_composition", card_renderer)
         self.assertIn('showPortfolioLabels ? "Lance próprio atribuído ao grupo" : "Lance do cliente"', card_renderer)
         self.assertIn('showPortfolioLabels ? "Lance total no grupo" : "Lance total do cenário"', card_renderer)
+        self.assertIn(".motor360-client-profile-summary-note", style_css)
         self.assertIn('item.requires_composition === true', card_renderer)
         self.assertIn('`Possível em composição · mín. ${visibleMinimum} cotas`', card_renderer)
         self.assertIn(': "Defina cotas por cenário"', card_renderer)
