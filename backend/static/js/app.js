@@ -1378,9 +1378,13 @@ async function preparePipeRunPlan() {
   } catch (error) { plan.innerHTML = `<p class="table-state-error">${error.message}</p>`; }
 }
 
+const moneyFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const percentFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 });
+const decimalInputFormatters = new Map();
+
 function formatMoney(value) {
   if (value === null || value === undefined || !Number.isFinite(Number(value)) || Number(value) > 100000000) return "-";
-  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+  return moneyFormatter.format(value);
 }
 
 function formatMoneyInputValue(value) {
@@ -1395,10 +1399,9 @@ function formatMoneyInputValue(value) {
 function formatDecimalInputValue(value, minimumFractionDigits = 2, maximumFractionDigits = 2) {
   const number = Number(parseNumberInput(value));
   if (!Number.isFinite(number)) return "";
-  return new Intl.NumberFormat("pt-BR", {
-    minimumFractionDigits,
-    maximumFractionDigits,
-  }).format(number);
+  const key = `${minimumFractionDigits}:${maximumFractionDigits}`;
+  if (!decimalInputFormatters.has(key)) decimalInputFormatters.set(key, new Intl.NumberFormat("pt-BR", { minimumFractionDigits, maximumFractionDigits }));
+  return decimalInputFormatters.get(key).format(number);
 }
 
 function formatMoneyInputById(id) {
@@ -1426,7 +1429,7 @@ function setMoneyInputValue(id, value) {
 
 function formatPercent(value) {
   if (value === null || value === undefined) return "-";
-  return `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 }).format(value * 100)}%`;
+  return `${percentFormatter.format(value * 100)}%`;
 }
 
 function percentToInputValue(value) {
@@ -3346,10 +3349,14 @@ function renderMotor360GroupCardUncached(item) {
 }
 
 function renderMotor360GroupCard(item) {
-  const compositionKey = [...investorState.selectedGroupIds].sort().map((id) => `${id}:${quotaCountFor(id, "without_embedded")},${quotaCountFor(id, "with_embedded")}`).join(";");
-  const desiredCredit = Number(motor360ClientProfile().credito_liquido_desejado || 0);
   const groupKey = motor360GroupKey(item);
   const selected = investorState.selectedGroupIds.has(groupKey);
+  // Only selected cards show portfolio-wide aggregates. Keep unselected card
+  // cache entries stable when another group's quota changes.
+  const compositionKey = selected
+    ? [...investorState.selectedGroupIds].sort().map((id) => `${id}:${quotaCountFor(id, "without_embedded")},${quotaCountFor(id, "with_embedded")}`).join(";")
+    : "";
+  const desiredCredit = Number(motor360ClientProfile().credito_liquido_desejado || 0);
   const selectedScenarios = [...selectedScenarioIdsForGroup(groupKey)].sort().join(",");
   const reviewState = motor360QuotaReview.get(groupKey);
   const reviewKey = reviewState ? `${reviewState.legacyCount}:${(reviewState.selectedScenarios || []).join(",")}` : "confirmed";
@@ -3414,11 +3421,36 @@ function motor360FinalItems(result = investorState.result) {
   return result?.final_items || result?.items || [];
 }
 
+const emptyMotor360Client = Object.freeze({});
+let motor360ClientProfileCache = null;
+
 function motor360ClientProfile() {
-  const resultClient = investorState.result?.cliente || {};
-  const profile = collectClientProfile?.() || {};
+  const resultClient = investorState.result?.cliente || emptyMotor360Client;
+  if (motor360ClientProfileCache?.source === resultClient) return motor360ClientProfileCache.value;
+  // Rendering Motor 360 must not collect and mutate the profile form. The
+  // analysis response is the stable source for all group-card calculations.
+  const profile = Object.keys(resultClient).length ? {} : (() => {
+    const titulares = summarizeClientTitulares(collectClientTitularesFromForm());
+    const ownResources = Number(titulares.lance_recursos_proprios || 0)
+      || toNumber(document.getElementById("clientProfileLanceProprio")?.value);
+    const fgts = Number(titulares.fgts || 0);
+    const income = Number(titulares.renda_total || 0);
+    const desiredInstallment = toNumber(document.getElementById("clientProfileParcelaIdeal")?.value);
+    const objective = document.getElementById("clientProfileObjetivo")?.value || "Não informado";
+    return {
+      credito_liquido_desejado: toNumber(document.getElementById("clientProfileCredito")?.value),
+      credito_desejado: toNumber(document.getElementById("clientProfileCredito")?.value),
+      renda_total: income,
+      parcela_maxima: income * DEFAULT_INCOME_COMMITMENT_PERCENT,
+      parcela_desejada: desiredInstallment,
+      fgts_total: fgts,
+      lance_recursos_proprios: ownResources,
+      lance_cliente_total: ownResources + fgts,
+      objetivo: objective,
+    };
+  })();
   const merged = { ...profile, ...resultClient };
-  return {
+  const client = {
     ...merged,
     objetivo: merged.objetivo || profile.objetivo || "Não informado",
     credito_liquido_desejado: merged.credito_liquido_desejado ?? merged.credito_desejado ?? profile.credito_desejado,
@@ -3429,6 +3461,8 @@ function motor360ClientProfile() {
     lance_recursos_proprios: merged.lance_recursos_proprios ?? merged.lance_proprio ?? profile.lance_recursos_proprios ?? profile.lance_proprio,
     lance_cliente_total: merged.lance_cliente_total ?? merged.lance_total ?? profile.lance_cliente_total,
   };
+  motor360ClientProfileCache = { source: resultClient, value: client };
+  return client;
 }
 
 function renderMotor360ClientProfileSummary(client = {}) {
@@ -5638,7 +5672,6 @@ function renderInvestorAnalysis(result) {
     }
     persistMotor360Selection();
     renderInvestorAnalysis(investorState.result);
-    renderSelectedGroupsScreen();
   }));
   let pendingQuotaFocusSelector = null;
   const quotaControls = [...results.querySelectorAll('[data-quota-action="scenario"]')];
@@ -5672,7 +5705,6 @@ function renderInvestorAnalysis(result) {
     pendingQuotaFocusSelector = null;
     window.setTimeout(() => {
       renderInvestorAnalysis(investorState.result);
-      renderSelectedGroupsScreen();
       if (focusSelector) document.querySelector(focusSelector)?.focus({ preventScroll: true });
     }, 0);
   }));
@@ -5682,7 +5714,6 @@ function renderInvestorAnalysis(result) {
     setScenarioCredit(groupId, scenarioId, control.value);
     persistMotor360Selection();
     renderInvestorAnalysis(investorState.result);
-    renderSelectedGroupsScreen();
     updateFinancialStudyActionState();
   }));
   results.querySelectorAll(".motor360-group-audit-btn").forEach((button) => button.addEventListener("click", () => renderMotor360GroupAudit(button.dataset.groupId)));
@@ -6132,6 +6163,7 @@ function renderClientPreliminaryAnalysis(analysis) {
 }
 
 function updateClientProfileTotals() {
+  motor360ClientProfileCache = null;
   const titulares = collectClientTitularesFromForm();
   const holderSummary = summarizeClientTitulares(titulares);
   const fgts = holderSummary.fgts;

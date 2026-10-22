@@ -10,6 +10,20 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class StaticEmailTest(unittest.TestCase):
+    def test_motor360_profile_lookup_is_pure_and_formatters_are_reused(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        profile_start = app_js.index("function motor360ClientProfile()")
+        profile_end = app_js.index("\nfunction renderMotor360ClientProfileSummary", profile_start)
+        profile_reader = app_js[profile_start:profile_end]
+
+        self.assertNotIn("collectClientProfile(", profile_reader)
+        self.assertIn("motor360ClientProfileCache", profile_reader)
+        self.assertIn("const moneyFormatter = new Intl.NumberFormat", app_js)
+        self.assertIn("const percentFormatter = new Intl.NumberFormat", app_js)
+        card_start = app_js.index("function renderMotor360GroupCard(item)")
+        card_end = app_js.index("\nfunction selectedMotor360Items", card_start)
+        self.assertIn("const compositionKey = selected", app_js[card_start:card_end])
+
     def test_motor360_credit_is_selected_per_scenario_before_quota_count(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
         css = (ROOT / "backend" / "static" / "css" / "style.css").read_text(encoding="utf-8")
