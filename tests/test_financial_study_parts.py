@@ -101,7 +101,7 @@ class FinancialStudyPartsTest(unittest.TestCase):
         renderer_start = app_js.index("function renderFinancialStudyInvestment()")
         renderer_end = app_js.index("\nasync function approveCurrentFinancialStudy()", renderer_start)
         renderer = app_js[renderer_start:renderer_end]
-        self.assertIn("selectedMotor360Items()", renderer)
+        self.assertIn("activeStudyItems()", renderer)
         self.assertIn("terms.reduce((sum, term) => sum + term, 0) / terms.length", renderer)
         self.assertIn("(rate / 12) * principal", renderer)
         self.assertIn("principal * ((1 + rate) ** (term / 12)) - principal", renderer)
@@ -151,10 +151,8 @@ class FinancialStudyPartsTest(unittest.TestCase):
 
         self.assertIn('data-study-part-name="Quadro Resumo"', part)
         self.assertIn("QUADRO RESUMO", part)
-        self.assertIn("SIMULAÇÃO INVESTIMENTOS", part)
-        self.assertIn("Valores hipotéticos do HTML de referência", part)
-        for value in ("R$ 3.713.088,00", "R$ 1.927.733,55", "R$ 1.223.300,97", "R$ 6.726.706,47", "R$ 3.491.636,87", "R$ 2.216.157,17"):
-            self.assertIn(value, part)
+        self.assertNotIn("SIMULAÇÃO INVESTIMENTOS", part)
+        self.assertNotIn("Valores hipotéticos do HTML de referência", part)
         self.assertIn('id="financialStudyPart4Content"', part)
         self.assertNotIn("<img", part)
         function_start = app_js.index("function renderFinancialStudySummary()")
@@ -169,7 +167,7 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("chargeTotal", summary_renderer)
         self.assertIn("weightedRate", summary_renderer)
         self.assertIn("Lance Livre", summary_renderer)
-        self.assertIn("Math.max(0, term - 1)", summary_renderer)
+        self.assertIn("const scenarioTermLabel = termLabel", summary_renderer)
         for profile_id in ("conservative", "moderate", "aggressive", "super_aggressive"):
             self.assertIn(f'"{profile_id}"', summary_renderer)
         self.assertIn("lance_ideal_total", app_js)

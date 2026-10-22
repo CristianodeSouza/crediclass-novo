@@ -1011,8 +1011,17 @@ def analyze_client_consortium_viability(
             "administradora": group.get("administradora"),
             "grupo_raw": group.get("grupo_raw", group.get("grupo")),
             "credito_minimo": group.get("credito_minimo"),
+            "credito_intermediario_1": group.get("credito_intermediario_1"),
+            "credito_intermediario_2": group.get("credito_intermediario_2"),
+            "credito_intermediario_3": group.get("credito_intermediario_3"),
             "credito_maximo": group.get("credito_maximo"),
+            "percentual_lance_embutido": group.get("percentual_lance_embutido"),
+            "fundo_reserva": group.get("fundo_reserva"),
+            "fundo_reserva_ano": group.get("fundo_reserva_ano"),
+            "taxa_adm": group.get("taxa_adm"),
+            "taxa_adm_ano": group.get("taxa_adm_ano"),
             "prazo_restante": group.get("prazo_restante"),
+            "credit_range_validation": _credit_range_validation(group),
         }
         for group in groups
     ]

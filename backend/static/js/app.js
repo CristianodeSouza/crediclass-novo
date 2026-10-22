@@ -452,11 +452,13 @@ function updateFinancialStudyActionState() {
   const missingScenarios = items.some((item) => !motor360QuotaReview.has(motor360GroupKey(item)) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)));
   const pendingReview = selectedMotor360Items().some((item) => motor360QuotaReview.has(motor360GroupKey(item)));
   button.disabled = !activeItems.length || missingScenarios || pendingReview;
+  const missingLabels = items.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)))
+    .map((item) => `Grupo ${item.grupo || item.grupo_id || "-"}`);
   button.title = pendingReview
     ? "Revise as quantidades migradas no Motor 360 antes de aprovar o estudo."
     : !activeItems.length
     ? "Selecione grupos no Motor 360 antes de aprovar."
-    : missingScenarios ? "Informe pelo menos uma cota em um cenário de cada grupo selecionado." : "Salvar uma cópia imutável no Histórico de Estudos.";
+    : missingScenarios ? `Informe ao menos uma cota nos grupos: ${missingLabels.join(", ")}.` : "Salvar uma cópia imutável no Histórico de Estudos.";
 }
 
 function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
@@ -464,6 +466,12 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
   const profile = collectClientProfile?.() || {};
   return {
     motor360_audit_id: investorState.result?.audit_id || null,
+    study_contract_rule: "Cada cota selecionada representa um contrato independente; cenários com e sem embutido são alternativas.",
+    study_steps: [
+      "introducao", "simulacao_investimento", "melhores_consorcios", "quadro_resumo",
+      "especialistas", "beneficios", "contratacao", "estrategias_contemplacao",
+      "historico_contemplacoes", "projecao_contemplacao", "datas_adesao", "consideracoes_auditoria",
+    ],
     client: {
       name: String(client.nome || profile.nome || "").trim(),
       objective: client.objetivo || null,
@@ -489,6 +497,7 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
       remaining_term: item.prazo_restante ?? null,
       due_day: item.vencimento_parcela ?? null,
       selected_scenarios: (item.cenarios || []).map((scenario) => ({ ...scenario })),
+      source_mapping: item.mapeamento_origem || {},
       contracts: ["without_embedded", "with_embedded"].flatMap((scenarioId) => {
         const metrics = selectedCompositionScenarioMetrics([item], scenarioId);
         const entry = metrics.entries[0];
@@ -801,6 +810,8 @@ function renderFinancialStudyContracting() {
       const sourceCredit = numericValue(entry.scenario.credito_liquido_projetado ?? entry.scenario.credito_contratado);
       const sourceInstallment = numericValue(entry.scenario.parcela_inicial);
       const adminRate = numericValue(entry.item.taxa_adm) ?? numericValue(entry.item.taxa_total);
+      const reserveRate = numericValue(entry.item.fundo_reserva);
+      const reserveAnnualRate = financialStudyReserveAnnualRate(entry.item);
       const term = numericValue(entry.item.prazo_restante);
       const sourceAnnualRate = financialStudyAnnualRate(entry.item);
       const annualRate = sourceAnnualRate ?? (adminRate !== null && term > 0 ? (adminRate * 12) / term : null);
@@ -814,6 +825,8 @@ function renderFinancialStudyContracting() {
           term,
           adminRate,
           annualRate,
+          reserveRate,
+          reserveAnnualRate,
           quotas: 1,
         });
       }
@@ -825,7 +838,7 @@ function renderFinancialStudyContracting() {
     return;
   }
 
-  const body = rows.map((row) => `<tr><th scope="row" data-label="Grupo">${escapeHtml(row.label)} · <strong class="financial-study-part7-scenario-emphasis">${row.scenarioWord}</strong> embutido</th><td data-label="Crédito">${formatMoney(row.credit)}</td><td data-label="Parcelas (sem seguro)">${formatMoney(row.installment)}</td><td data-label="Prazo">${row.term == null ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td><td data-label="Tx ADM total">${row.adminRate == null ? "Não informado" : formatPercent(row.adminRate)}</td><td data-label="Tx ADM ao ano">${row.annualRate == null ? "Não informado" : formatPercent(row.annualRate)}</td></tr>`).join("");
+  const body = rows.map((row) => `<tr><th scope="row" data-label="Grupo">${escapeHtml(row.label)} · <strong class="financial-study-part7-scenario-emphasis">${row.scenarioWord}</strong> embutido</th><td data-label="Crédito">${formatMoney(row.credit)}</td><td data-label="Parcelas (sem seguro)">${formatMoney(row.installment)}</td><td data-label="Prazo">${row.term == null ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td><td data-label="Tx ADM total">${row.adminRate == null ? "Não informado" : formatPercent(row.adminRate)}</td><td data-label="Tx ADM ao ano">${row.annualRate == null ? "Não informado" : formatPercent(row.annualRate)}</td><td data-label="Fundo reserva total">${row.reserveRate == null ? "Não informado" : formatPercent(row.reserveRate)}</td><td data-label="Fundo reserva ao ano">${row.reserveAnnualRate == null ? "Não informado" : formatPercent(row.reserveAnnualRate)}</td></tr>`).join("");
   const subtotalRows = scenarioIds.map((scenarioId) => {
     const scenarioRows = rows.filter((row) => row.scenarioId === scenarioId);
     if (!scenarioRows.length) return "";
@@ -844,15 +857,17 @@ function renderFinancialStudyContracting() {
     const averageTerm = average("term");
     const averageAdminRate = average("adminRate");
     const averageAnnualRate = average("annualRate");
+    const averageReserveRate = average("reserveRate");
+    const averageReserveAnnualRate = average("reserveAnnualRate");
     const scenarioLabel = scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido";
     const scenarioTitle = scenarioId === "with_embedded"
       ? '<strong class="financial-study-part7-scenario-emphasis">Com</strong> embutido'
       : '<strong class="financial-study-part7-scenario-emphasis">Sem</strong> embutido';
     const termLabel = averageTerm == null ? "Não informado" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(averageTerm)} meses`;
-    return `<tr class="financial-study-part7-total"><th scope="row" data-label="Grupo">Subtotal ${scenarioTitle} · ${totals.groups} ${totals.groups === 1 ? "contrato" : "contratos"}</th><td data-label="Crédito">${formatMoney(totals.credit)}</td><td data-label="Parcelas (sem seguro)">${formatMoney(totals.installment)}</td><td data-label="Prazo">${termLabel}</td><td data-label="Tx ADM total">${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td data-label="Tx ADM ao ano">${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td></tr>`;
+    return `<tr class="financial-study-part7-total"><th scope="row" data-label="Grupo">Subtotal ${scenarioTitle} · ${totals.groups} ${totals.groups === 1 ? "contrato" : "contratos"}</th><td data-label="Crédito">${formatMoney(totals.credit)}</td><td data-label="Parcelas (sem seguro)">${formatMoney(totals.installment)}</td><td data-label="Prazo">${termLabel}</td><td data-label="Tx ADM total">${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td data-label="Tx ADM ao ano">${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td><td data-label="Fundo reserva total">${averageReserveRate == null ? "Não informado" : formatPercent(averageReserveRate)}</td><td data-label="Fundo reserva ao ano">${averageReserveAnnualRate == null ? "Não informado" : formatPercent(averageReserveAnnualRate)}</td></tr>`;
   }).join("");
   const pendingReviewCount = allSelectedItems.length - items.length;
-  target.innerHTML = `${renderQuotaReviewBannerForStudy(allSelectedItems)}<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos contratos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Contrato independente</th><th scope="col">Crédito líquido</th><th scope="col">Parcela (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Cada cota selecionada é apresentada como um contrato independente. Os subtotais somam somente contratos do mesmo cenário; sem embutido e com embutido são alternativas e não são somados entre si. A taxa anual usa o valor informado pelo Motor 360; quando ausente, é estimada pela taxa total dividida pelo prazo em anos. A parcela não inclui seguro.</p>`;
+  target.innerHTML = `${renderQuotaReviewBannerForStudy(allSelectedItems)}<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos contratos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Contrato independente</th><th scope="col">Crédito líquido</th><th scope="col">Parcela (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th><th scope="col">Fundo reserva total</th><th scope="col">Fundo reserva ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Cada cota selecionada é apresentada como um contrato independente. Os subtotais somam somente contratos do mesmo cenário; sem embutido e com embutido são alternativas e não são somados entre si. As taxas e o fundo de reserva usam os valores do Motor 360; quando a taxa administrativa anual estiver ausente, a contratação estima a taxa total dividida pelo prazo em anos. A parcela não inclui seguro.</p>`;
 }
 
 function renderFinancialStudyContemplationHistory() {
@@ -999,8 +1014,8 @@ function renderFinancialStudyProjection() {
   });
   const tableFor = (rows, label) => {
     if (!rows.length) return '<p class="financial-study-part10-empty">Não há dados do Motor 360 para esta seleção.</p>';
-    const rowMarkup = rows.map((row) => `<tr><th scope="row" data-label="Grupo">${escapeHtml(row.groupLabel)}</th><td data-label="Percentual">${formatPercent(row.percentage)}</td><td data-label="Lance total ideal">${formatMoney(row.totalBid)}</td><td data-label="Pago carta">${row.embedded > 0 ? formatMoney(row.embedded) : "-"}</td><td data-label="Pago recurso próprio">${formatMoney(row.clientResources)}</td><td data-label="Crédito líquido">${formatMoney(row.credit)}</td><td data-label="Parcela inicial (sem seguro)">${formatMoney(row.installment)}</td><td data-label="Prazo restante">${row.term == null || row.term === "" ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td></tr>`).join("");
-    const mobileRows = rows.map((row) => `<article class="financial-study-part10-card"><h4>${escapeHtml(row.groupLabel)}<small>${row.scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}</small></h4><dl><div><dt>Percentual</dt><dd>${formatPercent(row.percentage)}</dd></div><div><dt>Lance total ideal</dt><dd>${formatMoney(row.totalBid)}</dd></div><div><dt>Pago carta</dt><dd>${row.embedded > 0 ? formatMoney(row.embedded) : "-"}</dd></div><div><dt>Pago recurso próprio</dt><dd>${formatMoney(row.clientResources)}</dd></div><div><dt>Crédito líquido</dt><dd>${formatMoney(row.credit)}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(row.installment)}</dd></div><div><dt>Prazo restante</dt><dd>${row.term == null || row.term === "" ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</dd></div></dl></article>`).join("");
+    const rowMarkup = rows.map((row) => `<tr><th scope="row" data-label="Grupo">${escapeHtml(row.groupLabel)}</th><td data-label="Percentual">${formatPercent(row.percentage)}</td><td data-label="Lance total ideal">${formatMoney(row.totalBid)}</td><td data-label="Pago carta">${formatMoney(row.embedded)}</td><td data-label="Pago recurso próprio">${formatMoney(row.clientResources)}</td><td data-label="Crédito líquido">${formatMoney(row.credit)}</td><td data-label="Parcela inicial (sem seguro)">${formatMoney(row.installment)}</td><td data-label="Prazo restante">${row.term == null || row.term === "" ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td></tr>`).join("");
+    const mobileRows = rows.map((row) => `<article class="financial-study-part10-card"><h4>${escapeHtml(row.groupLabel)}<small>${row.scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}</small></h4><dl><div><dt>Percentual</dt><dd>${formatPercent(row.percentage)}</dd></div><div><dt>Lance total ideal</dt><dd>${formatMoney(row.totalBid)}</dd></div><div><dt>Pago carta</dt><dd>${formatMoney(row.embedded)}</dd></div><div><dt>Pago recurso próprio</dt><dd>${formatMoney(row.clientResources)}</dd></div><div><dt>Crédito líquido</dt><dd>${formatMoney(row.credit)}</dd></div><div><dt>Parcela inicial</dt><dd>${formatMoney(row.installment)}</dd></div><div><dt>Prazo restante</dt><dd>${row.term == null || row.term === "" ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</dd></div></dl></article>`).join("");
     const subtotalRows = scenarioIds.map((scenarioId) => {
       const scenarioRows = rows.filter((row) => row.scenarioId === scenarioId);
       if (!scenarioRows.length) return "";
@@ -1145,7 +1160,7 @@ function renderFinancialStudySummary() {
     return min === max ? `${min} meses` : `${min} a ${max} meses`;
   };
   const termLabel = terms.length === items.length ? rangeLabel(terms) : "Prazo incompleto";
-  const scenarioTermLabel = terms.length === items.length ? rangeLabel(terms.map((term) => Math.max(0, term - 1))) : "Prazo incompleto";
+  const scenarioTermLabel = termLabel;
   const primaryEntries = baseEntries.length ? baseEntries : embeddedEntries;
   const primaryScenarioLabel = baseEntries.length ? "sem embutido" : "com embutido";
   const totalContractedCredit = sumField(primaryEntries, "contractedCredit");
@@ -1220,7 +1235,7 @@ function renderFinancialStudySummary() {
       : '<strong class="financial-study-part4-scenario-emphasis">Sem</strong> lance embutido';
     const entries = metricsByScenario[scenarioId]?.entries || [];
     const lotteryRow = scenarioId === "without_embedded"
-      ? `<tr class="financial-study-part4-lottery-row"><th scope="row" data-label="Perfil">Sorteio Geral<small>Não exige lance</small></th><td data-label="Lance próprio ideal somado">-</td><td data-label="Lance total ideal somado">-</td><td data-label="Lance embutido somado">${formatMoney(0)}</td><td data-label="Crédito disponível somado">${formatMoney(totalContractedCredit)}</td><td data-label="Parcela inicial somada">${formatMoney(initialInstallment)}</td><td data-label="Prazo">${escapeHtml(scenarioTermLabel)}</td></tr>`
+      ? `<tr class="financial-study-part4-lottery-row"><th scope="row" data-label="Perfil">Sorteio Geral<small>Não exige lance</small></th><td data-label="Lance próprio ideal somado">${formatMoney(0)}</td><td data-label="Lance total ideal somado">${formatMoney(0)}</td><td data-label="Lance embutido somado">${formatMoney(0)}</td><td data-label="Crédito disponível somado">${formatMoney(totalContractedCredit)}</td><td data-label="Parcela inicial somada">${formatMoney(initialInstallment)}</td><td data-label="Prazo">${escapeHtml(scenarioTermLabel)}</td></tr>`
       : "";
     const emptyRow = entries.length ? "" : '<tr><td colspan="7">Dados somados deste cenário não disponíveis no Motor 360.</td></tr>';
     return `<section class="financial-study-part4-scenario-summary"><h3>${scenarioTitle} · somatória dos grupos selecionados</h3><div class="financial-study-part4-scenarios-wrap" role="region" aria-label="${scenarioLabel}: perfis somados do Motor 360" tabindex="0"><table class="financial-study-part4-table financial-study-part4-scenarios-table"><colgroup><col style="width:32%"><col style="width:13%"><col style="width:13%"><col style="width:12%"><col style="width:14%"><col style="width:10%"><col style="width:6%"></colgroup><thead><tr><th scope="col">Perfil</th><th scope="col">Lance próprio ideal somado</th><th scope="col">Lance total ideal somado</th><th scope="col">Embutido somado</th><th scope="col">Crédito disponível somado</th><th scope="col">Parcela inicial somada</th><th scope="col">Prazo</th></tr></thead><tbody>${entries.length ? lotteryRow : ""}${profileRowsForScenario(scenarioId).join("")}${emptyRow}</tbody></table></div></section>`;
