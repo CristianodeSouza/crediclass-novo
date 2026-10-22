@@ -568,7 +568,7 @@ document.querySelector("#result").textContent = JSON.stringify({
 
     def test_full_audit_tables_translate_composition_and_exclusion_codes(self):
         source = APP_JS.read_text(encoding="utf-8")
-        audit_function = _between(source, "function renderMotor360Audit", "function renderMotor360GroupAudit")
+        audit_function = _between(source, "function renderMotor360AuditContent", "function renderMotor360Audit(")
         result = self._run_browser(r'''
 const audit = {
   metadata: { audit_id: "AUDIT-LABELS" }, summary: {
@@ -583,8 +583,8 @@ const audit = {
     result: "composition", matrix_approved: false, stage_results: {}, scenarios: [], source_values: {} }],
   final_ordering: { execution_summary: "", rules: [] }, warnings: [], data_source: {},
 };
-const html = renderMotor360Audit(audit);
-document.querySelector("#cards").innerHTML = html;
+const html = renderMotor360AuditContent(audit);
+document.querySelector("#cards").innerHTML = `<details class="motor360-audit-panel">${html}</details>`;
 const rendered = document.querySelector("#cards").textContent;
 const sequenceTable = [...document.querySelectorAll(".motor360-audit-panel table")]
   .find(table => table.querySelector("thead")?.textContent.includes("Opções viáveis em composição"));

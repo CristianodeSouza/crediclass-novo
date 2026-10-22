@@ -43,6 +43,11 @@ class Motor360ApiContractTest(unittest.TestCase):
             "lance_super_agressivo_3m": "40%", "lance_agressivo_6m": "30%",
             "lance_moderado_12m": "10%", "lance_conservador_24m": "5%",
             "lance_investidor": "2%", "historico_12_meses": [],
+            "mapeamento_origem": {
+                "credito_maximo": {"column": "V", "header": "Maior Crédito"},
+                "taxa_adm": {"column": "AD", "header": "Taxa ADM total"},
+                "historico:2026-06:qtd_contemplacoes": {"column": "X", "header": "Histórico"},
+            },
         }
         request = ViabilidadeRequest(
             objetivo="Contemplar - moderado - 12 meses", credito_desejado=600000,
@@ -62,7 +67,7 @@ class Motor360ApiContractTest(unittest.TestCase):
             result = viabilidade_360_analisar(request, response, compact=True)
 
         self.assertEqual(result["audit_id"], "AUD-CONTRACT-FIXTURE")
-        self.assertEqual(result["engine_version"], "4.0.229")
+        self.assertEqual(result["engine_version"], "4.0.230")
         self.assertNotIn("items", result)
         self.assertNotIn("credit_items", result)
         self.assertNotIn("composition_items", result)
@@ -74,6 +79,8 @@ class Motor360ApiContractTest(unittest.TestCase):
             [717519.32, 1255658.79],
         )
         self.assertEqual(item["available_credit_options"][0]["source_fields"], ["credito_minimo"])
+        self.assertNotIn("source_values", item)
+        self.assertEqual(set(item["mapeamento_origem"]), {"credito_maximo", "taxa_adm"})
         self.assertEqual(
             {key: item[key] for key in ("grupo_raw", "source_row", "credito_minimo", "credito_maximo", "prazo_restante", "vencimento_parcela")},
             {"grupo_raw": "1011", "source_row": 59, "credito_minimo": 717519.32,

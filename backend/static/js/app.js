@@ -168,6 +168,9 @@ const motor360GroupAnalyticsCache = new Map();
 const motor360DelegatedResults = new WeakSet();
 let pendingQuotaFocusSelector = null;
 let motor360VisibleItemCount = 0;
+let motor360VisibleItems = [];
+let motor360AuditLoadPromise = null;
+let motor360AuditLoadingId = null;
 let motor360AnalyticsCacheResult = null;
 let motor360CardCacheResult = null;
 let investorAnalysisController = null;
@@ -5221,8 +5224,8 @@ function formatMotor360ServerTiming(header) {
     .join(" · ");
 }
 
-function renderMotor360Audit(audit) {
-  if (!audit) return '<div data-motor360-audit></div>';
+function renderMotor360AuditContent(audit) {
+  if (!audit) return '<p class="motor360-audit-loading">Abra a auditoria para carregar os dados desta execução.</p>';
   const metadata = audit.metadata || {};
   const summary = audit.summary || {};
   const client = audit.client_snapshot || {};
@@ -5252,8 +5255,6 @@ function renderMotor360Audit(audit) {
   }).join("");
   const warnings = (audit.warnings || []).map((warning) => `<li class="audit-warning-${escapeHtml(warning.level || "info")}">${escapeHtml(warning.message)}</li>`).join("");
   return `
-    <details class="motor360-audit-panel">
-      <summary><span><strong>Auditoria da Análise</strong><small>Entenda como o Motor 360 chegou aos grupos exibidos.</small></span><span class="audit-summary-action">Exibir auditoria completa</span></summary>
       <div class="motor360-audit-content">
         <div class="motor360-audit-meta">
           <span><small>Execução</small><b>${auditDateTime(metadata.completed_at)}</b></span>
@@ -5274,11 +5275,48 @@ function renderMotor360Audit(audit) {
         <details><summary>7. Dados incompletos por grupo (${incompleteGroups.length})</summary>${incompleteGroups.length ? `<div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Coluna</th><th>Campo</th><th>Valor original</th><th>Motivo</th><th>Impacto</th></tr></thead><tbody>${incompleteRows}</tbody></table></div>` : "<p>Nenhum dado obrigatório ausente.</p>"}</details>
         <details><summary>8. Auditoria por grupo (${(audit.group_results || []).length})</summary><div class="table-responsive"><table class="table motor360-audit-table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Crédito contratado</th><th>Faixa P/V</th><th>Crédito</th><th>Parcela inicial<br><small>sem / com embutido</small></th><th>Prazo calculado / G</th><th>Prazo</th><th>Contemplação<br><small>cenário aprovado</small></th><th>Resultado</th></tr></thead><tbody>${groupRows}</tbody></table></div></details>
         <details><summary>9. Alertas e regras pendentes</summary><ul class="motor360-audit-warnings">${warnings}</ul></details>
-      </div>
-    </details>`;
+      </div>`;
+}
+
+function renderMotor360Audit(audit, auditId) {
+  const id = auditId || audit?.metadata?.audit_id || "";
+  return `<details class="motor360-audit-panel" data-motor360-audit data-audit-id="${escapeHtml(id)}"><summary><span><strong>Auditoria da Análise</strong><small>Entenda como o Motor 360 chegou aos grupos exibidos.</small></span><span class="audit-summary-action">Exibir auditoria completa</span></summary><div data-motor360-audit-content><p class="motor360-audit-loading">Abra para carregar a auditoria completa sob demanda.</p></div></details>`;
+}
+
+function bindMotor360AuditPanel(results) {
+  results.querySelectorAll(".motor360-audit-panel:not([data-audit-toggle-bound])").forEach((panel) => {
+    panel.dataset.auditToggleBound = "true";
+    panel.addEventListener("toggle", async () => {
+      if (!panel.open) return;
+      const auditId = panel.dataset.auditId;
+      if (auditId && investorState.audit?.metadata?.audit_id !== auditId) {
+        panel.setAttribute("aria-busy", "true");
+        try {
+          await loadMotor360Audit(auditId);
+        } catch (_) {
+          const target = panel.querySelector("[data-motor360-audit-content]");
+          if (target) target.innerHTML = '<p class="motor360-audit-loading">Falha ao carregar. Feche e abra novamente para tentar outra vez.</p>';
+        } finally {
+          panel.removeAttribute("aria-busy");
+        }
+      }
+      if (!panel.isConnected || !panel.open) return;
+      const target = panel.querySelector("[data-motor360-audit-content]");
+      if (target && target.dataset.rendered !== "true") {
+        target.innerHTML = renderMotor360AuditContent(investorState.audit);
+        target.dataset.rendered = "true";
+      }
+    });
+  });
 }
 
 function renderMotor360GroupAudit(groupId) {
+  if (investorState.result?.audit_id && investorState.audit?.metadata?.audit_id !== investorState.result.audit_id) {
+    loadMotor360Audit(investorState.result.audit_id)
+      .then(() => renderMotor360GroupAudit(groupId))
+      .catch(() => {});
+    return;
+  }
   const audit = investorState.audit;
   if (!audit) return;
   const entry = (audit.group_results || []).find((item) => motor360GroupKey(item) === String(groupId) || String(item.grupo) === String(groupId));
@@ -5326,6 +5364,12 @@ function motor360BlockingReasonAdvice(reason) {
 }
 
 function renderMotor360BlockingDiagnostics(audit) {
+  if (investorState.result?.audit_id && audit?.metadata?.audit_id !== investorState.result.audit_id) {
+    loadMotor360Audit(investorState.result.audit_id)
+      .then((loadedAudit) => renderMotor360BlockingDiagnostics(loadedAudit))
+      .catch(() => {});
+    return;
+  }
   const entries = audit?.group_results || [];
   const summary = audit?.summary || {};
   const rawOmissions = Array.isArray(summary.matrix_excluded_groups)
@@ -5397,6 +5441,14 @@ function motor360ExecutionStepMessage(step) {
 
 async function loadMotor360Audit(auditId) {
   if (!auditId) return;
+  if (investorState.audit?.metadata?.audit_id === auditId) return investorState.audit;
+  if (motor360AuditLoadPromise) {
+    if (motor360AuditLoadingId === auditId) return motor360AuditLoadPromise;
+    await motor360AuditLoadPromise.catch(() => {});
+    if (investorState.audit?.metadata?.audit_id === auditId) return investorState.audit;
+  }
+  motor360AuditLoadingId = auditId;
+  motor360AuditLoadPromise = (async () => {
   try {
     const response = await fetch(`/api/viabilidade-360/auditorias/${encodeURIComponent(auditId)}`, { credentials: "same-origin" });
     if (!response.ok) throw new Error("Auditoria não encontrada.");
@@ -5412,13 +5464,16 @@ async function loadMotor360Audit(auditId) {
       addMotor360ExecutionLog(`Etapa ${step.order}: ${step.name}`, motor360ExecutionStepMessage(step));
     });
     addMotor360ExecutionLog("Auditoria por grupo disponível", `${(audit.group_results || []).length} grupos com decisão, cenários, colunas e motivos registrados.`);
-    if (investorState.result) {
-      const auditBlock = document.querySelector("[data-motor360-audit]");
-      if (auditBlock) auditBlock.outerHTML = renderMotor360Audit(investorState.audit);
-    }
+    return audit;
   } catch (error) {
     showToast(error.message || "Não foi possível carregar a auditoria.", "warning");
+    throw error;
+  } finally {
+    motor360AuditLoadPromise = null;
+    motor360AuditLoadingId = null;
   }
+  })();
+  return motor360AuditLoadPromise;
 }
 
 function motor360AdministratorName(item) {
@@ -5503,6 +5558,30 @@ function motor360ScenarioSourceMetrics(item) {
   const clientCredit = motor360ClientProfile().credito_liquido_desejado;
   const annualRate = financialStudyAnnualRate(item);
   return `<div class="motor360-scenario-source-metrics"><div><small>Menor Crédito</small><b>${formatMoney(item?.credito_minimo)}</b></div><div><small>Créd. Inter. 1</small><b>${formatMoney(item?.credito_intermediario_1)}</b></div><div><small>Créd. Inter. 2</small><b>${formatMoney(item?.credito_intermediario_2)}</b></div><div><small>Créd. Inter. 3</small><b>${formatMoney(item?.credito_intermediario_3)}</b></div><div><small>Maior Crédito</small><b>${formatMoney(item?.credito_maximo)}</b></div><div><small>Taxa Adm</small><b>${formatPercent(item?.taxa_adm)}</b></div><div><small>Taxa Adm/ano</small><b title="${escapeHtml(annualRate.source)}">${formatPercent(annualRate.value)}</b></div><div><small>Fundo de Reserva</small><b>${formatPercent(item?.fundo_reserva)}</b></div><div><small>Fundo de Reserva/ano</small><b>${formatPercent(financialStudyReserveAnnualRate(item))}</b></div><div><small>Crédito desejado líquido</small><b>${formatMoney(clientCredit)}</b></div></div>`;
+}
+
+function bindMotor360GroupCardControls(root) {
+  root.querySelectorAll("[data-confirm-legacy-quotas]:not([data-card-control-bound])").forEach((button) => {
+    button.dataset.cardControlBound = "true";
+    button.addEventListener("click", () => confirmLegacyQuotaReview(button.dataset.confirmLegacyQuotas));
+  });
+  root.querySelectorAll(".motor360-group-audit-btn:not([data-card-control-bound])").forEach((button) => {
+    button.dataset.cardControlBound = "true";
+    button.addEventListener("click", () => renderMotor360GroupAudit(button.dataset.groupId));
+  });
+  root.querySelectorAll("[data-motor360-history-group]:not([data-card-control-bound])").forEach((trigger) => {
+    trigger.dataset.cardControlBound = "true";
+    const showHistory = () => {
+      const groupId = String(trigger.dataset.motor360HistoryGroup || "");
+      const item = motor360VisibleItems.find((entry) => String(entry.grupo || entry.grupo_id || "") === groupId)
+        || motor360FinalItems().find((entry) => String(entry.grupo || entry.grupo_id || "") === groupId);
+      showGroupHistoryHoverModal(trigger, item, motor360QuotaCapacity(item));
+    };
+    trigger.addEventListener("mouseenter", showHistory);
+    trigger.addEventListener("focus", showHistory);
+    trigger.addEventListener("mouseleave", scheduleHistoryHoverHide);
+    trigger.addEventListener("blur", scheduleHistoryHoverHide);
+  });
 }
 
 function renderMotor360ContemplationMatrix(items, selectedProfile, rejectedItems = []) {
@@ -5617,6 +5696,7 @@ function renderInvestorAnalysis(result) {
     ? sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey).filter(matchesSelectedScenario)
     : scenarioSourceItems;
   const items = applySelectedGroupsFiltersAndSort(applyInvestorPreferences(administratorItems, investorState.preferences));
+  motor360VisibleItems = items;
   motor360VisibleItemCount = items.length;
   const pageCount = Math.max(1, Math.ceil(items.length / MOTOR360_GROUP_PAGE_SIZE));
   investorState.motor360GroupPage = Math.min(Math.max(0, investorState.motor360GroupPage), pageCount - 1);
@@ -5651,8 +5731,9 @@ function renderInvestorAnalysis(result) {
       : result.perfil_contemplacao
       ? `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado para o perfil ${profileLabel}</strong><span>O lance do cliente (${formatMoney(client.lance_cliente_total)}) não atende ao percentual mínimo de contemplação dos grupos compatíveis. Ajuste o lance ou selecione um perfil com prazo maior.</span>${diagnosticButton}</div>`
       : `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado</strong><span>Nenhum grupo passou por todas as validações do Motor 360.</span>${diagnosticButton}</div>`;
-    results.innerHTML = `${explicitMessage}${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}${rejectedHtml}${renderMotor360Audit(scopedAudit)}`;
+    results.innerHTML = `${explicitMessage}${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}${rejectedHtml}${renderMotor360Audit(scopedAudit, result.audit_id)}`;
     results.insertAdjacentHTML("afterbegin", renderMotor360FilterNotice(administratorItems, items));
+    bindMotor360AuditPanel(results);
     results.querySelector("[data-motor360-blocking-diagnostics]")?.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit));
     setInvestorAnalysisState("results");
     if (!document.getElementById("selectedGroupsWorkspace")?.classList.contains("d-none")) renderSelectedGroupsScreen();
@@ -5674,9 +5755,10 @@ function renderInvestorAnalysis(result) {
 
     ${scopedContemplationRejected.length ? `<details class="motor360-credit-excluded" open><summary>Grupos fora do perfil de contemplação selecionado (${scopedContemplationRejected.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th></tr></thead><tbody>${scopedContemplationRejected.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>Lance disponível abaixo da faixa do perfil selecionado.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
-    ${renderMotor360Audit(scopedAudit)}
+    ${renderMotor360Audit(scopedAudit, result.audit_id)}
   `;
   results.insertAdjacentHTML("afterbegin", renderMotor360FilterNotice(administratorItems, items));
+  bindMotor360AuditPanel(results);
   results.querySelectorAll("[data-screen-jump]").forEach((button) => button.addEventListener("click", () => activateScreen(button.dataset.screenJump)));
   results.querySelectorAll("[data-open-selected-groups-workspace]").forEach((button) => button.addEventListener("click", openSelectedGroupsWorkspace));
   results.querySelectorAll("[data-motor360-blocking-diagnostics]").forEach((button) => button.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit)));
@@ -5689,20 +5771,7 @@ function renderInvestorAnalysis(result) {
     button.title = investorState.floatingSummaryMinimized ? "Expandir composição" : "Minimizar composição";
     button.setAttribute("aria-expanded", investorState.floatingSummaryMinimized ? "false" : "true");
   }));
-  results.querySelectorAll("[data-confirm-legacy-quotas]").forEach((button) => button.addEventListener("click", () => confirmLegacyQuotaReview(button.dataset.confirmLegacyQuotas)));
-  results.querySelectorAll(".motor360-group-audit-btn").forEach((button) => button.addEventListener("click", () => renderMotor360GroupAudit(button.dataset.groupId)));
-  results.querySelectorAll("[data-motor360-history-group]").forEach((trigger) => {
-    const showHistory = () => {
-      const groupId = String(trigger.dataset.motor360HistoryGroup || "");
-      const item = motor360FinalItems()
-        .find((entry) => String(entry.grupo || entry.grupo_id || "") === groupId);
-      showGroupHistoryHoverModal(trigger, item, motor360QuotaCapacity(item));
-    };
-    trigger.addEventListener("mouseenter", showHistory);
-    trigger.addEventListener("focus", showHistory);
-    trigger.addEventListener("mouseleave", () => scheduleHistoryHoverHide());
-    trigger.addEventListener("blur", () => scheduleHistoryHoverHide());
-  });
+  bindMotor360GroupCardControls(results);
   setInvestorAnalysisState("results");
   if (!document.getElementById("selectedGroupsWorkspace")?.classList.contains("d-none")) renderSelectedGroupsScreen();
 }
@@ -5727,22 +5796,7 @@ function refreshMotor360VisibleCards(changedGroupId = null, focusSelector = null
     template.innerHTML = renderMotor360GroupCard(item).trim();
     const nextCard = template.content.firstElementChild;
     if (!nextCard) return;
-    const auditButton = nextCard.querySelector(".motor360-group-audit-btn");
-    auditButton?.addEventListener("click", () => renderMotor360GroupAudit(auditButton.dataset.groupId));
-    nextCard.querySelectorAll("[data-confirm-legacy-quotas]").forEach((button) => {
-      button.addEventListener("click", () => confirmLegacyQuotaReview(button.dataset.confirmLegacyQuotas));
-    });
-    nextCard.querySelectorAll("[data-motor360-history-group]").forEach((trigger) => {
-      const showHistory = () => {
-        const groupId = String(trigger.dataset.motor360HistoryGroup || "");
-        const historyItem = itemsByGroup.get(key) || investorState.selectedGroupData.get(key);
-        showGroupHistoryHoverModal(trigger, historyItem, motor360QuotaCapacity(historyItem));
-      };
-      trigger.addEventListener("mouseenter", showHistory);
-      trigger.addEventListener("focus", showHistory);
-      trigger.addEventListener("mouseleave", scheduleHistoryHoverHide);
-      trigger.addEventListener("blur", scheduleHistoryHoverHide);
-    });
+    bindMotor360GroupCardControls(nextCard);
     card.replaceWith(nextCard);
   });
   updateMotor360SelectionSummary();
@@ -5761,7 +5815,16 @@ function installMotor360DelegatedControls(results) {
     const pageCount = Math.max(1, Math.ceil((motor360VisibleItemCount || 0) / MOTOR360_GROUP_PAGE_SIZE));
     const offset = button.dataset.groupPage === "next" ? 1 : -1;
     investorState.motor360GroupPage = Math.max(0, Math.min(pageCount - 1, investorState.motor360GroupPage + offset));
-    renderInvestorAnalysis(investorState.result);
+    const start = investorState.motor360GroupPage * MOTOR360_GROUP_PAGE_SIZE;
+    const list = results.querySelector(".motor360-group-list");
+    const pager = results.querySelector(".motor360-group-pagination");
+    if (!list || !pager) return;
+    list.innerHTML = motor360VisibleItems.slice(start, start + MOTOR360_GROUP_PAGE_SIZE).map(renderMotor360GroupCard).join("");
+    const [previous, status, next] = pager.querySelectorAll("button, span");
+    if (previous) previous.disabled = investorState.motor360GroupPage === 0;
+    if (status) status.textContent = `Grupos ${motor360VisibleItems.length ? start + 1 : 0}–${Math.min(start + MOTOR360_GROUP_PAGE_SIZE, motor360VisibleItems.length)} de ${motor360VisibleItems.length} · Página ${investorState.motor360GroupPage + 1} de ${pageCount}`;
+    if (next) next.disabled = investorState.motor360GroupPage >= pageCount - 1;
+    bindMotor360GroupCardControls(list);
   });
   results.addEventListener("keydown", (event) => {
     const control = event.target instanceof Element ? event.target.closest('[data-quota-action="scenario"]') : null;
@@ -6013,7 +6076,6 @@ async function loadInvestorAnalysis() {
     const oneQuotaCount = Math.max(0, displayedCount - compositionCount);
     addMotor360ExecutionLog("Análise concluída", `${result.total_grupos_analisados ?? 0} analisados · ${displayedCount} exibidos (${oneQuotaCount} opção(ões) de 1 cota · ${compositionCount} que exigem composição).`);
     renderInvestorAnalysis(result);
-    loadMotor360Audit(result.audit_id);
   } catch (error) {
     if (error.name === "AbortError" || requestId !== investorAnalysisRequestId) return;
     addMotor360ExecutionLog("Falha na análise", error.message || "Erro não identificado.", "error");

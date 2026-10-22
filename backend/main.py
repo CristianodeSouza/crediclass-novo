@@ -733,6 +733,28 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response, co
                 }
                 for item in result.get("matrix_items", [])
             ]
+            # The compact list already carries the normalized fields used by
+            # cards and calculations. Keep only the source-column provenance
+            # needed by the financial-study traceability payload; raw source
+            # snapshots and per-group history mappings remain in the audit API.
+            study_mapping_fields = {
+                "tipo_bem", "prazo_restante", "credito_minimo",
+                "credito_intermediario_1", "credito_intermediario_2",
+                "credito_intermediario_3", "credito_maximo", "taxa_adm",
+                "taxa_adm_ano", "taxa_ano", "fundo_reserva",
+                "fundo_reserva_ano", "percentual_lance_embutido",
+                "vencimento_parcela", "lance_conservador_24m",
+                "lance_moderado_12m", "lance_agressivo_6m",
+                "lance_super_agressivo_3m",
+            }
+            for item in result.get("final_items", []) or []:
+                raw_mapping = item.get("mapeamento_origem") or {}
+                item["mapeamento_origem"] = {
+                    field: raw_mapping[field]
+                    for field in study_mapping_fields
+                    if field in raw_mapping
+                }
+                item.pop("source_values", None)
             result.pop("items", None)
             result.pop("credit_items", None)
             result.pop("composition_items", None)
