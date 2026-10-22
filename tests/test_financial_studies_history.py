@@ -146,7 +146,7 @@ class FinancialStudiesHistoryApiTest(unittest.TestCase):
             self.assertEqual(response.status_code, 200, response.text)
             self.assertEqual(response.json()["study"]["id"], created["id"])
             self.assertEqual(save.call_args.kwargs["approved_by"], "Administrador")
-            self.assertEqual(save.call_args.kwargs["app_version"], "4.0.214")
+            self.assertEqual(save.call_args.kwargs["app_version"], "4.0.226")
 
     def test_history_can_search_and_open_archived_record(self):
         item = {"id": "EF-1", "client_name": "Cliente", "approved_at": "2026-10-15T12:00:00+00:00", "approved_by": "Operador 1", "group_count": 2, "has_snapshot": True}
@@ -263,7 +263,7 @@ class FinancialStudiesHistoryApiTest(unittest.TestCase):
         self.assertNotIn("sharedStudyQuickSummary", response.text)
         self.assertNotIn("Resumo do estudo", response.text)
         self.assertIn("<main class='shared-study-content'>", response.text)
-        self.assertIn("/static/js/shared-study.js?v=4.0.214", response.text)
+        self.assertIn("/static/js/shared-study.js?v=4.0.226", response.text)
         self.assertIn("Content-Security-Policy", response.headers)
         self.assertIn("noindex, nofollow, noarchive", response.headers["X-Robots-Tag"])
         load.assert_called_once_with("opaque-token")

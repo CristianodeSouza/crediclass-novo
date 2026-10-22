@@ -12,11 +12,16 @@ import secrets
 import threading
 import zlib
 from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 from uuid import UUID
 
 from cryptography.fernet import Fernet, InvalidToken
 
 from .config import get_settings
+from .credit_options import available_credit_options
+from .motor360_auditoria import get_motor360_audit
+from .motor360_math import money, normalize_percent
+from .selected_credit_math import calculate_selected_credit
 from .sheets_client import column_letter, get_service, normalize_header
 
 
@@ -246,6 +251,23 @@ def _decompress_archive(value: str) -> dict | None:
 
 def _validate_selected_credit_basis(snapshot: dict) -> None:
     """Reject new-format studies with incomplete or inconsistent credit selections."""
+    credit_basis_groups = [group for group in snapshot.get("groups", []) if group.get("study_credit_basis") == "credito_escolhido_por_cenario"]
+    if any(group.get("calculation_contract_version") != 1 for group in credit_basis_groups):
+        raise ValueError("Atualize a tela do Motor 360 antes de aprovar este estudo; a versão aberta não envia os dados completos de cálculo.")
+    has_strict_contract = bool(credit_basis_groups)
+    if has_strict_contract and (not snapshot.get("motor360_audit_id") or not snapshot.get("motor_engine_version")):
+        raise ValueError("Execute o Motor 360 novamente antes de aprovar: faltam o ID de auditoria ou a versão do Motor no estudo.")
+    audited_groups = {}
+    if has_strict_contract:
+        audit = get_motor360_audit(snapshot["motor360_audit_id"])
+        if not audit:
+            raise ValueError("A auditoria do Motor 360 não está mais disponível. Execute o Motor novamente antes de aprovar.")
+        metadata = audit.get("metadata") or {}
+        if str(metadata.get("engine_version") or "") != str(snapshot.get("motor_engine_version") or ""):
+            raise ValueError("A versão do Motor no estudo diverge da execução auditada.")
+        for audited in audit.get("group_results") or []:
+            key = (str(audited.get("administradora") or "").casefold(), str(audited.get("grupo") or "").casefold(), str(audited.get("source_row") or ""))
+            audited_groups[key] = audited
     for group in snapshot.get("groups", []):
         if group.get("study_credit_basis") != "credito_escolhido_por_cenario":
             continue
@@ -263,9 +285,46 @@ def _validate_selected_credit_basis(snapshot: dict) -> None:
                 allowed_values.add(round(value, 2))
         scenarios = {str(item.get("id")): item for item in group.get("selected_scenarios") or []}
         contracts = group.get("contracts") or []
+        strict_calculation = group.get("calculation_contract_version") == 1
+        canonical_options = available_credit_options(group) if strict_calculation else []
+        if strict_calculation:
+            audit_key = (str(group.get("administrator") or "").casefold(), str(group.get("group") or "").casefold(), str(group.get("source_row") or ""))
+            audited = audited_groups.get(audit_key)
+            if not audited:
+                raise ValueError("O grupo selecionado não corresponde a um grupo da auditoria do Motor 360.")
+            audited_source = audited.get("source_values") or {}
+            audited_options = available_credit_options(audited_source)
+            if {round(float(option["value"]), 2) for option in canonical_options} != {round(float(option["value"]), 2) for option in audited_options}:
+                raise ValueError("As opções de crédito do estudo não correspondem à linha auditada da planilha.")
+            def option_origin_signature(option: dict) -> tuple:
+                return (
+                    round(float(option.get("value") or 0), 2),
+                    tuple(option.get("source_fields") or option.get("fields") or []),
+                    tuple(tuple(sorted((source or {}).items())) for source in option.get("sources") or []),
+                )
+            if sorted(option_origin_signature(option) for option in options if isinstance(option, dict)) != sorted(option_origin_signature(option) for option in canonical_options):
+                raise ValueError("A rastreabilidade das opções de crédito não corresponde aos campos de origem auditados.")
+            for field in ("credito_minimo", "credito_intermediario_1", "credito_intermediario_2", "credito_intermediario_3", "credito_maximo", "taxa_adm", "fundo_reserva", "percentual_lance_embutido", "prazo_restante"):
+                snapshot_field = "credit_max" if field == "credito_maximo" else "remaining_term" if field == "prazo_restante" else field
+                audited_value = audited_source.get(field)
+                snapshot_value = group.get(snapshot_field)
+                if audited_value is None and snapshot_value is None:
+                    continue
+                try:
+                    matches = abs(float(audited_value) - float(snapshot_value)) <= (0.02 if field not in {"taxa_adm", "fundo_reserva", "percentual_lance_embutido"} else 0.0001)
+                except (TypeError, ValueError):
+                    matches = False
+                if not matches:
+                    raise ValueError(f"O campo {field} do estudo diverge dos dados registrados na auditoria do Motor.")
+            canonical_values = {round(float(option["value"]), 2) for option in canonical_options}
+            if allowed_values != canonical_values:
+                raise ValueError("A lista de créditos do estudo diverge dos valores de origem do grupo.")
         for scenario_id in ("without_embedded", "with_embedded"):
             try:
-                count = max(0, int(quotas.get(scenario_id, 0)))
+                raw_count = quotas.get(scenario_id, 0)
+                count = int(raw_count or 0)
+                if count < 0 or float(raw_count or 0) != count:
+                    raise ValueError
             except (TypeError, ValueError):
                 raise ValueError("A quantidade de cotas do estudo é inválida.") from None
             if count <= 0:
@@ -287,6 +346,98 @@ def _validate_selected_credit_basis(snapshot: dict) -> None:
             scenario_contracts = [contract for contract in contracts if contract.get("scenario") == scenario_id]
             if len(scenario_contracts) != count or any(abs(float(contract.get("contracted_credit") or 0) - credit) > 0.01 for contract in scenario_contracts):
                 raise ValueError("A quantidade ou o crédito dos contratos do cenário não corresponde à seleção.")
+            if not strict_calculation:
+                continue
+            embedded_percent = group.get("percentual_lance_embutido") if scenario_id == "with_embedded" else 0
+            if scenario_id == "with_embedded" and embedded_percent is None:
+                raise ValueError("O percentual de lance embutido do grupo não foi informado.")
+            first_own_bid = scenario_contracts[0].get("own_bid", 0)
+            try:
+                calculated = calculate_selected_credit(
+                    credit=credit,
+                    embedded_percent=embedded_percent,
+                    administration_rate=group.get("taxa_adm"),
+                    reserve_rate=group.get("fundo_reserva"),
+                    remaining_term=group.get("remaining_term"),
+                    own_bid=first_own_bid,
+                )
+            except ValueError as error:
+                raise ValueError(f"Não foi possível recalcular o cenário {scenario_id}: {error}") from None
+
+            def assert_amount(container: dict, field: str, expected: float | None, label: str) -> None:
+                actual = container.get(field)
+                if expected is None:
+                    if actual is not None:
+                        raise ValueError(f"{label} deveria estar sem cálculo para o prazo informado.")
+                    return
+                try:
+                    actual_value = float(actual)
+                except (TypeError, ValueError):
+                    actual_value = math.nan
+                if not math.isfinite(actual_value) or abs(actual_value - expected) > 0.02:
+                    raise ValueError(f"{label} diverge do recálculo financeiro do servidor.")
+
+            scenario_fields = (
+                ("credito_contratado", "contracted_credit", "Crédito contratado"),
+                ("credito_liquido_projetado", "liquid_credit", "Crédito líquido"),
+                ("valor_lance_embutido", "embedded_bid", "Lance embutido"),
+                ("taxa_administracao", "administration_fee", "Taxa administrativa"),
+                ("fundo_reserva_valor", "reserve_fee", "Fundo de reserva"),
+                ("saldo_devedor", "remaining_balance", "Saldo devedor"),
+                ("parcela_inicial", "initial_installment", "Parcela inicial"),
+            )
+            for field, expected_key, label in scenario_fields:
+                assert_amount(scenario, field, calculated[expected_key], label)
+            assert_amount(scenario, "lance_embutido", calculated["embedded_bid"], "Lance embutido do cenário")
+            assert_amount(scenario, "lance_total_cenario", calculated["total_bid"], "Lance total do cenário")
+            assert_amount(scenario, "lance_cliente_total", calculated["own_bid"], "Lance próprio do cenário")
+            assert_amount(scenario, "parcela_pos_contemplacao", calculated["post_contemplation_installment"], "Parcela pós-contemplação")
+            for profile in scenario.get("perfis_contemplacao") or []:
+                threshold = normalize_percent(profile.get("percentual_referencia"))
+                if threshold is None:
+                    continue
+                ideal_total = money(Decimal(str(credit)) * threshold)
+                ideal_own = max(0, ideal_total - calculated["embedded_bid"])
+                assert_amount(profile, "lance_ideal_total", ideal_total, "Lance total ideal do perfil")
+                assert_amount(profile, "lance_ideal", ideal_own, "Lance próprio ideal do perfil")
+                assert_amount(profile, "lance_cliente", calculated["own_bid"], "Lance disponível por perfil")
+                assert_amount(profile, "lance_embutido", calculated["embedded_bid"], "Embutido por perfil")
+                assert_amount(profile, "falta_para_ideal", max(0, ideal_own - calculated["own_bid"]), "Déficit de lance do perfil")
+                assert_amount(profile, "percentual_lance_efetivo", calculated["total_bid"] / credit, "Percentual efetivo do perfil")
+                expected_attainment = calculated["total_bid"] / credit >= float(threshold)
+                if profile.get("atinge_perfil") is not expected_attainment:
+                    raise ValueError("A classificação de aderência do perfil diverge do lance recalculado pelo servidor.")
+            for contract in scenario_contracts:
+                for field, expected_key, label in (
+                    ("contracted_credit", "contracted_credit", "Crédito bruto do contrato"),
+                    ("liquid_credit", "liquid_credit", "Crédito líquido do contrato"),
+                    ("embedded_bid", "embedded_bid", "Embutido do contrato"),
+                    ("initial_installment", "initial_installment", "Parcela inicial do contrato"),
+                    ("post_contemplation_installment", "post_contemplation_installment", "Parcela pós-contemplação do contrato"),
+                    ("remaining_balance", "remaining_balance", "Saldo devedor do contrato"),
+                    ("own_bid", "own_bid", "Lance próprio do contrato"),
+                    ("total_bid", "total_bid", "Lance total do contrato"),
+                ):
+                    assert_amount(contract, field, calculated[expected_key], label)
+
+        if strict_calculation:
+            client = snapshot.get("client") or {}
+            budget = client.get("available_bid")
+            if budget is None:
+                budget = (client.get("own_resources") or 0) + (client.get("fgts") or 0)
+            try:
+                budget_value = float(budget or 0)
+            except (TypeError, ValueError):
+                budget_value = math.nan
+            if not math.isfinite(budget_value) or budget_value < 0:
+                raise ValueError("O orçamento de lance do cliente é inválido.")
+            for scenario_id in ("without_embedded", "with_embedded"):
+                scenario_own_bid = sum(
+                    float(contract.get("own_bid") or 0)
+                    for contract in contracts if contract.get("scenario") == scenario_id
+                )
+                if scenario_own_bid > budget_value + 0.02:
+                    raise ValueError(f"O lance próprio do cenário {scenario_id} excede os recursos compartilhados do cliente.")
 
 
 def create_study(*, client_name: str, approved_by: str, app_version: str, snapshot: dict, document_html: str, approval_key: str) -> dict:

@@ -29,7 +29,8 @@ from .motor360_auditoria import audit_to_markdown, audit_to_pdf, get_motor360_au
 from .administrator_rules import normalize_admin_name, rules_by_administradora
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
-from .consortium_viability_engine import analyze_client_consortium_viability
+from .consortium_viability_engine import MOTOR_VERSION, RULES_VERSION, analyze_client_consortium_viability
+from .credit_options import available_credit_options
 from .defasagem import build_defasagem_report, update_defasagem_task
 from . import financial_studies
 from .piperun import fetch_opportunities_preview, fetch_opportunity_notes
@@ -173,14 +174,15 @@ def read_public_financial_study(token: str):
             headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer"},
         )
     nonce = secrets.token_urlsafe(18)
+    release_version = get_settings().version
     document = "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-    document += f"<title>{html_escape(study['client_name'])} | Estudo Financeiro CrediClass</title><link rel='stylesheet' href='/static/css/style.css?v=4.0.214'>"
+    document += f"<title>{html_escape(study['client_name'])} | Estudo Financeiro CrediClass</title><link rel='stylesheet' href='/static/css/style.css?v={release_version}'>"
     document += "<meta name='robots' content='noindex,nofollow,noarchive'></head><body class='shared-study-page'>"
     document += "<div class='shared-study-shell'>"
     document += "<header class='shared-study-header'><div class='shared-study-brand'>CREDICLASS <span>· Estudo Financeiro</span></div><button id='printSharedStudy' class='shared-study-print' type='button'>Imprimir / Salvar PDF</button></header>"
     document += "<nav id='sharedStudyNavigation' class='shared-study-navigation' aria-label='Navegação pelas seções do estudo'></nav>"
     document += f"<main class='shared-study-content'>{study['document_html']}</main></div>"
-    document += f"<script nonce='{nonce}' src='/static/js/shared-study.js?v=4.0.214' defer></script></body></html>"
+    document += f"<script nonce='{nonce}' src='/static/js/shared-study.js?v={release_version}' defer></script></body></html>"
     policy = f"default-src 'none'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     return HTMLResponse(document, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": policy})
 
@@ -682,6 +684,15 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response):
         result = analyze_client_consortium_viability(payload, groups, mode=payload.base_mode, request_id=request_id)
         engine_duration_ms = (time.perf_counter() - engine_started) * 1000
         result["administradoras_analisadas"] = administrators_analyzed
+        result["engine_version"] = MOTOR_VERSION
+        result["rules_version"] = RULES_VERSION
+        seen_item_ids = set()
+        for collection_name in ("final_items", "items", "credit_items", "matrix_items", "composition_items"):
+            for item in result.get(collection_name, []) or []:
+                if id(item) in seen_item_ids:
+                    continue
+                seen_item_ids.add(id(item))
+                item["available_credit_options"] = available_credit_options(item)
         result["administradora_selecionada"] = selected_administrator or None
         result["grupos_na_base"] = total_groups_in_base
         result["grupos_filtrados_por_tipo_bem"] = len(groups) if payload.tipo_bem_explicit and requested_type else None

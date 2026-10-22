@@ -160,6 +160,23 @@ document.querySelector("#result").textContent = JSON.stringify({
         self.assertIn("sem lance embutido", result["scenarioNames"][0])
         self.assertIn("com lance embutido", result["scenarioNames"][1])
 
+    def test_motor_card_uses_server_normalized_credit_options_and_origins(self):
+        result = self._run_browser(r'''
+const item = {
+  grupo: "SERVER-OPTIONS", credito_minimo: 100000, credito_maximo: 900000,
+  available_credit_options: [
+    { value: 250000, labels: ["Créd. Inter. 1"], source_fields: ["credito_intermediario_1"], sources: [{ column: "R" }] },
+    { value: 900000, labels: ["Maior Crédito"], source_fields: ["credito_maximo"], sources: [{ column: "V" }] },
+  ],
+};
+const options = motor360CreditOptions(item);
+document.querySelector("#result").textContent = JSON.stringify(options.map(option => ({ value: option.value, label: option.label, fields: option.fields, source: option.sources[0].column })));
+''')
+        self.assertEqual(result, [
+            {"value": 250000, "label": "Créd. Inter. 1", "fields": ["credito_intermediario_1"], "source": "R"},
+            {"value": 900000, "label": "Maior Crédito", "fields": ["credito_maximo"], "source": "V"},
+        ])
+
     def test_selected_credit_recalculates_financial_values_independently_by_scenario(self):
         result = self._run_browser(r'''
 const item = {

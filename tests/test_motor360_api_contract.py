@@ -62,8 +62,14 @@ class Motor360ApiContractTest(unittest.TestCase):
             result = viabilidade_360_analisar(request, response)
 
         self.assertEqual(result["audit_id"], "AUD-CONTRACT-FIXTURE")
+        self.assertEqual(result["engine_version"], "4.0.226")
         self.assertEqual(result["total_grupos_analisados"], 1)
         item = next(row for row in result["final_items"] if row["grupo"] == "1011")
+        self.assertEqual(
+            [option["value"] for option in item["available_credit_options"]],
+            [717519.32, 1255658.79],
+        )
+        self.assertEqual(item["available_credit_options"][0]["source_fields"], ["credito_minimo"])
         self.assertEqual(
             {key: item[key] for key in ("grupo_raw", "source_row", "credito_minimo", "credito_maximo", "prazo_restante", "vencimento_parcela")},
             {"grupo_raw": "1011", "source_row": 59, "credito_minimo": 717519.32,

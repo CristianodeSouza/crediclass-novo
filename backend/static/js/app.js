@@ -507,6 +507,8 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
   const profile = collectClientProfile?.() || {};
   return {
     motor360_audit_id: investorState.result?.audit_id || null,
+    motor_engine_version: investorState.result?.engine_version || investorState.audit?.metadata?.engine_version || null,
+    motor_rules_version: investorState.result?.rules_version || investorState.audit?.metadata?.rules_version || null,
     app_version: investorState.buildIdentity?.version || document.querySelector('meta[name="crediclass-build"]')?.content || null,
     app_commit: investorState.buildIdentity?.commit || null,
     motor360_base_fingerprint: investorState.audit?.data_source?.base_snapshot?.fingerprint || null,
@@ -520,24 +522,34 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
       name: String(client.nome || profile.nome || "").trim(),
       objective: client.objetivo || null,
       desired_credit: client.credito_liquido_desejado ?? client.credito_desejado ?? null,
+      own_resources: client.lance_recursos_proprios ?? client.lance_proprio ?? 0,
+      fgts: client.fgts_total ?? client.fgts ?? 0,
+      available_bid: client.lance_cliente_total ?? client.lance_total ?? null,
+      desired_installment: client.parcela_desejada ?? null,
+      maximum_installment: client.parcela_maxima ?? null,
+      income: client.renda_total ?? null,
+      contemplation_profile: client.contemplacao_perfil || investorState.result?.perfil_contemplacao || null,
     },
     investment_simulation: investmentSimulation,
     groups: items.map((item) => ({
       group_key: motor360GroupKey(item),
       group: item.grupo || item.grupo_id || "",
+      source_row: item.source_row ?? null,
       administrator: item.administradora || "",
       study_credit_basis: "credito_escolhido_por_cenario",
+      calculation_contract_version: 1,
       quotas_by_scenario: { without_embedded: quotaCountFor(item, "without_embedded"), with_embedded: quotaCountFor(item, "with_embedded") },
       credito_minimo: item.credito_minimo ?? null,
       credito_intermediario_1: item.credito_intermediario_1 ?? null,
       credito_intermediario_2: item.credito_intermediario_2 ?? null,
       credito_intermediario_3: item.credito_intermediario_3 ?? null,
+      credito_maximo: item.credito_maximo ?? null,
       credit_max: item.credito_maximo ?? null,
       selected_credit_by_scenario: {
         without_embedded: selectedCreditFor(item, "without_embedded"),
         with_embedded: selectedCreditFor(item, "with_embedded"),
       },
-      available_credit_options: motor360CreditOptions(item).map(({ value, labels, fields }) => ({ value, labels, source_fields: fields })),
+      available_credit_options: motor360CreditOptions(item).map(({ value, labels, fields, sources }) => ({ value, labels, source_fields: fields, sources })),
       percentual_lance_embutido: item.percentual_lance_embutido ?? item.lance_embutido ?? null,
       taxa_adm: item.taxa_adm ?? null,
       taxa_adm_ano: financialStudyAnnualRate(item).value,
@@ -4600,6 +4612,17 @@ function persistMotor360Selection() {
 }
 
 function motor360CreditOptions(item) {
+  if (Array.isArray(item?.available_credit_options)) {
+    return item.available_credit_options
+      .map((option) => ({
+        value: Number(option.value),
+        labels: Array.isArray(option.labels) ? option.labels : [],
+        fields: option.source_fields || option.fields || [],
+        sources: option.sources || [],
+      }))
+      .filter((option) => Number.isFinite(option.value) && option.value > 0)
+      .map((option) => ({ ...option, label: option.labels.join(" / ") }));
+  }
   const fields = [
     ["credito_minimo", "Menor Crédito"],
     ["credito_intermediario_1", "Créd. Inter. 1"],
@@ -4863,26 +4886,22 @@ function minimumQuotasFor(item, scenarioId = null) {
 
 function suggestedCompositionQuotas(item, scenarioId = "without_embedded") {
   const otherItems = selectedMotor360Items().filter((entry) => motor360GroupKey(entry) !== motor360GroupKey(item));
-  if (!otherItems.length) return minimumQuotasFor(item, scenarioId);
   const client = motor360ClientProfile();
   const desired = Number(client.credito_liquido_desejado || 0);
-  const perQuotaCapacity = Number(item?.credito_maximo || 0);
+  const selectedNetCredit = (entry) => {
+    const gross = selectedCreditFor(entry, scenarioId);
+    if (gross === null) return 0;
+    if (scenarioId !== "with_embedded") return gross;
+    const rawRate = Number(entry.percentual_lance_embutido ?? entry.source_values?.percentual_lance_embutido ?? 0);
+    const rate = rawRate > 1 ? rawRate / 100 : rawRate;
+    return Math.max(0, gross - gross * (Number.isFinite(rate) ? rate : 0));
+  };
+  const perQuotaCapacity = selectedNetCredit(item);
   if (desired <= 0 || perQuotaCapacity <= 0) return 1;
-  let combinedCapacity = otherItems.reduce((sum, entry) => sum + Number(entry.credito_maximo || 0) * quotaCountFor(entry, scenarioId), 0) + perQuotaCapacity;
-  for (const entry of otherItems) {
-    const key = motor360GroupKey(entry);
-    const capacity = Number(entry.credito_maximo || 0);
-    let quotas = quotaCountFor(entry, scenarioId);
-    while (quotas > 1 && combinedCapacity - capacity >= desired) {
-      quotas -= 1;
-      combinedCapacity -= capacity;
-      setScenarioQuotaCount(key, scenarioId, quotas);
-    }
-  }
-  const alreadyCovered = combinedCapacity - perQuotaCapacity;
+  const alreadyCovered = otherItems.reduce((sum, entry) => sum + selectedNetCredit(entry) * quotaCountFor(entry, scenarioId), 0);
   const remaining = Math.max(0, desired - alreadyCovered);
   if (remaining <= 0) return 1;
-  return Math.min(50, Math.max(1, Math.ceil(remaining / perQuotaCapacity)));
+  return Math.min(50, Math.max(minimumQuotasFor(item, scenarioId), Math.ceil(remaining / perQuotaCapacity)));
 }
 
 function clientResourceTotal() {
