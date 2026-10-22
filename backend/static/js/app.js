@@ -726,10 +726,10 @@ const FINANCIAL_STUDY_ADMINISTRATOR_BENEFITS = {
     benefits: [
       "Grupos em andamento, com ótima saúde financeira, grande quantidade de contemplações por mês, facilitando a liberação de todas as cartas para utilização rapidamente;",
       "As contemplações ocorrem todos os meses: Sorteio e Lances Livres;",
-      "É possível utilizar até 30% do crédito para pagar o lance ofertado;",
+      "O percentual de lance embutido aplicável deve ser confirmado no grupo selecionado e é exibido nos cenários do Motor 360;",
       "É permitido reduzir 100% do lance no valor da parcela para obter o menor custo/mês possível;",
       "A correção das cartas de créditos ocorre anualmente pelo INCC (Índice Nacional da Construção Civil) para manutenção do poder de compra das cartas de crédito do grupo frente ao mercado;",
-      "Fundo de reserva: 2% em média no total, diluído no prazo do grupo. Saldo remanescente é devolvido no término do grupo;",
+      "O fundo de reserva total e anual é apresentado conforme os dados do grupo selecionado; eventual saldo remanescente segue as regras do contrato;",
       "Seguro prestamista 0,06% sob o saldo devedor - opcional; a simulação não contempla inclusão do seguro.",
       "Débito automático das prestações em contas Itaú.",
     ],
@@ -1021,9 +1021,14 @@ function renderFinancialStudyProjection() {
     const rows = profileProjectionRows(profile.id);
     return `<section class="financial-study-part10-profile"><h3>${profile.number}. ${escapeHtml(profile.label)}</h3>${tableFor(rows, `Projeção ${profile.label}`)}</section>`;
   }).join("");
-  const portfolio = selectedPortfolioTotals(items);
-  const consolidated = `<section class="financial-study-part10-profile"><h3>Resumo consolidado da carteira</h3><p>Somatório dos contratos efetivamente selecionados, sem misturar os subtotais por cenário.</p><dl class="financial-study-portfolio-totals"><div><dt>Cotas ativas</dt><dd>${portfolio.totalQuotas}</dd></div><div><dt>Crédito líquido contratado</dt><dd>${formatMoney(portfolio.credit)}</dd></div><div><dt>Parcela inicial total</dt><dd>${formatMoney(portfolio.installment)}</dd></div><div><dt>Lance próprio disponível (compartilhado)</dt><dd>${formatMoney(selectedGroupsClientFinancials().availableBid)}</dd></div><div><dt>Lance próprio alocado · perfil em foco</dt><dd>${formatMoney(portfolio.availableBidByProfile[motor360FocusedProfileId()] || 0)}</dd></div></dl></section>`;
-  target.innerHTML = `${reviewBanner}<section class="financial-study-part10-lottery"><h3>1. Sorteio Geral</h3>${tableFor(lotteryRows, "Projeção de contemplação por sorteio geral")}</section>${consolidated}${profileSections}<p class="financial-study-part10-source-note">Sorteio Geral considera os cenários e quantidades de cotas efetivamente selecionados, sem lance próprio. Os lances e percentuais dos demais quadros vêm dos perfis calculados pelo Motor 360; crédito, embutido, parcela inicial e prazo vêm do cenário correspondente. Cenários sem e com embutido têm contratos distintos e subtotais separados; o resumo consolidado soma os contratos ativos. O recurso próprio é um limite compartilhado, alocado uma única vez entre os contratos selecionados. A contemplação não é garantida.</p>`;
+  const scenarioPortfolio = scenarioIds.map((scenarioId) => {
+    const metrics = metricsByScenario[scenarioId];
+    const label = scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido";
+    if (!metrics?.entries?.length) return "";
+    return `<section class="financial-study-part10-profile"><h3>Resumo do cenário ${label}</h3><p>Totais dos contratos deste cenário. O cenário alternativo não está incluído nesta soma.</p><dl class="financial-study-portfolio-totals"><div><dt>Contratos independentes</dt><dd>${metrics.totalQuotas}</dd></div><div><dt>Crédito líquido</dt><dd>${formatMoney(metrics.credit)}</dd></div><div><dt>Crédito contratado</dt><dd>${formatMoney(metrics.contractedCredit)}</dd></div><div><dt>Parcela inicial total</dt><dd>${formatMoney(metrics.installment)}</dd></div><div><dt>Lance embutido</dt><dd>${formatMoney(metrics.embedded)}</dd></div></dl></section>`;
+  }).join("");
+  const consolidated = `${scenarioPortfolio}<section class="financial-study-part10-profile"><h3>Recursos compartilhados</h3><dl class="financial-study-portfolio-totals"><div><dt>Lance próprio disponível</dt><dd>${formatMoney(selectedGroupsClientFinancials().availableBid)}</dd></div></dl></section>`;
+  target.innerHTML = `${reviewBanner}<section class="financial-study-part10-lottery"><h3>1. Sorteio Geral</h3>${tableFor(lotteryRows, "Projeção de contemplação por sorteio geral")}</section>${consolidated}${profileSections}<p class="financial-study-part10-source-note">Sorteio Geral considera os cenários e quantidades de contratos efetivamente selecionados, sem lance próprio. Os lances e percentuais dos demais quadros vêm dos perfis calculados pelo Motor 360; crédito, embutido, parcela inicial e prazo vêm do cenário correspondente. Cenários sem e com embutido têm contratos distintos e subtotais separados, sem soma entre alternativas. O recurso próprio é um limite compartilhado, alocado uma única vez entre os contratos selecionados. A contemplação não é garantida.</p>`;
 }
 
 function financialStudyAssemblyEvent(schedule, month, eventId) {
