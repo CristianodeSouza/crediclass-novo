@@ -59,10 +59,14 @@ class Motor360ApiContractTest(unittest.TestCase):
         with patch("backend.main.list_grupos", return_value=[source_row]), patch(
             "backend.main.save_motor360_audit", side_effect=save_audit
         ):
-            result = viabilidade_360_analisar(request, response)
+            result = viabilidade_360_analisar(request, response, compact=True)
 
         self.assertEqual(result["audit_id"], "AUD-CONTRACT-FIXTURE")
-        self.assertEqual(result["engine_version"], "4.0.226")
+        self.assertEqual(result["engine_version"], "4.0.229")
+        self.assertNotIn("items", result)
+        self.assertNotIn("credit_items", result)
+        self.assertNotIn("composition_items", result)
+        self.assertTrue(all(set(row) <= {"grupo", "grupo_id", "administradora", "eligible_scenarios", "cenarios"} for row in result["matrix_items"]))
         self.assertEqual(result["total_grupos_analisados"], 1)
         item = next(row for row in result["final_items"] if row["grupo"] == "1011")
         self.assertEqual(
@@ -87,6 +91,27 @@ class Motor360ApiContractTest(unittest.TestCase):
         timing = response.headers.get("Server-Timing", "")
         for phase in ("sheet_load", "engine", "audit_save", "total"):
             self.assertRegex(timing, rf"(?:^|, )\s*{phase};dur=[0-9.]+")
+
+    def test_endpoint_preserves_legacy_payload_unless_compact_is_requested(self):
+        analysis = {
+            "items": [{"grupo": "G1"}], "final_items": [{"grupo": "G1"}],
+            "credit_items": [{"grupo": "G1"}], "composition_items": [{"grupo": "G1"}],
+            "matrix_items": [{"grupo": "G1", "cenarios": []}],
+            "audit": {"metadata": {}, "data_source": {}, "summary": {}, "execution_steps": []},
+        }
+        request = ViabilidadeRequest(
+            objetivo="Contemplar", credito_desejado=100000, prazo_desejado=12,
+            lance_proprio=0, fgts=0, renda_total=10000, parcela_desejada=1000,
+            parcela_limite=3000,
+        )
+        with patch("backend.main.list_grupos", return_value=[]), patch(
+            "backend.main.analyze_client_consortium_viability", return_value=analysis
+        ), patch("backend.main.save_motor360_audit", return_value={"metadata": {"audit_id": "AUD-COMPACT"}}):
+            result = viabilidade_360_analisar(request, Response())
+
+        self.assertEqual(result["items"], [{"grupo": "G1"}])
+        self.assertIn("credit_items", result)
+        self.assertIn("composition_items", result)
 
 
 if __name__ == "__main__":

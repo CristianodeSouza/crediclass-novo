@@ -99,25 +99,33 @@ document.addEventListener("click", (event) => {
   }
 });
 const investorPreferenceFlags = [];
+const savedMotor360Selection = (() => {
+  try { return JSON.parse(localStorage.getItem("crediclass.motor360.selection.v2") || "null"); } catch { return null; }
+})();
 const savedMotor360SelectedGroups = (() => {
+  if (savedMotor360Selection?.selectedGroups) return savedMotor360Selection.selectedGroups;
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedGroups") || "[]"); } catch { return []; }
 })();
 const savedMotor360QuotaCounts = (() => {
+  if (savedMotor360Selection?.quotaCounts) return savedMotor360Selection.quotaCounts;
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.quotaCounts") || "{}"); } catch { return {}; }
 })();
 const savedMotor360SelectedScenarios = (() => {
+  if (savedMotor360Selection?.selectedScenarios) return savedMotor360Selection.selectedScenarios;
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedScenarios") || "{}"); } catch { return {}; }
 })();
 const savedMotor360QuotaReview = (() => {
+  if (savedMotor360Selection?.quotaReview) return savedMotor360Selection.quotaReview;
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.quotaReview") || "{}"); } catch { return {}; }
 })();
 const savedMotor360SelectedData = (() => {
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedGroupData") || "{}"); } catch { return {}; }
 })();
 const savedMotor360SelectedCredits = (() => {
+  if (savedMotor360Selection?.selectedCredits) return savedMotor360Selection.selectedCredits;
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedCredits") || "{}"); } catch { return {}; }
 })();
-const savedMotor360Administrator = localStorage.getItem("crediclass.motor360.administrator") || "";
+const savedMotor360Administrator = savedMotor360Selection?.administrator ?? localStorage.getItem("crediclass.motor360.administrator") ?? "";
 const motor360QuotaReview = new Map(Object.entries(savedMotor360QuotaReview));
 Object.entries(savedMotor360QuotaCounts).forEach(([groupId, value]) => {
   if (value && typeof value === "object" || motor360QuotaReview.has(String(groupId))) return;
@@ -153,8 +161,13 @@ const investorState = {
     with_embedded: Number.isFinite(Number(value?.with_embedded)) ? Number(value.with_embedded) : null,
   }])),
   floatingSummaryMinimized: true,
+  motor360GroupPage: 0,
 };
+const MOTOR360_GROUP_PAGE_SIZE = 20;
 const motor360GroupAnalyticsCache = new Map();
+const motor360DelegatedResults = new WeakSet();
+let pendingQuotaFocusSelector = null;
+let motor360VisibleItemCount = 0;
 let motor360AnalyticsCacheResult = null;
 let motor360CardCacheResult = null;
 let investorAnalysisController = null;
@@ -3122,6 +3135,9 @@ function focusMotor360Group(anchorId) {
 
 const motor360GroupCardCache = new Map();
 const motor360CompositionMetricsCache = new Map();
+const motor360AdministratorKeyCache = new Map();
+const motor360ObjectGroupKeyCache = new WeakMap();
+const motor360ItemsByGroupCache = new WeakMap();
 function renderMotor360GroupCardUncached(item) {
   const sourceScenarios = Array.isArray(item.cenarios) ? item.cenarios : [];
   const scenarios = investorState.selectedGroupIds.has(motor360GroupKey(item))
@@ -3138,6 +3154,7 @@ function renderMotor360GroupCardUncached(item) {
   const groupId = String(item.grupo || item.grupo_id || "");
   const groupDisplayName = `Grupo ${groupId || "-"}${String(item.tipo_bem || "").trim() ? ` - ${String(item.tipo_bem).trim()}` : ""}`;
   const groupKey = motor360GroupKey(item);
+  const sourceMetricsHtml = motor360ScenarioSourceMetrics(item);
   const auditId = escapeHtml(groupKey);
   const anchorId = motor360GroupAnchorId(groupId);
   const selected = investorState.selectedGroupIds.has(groupKey);
@@ -3303,7 +3320,7 @@ function renderMotor360GroupCardUncached(item) {
     const creditOptions = motor360CreditOptions(item);
     const creditInput = selected ? `<label class="motor360-scenario-credit"><span>Crédito escolhido nesta cota</span><select data-credit-action="scenario" data-group-id="${auditId}" data-scenario-id="${scenario.id}" aria-label="Crédito escolhido para o cenário ${scenario.id === "with_embedded" ? "com lance embutido" : "sem lance embutido"}"><option value="">Escolha uma opção</option>${creditOptions.map((option) => `<option value="${option.value}" ${chosenCredit !== null && Math.round(chosenCredit * 100) === Math.round(option.value * 100) ? "selected" : ""}>${escapeHtml(option.label)} · ${formatMoney(option.value)}</option>`).join("")}</select></label>` : "";
     const quotaInput = selected ? `${creditInput}<label class="motor360-scenario-quota"><span>Cotas neste cenário</span><input class="motor360-quota-input" type="number" min="0" max="50" step="1" value="${scenarioQuotaCount}" ${chosenCredit === null ? "disabled" : ""} data-quota-action="scenario" data-group-id="${auditId}" data-scenario-id="${scenario.id}" aria-label="Quantidade de cotas do cenário ${scenario.id === "with_embedded" ? "com lance embutido" : "sem lance embutido"} no grupo ${auditId}"></label>${quotaLimit !== null && scenarioQuotaCount > quotaLimit ? `<small class="motor360-quota-warning" role="status"><strong>Acima da média histórica:</strong> ${scenarioQuotaCount} cotas; referência de ${quotaLimit}.</small>` : ""}` : "";
-    return `<article class="motor360-scenario-card ${analysisOnly ? "is-analysis-only" : requirement.ok ? "is-compatible" : "is-incompatible"}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusLabel} ${info}</span>${quotaInput}</div>${visibleFailure}<div class="motor360-scenario-grid"><div><small>Crédito contratado${showPortfolioLabels ? " (total das cotas do grupo)" : " (por cota)"}</small><b>${formatMoney(cardCredit)}</b></div><div><small>${showPortfolioLabels ? "Lance próprio atribuído ao grupo" : "Lance do cliente"}</small><b>${formatMoney(cardClientBid)} <em>(${formatPercent(clientBidPercent)})</em></b></div><div><small>Lance embutido${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${formatMoney(cardEmbedded)}</b></div><div><small>${showPortfolioLabels ? "Lance total no grupo" : "Lance total do cenário"}</small><b>${formatMoney(cardScenarioBid)} <em>(${formatPercent(scenarioBidPercent)})</em></b></div><div><small>Saldo devedor${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${formatMoney(cardBalance)}</b></div><div><small>Parcela inicial${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${formatMoney(cardInstallment)}</b></div><div><small>Parcela pós-contemplação${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${cardAfter == null ? "Não calculada" : formatMoney(cardAfter)}</b></div></div>${cardLabel}<small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small>${renderScenarioProfiles(scenario)}</article>`;
+    return `<article class="motor360-scenario-card ${analysisOnly ? "is-analysis-only" : requirement.ok ? "is-compatible" : "is-incompatible"}" data-scenario-id="${escapeHtml(scenario.id)}"><div class="motor360-scenario-title"><strong>${title}</strong><span>${statusLabel} ${info}</span>${quotaInput}</div>${visibleFailure}<div class="motor360-scenario-grid"><div><small>Crédito contratado${showPortfolioLabels ? " (total das cotas do grupo)" : " (por cota)"}</small><b>${formatMoney(cardCredit)}</b></div><div><small>${showPortfolioLabels ? "Lance próprio atribuído ao grupo" : "Lance do cliente"}</small><b>${formatMoney(cardClientBid)} <em>(${formatPercent(clientBidPercent)})</em></b></div><div><small>Lance embutido${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${formatMoney(cardEmbedded)}</b></div><div><small>${showPortfolioLabels ? "Lance total no grupo" : "Lance total do cenário"}</small><b>${formatMoney(cardScenarioBid)} <em>(${formatPercent(scenarioBidPercent)})</em></b></div><div><small>Saldo devedor${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${formatMoney(cardBalance)}</b></div><div><small>Parcela inicial${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${formatMoney(cardInstallment)}</b></div><div><small>Parcela pós-contemplação${showPortfolioLabels ? " (total do grupo)" : ""}</small><b>${cardAfter == null ? "Não calculada" : formatMoney(cardAfter)}</b></div>${sourceMetricsHtml}</div>${cardLabel}<small class="motor360-scenario-note">Prazo após lance: ${scenario.term_compatible === null ? "não analisado" : scenario.term_compatible ? "compatível" : "requer análise"}</small>${renderScenarioProfiles(scenario)}</article>`;
   }).join("");
   const selectedScenarioIds = selectedScenarioIdsForGroup(groupKey);
   const activeSelectedScenarioIds = [...selectedScenarioIds].filter((id) => quotaCountFor(groupKey, id) > 0);
@@ -3419,6 +3436,16 @@ function financialStudyReserveAnnualRate(item) {
 
 function motor360FinalItems(result = investorState.result) {
   return result?.final_items || result?.items || [];
+}
+
+function motor360ItemsByGroup(result = investorState.result) {
+  if (!result || typeof result !== "object") return new Map();
+  let index = motor360ItemsByGroupCache.get(result);
+  if (!index) {
+    index = new Map(motor360FinalItems(result).map((item) => [motor360GroupKey(item), item]));
+    motor360ItemsByGroupCache.set(result, index);
+  }
+  return index;
 }
 
 const emptyMotor360Client = Object.freeze({});
@@ -4635,15 +4662,32 @@ function renderSelectedGroupsScreen() {
   }));
 }
 
-function persistMotor360Selection() {
-  localStorage.setItem("crediclass.motor360.selectedGroups", JSON.stringify([...investorState.selectedGroupIds]));
-  localStorage.setItem("crediclass.motor360.selectedScenarios", JSON.stringify(Object.fromEntries(investorState.selectedScenarioIds)));
-  localStorage.setItem("crediclass.motor360.quotaCounts", JSON.stringify(Object.fromEntries(investorState.quotaCounts)));
-  localStorage.setItem("crediclass.motor360.quotaReview", JSON.stringify(Object.fromEntries(motor360QuotaReview)));
-  localStorage.setItem("crediclass.motor360.selectedGroupData", JSON.stringify(Object.fromEntries(investorState.selectedGroupData)));
-  localStorage.setItem("crediclass.motor360.selectedCredits", JSON.stringify(Object.fromEntries(investorState.selectedCredits)));
-  localStorage.setItem("crediclass.motor360.administrator", investorState.administrator || "");
+let motor360PersistTimer = null;
+
+function persistMotor360SelectionNow() {
+  if (motor360PersistTimer !== null) window.clearTimeout(motor360PersistTimer);
+  motor360PersistTimer = null;
+  const snapshot = {
+    selectedGroups: [...investorState.selectedGroupIds],
+    selectedScenarios: Object.fromEntries(investorState.selectedScenarioIds),
+    quotaCounts: Object.fromEntries(investorState.quotaCounts),
+    quotaReview: Object.fromEntries(motor360QuotaReview),
+    selectedCredits: Object.fromEntries(investorState.selectedCredits),
+    administrator: investorState.administrator || "",
+  };
+  try {
+    localStorage.setItem("crediclass.motor360.selection.v2", JSON.stringify(snapshot));
+    localStorage.removeItem("crediclass.motor360.selectedGroupData");
+  }
+  catch (error) { console.warn("Não foi possível persistir a composição do Motor 360.", error); }
 }
+
+function persistMotor360Selection() {
+  if (motor360PersistTimer !== null) window.clearTimeout(motor360PersistTimer);
+  motor360PersistTimer = window.setTimeout(persistMotor360SelectionNow, 120);
+}
+
+window.addEventListener("pagehide", persistMotor360SelectionNow);
 
 function motor360CreditOptions(item) {
   if (Array.isArray(item?.available_credit_options)) {
@@ -5383,10 +5427,24 @@ function motor360AdministratorName(item) {
 }
 
 function motor360AdministratorKey(item) {
-  return normalizeText(motor360AdministratorName(item)).replace(/[^a-z0-9]+/g, "");
+  const name = motor360AdministratorName(item);
+  if (!motor360AdministratorKeyCache.has(name)) {
+    if (motor360AdministratorKeyCache.size >= 300) motor360AdministratorKeyCache.clear();
+    motor360AdministratorKeyCache.set(name, normalizeText(name).replace(/[^a-z0-9]+/g, ""));
+  }
+  return motor360AdministratorKeyCache.get(name);
 }
 
 function motor360GroupKey(itemOrAdministrator, groupId = null) {
+  if (groupId === null && itemOrAdministrator && typeof itemOrAdministrator === "object") {
+    const cachedKey = motor360ObjectGroupKeyCache.get(itemOrAdministrator);
+    if (cachedKey) return cachedKey;
+    const administrator = motor360AdministratorKey(itemOrAdministrator);
+    const group = String(itemOrAdministrator?.grupo || itemOrAdministrator?.grupo_id || "").trim();
+    const key = `${administrator}|${group}`;
+    motor360ObjectGroupKeyCache.set(itemOrAdministrator, key);
+    return key;
+  }
   const item = groupId === null ? itemOrAdministrator : { administradora: itemOrAdministrator, grupo: groupId };
   const administrator = motor360AdministratorKey(item);
   const group = String(item?.grupo || item?.grupo_id || "").trim();
@@ -5437,7 +5495,6 @@ function syncMotor360AdministratorFilter(sourceItems) {
     select.value = investorState.administrator;
     select.disabled = !administrators.length;
   }
-  localStorage.setItem("crediclass.motor360.administrator", investorState.administrator);
   persistMotor360Selection();
   return investorState.administrator;
 }
@@ -5500,6 +5557,7 @@ function renderInvestorAnalysis(result) {
   const summary = document.getElementById("investorAnalysisSummary");
   const results = document.getElementById("investorAnalysisResults");
   if (!status || !summary || !results) return;
+  installMotor360DelegatedControls(results);
   renderMotor360FloatingSelectionSummaryIntoFold();
   const client = result.cliente || {};
   const totals = result.contadores || {};
@@ -5559,6 +5617,11 @@ function renderInvestorAnalysis(result) {
     ? sourceItems.filter((item) => motor360AdministratorKey(item) === selectedAdministratorKey).filter(matchesSelectedScenario)
     : scenarioSourceItems;
   const items = applySelectedGroupsFiltersAndSort(applyInvestorPreferences(administratorItems, investorState.preferences));
+  motor360VisibleItemCount = items.length;
+  const pageCount = Math.max(1, Math.ceil(items.length / MOTOR360_GROUP_PAGE_SIZE));
+  investorState.motor360GroupPage = Math.min(Math.max(0, investorState.motor360GroupPage), pageCount - 1);
+  const pageStart = investorState.motor360GroupPage * MOTOR360_GROUP_PAGE_SIZE;
+  const visibleItems = items.slice(pageStart, pageStart + MOTOR360_GROUP_PAGE_SIZE);
   const summaryItems = [
     ["Grupos analisados", result.total_grupos_analisados ?? 0],
     ["Crédito líquido desejado", formatMoney(client.credito_liquido_desejado)],
@@ -5602,24 +5665,18 @@ function renderInvestorAnalysis(result) {
       <strong>Grupos compatíveis para composição da carteira</strong>
       <span>Exibimos grupos com crédito e prazo compatíveis. O perfil pode ser atingido pela composição de múltiplas cotas ou grupos; confira os requisitos de cada cenário antes de selecionar.</span>
     </div>
-    <div class="motor360-group-list">${items.map(renderMotor360GroupCard).join("")}</div>
+    <nav class="motor360-group-pagination" aria-label="Páginas de grupos">
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-group-page="previous" ${investorState.motor360GroupPage === 0 ? "disabled" : ""}>Anterior</button>
+      <span>Grupos ${items.length ? pageStart + 1 : 0}–${Math.min(pageStart + MOTOR360_GROUP_PAGE_SIZE, items.length)} de ${items.length} · Página ${investorState.motor360GroupPage + 1} de ${pageCount}</span>
+      <button type="button" class="btn btn-outline-secondary btn-sm" data-group-page="next" ${investorState.motor360GroupPage >= pageCount - 1 ? "disabled" : ""}>Próxima</button>
+    </nav>
+    <div class="motor360-group-list">${visibleItems.map(renderMotor360GroupCard).join("")}</div>
 
     ${scopedContemplationRejected.length ? `<details class="motor360-credit-excluded" open><summary>Grupos fora do perfil de contemplação selecionado (${scopedContemplationRejected.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th></tr></thead><tbody>${scopedContemplationRejected.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>Lance disponível abaixo da faixa do perfil selecionado.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
     ${renderMotor360Audit(scopedAudit)}
   `;
   results.insertAdjacentHTML("afterbegin", renderMotor360FilterNotice(administratorItems, items));
-  results.querySelectorAll(".motor360-scenario-card").forEach((card) => {
-    const groupId = card.closest(".motor360-group-card")?.querySelector(".motor360-group-select-input")?.dataset.groupId;
-    const groupItem = motor360FinalItems(result).find((item) => motor360GroupKey(item) === String(groupId || "") || String(item.grupo || item.grupo_id || "") === String(groupId || ""));
-    card.querySelector(".motor360-scenario-grid")?.insertAdjacentHTML("beforeend", motor360ScenarioSourceMetrics(groupItem));
-    const scenarioCards = [...(card.closest(".motor360-group-card")?.querySelectorAll(".motor360-scenario-card") || [])];
-    const scenarioId = groupItem?.cenarios?.[scenarioCards.indexOf(card)]?.id || "";
-    if (!scenarioId) return;
-    card.dataset.scenarioId = scenarioId;
-    const scenario = (groupItem?.cenarios || []).find((item) => item.id === scenarioId) || {};
-    card.dataset.scenarioId = scenarioId;
-  });
   results.querySelectorAll("[data-screen-jump]").forEach((button) => button.addEventListener("click", () => activateScreen(button.dataset.screenJump)));
   results.querySelectorAll("[data-open-selected-groups-workspace]").forEach((button) => button.addEventListener("click", openSelectedGroupsWorkspace));
   results.querySelectorAll("[data-motor360-blocking-diagnostics]").forEach((button) => button.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit)));
@@ -5633,87 +5690,6 @@ function renderInvestorAnalysis(result) {
     button.setAttribute("aria-expanded", investorState.floatingSummaryMinimized ? "false" : "true");
   }));
   results.querySelectorAll("[data-confirm-legacy-quotas]").forEach((button) => button.addEventListener("click", () => confirmLegacyQuotaReview(button.dataset.confirmLegacyQuotas)));
-  results.querySelectorAll(".motor360-group-select-input").forEach((input) => input.addEventListener("change", (event) => {
-    const groupId = String(event.target.dataset.groupId || "");
-    if (event.target.checked) {
-      const selectedItem = motor360FinalItems()
-        .find((item) => motor360GroupKey(item) === groupId);
-      if (!investorState.administrator && selectedItem?.administradora) {
-        investorState.administrator = selectedItem.administradora;
-        const administratorSelect = document.getElementById("investorAdministratorFilter");
-        if (administratorSelect) administratorSelect.value = selectedItem.administradora;
-        persistMotor360Selection();
-        updateInvestorPreferenceSummary();
-      }
-      if (investorState.administrator && motor360AdministratorKey(selectedItem) !== motor360AdministratorKey(investorState.administrator)) {
-        event.target.checked = false;
-        showToast("Selecione grupos de apenas uma administradora por composição.", "warning");
-        return;
-      }
-      investorState.selectedGroupIds.add(groupId);
-      if (selectedItem) investorState.selectedGroupData.set(groupId, selectedItem);
-      if (!investorState.quotaCounts.has(groupId)) investorState.quotaCounts.set(groupId, { without_embedded: 0, with_embedded: 0 });
-    } else {
-      investorState.selectedGroupIds.delete(groupId);
-      investorState.selectedScenarioIds.delete(groupId);
-      investorState.quotaCounts.delete(groupId);
-      investorState.selectedGroupData.delete(groupId);
-      investorState.selectedCredits.delete(groupId);
-      motor360QuotaReview.delete(groupId);
-      if (!investorState.selectedGroupIds.size) {
-        investorState.administrator = "";
-        const administratorSelect = document.getElementById("investorAdministratorFilter");
-        if (administratorSelect) administratorSelect.value = "";
-        persistMotor360Selection();
-        updateInvestorPreferenceSummary();
-      }
-    }
-    persistMotor360Selection();
-    renderInvestorAnalysis(investorState.result);
-  }));
-  let pendingQuotaFocusSelector = null;
-  const quotaControls = [...results.querySelectorAll('[data-quota-action="scenario"]')];
-  quotaControls.forEach((control) => control.addEventListener("keydown", (event) => {
-    if (event.key !== "Tab") return;
-    const focusable = [...results.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')]
-      .filter((element) => element.getClientRects().length > 0);
-    const index = focusable.indexOf(control);
-    const target = focusable[index + (event.shiftKey ? -1 : 1)];
-    pendingQuotaFocusSelector = motor360FocusSelector(target);
-  }));
-  quotaControls.forEach((control) => control.addEventListener("change", (event) => {
-    const groupId = String(control.dataset.groupId || "");
-    const scenarioId = String(control.dataset.scenarioId || "");
-    const rawQuotaCount = control.value.trim() === "" ? 0 : Number(control.value);
-    const nextQuotaCount = normalizeScenarioQuota(control.value);
-    control.value = String(nextQuotaCount);
-    if (!Number.isFinite(rawQuotaCount) || rawQuotaCount !== nextQuotaCount) {
-      showToast(`Quantidade ajustada para ${nextQuotaCount}; use números inteiros entre 0 e 50 cotas.`, "warning");
-    }
-    setScenarioQuotaCount(groupId, scenarioId, nextQuotaCount);
-    const selectedItem = motor360FinalItems()
-      .find((item) => motor360GroupKey(item) === groupId);
-    const historicalLimit = Number(motor360QuotaCapacity(selectedItem)?.limite_cotas);
-    if (Number.isFinite(historicalLimit) && nextQuotaCount > historicalLimit) {
-      showToast(`A quantidade selecionada ultrapassa a média histórica de ${historicalLimit} cota(s) para o perfil deste grupo.`, "warning");
-    }
-    persistMotor360Selection();
-    const activeElement = document.activeElement;
-    const focusSelector = pendingQuotaFocusSelector || motor360FocusSelector(activeElement) || (activeElement === control ? motor360FocusSelector(control) : null);
-    pendingQuotaFocusSelector = null;
-    window.setTimeout(() => {
-      renderInvestorAnalysis(investorState.result);
-      if (focusSelector) document.querySelector(focusSelector)?.focus({ preventScroll: true });
-    }, 0);
-  }));
-  results.querySelectorAll('[data-credit-action="scenario"]').forEach((control) => control.addEventListener("change", () => {
-    const groupId = String(control.dataset.groupId || "");
-    const scenarioId = String(control.dataset.scenarioId || "");
-    setScenarioCredit(groupId, scenarioId, control.value);
-    persistMotor360Selection();
-    renderInvestorAnalysis(investorState.result);
-    updateFinancialStudyActionState();
-  }));
   results.querySelectorAll(".motor360-group-audit-btn").forEach((button) => button.addEventListener("click", () => renderMotor360GroupAudit(button.dataset.groupId)));
   results.querySelectorAll("[data-motor360-history-group]").forEach((trigger) => {
     const showHistory = () => {
@@ -5729,6 +5705,144 @@ function renderInvestorAnalysis(result) {
   });
   setInvestorAnalysisState("results");
   if (!document.getElementById("selectedGroupsWorkspace")?.classList.contains("d-none")) renderSelectedGroupsScreen();
+}
+
+function refreshMotor360VisibleCards(changedGroupId = null, focusSelector = null) {
+  const results = document.getElementById("investorAnalysisResults");
+  if (!results || !investorState.result) return;
+  const itemsByGroup = motor360ItemsByGroup(investorState.result);
+  const changedKey = changedGroupId === null ? null : String(changedGroupId);
+  const currentCards = [...results.querySelectorAll(".motor360-group-card")];
+  const affectedKeys = new Set(changedKey ? [changedKey] : []);
+  currentCards.forEach((card) => {
+    const key = card.querySelector(".motor360-group-select-input")?.dataset.groupId;
+    if (key && investorState.selectedGroupIds.has(key)) affectedKeys.add(key);
+  });
+  currentCards.forEach((card) => {
+    const key = card.querySelector(".motor360-group-select-input")?.dataset.groupId;
+    if (!key || !affectedKeys.has(key)) return;
+    const item = itemsByGroup.get(key) || investorState.selectedGroupData.get(key);
+    if (!item) return;
+    const template = document.createElement("template");
+    template.innerHTML = renderMotor360GroupCard(item).trim();
+    const nextCard = template.content.firstElementChild;
+    if (!nextCard) return;
+    const auditButton = nextCard.querySelector(".motor360-group-audit-btn");
+    auditButton?.addEventListener("click", () => renderMotor360GroupAudit(auditButton.dataset.groupId));
+    nextCard.querySelectorAll("[data-confirm-legacy-quotas]").forEach((button) => {
+      button.addEventListener("click", () => confirmLegacyQuotaReview(button.dataset.confirmLegacyQuotas));
+    });
+    nextCard.querySelectorAll("[data-motor360-history-group]").forEach((trigger) => {
+      const showHistory = () => {
+        const groupId = String(trigger.dataset.motor360HistoryGroup || "");
+        const historyItem = itemsByGroup.get(key) || investorState.selectedGroupData.get(key);
+        showGroupHistoryHoverModal(trigger, historyItem, motor360QuotaCapacity(historyItem));
+      };
+      trigger.addEventListener("mouseenter", showHistory);
+      trigger.addEventListener("focus", showHistory);
+      trigger.addEventListener("mouseleave", scheduleHistoryHoverHide);
+      trigger.addEventListener("blur", scheduleHistoryHoverHide);
+    });
+    card.replaceWith(nextCard);
+  });
+  updateMotor360SelectionSummary();
+  renderMotor360FloatingSelectionSummaryIntoFold();
+  updateFinancialStudyActionState();
+  if (!document.getElementById("selectedGroupsWorkspace")?.classList.contains("d-none")) renderSelectedGroupsScreen();
+  if (focusSelector) window.setTimeout(() => document.querySelector(focusSelector)?.focus({ preventScroll: true }), 0);
+}
+
+function installMotor360DelegatedControls(results) {
+  if (motor360DelegatedResults.has(results)) return;
+  motor360DelegatedResults.add(results);
+  results.addEventListener("click", (event) => {
+    const button = event.target instanceof Element ? event.target.closest("[data-group-page]") : null;
+    if (!button || button.disabled) return;
+    const pageCount = Math.max(1, Math.ceil((motor360VisibleItemCount || 0) / MOTOR360_GROUP_PAGE_SIZE));
+    const offset = button.dataset.groupPage === "next" ? 1 : -1;
+    investorState.motor360GroupPage = Math.max(0, Math.min(pageCount - 1, investorState.motor360GroupPage + offset));
+    renderInvestorAnalysis(investorState.result);
+  });
+  results.addEventListener("keydown", (event) => {
+    const control = event.target instanceof Element ? event.target.closest('[data-quota-action="scenario"]') : null;
+    if (!control || event.key !== "Tab") return;
+    const focusable = [...results.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')]
+      .filter((element) => element.getClientRects().length > 0);
+    const index = focusable.indexOf(control);
+    pendingQuotaFocusSelector = motor360FocusSelector(focusable[index + (event.shiftKey ? -1 : 1)]);
+  });
+  results.addEventListener("change", (event) => {
+    const control = event.target instanceof Element ? event.target : null;
+    if (!control) return;
+    if (control.matches(".motor360-group-select-input")) {
+      const groupId = String(control.dataset.groupId || "");
+      const previousAdministratorKey = motor360AdministratorKey(investorState.administrator);
+      const selectedItem = motor360ItemsByGroup(investorState.result).get(groupId);
+      if (control.checked) {
+        if (!investorState.administrator && selectedItem?.administradora) {
+          investorState.administrator = selectedItem.administradora;
+          const administratorSelect = document.getElementById("investorAdministratorFilter");
+          if (administratorSelect) administratorSelect.value = selectedItem.administradora;
+          updateInvestorPreferenceSummary();
+        }
+        if (investorState.administrator && motor360AdministratorKey(selectedItem) !== motor360AdministratorKey(investorState.administrator)) {
+          control.checked = false;
+          showToast("Selecione grupos de apenas uma administradora por composição.", "warning");
+          return;
+        }
+        investorState.selectedGroupIds.add(groupId);
+        if (selectedItem) investorState.selectedGroupData.set(groupId, selectedItem);
+        if (!investorState.quotaCounts.has(groupId)) investorState.quotaCounts.set(groupId, { without_embedded: 0, with_embedded: 0 });
+      } else {
+        investorState.selectedGroupIds.delete(groupId);
+        investorState.selectedScenarioIds.delete(groupId);
+        investorState.quotaCounts.delete(groupId);
+        investorState.selectedGroupData.delete(groupId);
+        investorState.selectedCredits.delete(groupId);
+        motor360QuotaReview.delete(groupId);
+        if (!investorState.selectedGroupIds.size) {
+          investorState.administrator = "";
+          const administratorSelect = document.getElementById("investorAdministratorFilter");
+          if (administratorSelect) administratorSelect.value = "";
+          updateInvestorPreferenceSummary();
+        }
+      }
+      persistMotor360Selection();
+      if (previousAdministratorKey !== motor360AdministratorKey(investorState.administrator)) {
+        renderInvestorAnalysis(investorState.result);
+      } else {
+        refreshMotor360VisibleCards(groupId);
+      }
+      return;
+    }
+    if (control.matches('[data-quota-action="scenario"]')) {
+      const groupId = String(control.dataset.groupId || "");
+      const scenarioId = String(control.dataset.scenarioId || "");
+      const rawQuotaCount = control.value.trim() === "" ? 0 : Number(control.value);
+      const nextQuotaCount = normalizeScenarioQuota(control.value);
+      control.value = String(nextQuotaCount);
+      if (!Number.isFinite(rawQuotaCount) || rawQuotaCount !== nextQuotaCount) {
+        showToast(`Quantidade ajustada para ${nextQuotaCount}; use números inteiros entre 0 e 50 cotas.`, "warning");
+      }
+      setScenarioQuotaCount(groupId, scenarioId, nextQuotaCount);
+      const selectedItem = motor360ItemsByGroup(investorState.result).get(groupId);
+      const historicalLimit = Number(motor360QuotaCapacity(selectedItem)?.limite_cotas);
+      if (Number.isFinite(historicalLimit) && nextQuotaCount > historicalLimit) {
+        showToast(`A quantidade selecionada ultrapassa a média histórica de ${historicalLimit} cota(s) para o perfil deste grupo.`, "warning");
+      }
+      persistMotor360Selection();
+      const focusSelector = pendingQuotaFocusSelector || motor360FocusSelector(control);
+      pendingQuotaFocusSelector = null;
+      refreshMotor360VisibleCards(groupId, focusSelector);
+      return;
+    }
+    if (control.matches('[data-credit-action="scenario"]')) {
+      const groupId = String(control.dataset.groupId || "");
+      setScenarioCredit(groupId, String(control.dataset.scenarioId || ""), control.value);
+      persistMotor360Selection();
+      refreshMotor360VisibleCards(groupId);
+    }
+  });
 }
 
 function renderInvestorPreferenceOptions() {
@@ -5854,7 +5968,7 @@ async function loadInvestorAnalysis() {
       }, MOTOR360_ANALYSIS_REQUEST_TIMEOUT_MS);
       let retryReason = "";
       try {
-        response = await fetch("/api/viabilidade-360/analisar", {
+        response = await fetch("/api/viabilidade-360/analisar?compact=true", {
           method: "POST",
           cache: "no-store",
           credentials: "same-origin",

@@ -23,6 +23,45 @@ class StaticEmailTest(unittest.TestCase):
         card_start = app_js.index("function renderMotor360GroupCard(item)")
         card_end = app_js.index("\nfunction selectedMotor360Items", card_start)
         self.assertIn("const compositionKey = selected", app_js[card_start:card_end])
+        self.assertIn("const MOTOR360_GROUP_PAGE_SIZE = 20", app_js)
+        self.assertIn("items.slice(pageStart, pageStart + MOTOR360_GROUP_PAGE_SIZE)", app_js)
+        self.assertIn("installMotor360DelegatedControls(results)", app_js)
+        persist_start = app_js.index("function persistMotor360SelectionNow()")
+        persist_end = app_js.index("\nfunction persistMotor360Selection()", persist_start)
+        persist_body = app_js[persist_start:persist_end]
+        self.assertEqual(persist_body.count("localStorage.setItem("), 1)
+        self.assertNotIn("selectedGroupData:", persist_body)
+        self.assertIn('localStorage.removeItem("crediclass.motor360.selectedGroupData")', persist_body)
+        self.assertIn("selectedCredits: Object.fromEntries(investorState.selectedCredits)", persist_body)
+
+    def test_motor360_group_interactions_update_only_affected_cards(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        refresh = app_js.split("function refreshMotor360VisibleCards(", 1)[1].split("function installMotor360DelegatedControls", 1)[0]
+        render = app_js.split("function renderInvestorAnalysis(result)", 1)[1].split("function renderInvestorPreferenceOptions", 1)[0]
+
+        self.assertIn("motor360ItemsByGroup(investorState.result)", refresh)
+        self.assertIn("card.replaceWith(nextCard)", refresh)
+        self.assertNotIn("renderInvestorAnalysis(", refresh)
+        self.assertNotIn('results.querySelectorAll(".motor360-scenario-card")', render)
+        self.assertIn("const sourceMetricsHtml = motor360ScenarioSourceMetrics(item)", app_js)
+        self.assertIn("data-scenario-id=\"${escapeHtml(scenario.id)}\"", app_js)
+
+    def test_motor360_group_and_administrator_keys_are_memoized(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        self.assertIn("const motor360AdministratorKeyCache = new Map()", app_js)
+        self.assertIn("const motor360ObjectGroupKeyCache = new WeakMap()", app_js)
+        self.assertIn("const motor360ItemsByGroupCache = new WeakMap()", app_js)
+        self.assertIn("function motor360ItemsByGroup(result = investorState.result)", app_js)
+
+    def test_motor360_requests_compact_payload_without_breaking_legacy_api(self):
+        app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")
+        main_py = (ROOT / "backend" / "main.py").read_text(encoding="utf-8")
+        self.assertIn('fetch("/api/viabilidade-360/analisar?compact=true"', app_js)
+        self.assertIn("response: Response, compact: bool = False", main_py)
+        self.assertIn('result.pop("items", None)', main_py)
+        self.assertIn('result.pop("credit_items", None)', main_py)
+        self.assertIn('result.pop("composition_items", None)', main_py)
+        self.assertIn('if compact:', main_py)
 
     def test_motor360_credit_is_selected_per_scenario_before_quota_count(self):
         app_js = (ROOT / "backend" / "static" / "js" / "app.js").read_text(encoding="utf-8")

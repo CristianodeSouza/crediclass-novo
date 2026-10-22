@@ -651,7 +651,7 @@ def grupo_historico_lote_atualizar(grupo_id: str, payload: HistoricoBatchUpdateR
 
 
 @app.post("/api/viabilidade-360/analisar")
-def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response):
+def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response, compact: bool = False):
     """Single entry point: declared objective is a presentation preference, never an exclusion."""
     request_started = time.perf_counter()
     request_id = f"REQ-{uuid4().hex[:12].upper()}"
@@ -703,6 +703,39 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response):
         audit_started = time.perf_counter()
         audit = save_motor360_audit(audit_payload)
         audit_save_duration_ms = (time.perf_counter() - audit_started) * 1000
+        if compact:
+            # The browser consumes final_items for cards and only a small
+            # projection of matrix_items for the contemplation matrix. Avoid
+            # serializing engine work queues and a second final_items alias.
+            result["matrix_items"] = [
+                {
+                    "grupo": item.get("grupo"),
+                    "grupo_id": item.get("grupo_id"),
+                    "administradora": item.get("administradora"),
+                    "eligible_scenarios": item.get("eligible_scenarios", []),
+                    "cenarios": [
+                        {
+                            "id": scenario.get("id"),
+                            "eligible": scenario.get("eligible"),
+                            "credit_compatible": scenario.get("credit_compatible"),
+                            "term_compatible": scenario.get("term_compatible"),
+                            "perfis_contemplacao": [
+                                {
+                                    "id": profile.get("id"),
+                                    "atinge_perfil": profile.get("atinge_perfil"),
+                                    "percentual_referencia": profile.get("percentual_referencia"),
+                                }
+                                for profile in (scenario.get("perfis_contemplacao") or [])
+                            ],
+                        }
+                        for scenario in (item.get("cenarios") or [])
+                    ],
+                }
+                for item in result.get("matrix_items", [])
+            ]
+            result.pop("items", None)
+            result.pop("credit_items", None)
+            result.pop("composition_items", None)
         total_duration_ms = (time.perf_counter() - request_started) * 1000
         response.headers["Server-Timing"] = (
             f"sheet_load;dur={source_duration_ms:.2f}, engine;dur={engine_duration_ms:.2f}, "

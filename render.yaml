@@ -10,7 +10,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: APP_VERSION
-        value: 4.0.228
+        value: 4.0.229
       - key: DEBUG
         value: "false"
       - key: GOOGLE_SHEETS_ID
