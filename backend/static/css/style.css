@@ -1998,7 +1998,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-summary .motor360-group-status { text-align: center; }
 .motor360-group-summary small, .motor360-scenario-grid small, .motor360-profile-card-value small { color: var(--muted); font-size: 0.68rem; }
 .motor360-group-summary b { color: var(--brand-navy); font-size: 0.82rem; }
-.motor360-scenario-source-metrics { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 2px; padding-top: 8px; border-top: 1px solid var(--line); }
+.motor360-scenario-source-metrics { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 2px; padding-top: 8px; border-top: 1px solid var(--line); }
 .motor360-scenario-source-metrics div { display: grid; gap: 2px; min-width: 0; }
 .motor360-scenario-source-metrics small { color: var(--muted); font-size: 0.66rem; }
 .motor360-scenario-source-metrics b { color: var(--brand-navy); font-size: 0.76rem; }

@@ -5041,7 +5041,7 @@ function syncMotor360AdministratorFilter(sourceItems) {
 
 function motor360ScenarioSourceMetrics(item) {
   const clientCredit = investorState.result?.cliente?.credito_liquido_desejado;
-  return `<div class="motor360-scenario-source-metrics"><div><small>Taxa Adm</small><b>${formatPercent(item?.taxa_adm)}</b></div><div><small>Fundo de Reserva</small><b>${formatPercent(item?.fundo_reserva)}</b></div><div><small>Crédito desejado líquido</small><b>${formatMoney(clientCredit)}</b></div></div>`;
+  return `<div class="motor360-scenario-source-metrics"><div><small>Taxa Adm</small><b>${formatPercent(item?.taxa_adm)}</b></div><div><small>Taxa ADM ao ano</small><b>${formatPercent(item?.taxa_ano)}</b></div><div><small>Fundo de Reserva</small><b>${formatPercent(item?.fundo_reserva)}</b></div><div><small>Fundo de Reserva ao ano</small><b>${formatPercent(item?.fundo_reserva_ano)}</b></div><div><small>Crédito desejado líquido</small><b>${formatMoney(clientCredit)}</b></div></div>`;
 }
 
 function renderMotor360ContemplationMatrix(items, selectedProfile, rejectedItems = []) {
