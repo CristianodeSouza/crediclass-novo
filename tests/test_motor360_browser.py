@@ -149,16 +149,20 @@ document.querySelector("#cards").innerHTML = renderMotor360GroupCard(item);
 const selectors = [...document.querySelectorAll('[data-credit-action="scenario"]')];
 const quotas = [...document.querySelectorAll('[data-quota-action="scenario"]')];
 const options = selectors.map(select => [...select.options].slice(1).map(option => Number(option.value)));
+const sequence = [...document.querySelectorAll(".motor360-scenario-card")].map(card => [...card.querySelectorAll('[data-credit-action="scenario"], [data-quota-action="scenario"]')].map(control => control.matches('[data-credit-action="scenario"]') ? "credit" : "quotas"));
 document.querySelector("#result").textContent = JSON.stringify({
-  options, quotaDisabled: quotas.map(input => input.disabled),
+  options, quotaDisabled: quotas.map(input => input.disabled), sequence,
   scenarioNames: selectors.map(select => select.getAttribute("aria-label")),
 });
 ''')
         expected = [100000, 200000, 300000, 400000, 500000]
         self.assertEqual(result["options"], [expected, expected])
         self.assertEqual(result["quotaDisabled"], [True, True])
+        self.assertEqual(result["sequence"], [["credit", "quotas"], ["credit", "quotas"]])
         self.assertIn("sem lance embutido", result["scenarioNames"][0])
         self.assertIn("com lance embutido", result["scenarioNames"][1])
+        styles = STYLE_CSS.read_text(encoding="utf-8")
+        self.assertIn("grid-column: 1 / -1; grid-row: 4; width: 100%", styles)
 
     def test_motor_card_uses_server_normalized_credit_options_and_origins(self):
         result = self._run_browser(r'''

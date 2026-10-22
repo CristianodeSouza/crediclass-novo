@@ -67,7 +67,7 @@ class Motor360ApiContractTest(unittest.TestCase):
             result = viabilidade_360_analisar(request, response, compact=True)
 
         self.assertEqual(result["audit_id"], "AUD-CONTRACT-FIXTURE")
-        self.assertEqual(result["engine_version"], "4.0.230")
+        self.assertEqual(result["engine_version"], "4.0.231")
         self.assertNotIn("items", result)
         self.assertNotIn("credit_items", result)
         self.assertNotIn("composition_items", result)
