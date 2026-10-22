@@ -3354,7 +3354,7 @@ function renderMotor360GroupCard(item) {
   // Only selected cards show portfolio-wide aggregates. Keep unselected card
   // cache entries stable when another group's quota changes.
   const compositionKey = selected
-    ? [...investorState.selectedGroupIds].sort().map((id) => `${id}:${quotaCountFor(id, "without_embedded")},${quotaCountFor(id, "with_embedded")}`).join(";")
+    ? [...investorState.selectedGroupIds].sort().map((id) => `${id}:${quotaCountFor(id, "without_embedded")},${quotaCountFor(id, "with_embedded")}:${selectedCreditFor(id, "without_embedded") ?? ""},${selectedCreditFor(id, "with_embedded") ?? ""}`).join(";")
     : "";
   const desiredCredit = Number(motor360ClientProfile().credito_liquido_desejado || 0);
   const selectedScenarios = [...selectedScenarioIdsForGroup(groupKey)].sort().join(",");
@@ -4697,7 +4697,6 @@ function setScenarioCredit(groupId, scenarioId, value) {
   investorState.selectedCredits.set(key, selected);
   // A new credit invalidates the old quantity and all figures derived from it.
   setScenarioQuotaCount(key, scenarioId, 0);
-  motor360GroupCardCache.clear();
   motor360GroupAnalyticsCache.clear();
   motor360CompositionMetricsCache.clear();
 }
@@ -4903,7 +4902,6 @@ function confirmLegacyQuotaReview(groupId) {
     return;
   }
   motor360QuotaReview.delete(key);
-  motor360GroupCardCache.clear();
   motor360CompositionMetricsCache.clear();
   investorState.selectedScenarioIds.set(key, ["without_embedded", "with_embedded"].filter((scenarioId) => quotaCountFor(key, scenarioId) > 0));
   persistMotor360Selection();
