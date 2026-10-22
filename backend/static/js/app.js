@@ -804,17 +804,19 @@ function renderFinancialStudyContracting() {
       const term = numericValue(entry.item.prazo_restante);
       const sourceAnnualRate = financialStudyAnnualRate(entry.item);
       const annualRate = sourceAnnualRate ?? (adminRate !== null && term > 0 ? (adminRate * 12) / term : null);
-      rows.push({
-        scenarioId,
-        label: groupLabel,
-        scenarioWord: scenarioId === "with_embedded" ? "Com" : "Sem",
-        credit: sourceCredit === null ? null : entry.credit,
-        installment: sourceInstallment === null ? null : entry.installment,
-        term,
-        adminRate,
-        annualRate,
-        quotas: entry.quotas,
-      });
+      for (let contractIndex = 1; contractIndex <= entry.quotas; contractIndex += 1) {
+        rows.push({
+          scenarioId,
+          label: `${groupLabel} · Contrato ${contractIndex}`,
+          scenarioWord: scenarioId === "with_embedded" ? "Com" : "Sem",
+          credit: sourceCredit,
+          installment: sourceInstallment,
+          term,
+          adminRate,
+          annualRate,
+          quotas: 1,
+        });
+      }
     }
   }
 
@@ -847,10 +849,10 @@ function renderFinancialStudyContracting() {
       ? '<strong class="financial-study-part7-scenario-emphasis">Com</strong> embutido'
       : '<strong class="financial-study-part7-scenario-emphasis">Sem</strong> embutido';
     const termLabel = averageTerm == null ? "Não informado" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(averageTerm)} meses`;
-    return `<tr class="financial-study-part7-total"><th scope="row" data-label="Grupo">Total / média ${scenarioTitle} · ${totals.groups} ${totals.groups === 1 ? "grupo" : "grupos"}</th><td data-label="Crédito">${formatMoney(totals.credit)}</td><td data-label="Parcelas (sem seguro)">${formatMoney(totals.installment)}</td><td data-label="Prazo">${termLabel}</td><td data-label="Tx ADM total">${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td data-label="Tx ADM ao ano">${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td></tr>`;
+    return `<tr class="financial-study-part7-total"><th scope="row" data-label="Grupo">Subtotal ${scenarioTitle} · ${totals.groups} ${totals.groups === 1 ? "contrato" : "contratos"}</th><td data-label="Crédito">${formatMoney(totals.credit)}</td><td data-label="Parcelas (sem seguro)">${formatMoney(totals.installment)}</td><td data-label="Prazo">${termLabel}</td><td data-label="Tx ADM total">${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td data-label="Tx ADM ao ano">${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td></tr>`;
   }).join("");
   const pendingReviewCount = allSelectedItems.length - items.length;
-  target.innerHTML = `${renderQuotaReviewBannerForStudy(allSelectedItems)}<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos grupos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Crédito</th><th scope="col">Parcelas (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Como no modelo de referência, cada cenário tem seu próprio fechamento: crédito e parcela são somados; prazo e taxas são médias aritméticas dos grupos daquele cenário. A taxa anual usa o valor informado pelo Motor 360; quando ausente, é estimada pela taxa total dividida pelo prazo em anos. Campos indisponíveis são ignorados, não tratados como zero. Cenários alternativos não são somados entre si. A parcela não inclui seguro.</p>`;
+  target.innerHTML = `${renderQuotaReviewBannerForStudy(allSelectedItems)}<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos contratos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Contrato independente</th><th scope="col">Crédito líquido</th><th scope="col">Parcela (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Cada cota selecionada é apresentada como um contrato independente. Os subtotais somam somente contratos do mesmo cenário; sem embutido e com embutido são alternativas e não são somados entre si. A taxa anual usa o valor informado pelo Motor 360; quando ausente, é estimada pela taxa total dividida pelo prazo em anos. A parcela não inclui seguro.</p>`;
 }
 
 function renderFinancialStudyContemplationHistory() {
@@ -962,18 +964,18 @@ function renderFinancialStudyProjection() {
       if (!entry || !profile || !Number.isFinite(percentage) || !Number.isFinite(totalBid)) return [];
       const embedded = entry.embedded;
       const clientResources = Number(profile.ideal || 0);
-      const groupLabel = `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"} · ${entry.quotas} ${entry.quotas === 1 ? "cota" : "cotas"} · ${scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}`;
-      return [{
+      const groupLabel = `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"} · ${scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}`;
+      return Array.from({ length: entry.quotas }, (_, index) => ({
         scenarioId,
-        groupLabel,
+        groupLabel: `${groupLabel} · Contrato ${index + 1}`,
         percentage,
-        totalBid: totalBid * entry.ratio * entry.quotas,
-        embedded,
-        clientResources,
-        credit: entry.credit,
-        installment: entry.installment,
+        totalBid: totalBid * entry.ratio,
+        embedded: embedded / entry.quotas,
+        clientResources: clientResources / entry.quotas,
+        credit: entry.credit / entry.quotas,
+        installment: entry.installment / entry.quotas,
         term: entry.item.prazo_restante,
-      }];
+      }));
     });
   });
   const lotteryRows = items.flatMap((item) => {
@@ -982,17 +984,17 @@ function renderFinancialStudyProjection() {
       if (!selectedScenarioIdsForGroup(groupKey).has(scenarioId)) return [];
       const entry = entryFor(item, scenarioId);
       if (!entry) return [];
-      return [{
+      return Array.from({ length: entry.quotas }, (_, index) => ({
         scenarioId,
-        groupLabel: `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"} · ${entry.quotas} ${entry.quotas === 1 ? "cota" : "cotas"} · ${scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}`,
+        groupLabel: `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"} · Contrato ${index + 1} · ${scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}`,
         percentage: 0,
         totalBid: 0,
         embedded: 0,
         clientResources: 0,
-        credit: entry.credit,
-        installment: entry.installment,
+        credit: entry.credit / entry.quotas,
+        installment: entry.installment / entry.quotas,
         term: entry.item.prazo_restante,
-      }];
+      }));
     });
   });
   const tableFor = (rows, label) => {
