@@ -49,6 +49,9 @@ SUMMARY_FIELDS = [
     "grupo",
     "tipo_bem",
     "credito_minimo",
+    "credito_intermediario_1",
+    "credito_intermediario_2",
+    "credito_intermediario_3",
     "credito_maximo",
     "indexador",
     "taxa_adm",
@@ -103,6 +106,9 @@ MAPA_GRUPOS_COLUMN_INDEXES = {
     "idade_maxima_seguro": 12,  # M
     "aliquota_seguro": 13,  # N
     "credito_minimo": 15,  # P
+    "credito_intermediario_1": 17,  # R
+    "credito_intermediario_2": 18,  # S
+    "credito_intermediario_3": 19,  # T
     "credito_maximo": 21,  # V
     "indexador": 22,  # W
     "modalidades_assembleia": 23,  # X
@@ -188,6 +194,9 @@ FIELD_ALIASES = {
     ],
     "tipo_bem": ["tipo de bem", "tipo bem", "bem", "segmento", "categoria bem"],
     "credito_minimo": ["credito minimo", "menor credito", "credito min", "carta minima", "valor minimo"],
+    "credito_intermediario_1": ["credito intermediario 1", "cred inter 1", "credito inter 1"],
+    "credito_intermediario_2": ["credito intermediario 2", "cred inter 2", "credito inter 2"],
+    "credito_intermediario_3": ["credito intermediario 3", "cred inter 3", "credito inter 3"],
     "credito_maximo": ["credito maximo", "maior credito", "credito max", "carta maxima", "valor maximo"],
     "indexador": ["indexador"],
     "taxa_adm": ["taxa administracao", "taxa adm", "taxa adm total", "taxa adm original", "taxa de administracao", "taxa administrativa", "tx adm", "tx adm total", "tx administracao"],
@@ -1233,6 +1242,9 @@ def row_to_grupo(row: dict[str, Any], _timings: dict[str, float] | None = None) 
         "grupo_raw": str(get_field(row, "grupo") or ""),
         "tipo_bem": clean_text(get_field(row, "tipo_bem")),
         "credito_minimo": parse_credit(get_field(row, "credito_minimo")),
+        "credito_intermediario_1": parse_credit(get_optional_field(row, "credito_intermediario_1")),
+        "credito_intermediario_2": parse_credit(get_optional_field(row, "credito_intermediario_2")),
+        "credito_intermediario_3": parse_credit(get_optional_field(row, "credito_intermediario_3")),
         "credito_maximo": parse_credit(get_field(row, "credito_maximo")),
         "indexador": clean_text(get_optional_field(row, "indexador")),
         "taxa_adm": parse_percent(get_field(row, "taxa_adm")),
