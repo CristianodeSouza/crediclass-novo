@@ -476,10 +476,37 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
       administrator: item.administradora || "",
       quotas: quotaCountFor(item),
       quotas_by_scenario: { without_embedded: quotaCountFor(item, "without_embedded"), with_embedded: quotaCountFor(item, "with_embedded") },
+      credito_minimo: item.credito_minimo ?? null,
+      credito_intermediario_1: item.credito_intermediario_1 ?? null,
+      credito_intermediario_2: item.credito_intermediario_2 ?? null,
+      credito_intermediario_3: item.credito_intermediario_3 ?? null,
       credit_max: item.credito_maximo ?? null,
+      percentual_lance_embutido: item.percentual_lance_embutido ?? null,
+      taxa_adm: item.taxa_adm ?? null,
+      taxa_adm_ano: item.taxa_ano ?? item.taxa_adm_ano ?? null,
+      fundo_reserva: item.fundo_reserva ?? null,
+      fundo_reserva_ano: item.fundo_reserva_ano ?? null,
       remaining_term: item.prazo_restante ?? null,
       due_day: item.vencimento_parcela ?? null,
       selected_scenarios: (item.cenarios || []).map((scenario) => ({ ...scenario })),
+      contracts: ["without_embedded", "with_embedded"].flatMap((scenarioId) => {
+        const metrics = selectedCompositionScenarioMetrics([item], scenarioId);
+        const entry = metrics.entries[0];
+        if (!entry) return [];
+        return Array.from({ length: entry.quotas }, (_, index) => ({
+          contract_index: index + 1,
+          scenario: scenarioId,
+          group: item.grupo || item.grupo_id || "",
+          contracted_credit: entry.grossCreditPerQuota,
+          liquid_credit: entry.perQuotaCredit,
+          embedded_bid: Number(entry.scenario.lance_embutido || 0),
+          total_bid: Number(entry.scenario.lance_total_cenario || 0),
+          initial_installment: Number(entry.scenario.parcela_inicial || 0),
+          post_contemplation_installment: entry.scenario.parcela_pos_contemplacao ?? null,
+          remaining_balance: entry.scenario.saldo_devedor ?? null,
+          remaining_term: item.prazo_restante ?? null,
+        }));
+      }),
     })),
   };
 }
@@ -491,7 +518,7 @@ function renderFinancialStudyInvestment() {
 
   const desiredCredit = Number(parseNumberInput(motor360ClientProfile().credito_liquido_desejado || 0));
   const principal = desiredCredit > 0 ? -Math.abs(desiredCredit) : null;
-  const groups = selectedMotor360Items();
+  const groups = activeStudyItems();
   const confirmedGroups = groups.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
   const terms = confirmedGroups.map((item) => Number(item.prazo_restante)).filter((term) => Number.isFinite(term) && term > 0);
   const averageTerm = terms.length ? terms.reduce((sum, term) => sum + term, 0) / terms.length : null;
@@ -534,7 +561,7 @@ function renderFinancialStudyInvestment() {
 document.getElementById("financialStudyPart2AnnualRate")?.addEventListener("input", renderFinancialStudyInvestment);
 
 async function approveCurrentFinancialStudy() {
-  const items = selectedMotor360Items().filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
+  const items = activeStudyItems();
   if (!items.length || items.some((item) => !item.cenarios?.length) || selectedMotor360Items().some((item) => motor360QuotaReview.has(motor360GroupKey(item)))) {
     updateFinancialStudyActionState();
     showToast("Revise quantidades pendentes e selecione ao menos uma cota por grupo antes de aprovar.", "warning");
@@ -751,7 +778,7 @@ function renderFinancialStudyContracting() {
   const target = document.getElementById("financialStudyPart7Content");
   if (!target) return;
   const allSelectedItems = selectedMotor360Items();
-  const items = allSelectedItems.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
+  const items = activeStudyItems();
   if (!items.length) {
     target.innerHTML = allSelectedItems.some((item) => motor360QuotaReview.has(motor360GroupKey(item)))
       ? '<div class="motor360-quota-review-alert" role="alert"><strong>Quantidades pendentes de revisão</strong><span>Os grupos migrados estão fora da contratação até que as quantidades por cenário sejam confirmadas no Motor 360.</span></div>'
@@ -775,7 +802,7 @@ function renderFinancialStudyContracting() {
       const sourceInstallment = numericValue(entry.scenario.parcela_inicial);
       const adminRate = numericValue(entry.item.taxa_adm) ?? numericValue(entry.item.taxa_total);
       const term = numericValue(entry.item.prazo_restante);
-      const sourceAnnualRate = numericValue(entry.item.taxa_ano);
+      const sourceAnnualRate = financialStudyAnnualRate(entry.item);
       const annualRate = sourceAnnualRate ?? (adminRate !== null && term > 0 ? (adminRate * 12) / term : null);
       rows.push({
         scenarioId,
@@ -830,7 +857,7 @@ function renderFinancialStudyContemplationHistory() {
   const target = document.getElementById("financialStudyPart9Content");
   if (!target) return;
   const allSelectedItems = selectedMotor360Items();
-  const items = allSelectedItems.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
+  const items = activeStudyItems();
   const reviewBanner = renderQuotaReviewBannerForStudy(allSelectedItems);
   if (!items.length) {
     target.innerHTML = allSelectedItems.some((item) => motor360QuotaReview.has(motor360GroupKey(item)))
@@ -912,7 +939,7 @@ function renderFinancialStudyProjection() {
   const target = document.getElementById("financialStudyPart10Content");
   if (!target) return;
   const selectedItems = selectedMotor360Items();
-  const items = selectedItems.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
+  const items = activeStudyItems();
   if (!items.length) {
     target.innerHTML = '<p class="financial-study-part10-empty">Selecione grupos no Motor 360 para exibir a projeção de contemplação.</p>';
     if (selectedItems.some((item) => motor360QuotaReview.has(motor360GroupKey(item)))) target.innerHTML = renderQuotaReviewBannerForStudy(selectedItems);
@@ -1046,7 +1073,7 @@ function renderFinancialStudyAdhesionDates() {
   const target = document.getElementById("financialStudyPart11Content");
   if (!target) return;
   const allSelectedItems = selectedMotor360Items();
-  const items = allSelectedItems.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
+  const items = activeStudyItems();
   const reviewBanner = renderQuotaReviewBannerForStudy(allSelectedItems);
   if (!items.length) {
     target.innerHTML = allSelectedItems.some((item) => motor360QuotaReview.has(motor360GroupKey(item)))
@@ -1083,7 +1110,7 @@ function renderFinancialStudySummary() {
   if (!target) return;
   const selectedItems = [...new Map(selectedMotor360Items().map((item) => [motor360GroupKey(item), item])).values()];
   const pendingReviewItems = selectedItems.filter((item) => motor360QuotaReview.has(motor360GroupKey(item)));
-  const items = selectedItems.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
+  const items = activeStudyItems();
   if (!items.length) {
     target.innerHTML = pendingReviewItems.length
       ? `<div class="motor360-quota-review-alert" role="alert"><strong>Quantidades pendentes de revisão</strong><span>${pendingReviewItems.length} grupo(s) mantidos na seleção, mas fora dos totais até o operador informar e confirmar as quantidades de cada cenário no Motor 360.</span></div>`
@@ -1112,22 +1139,24 @@ function renderFinancialStudySummary() {
   };
   const termLabel = terms.length === items.length ? rangeLabel(terms) : "Prazo incompleto";
   const scenarioTermLabel = terms.length === items.length ? rangeLabel(terms.map((term) => Math.max(0, term - 1))) : "Prazo incompleto";
-  const totalContractedCredit = sumField(baseEntries, "contractedCredit");
-  const initialInstallment = sumField(baseEntries, "installment");
+  const primaryEntries = baseEntries.length ? baseEntries : embeddedEntries;
+  const primaryScenarioLabel = baseEntries.length ? "sem embutido" : "com embutido";
+  const totalContractedCredit = sumField(primaryEntries, "contractedCredit");
+  const initialInstallment = sumField(primaryEntries, "installment");
   const totalEmbeddedBid = sumField(embeddedEntries, "embedded");
   const rateFor = (item, field) => {
-    const value = item[field];
+    const value = field === "taxa_ano" ? financialStudyAnnualRate(item) : field === "fundo_reserva_ano" ? financialStudyReserveAnnualRate(item) : item[field];
     return value === null || value === undefined || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
   };
   const weightedRate = (field) => {
-    if (baseEntries.length !== items.length || baseEntries.some((entry) => rateFor(entry.item, field) === null)) return null;
-    const base = sumField(baseEntries, "contractedCredit");
+    if (primaryEntries.length !== items.length || primaryEntries.some((entry) => rateFor(entry.item, field) === null)) return null;
+    const base = sumField(primaryEntries, "contractedCredit");
     if (!(base > 0)) return null;
-    return baseEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit) * rateFor(entry.item, field), 0) / base;
+    return primaryEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit) * rateFor(entry.item, field), 0) / base;
   };
   const chargeTotal = (field) => {
-    if (baseEntries.length !== items.length || baseEntries.some((entry) => rateFor(entry.item, field) === null || !Number.isFinite(Number(entry.contractedCredit)))) return null;
-    return baseEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit) * rateFor(entry.item, field), 0);
+    if (primaryEntries.length !== items.length || primaryEntries.some((entry) => rateFor(entry.item, field) === null || !Number.isFinite(Number(entry.contractedCredit)))) return null;
+    return primaryEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit) * rateFor(entry.item, field), 0);
   };
   const rateRows = [
     { label: "Taxa administrativa", annual: weightedRate("taxa_ano"), total: weightedRate("taxa_adm"), amount: chargeTotal("taxa_adm") },
@@ -1198,7 +1227,7 @@ function renderFinancialStudySummary() {
       <div class="financial-study-part4-rates-wrap" role="region" aria-label="Taxas e valores totais" tabindex="0"><table class="financial-study-part4-table financial-study-part4-rate-summary"><thead><tr><th scope="col">Encargo</th><th scope="col">Ao ano</th><th scope="col">Total</th><th scope="col">Valor total</th></tr></thead><tbody>${rateRows}</tbody></table></div>
     </div>
     <div class="financial-study-part4-profile-scenarios"><h3 class="financial-study-part4-profile-scenarios-title">Lance Livre · perfis de contemplação do Motor 360</h3>${scenarioTables}</div>
-    <p class="financial-study-part4-source-note">Valores monetários apresentados como somatória dos grupos e cotas selecionados; o quadro não discrimina grupos individualmente. A referência percentual de cada perfil é ponderada pelo crédito contratado, não somada. As taxas e encargos permanecem consolidados no quadro acima. ${historySummary()} ${incompleteGroupCount > 0 ? `Há dados de cenário incompletos em ${incompleteGroupCount} grupo(s); os totais correspondentes são apresentados como não informados.` : ""}</p>`;
+    <p class="financial-study-part4-source-note">Valores monetários apresentados como somatória dos contratos independentes do cenário ${primaryScenarioLabel}; o cenário alternativo não é somado. A referência percentual de cada perfil é ponderada pelo crédito contratado, não somada. As taxas e encargos permanecem consolidados no quadro acima. ${historySummary()} ${incompleteGroupCount > 0 ? `Há dados de cenário incompletos em ${incompleteGroupCount} grupo(s); os totais correspondentes são apresentados como não informados.` : ""}</p>`;
 }
 
 function clearRetiredFinancialStudyState() {
@@ -3240,6 +3269,24 @@ function selectedMotor360Items() {
     const pendingReview = motor360QuotaReview.has(id);
     return { ...item, quota_review_pending: pendingReview, cenarios: pendingReview ? [] : selectedScenariosForItem(item) };
   }).filter(Boolean);
+}
+
+function activeStudyItems() {
+  return selectedMotor360Items().filter((item) => (
+    !motor360QuotaReview.has(motor360GroupKey(item)) && groupHasPositiveScenarioQuota(motor360GroupKey(item))
+  ));
+}
+
+function financialStudyNumericValue(value) {
+  return value === null || value === undefined || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
+}
+
+function financialStudyAnnualRate(item) {
+  return financialStudyNumericValue(item?.taxa_ano ?? item?.taxa_adm_ano);
+}
+
+function financialStudyReserveAnnualRate(item) {
+  return financialStudyNumericValue(item?.fundo_reserva_ano);
 }
 
 function motor360FinalItems(result = investorState.result) {
