@@ -251,6 +251,11 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("selectedScenarioIdsForGroup(groupKey)", renderer)
         self.assertIn("selectedCompositionScenarioMetrics(items, id)", renderer)
         self.assertIn("entry.credit", renderer)
+        self.assertIn("entry.grossCreditPerQuota", renderer)
+        self.assertIn("entry.scenario.lance_embutido", renderer)
+        self.assertIn('data-label="Carta contratada"', renderer)
+        self.assertIn('data-label="Crédito líquido"', renderer)
+        self.assertIn('data-label="Lance embutido"', renderer)
         self.assertIn("entry.installment", renderer)
         self.assertIn("entry.item.prazo_restante", renderer)
         self.assertIn("numericValue(entry.item.taxa_adm) ?? numericValue(entry.item.taxa_total)", renderer)
@@ -270,6 +275,21 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn('rows.filter((row) => row.scenarioId === scenarioId)', renderer)
         self.assertIn("sem seguro", renderer)
         self.assertIn(".financial-study-part7-table", css)
+
+    def test_study_distinguishes_fixed_copy_from_motor_data_and_declares_credit_basis(self):
+        html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
+        app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
+
+        self.assertIn('class="financial-study-data-legend"', html)
+        self.assertIn('class="financial-study-fixed-copy">Texto fixo', html)
+        self.assertIn('class="financial-study-motor-value">Dados do Motor 360', html)
+        self.assertIn('class="financial-study-external-value">Perfil do cliente / calendário', html)
+        self.assertIn('study_credit_basis: "credito_maximo"', app_js)
+        self.assertIn("Menor Crédito e créditos intermediários são referências visuais", app_js)
+        self.assertIn(".financial-study-fixed-copy { color: #1f5da8", css)
+        self.assertIn(".financial-study-motor-value { color: #147a48", css)
+        self.assertIn(".financial-study-part7-table tbody td", css)
 
     def test_part_eight_contemplation_strategies_are_fixed_copy(self):
         html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
@@ -347,6 +367,7 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("Number(profile.ideal || 0)", renderer)
         self.assertIn("entry.embedded", renderer)
         self.assertIn("entry.installment", renderer)
+        self.assertIn('data-label="Carta contratada"', renderer)
         self.assertIn("Cenários sem e com embutido têm contratos distintos e subtotais separados", renderer)
         self.assertIn("O recurso próprio é um limite compartilhado, alocado uma única vez entre os contratos selecionados", renderer)
         self.assertIn("A contemplação não é garantida", renderer)

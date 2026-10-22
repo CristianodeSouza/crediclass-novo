@@ -5255,8 +5255,49 @@ body[data-theme="escuro"] .btn-outline-secondary {
   border-radius: 10px;
   background: #fff;
   box-shadow: 0 8px 26px rgba(28, 43, 49, 0.07);
-  color: #17272d;
+  color: #1f5da8;
 }
+
+.financial-study-data-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 12px; color: #1f5da8; font-size: 0.68rem; }
+.financial-study-fixed-copy { color: #1f5da8 !important; }
+.financial-study-motor-value { color: #147a48 !important; font-weight: 700; }
+.financial-study-external-value { color: #52636a !important; }
+.financial-study-part1-context,
+.financial-study-part1-copy,
+.financial-study-part2-description,
+.financial-study-part2-disclaimer,
+.financial-study-part3-grid,
+.financial-study-part4-subtitle,
+.financial-study-part4-source-note,
+.financial-study-part5-grid,
+.financial-study-part6-content,
+.financial-study-part7-source-note,
+.financial-study-part8-content,
+.financial-study-part9-source-note,
+.financial-study-part10-source-note,
+.financial-study-part11-source-note,
+.financial-study-part12-content,
+.financial-study-part12-title { color: #1f5da8; }
+.financial-study-part3-administrator strong { color: #147a48; }
+.financial-study-part4-content tbody td,
+.financial-study-part7-table tbody td,
+.financial-study-part9-table tbody td,
+.financial-study-part10-table tbody td,
+.financial-study-part11-table tbody td { color: #147a48; font-weight: 650; }
+.financial-study-part4-table thead th,
+.financial-study-part7-table thead th,
+.financial-study-part9-table thead th,
+.financial-study-part10-table thead th,
+.financial-study-part11-table thead th { color: #1f5da8; }
+.financial-study-part4-profile-row th,
+.financial-study-part7-table tbody th,
+.financial-study-part9-table tbody th,
+.financial-study-part10-table tbody th,
+.financial-study-part11-table tbody th { color: #1f5da8; }
+.financial-study-part6-administrator { color: #fff; }
+.financial-study-part9-mobile-month,
+.financial-study-part10-card dd,
+.financial-study-portfolio-totals dd { color: #147a48; font-weight: 700; }
 
 .financial-study-part1-header {
   display: flex;
@@ -5518,7 +5559,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part7-table th, .financial-study-part7-table td { padding: 7px 9px; border: 1px solid #c6cbcd; vertical-align: middle; }
 .financial-study-part7-table thead th { background: #f1f1f1; font-weight: 700; }
 .financial-study-part7-table tbody th { text-align: left; }
-.financial-study-part7-scenario-emphasis { color: #111; font-weight: 800; }
+.financial-study-part7-scenario-emphasis { color: #147a48; font-weight: 800; }
 .financial-study-part7-total { background: #f1f1f1; font-weight: 800; }
 .financial-study-part7-total td[colspan] { font-weight: 500; }
 .financial-study-part7-empty, .financial-study-part7-source-note { margin: 0; padding: 9px 12px; color: #52636a; font-size: 0.74rem; line-height: 1.5; }
@@ -5735,6 +5776,50 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
   .financial-study-part--specialists { break-inside: avoid; }
 }
+
+/* Study provenance: fixed narrative in blue, Motor 360 values in green. */
+.financial-study-document .financial-study-part1-context,
+.financial-study-document .financial-study-part1-copy,
+.financial-study-document .financial-study-part2-description,
+.financial-study-document .financial-study-part2-disclaimer,
+.financial-study-document .financial-study-part3-grid > h3,
+.financial-study-document .financial-study-part3-content,
+.financial-study-document .financial-study-part4-source-note,
+.financial-study-document .financial-study-part5-grid > *,
+.financial-study-document .financial-study-part6-content,
+.financial-study-document .financial-study-part7-source-note,
+.financial-study-document .financial-study-part8-content,
+.financial-study-document .financial-study-part9-source-note,
+.financial-study-document .financial-study-part10-source-note,
+.financial-study-document .financial-study-part11-source-note,
+.financial-study-document .financial-study-part12-title,
+.financial-study-document .financial-study-part12-content { color: #1f5da8; }
+.financial-study-document .financial-study-part3-administrator { color: #1f5da8; }
+.financial-study-document .financial-study-part4-subtitle,
+.financial-study-document .financial-study-part4-administrator { color: #1f5da8; }
+.financial-study-document .financial-study-part4-table thead th,
+.financial-study-document .financial-study-part7-table thead th,
+.financial-study-document .financial-study-part9-table thead th,
+.financial-study-document .financial-study-part10-table thead th,
+.financial-study-document .financial-study-part11-table thead th { color: #1f5da8; }
+.financial-study-document .financial-study-part4-table tbody td,
+.financial-study-document .financial-study-part7-table tbody td,
+.financial-study-document .financial-study-part9-table tbody td,
+.financial-study-document .financial-study-part10-table tbody td,
+.financial-study-document .financial-study-part11-table tbody td { color: #147a48; }
+.financial-study-document .financial-study-part7-table tbody th,
+.financial-study-document .financial-study-part9-table tbody th,
+.financial-study-document .financial-study-part10-table tbody th,
+.financial-study-document .financial-study-part11-table tbody th { color: #1f5da8; }
+.financial-study-document .financial-study-part6-administrator { color: #55d68b; }
+.financial-study-document .financial-study-part4-profile-row td,
+.financial-study-document .financial-study-part10-card dd,
+.financial-study-document .financial-study-portfolio-totals dd { color: #147a48; }
+.financial-study-document #financialStudyPart2Redemption,
+.financial-study-document #financialStudyPart2Rate,
+.financial-study-document [id^="financialStudyPart2Term"],
+.financial-study-document [id^="financialStudyPart2Cost"],
+.financial-study-document .financial-study-part11-table tbody td { color: #52636a; }
 
 /* Public financial study: phone-first reading without shrinking desktop tables. */
 @media (max-width: 640px) {
