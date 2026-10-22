@@ -369,6 +369,21 @@ function withTimeout(promise, timeoutMs, message) {
 function activateScreen(screenName) {
   const meta = screens[screenName];
   if (!meta) return;
+  if (screenName === "estudo") {
+    const selectedGroups = [...investorState.selectedGroupIds];
+    const groupsPendingQuotaReview = selectedGroups.filter((groupId) => motor360QuotaReview.has(groupId));
+    if (groupsPendingQuotaReview.length) {
+      showToast("Revise e confirme as quantidades dos grupos migrados antes de abrir o estudo.", "warning");
+      focusMotor360Group(motor360GroupAnchorId(groupsPendingQuotaReview[0].split("|").pop() || groupsPendingQuotaReview[0]));
+      return;
+    }
+    const groupsWithoutScenario = selectedGroups.filter((groupId) => !groupHasPositiveScenarioQuota(groupId));
+    if (groupsWithoutScenario.length) {
+      showToast("O estudo só pode receber grupos com ao menos uma cota em cenário financeiro marcado.", "warning");
+      focusMotor360Group(motor360GroupAnchorId(groupsWithoutScenario[0].split("|").pop() || groupsWithoutScenario[0]));
+      return;
+    }
+  }
   if (screenName === "grupos-selecionados") {
     const selectedGroups = [...investorState.selectedGroupIds];
     const groupsPendingQuotaReview = selectedGroups.filter((groupId) => motor360QuotaReview.has(groupId));
@@ -3306,10 +3321,15 @@ function selectedMotor360Items() {
   }).filter(Boolean);
 }
 
-function activeStudyItems() {
+function selectedFinancialStudyItems() {
   return selectedMotor360Items().filter((item) => (
-    !motor360QuotaReview.has(motor360GroupKey(item)) && groupHasPositiveScenarioQuota(motor360GroupKey(item))
+    !motor360QuotaReview.has(motor360GroupKey(item))
+    && groupHasPositiveScenarioQuota(motor360GroupKey(item))
   ));
+}
+
+function activeStudyItems() {
+  return selectedFinancialStudyItems();
 }
 
 function financialStudyNumericValue(value) {
@@ -3378,12 +3398,16 @@ function renderQuotaReviewBannerForStudy(items = selectedMotor360Items()) {
 
 function renderMotor360FloatingSelectionSummary() {
   const allItems = selectedMotor360Items();
-  const items = allItems.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
-  const pendingReviewCount = allItems.length - items.length;
+  const items = selectedFinancialStudyItems();
+  const pendingReviewCount = allItems.filter((item) => motor360QuotaReview.has(motor360GroupKey(item))).length;
+  const missingScenarioCount = allItems.filter((item) => (
+    !motor360QuotaReview.has(motor360GroupKey(item))
+    && !groupHasPositiveScenarioQuota(motor360GroupKey(item))
+  )).length;
   const minimizedClass = investorState.floatingSummaryMinimized ? " is-minimized" : "";
   const minimizeButton = `<button type="button" class="motor360-floating-minimize" data-floating-summary-toggle aria-expanded="${investorState.floatingSummaryMinimized ? "false" : "true"}" title="${investorState.floatingSummaryMinimized ? "Expandir composição" : "Minimizar composição"}">${investorState.floatingSummaryMinimized ? "+" : "−"}</button>`;
   if (!items.length) {
-    return `<aside class="motor360-floating-summary is-empty${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${pendingReviewCount ? `${pendingReviewCount} grupo(s) pendente(s) · 0 cotas confirmadas` : "Nenhum grupo selecionado"}</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">0</span>${minimizeButton}</div></div>${pendingReviewCount ? `<p class="motor360-quota-review-alert" role="alert">${pendingReviewCount} grupo(s) aguardam revisão de quantidades. Não entram nos cálculos.</p>` : ""}<p>Adicione grupos e cotas para acompanhar o atendimento ao crédito e à parcela do cliente.</p></aside>`;
+    return `<aside class="motor360-floating-summary is-empty${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${pendingReviewCount ? `${pendingReviewCount} grupo(s) pendente(s) · 0 cotas confirmadas` : missingScenarioCount ? `${missingScenarioCount} grupo(s) sem cenário marcado` : "Nenhum grupo selecionado"}</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">0</span>${minimizeButton}</div></div>${pendingReviewCount ? `<p class="motor360-quota-review-alert" role="alert">${pendingReviewCount} grupo(s) aguardam revisão de quantidades. Não entram nos cálculos.</p>` : ""}${missingScenarioCount ? `<p class="motor360-quota-review-alert" role="status">${missingScenarioCount} grupo(s) sem cotas em cenário financeiro marcado não entram na composição nem no estudo.</p>` : ""}<p>Adicione grupos e cotas para acompanhar o atendimento ao crédito e à parcela do cliente.</p></aside>`;
   }
   const client = motor360ClientProfile();
   const desiredCredit = Number(client.credito_liquido_desejado || 0);
@@ -3457,9 +3481,9 @@ function openSelectedGroupsWorkspace() {
   const profileSummary = document.getElementById("selectedGroupsWorkspaceProfileSummary");
   if (profileSummary) profileSummary.innerHTML = renderMotor360ClientProfileSummary(motor360ClientProfile());
   const compositionSummary = document.getElementById("selectedGroupsWorkspaceCompositionSummary");
-  const activeItems = selectedMotor360Items().filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
+  const activeItems = selectedFinancialStudyItems();
   const portfolioTotals = selectedPortfolioTotals(activeItems);
-  if (compositionSummary) compositionSummary.textContent = `${investorState.selectedGroupIds.size} grupo(s) · ${portfolioTotals.totalQuotas} cota(s) confirmada(s) · Crédito ${formatMoney(portfolioTotals.credit)} · Parcela ${formatMoney(portfolioTotals.installment)}`;
+  if (compositionSummary) compositionSummary.textContent = `${activeItems.length} grupo(s) com cenário marcado · ${portfolioTotals.totalQuotas} cota(s) confirmada(s) · Crédito ${formatMoney(portfolioTotals.credit)} · Parcela ${formatMoney(portfolioTotals.installment)}`;
   workspace.classList.remove("d-none");
   document.body.classList.add("selected-groups-workspace-open");
   renderSelectedGroupsScreen();
@@ -3644,6 +3668,10 @@ function selectedCompositionScenarioMetrics(items, scenarioId, desiredCreditOver
 }
 
 function selectedPortfolioTotals(items = selectedMotor360Items()) {
+  items = items.filter((item) => (
+    !motor360QuotaReview.has(motor360GroupKey(item))
+    && groupHasPositiveScenarioQuota(motor360GroupKey(item))
+  ));
   const scenarios = ["without_embedded", "with_embedded"].map((scenarioId) => selectedCompositionScenarioMetrics(items, scenarioId));
   const active = scenarios.filter((metrics) => metrics.entries.length);
   const credit = active.reduce((sum, metrics) => sum + metrics.credit, 0);
@@ -4470,12 +4498,12 @@ function renderSelectedGroupsScreen() {
     return;
   }
   const allItems = selectedMotor360Items();
-  const items = allItems.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
+  const items = selectedFinancialStudyItems();
   const activeItems = items;
   if (!activeItems.length && investorState.selectedGroupIds.size && !allItems.some((item) => motor360QuotaReview.has(motor360GroupKey(item)))) {
     empty.classList.add("d-none");
     results.classList.remove("d-none");
-    results.innerHTML = '<section class="sg-dashboard sg-filter-empty-dashboard" data-sg-dashboard><div class="sg-filter-empty"><strong>Nenhum grupo atende aos filtros atuais.</strong><span>A seleção continua preservada. Ajuste os filtros ou use “Limpar filtros” para voltar a visualizar os grupos.</span></div></section>';
+    results.innerHTML = '<section class="sg-dashboard sg-filter-empty-dashboard" data-sg-dashboard><div class="sg-filter-empty"><strong>Nenhum grupo tem cenário financeiro marcado.</strong><span>Marque ao menos uma cota em um dos cenários financeiros para incluir o grupo na análise e no Estudo Financeiro.</span></div></section>';
     return;
   }
   empty.classList.toggle("d-none", allItems.length > 0);
@@ -7278,8 +7306,8 @@ document.getElementById("clearMotor360ExecutionLogsBtn")?.addEventListener("clic
 });
 document.getElementById("closeSelectedGroupsWorkspace")?.addEventListener("click", closeSelectedGroupsWorkspace);
 document.getElementById("selectedGroupsWorkspaceStudy")?.addEventListener("click", () => {
-  closeSelectedGroupsWorkspace();
   activateScreen("estudo");
+  if (document.getElementById("screen-estudo")?.classList.contains("active")) closeSelectedGroupsWorkspace();
 });
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && !document.getElementById("selectedGroupsWorkspace")?.classList.contains("d-none")) closeSelectedGroupsWorkspace();
