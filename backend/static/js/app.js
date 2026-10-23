@@ -954,8 +954,8 @@ function renderFinancialStudyContracting() {
       return values.length === rows.length ? values.reduce((sum, value) => sum + value, 0) : null;
     };
     const average = (field) => {
-      const values = rows.map((row) => numericValue(row[field])).filter((value) => value !== null);
-      return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+      const values = rows.map((row) => numericValue(row[field]));
+      return values.length && values.every((value) => value !== null) ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
     };
     const weightedAverage = (field) => {
       if (!rows.length || rows.some((row) => numericValue(row.contractedCredit) === null || numericValue(row[field]) === null)) return null;
@@ -1376,8 +1376,11 @@ function renderFinancialStudySummary() {
     return values.every((value) => Number.isFinite(value)) ? values.reduce((sum, value) => sum + value, 0) : null;
   };
   const consolidatedAverage = (field) => {
-    const values = consolidatedEntries.map((entry) => Number(field === "term" ? entry.item.prazo_restante : entry[field])).filter((value) => Number.isFinite(value));
-    return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+    if (!consolidatedEntries.length) return null;
+    const values = consolidatedEntries.map((entry) => ({ value: Number(field === "term" ? entry.item.prazo_restante ?? entry.item.prazo_remanescente : entry[field]), quotas: Math.max(1, Number(entry.quotas || 1)) }));
+    if (values.some(({ value }) => !Number.isFinite(value))) return null;
+    const totalQuotas = values.reduce((sum, entry) => sum + entry.quotas, 0);
+    return totalQuotas > 0 ? values.reduce((sum, entry) => sum + entry.value * entry.quotas, 0) / totalQuotas : null;
   };
   const consolidatedTerm = consolidatedAverage("term");
   const consolidatedTermLabel = consolidatedTerm == null ? "Não informado" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(consolidatedTerm)} meses`;
