@@ -323,6 +323,11 @@ AUTH_USERS = {
 AUTH_SECRET = os.getenv("AUTH_SECRET", "crediclass-dashboard-v3-local-login")
 
 
+def _is_administrator_request(request: Request) -> bool:
+    username = getattr(request.state, "auth_user", None)
+    return bool(username and AUTH_USERS.get(username, {}).get("role") == "Administrador")
+
+
 def _sign_session(username: str, issued_at: int) -> str:
     payload = f"{username}:{issued_at}"
     signature = hmac.new(AUTH_SECRET.encode("utf-8"), payload.encode("utf-8"), hashlib.sha256).hexdigest()
@@ -651,7 +656,7 @@ def grupo_historico_lote_atualizar(grupo_id: str, payload: HistoricoBatchUpdateR
 
 
 @app.post("/api/viabilidade-360/analisar")
-def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response, compact: bool = False):
+def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response, request: Request, compact: bool = False):
     """Single entry point: declared objective is a presentation preference, never an exclusion."""
     request_started = time.perf_counter()
     request_id = f"REQ-{uuid4().hex[:12].upper()}"
@@ -771,7 +776,8 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response, co
         # Keep the audit attached to the execution result as a durable client
         # fallback. The runtime JSON store can be lost on a Render restart or
         # deploy, while the browser cache may still retain this result.
-        result["audit"] = audit
+        if _is_administrator_request(request):
+            result["audit"] = audit
         result["request_id"] = request_id
         return result
     except ValueError as error:
@@ -783,7 +789,9 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response, co
 
 
 @app.get("/api/viabilidade-360/auditorias/{audit_id}")
-def viabilidade_360_auditoria(audit_id: str):
+def viabilidade_360_auditoria(audit_id: str, request: Request):
+    if not _is_administrator_request(request):
+        return JSONResponse(status_code=403, content={"success": False, "error": "A auditoria é restrita ao usuário administrador."})
     audit = get_motor360_audit(audit_id)
     if audit is None:
         return JSONResponse(status_code=404, content={"success": False, "error": "Auditoria não encontrada."})
@@ -791,7 +799,9 @@ def viabilidade_360_auditoria(audit_id: str):
 
 
 @app.get("/api/viabilidade-360/auditorias/{audit_id}/exportar.md")
-def viabilidade_360_auditoria_markdown(audit_id: str):
+def viabilidade_360_auditoria_markdown(audit_id: str, request: Request):
+    if not _is_administrator_request(request):
+        return JSONResponse(status_code=403, content={"success": False, "error": "A auditoria é restrita ao usuário administrador."})
     audit = get_motor360_audit(audit_id)
     if audit is None:
         return JSONResponse(status_code=404, content={"success": False, "error": "Auditoria não encontrada."})
@@ -800,7 +810,9 @@ def viabilidade_360_auditoria_markdown(audit_id: str):
 
 
 @app.get("/api/viabilidade-360/auditorias/{audit_id}/exportar.pdf")
-def viabilidade_360_auditoria_pdf(audit_id: str):
+def viabilidade_360_auditoria_pdf(audit_id: str, request: Request):
+    if not _is_administrator_request(request):
+        return JSONResponse(status_code=403, content={"success": False, "error": "A auditoria é restrita ao usuário administrador."})
     audit = get_motor360_audit(audit_id)
     if audit is None:
         return JSONResponse(status_code=404, content={"success": False, "error": "Auditoria não encontrada."})

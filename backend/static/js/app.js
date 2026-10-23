@@ -5453,6 +5453,7 @@ function renderMotor360AuditContent(audit) {
 }
 
 function renderMotor360Audit(audit, auditId) {
+  if (authState.user?.perfil !== "Administrador") return "";
   const embeddedAudit = audit || investorState.result?.audit || null;
   const id = auditId || embeddedAudit?.metadata?.audit_id || "";
   if (id && !embeddedAudit) {
@@ -5489,6 +5490,7 @@ function bindMotor360AuditPanel(results) {
 }
 
 function renderMotor360GroupAudit(groupId) {
+  if (authState.user?.perfil !== "Administrador") return;
   if (investorState.result?.audit_id && !investorState.audit && !investorState.result?.audit) {
     showToast("A auditoria desta execução não está mais disponível. Execute o Motor 360 novamente.", "warning");
     return;
