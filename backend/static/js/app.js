@@ -777,7 +777,7 @@ async function openFinancialStudyHistoryItem(studyId) {
     const frame = document.getElementById("financialStudyHistoryFrame");
     const documentHtml = study.document_html || `<main style="font:16px system-ui;max-width:720px;margin:40px auto;color:#2e3f47"><h1>Registro legado</h1><p>Este registro já existia na planilha e não possui um snapshot visual arquivado. Os dados originais foram preservados.</p></main>`;
     financialStudyHistoryState.documentHtml = documentHtml;
-    frame.srcdoc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/static/css/style.css"><style>body{margin:16px;background:#fff}.financial-study-document{max-width:1100px;margin:auto}</style></head><body>${documentHtml}</body></html>`;
+    frame.srcdoc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/static/css/style.css"><style>body{margin:16px;background:#fff}.financial-study-document{max-width:1100px;margin:auto}@media print{html,body{width:277mm!important;min-width:277mm!important;margin:0!important}.financial-study-document{width:277mm!important;min-width:277mm!important;max-width:none!important;margin:0!important}}</style></head><body>${documentHtml}</body></html>`;
     const shareStatus = document.getElementById("financialStudyShareStatus");
     const shareLinkRow = document.getElementById("financialStudyShareLinkRow");
     const shareUrl = document.getElementById("financialStudyShareUrl");
