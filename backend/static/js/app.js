@@ -453,6 +453,7 @@ function activateScreen(screenName) {
   }
   if (screenName === "mapa-assembleia") loadAssemblyMap();
   if (screenName === "estudo") {
+    if (!investorState.result) hydrateInvestorAnalysisFromCache();
     clearRetiredFinancialStudyState();
     renderFinancialStudySelectedAdministrator();
     renderFinancialStudyInvestment();
@@ -469,6 +470,23 @@ function activateScreen(screenName) {
     loadConfiguracoes();
   }
   if (screenName === "crm-piperun") resetPipeRunPreview();
+}
+
+function hydrateInvestorAnalysisFromCache() {
+  if (investorState.result) return true;
+  try {
+    const profile = { ...collectClientProfile(), administradora: null, filtro_lance_embutido: null };
+    const cached = JSON.parse(sessionStorage.getItem(INVESTOR_ANALYSIS_CACHE_KEY) || "null");
+    const analysisKey = investorAnalysisCacheKey(profile);
+    if (cached?.key === analysisKey && cached.result) {
+      investorState.result = cached.result;
+      investorState.analysisKey = cached.key;
+      investorState.audit = cached.result.audit || null;
+      syncMotor360BidExplorer();
+      return true;
+    }
+  } catch (_) { /* cache inválido: o Motor 360 poderá recarregar a análise */ }
+  return false;
 }
 
 function renderFinancialStudySelectedAdministrator() {
@@ -899,7 +917,7 @@ function renderFinancialStudyContracting() {
       const adminRate = numericValue(entry.item.taxa_adm) ?? numericValue(entry.item.taxa_total);
       const reserveRate = numericValue(entry.item.fundo_reserva);
       const reserveAnnualRate = financialStudyReserveAnnualRate(entry.item);
-      const term = numericValue(entry.item.prazo_restante);
+      const term = numericValue(entry.item.prazo_restante ?? entry.item.prazo_remanescente);
       const annualRateInfo = financialStudyAnnualRate(entry.item);
       const annualRate = annualRateInfo.value;
       for (let contractIndex = 1; contractIndex <= entry.quotas; contractIndex += 1) {
@@ -1239,8 +1257,6 @@ function renderFinancialStudySummary() {
   const embeddedEntries = metricsByScenario.with_embedded?.entries || [];
   const admins = [...new Set(items.map((item) => String(item.administradora || "").trim()).filter(Boolean))];
   const adminLabel = admins.length ? admins.join(" · ") : "Não informada";
-  const allGroupsHave = (entries, field) => entries.length === items.length
-    && entries.every((entry) => entry[field] !== null && entry[field] !== undefined && entry[field] !== "" && Number.isFinite(Number(entry[field])));
   const sumField = (entries, field) => {
     if (!entries.length) return null;
     const values = entries.map((entry) => Number(entry[field]));
@@ -1248,16 +1264,12 @@ function renderFinancialStudySummary() {
       ? values.reduce((sum, value) => sum + value, 0)
       : null;
   };
-  const terms = items.map((item) => Number(item.prazo_restante ?? item.prazo_remanescente))
-    .filter((value) => Number.isFinite(value) && value > 0);
   const rangeLabel = (values) => {
     if (!values.length) return "Não informado";
     const min = Math.min(...values);
     const max = Math.max(...values);
     return min === max ? `${min} meses` : `${min} a ${max} meses`;
   };
-  const termLabel = terms.length === items.length ? rangeLabel(terms) : "Prazo incompleto";
-  const scenarioTermLabel = termLabel;
   const rateFor = (item, field) => {
     const value = field === "taxa_ano" ? financialStudyAnnualRate(item).value : field === "fundo_reserva_ano" ? financialStudyReserveAnnualRate(item) : item[field];
     return value === null || value === undefined || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
@@ -1272,7 +1284,7 @@ function renderFinancialStudySummary() {
     if (!entries.length || entries.some((entry) => rateFor(entry.item, field) === null || !Number.isFinite(Number(entry.contractedCredit)))) return null;
     return entries.reduce((sum, entry) => sum + Number(entry.contractedCredit) * rateFor(entry.item, field), 0);
   };
-  const rateSource = (entries, field) => [...new Set(entries.map((entry) => field === "taxa_ano" ? financialStudyAnnualRate(entry.item).source : entry.item.fundo_reserva_ano == null ? "indisponível" : "Motor 360:fundo_reserva_ano"))].join("; ");
+  const rateSource = (entries, field) => [...new Set(entries.map((entry) => field === "taxa_ano" ? financialStudyAnnualRate(entry.item).source : entry.item.fundo_reserva_ano == null ? "estimado:fundo reserva × 12 ÷ prazo" : "Motor 360:fundo_reserva_ano"))].join("; ");
   const scenarioRateRows = (entries) => [
     { label: "Taxa administrativa", field: "taxa_ano", annual: weightedRate(entries, "taxa_ano"), total: weightedRate(entries, "taxa_adm"), amount: chargeTotal(entries, "taxa_adm") },
     { label: "Fundo de reserva", field: "fundo_reserva_ano", annual: weightedRate(entries, "fundo_reserva_ano"), total: weightedRate(entries, "fundo_reserva"), amount: chargeTotal(entries, "fundo_reserva") },
@@ -1313,6 +1325,8 @@ function renderFinancialStudySummary() {
   const profileRowsForScenario = (scenarioId) => {
     const entries = metricsByScenario[scenarioId]?.entries || [];
     if (!entries.length) return [];
+    const scenarioTerms = entries.flatMap((entry) => Array.from({ length: Math.max(1, Number(entry.quotas || 1)) }, () => Number(entry.item.prazo_restante ?? entry.item.prazo_remanescente))).filter((value) => Number.isFinite(value) && value > 0);
+    const scenarioTermLabel = scenarioTerms.length ? rangeLabel(scenarioTerms) : "Prazo incompleto";
     const availableCredit = sumField(entries, "credit");
     const installment = sumField(entries, "installment");
     const embeddedBid = sumField(entries, "embedded");
@@ -1366,11 +1380,41 @@ function renderFinancialStudySummary() {
   const consolidatedAdminTotal = weightedRate(consolidatedEntries, "taxa_adm");
   const consolidatedReserveAnnual = weightedRate(consolidatedEntries, "fundo_reserva_ano");
   const consolidatedReserveTotal = weightedRate(consolidatedEntries, "fundo_reserva");
-  const consolidatedSummary = `<section class="financial-study-part4-consolidated-summary"><h3>Resumo consolidado de todas as cotas</h3><div class="financial-study-part4-overview-wrap"><table class="financial-study-part4-table financial-study-part4-overview-table"><thead><tr><th>Carta de crédito</th><th>Lance embutido</th><th>Parcelas sem seguro</th><th>Prazo médio</th><th>Taxa administrativa</th><th>Fundo de reserva</th></tr></thead><tbody><tr><td>${formatMoney(consolidatedSum("contractedCredit"))}</td><td>${formatMoney(consolidatedSum("embedded"))}</td><td>${formatMoney(consolidatedSum("installment"))}</td><td>${consolidatedTermLabel}</td><td><strong>${formatPercent(consolidatedAdminAnnual)} ao ano</strong><small>${formatPercent(consolidatedAdminTotal)} total</small><small>${formatMoney(chargeTotal(consolidatedEntries, "taxa_adm"))}</small></td><td><strong>${formatPercent(consolidatedReserveAnnual)} ao ano</strong><small>${formatPercent(consolidatedReserveTotal)} total</small><small>${formatMoney(chargeTotal(consolidatedEntries, "fundo_reserva"))}</small></td></tr></tbody></table></div><p class="financial-study-part4-consolidated-note">${consolidatedEntries.reduce((count, entry) => count + entry.quotas, 0)} cotas contratadas somadas entre os cenários selecionados. Os valores financeiros são somados; prazo e percentuais representam médias consolidadas.</p></section>`;
+  const percentLabel = (value) => value == null ? "Não informado" : formatPercent(value);
+  const consolidatedSummary = `<section class="financial-study-part4-consolidated-summary"><h3>Resumo consolidado de todas as cotas</h3><div class="financial-study-part4-overview-wrap"><table class="financial-study-part4-table financial-study-part4-overview-table"><thead><tr><th>Carta de crédito</th><th>Lance embutido</th><th>Parcelas sem seguro</th><th>Prazo médio</th><th>Taxa administrativa</th><th>Fundo de reserva</th></tr></thead><tbody><tr><td>${formatMoney(consolidatedSum("contractedCredit"))}</td><td>${formatMoney(consolidatedSum("embedded"))}</td><td>${formatMoney(consolidatedSum("installment"))}</td><td>${consolidatedTermLabel}</td><td><strong>${percentLabel(consolidatedAdminAnnual)}${consolidatedAdminAnnual == null ? "" : " ao ano"}</strong><small>${percentLabel(consolidatedAdminTotal)}${consolidatedAdminTotal == null ? "" : " total"}</small><small>${formatMoney(chargeTotal(consolidatedEntries, "taxa_adm"))}</small></td><td><strong>${percentLabel(consolidatedReserveAnnual)}${consolidatedReserveAnnual == null ? "" : " ao ano"}</strong><small>${percentLabel(consolidatedReserveTotal)}${consolidatedReserveTotal == null ? "" : " total"}</small><small>${formatMoney(chargeTotal(consolidatedEntries, "fundo_reserva"))}</small></td></tr></tbody></table></div><p class="financial-study-part4-consolidated-note">${consolidatedEntries.reduce((count, entry) => count + entry.quotas, 0)} cotas contratadas somadas entre os cenários selecionados. Os valores financeiros são somados; prazo e percentuais representam médias consolidadas.</p></section>`;
   const incompleteGroupCount = items.length - Math.min(baseEntries.length, embeddedEntries.length);
   const adminsText = escapeHtml(adminLabel);
   const excluded = selectedItems.filter((item) => !pendingReviewItems.includes(item) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)));
   target.innerHTML = `${renderQuotaReviewBannerForStudy(selectedItems)}<div data-financial-study-exclusions>${excluded.length ? `<div class="motor360-quota-review-alert" role="status"><strong>Grupos fora do estudo</strong><span>${excluded.map((item) => `Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")} selecionado sem cotas; fora dos cálculos.`).join("<br>")}</span></div>` : ""}</div><p class="financial-study-part4-administrator">Administradora(s): <strong class="financial-study-motor-value">${adminsText}</strong></p>${consolidatedSummary}<div class="financial-study-part4-profile-scenarios"><h3 class="financial-study-part4-profile-scenarios-title">Cenários, perfis e discriminação das cotas do Motor 360</h3>${scenarioTables}</div><p class="financial-study-part4-source-note">O resumo consolidado soma todas as cotas dos cenários selecionados. Abaixo dele, cada cenário mantém sua discriminação individual e seus perfis de contemplação. O estudo usa o Maior Crédito do grupo como crédito contratado; Menor Crédito e créditos intermediários são referências visuais do Motor 360 e não entram nos cálculos do estudo. ${historySummary()} ${incompleteGroupCount > 0 ? `Há grupos sem dados naquele cenário; cada resumo inclui somente contratos ativos do próprio cenário.` : ""}</p>`;
+  const insertSummaryColumn = (table, index, label, value) => {
+    const header = table?.tHead?.rows[0];
+    const bodyRow = table?.tBodies?.[0]?.rows[0];
+    if (!header || !bodyRow) return;
+    const th = document.createElement("th");
+    th.textContent = label;
+    header.insertBefore(th, header.cells[index]);
+    const td = document.createElement("td");
+    td.textContent = formatMoney(value);
+    bodyRow.insertBefore(td, bodyRow.cells[index]);
+  };
+  insertSummaryColumn(target.querySelector(".financial-study-part4-consolidated-summary table"), 3, "Parcela pós-contemplação", consolidatedSum("installmentAfter"));
+  target.querySelectorAll(".financial-study-part4-scenario-summary").forEach((section, index) => {
+    const entries = metricsByScenario[scenarioIds[index]]?.entries || [];
+    insertSummaryColumn(section.querySelector(".financial-study-part4-overview-table"), 4, "Parcela pós-contemplação", sumField(entries, "installmentAfter"));
+    const quotaTable = section.querySelector(".financial-study-part4-quota-table");
+    const quotaValues = entries.flatMap((entry) => Array.from({ length: Math.max(1, Number(entry.quotas || 1)) }, () => entry.installmentAfter == null ? null : Number(entry.installmentAfter) / Math.max(1, Number(entry.quotas || 1))));
+    const quotaHeader = quotaTable?.tHead?.rows[0];
+    if (quotaHeader) {
+      const th = document.createElement("th");
+      th.textContent = "Parcela pós-contemplação";
+      quotaHeader.insertBefore(th, quotaHeader.cells[4]);
+      quotaTable.tBodies[0]?.querySelectorAll("tr").forEach((row, rowIndex) => {
+        const td = document.createElement("td");
+        td.textContent = formatMoney(quotaValues[rowIndex]);
+        row.insertBefore(td, row.cells[4]);
+      });
+    }
+  });
 }
 
 function clearRetiredFinancialStudyState() {
@@ -3488,7 +3532,11 @@ function financialStudyAnnualRateTitle(item) {
 }
 
 function financialStudyReserveAnnualRate(item) {
-  return financialStudyNumericValue(item?.fundo_reserva_ano);
+  const declared = financialStudyNumericValue(item?.fundo_reserva_ano);
+  if (declared !== null) return declared;
+  const total = financialStudyNumericValue(item?.fundo_reserva);
+  const term = financialStudyNumericValue(item?.prazo_restante ?? item?.prazo_remanescente);
+  return total !== null && term > 0 ? total * 12 / term : null;
 }
 
 function motor360FinalItems(result = investorState.result) {
@@ -4993,6 +5041,7 @@ function motor360ScenarioForSelectedCredit(item, scenario) {
     credito_liquido_projetado: money(credit - embedded),
     valor_lance_embutido: embedded,
     taxa_administracao: feeAmount,
+    fundo_reserva: reserve,
     fundo_reserva_valor: reserveAmount,
     saldo_devedor: balance,
     lance_cliente_total: ownBidPerQuota,
