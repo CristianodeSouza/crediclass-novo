@@ -63,6 +63,15 @@
       const title = section.querySelector(":scope > h3")?.textContent.trim().toLowerCase() || "";
       return title.startsWith("resumo do cenário") || title === "recursos compartilhados";
     });
+    const summaryNote = root.querySelector(".financial-study-part4-source-note");
+    if (summaries.length && summaryNote?.parentElement) {
+      let anchor = summaryNote;
+      summaries.forEach((section) => {
+        anchor.parentElement.insertBefore(section, anchor.nextSibling);
+        anchor = section;
+      });
+      return;
+    }
     const projectionStart = content.querySelector(":scope > .financial-study-part10-lottery") || directSections.find((section) => !summaries.includes(section));
     if (!summaries.length || !projectionStart) return;
     summaries.forEach((section) => content.insertBefore(section, projectionStart));
