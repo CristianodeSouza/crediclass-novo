@@ -951,6 +951,8 @@ function renderFinancialStudyContracting() {
   const pendingReviewCount = allSelectedItems.length - items.length;
   target.innerHTML = `${renderQuotaReviewBannerForStudy(allSelectedItems)}<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos contratos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Contrato independente</th><th scope="col">Carta contratada</th><th scope="col">Crédito líquido</th><th scope="col">Lance embutido</th><th scope="col">Parcela (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th><th scope="col">Fundo reserva total</th><th scope="col">Fundo reserva ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Cada cota selecionada é apresentada como um contrato independente. No cenário com embutido, a carta contratada é a base do lance; o embutido é deduzido para apresentar o crédito líquido disponível ao cliente. O resumo consolidado soma todos os contratos dos cenários selecionados; valores financeiros são somados e prazo e percentuais são calculados pela média simples das cotas. As taxas e o fundo de reserva usam os valores do Motor 360; quando a taxa administrativa anual estiver ausente, a contratação estima a taxa total dividida pelo prazo em anos. A parcela não inclui seguro.</p>`;
   target.innerHTML = target.innerHTML.replaceAll("Carta contratada", "Crédito contratado");
+  const contractTable = target.querySelector(".financial-study-part7-table");
+  contractTable?.querySelectorAll("tr").forEach((row) => row.cells[2]?.remove());
 }
 
 function renderFinancialStudyContemplationHistory() {
