@@ -55,6 +55,19 @@
     });
   }
 
+  function repositionScenarioSummaries(root = document) {
+    const content = root.querySelector("#financialStudyPart10Content, .financial-study-part10-content");
+    if (!content) return;
+    const directSections = [...content.children].filter((element) => element.matches(".financial-study-part10-profile"));
+    const summaries = directSections.filter((section) => {
+      const title = section.querySelector(":scope > h3")?.textContent.trim().toLowerCase() || "";
+      return title.startsWith("resumo do cenário") || title === "recursos compartilhados";
+    });
+    const projectionStart = content.querySelector(":scope > .financial-study-part10-lottery") || directSections.find((section) => !summaries.includes(section));
+    if (!summaries.length || !projectionStart) return;
+    summaries.forEach((section) => content.insertBefore(section, projectionStart));
+  }
+
   function buildPublicStudyNavigation() {
     const documentNode = document.querySelector(".financial-study-document");
     const nav = document.getElementById("sharedStudyNavigation");
@@ -97,6 +110,7 @@
   };
 
   document.addEventListener("DOMContentLoaded", () => {
+    repositionScenarioSummaries();
     prepareInvestmentCards();
     annotateMissingValues();
     buildPublicStudyNavigation();
