@@ -1241,9 +1241,13 @@ function renderFinancialStudySummary() {
   const adminLabel = admins.length ? admins.join(" · ") : "Não informada";
   const allGroupsHave = (entries, field) => entries.length === items.length
     && entries.every((entry) => entry[field] !== null && entry[field] !== undefined && entry[field] !== "" && Number.isFinite(Number(entry[field])));
-  const sumField = (entries, field) => allGroupsHave(entries, field)
-    ? entries.reduce((sum, entry) => sum + Number(entry[field]), 0)
-    : null;
+  const sumField = (entries, field) => {
+    if (!entries.length) return null;
+    const values = entries.map((entry) => Number(entry[field]));
+    return values.every((value) => Number.isFinite(value))
+      ? values.reduce((sum, value) => sum + value, 0)
+      : null;
+  };
   const terms = items.map((item) => Number(item.prazo_restante ?? item.prazo_remanescente))
     .filter((value) => Number.isFinite(value) && value > 0);
   const rangeLabel = (values) => {
@@ -1274,8 +1278,10 @@ function renderFinancialStudySummary() {
     { label: "Fundo de reserva", field: "fundo_reserva_ano", annual: weightedRate(entries, "fundo_reserva_ano"), total: weightedRate(entries, "fundo_reserva"), amount: chargeTotal(entries, "fundo_reserva") },
   ].map((row) => `<tr><th scope="row">${row.label}</th><td title="Origem: ${escapeHtml(rateSource(entries, row.field))}">${formatPercent(row.annual)}</td><td>${formatPercent(row.total)}</td><td>${formatMoney(row.amount)}</td></tr>`).join("");
   const sumProfile = (entries, profileId, field = "ideal") => {
-    if (entries.length !== items.length || entries.some((entry) => !entry.profiles?.[profileId] || entry.profiles[profileId][field] === null || entry.profiles[profileId][field] === undefined || !Number.isFinite(Number(entry.profiles[profileId][field])))) return null;
-    return entries.reduce((sum, entry) => sum + Number(entry.profiles[profileId][field]), 0);
+    if (!entries.length) return null;
+    const values = entries.map((entry) => entry.profiles?.[profileId]?.[field]);
+    if (values.some((value) => value === null || value === undefined || value === "" || !Number.isFinite(Number(value)))) return null;
+    return values.reduce((sum, value) => sum + Number(value), 0);
   };
   const historySummary = () => {
     let hitCount = 0;
