@@ -40,7 +40,10 @@ def save_motor360_audit(audit: dict[str, Any]) -> dict[str, Any]:
     records = _load_all()
     records[audit_id] = snapshot
     _save_all(records)
-    return deepcopy(snapshot)
+    # The caller already removed the original audit from the result before
+    # attaching this persisted snapshot. Returning another deep copy doubles
+    # the peak memory used by large Motor 360 audits on small instances.
+    return snapshot
 
 
 def get_motor360_audit(audit_id: str) -> dict[str, Any] | None:
