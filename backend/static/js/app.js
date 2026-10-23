@@ -951,23 +951,28 @@ function renderFinancialStudyContracting() {
     if (!rows.length) return "";
     const sumAvailable = (field) => {
       const values = rows.map((row) => numericValue(row[field])).filter((value) => value !== null);
-      return values.length ? values.reduce((sum, value) => sum + value, 0) : null;
+      return values.length === rows.length ? values.reduce((sum, value) => sum + value, 0) : null;
     };
     const average = (field) => {
       const values = rows.map((row) => numericValue(row[field])).filter((value) => value !== null);
       return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
     };
+    const weightedAverage = (field) => {
+      if (!rows.length || rows.some((row) => numericValue(row.contractedCredit) === null || numericValue(row[field]) === null)) return null;
+      const base = rows.reduce((sum, row) => sum + Number(row.contractedCredit), 0);
+      return base > 0 ? rows.reduce((sum, row) => sum + Number(row.contractedCredit) * Number(row[field]), 0) / base : null;
+    };
     const totals = { contractedCredit: sumAvailable("contractedCredit"), credit: sumAvailable("credit"), embeddedBid: sumAvailable("embeddedBid"), installment: sumAvailable("installment"), contracts: rows.length };
     const averageTerm = average("term");
-    const averageAdminRate = average("adminRate");
-    const averageAnnualRate = average("annualRate");
-    const averageReserveRate = average("reserveRate");
-    const averageReserveAnnualRate = average("reserveAnnualRate");
+    const averageAdminRate = weightedAverage("adminRate");
+    const averageAnnualRate = weightedAverage("annualRate");
+    const averageReserveRate = weightedAverage("reserveRate");
+    const averageReserveAnnualRate = weightedAverage("reserveAnnualRate");
     const termLabel = averageTerm == null ? "Não informado" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(averageTerm)} meses`;
     return `<tr class="financial-study-part7-total financial-study-part7-consolidated-total"><th scope="row" data-label="Grupo">Resumo consolidado · ${totals.contracts} contratos</th><td data-label="Carta contratada">${formatMoney(totals.contractedCredit)}</td><td data-label="Crédito líquido">${formatMoney(totals.credit)}</td><td data-label="Lance embutido">${formatMoney(totals.embeddedBid)}</td><td data-label="Parcela (sem seguro)">${formatMoney(totals.installment)}</td><td data-label="Prazo">${termLabel}</td><td data-label="Tx ADM total">${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td data-label="Tx ADM ao ano">${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td><td data-label="Fundo reserva total">${averageReserveRate == null ? "Não informado" : formatPercent(averageReserveRate)}</td><td data-label="Fundo reserva ao ano">${averageReserveAnnualRate == null ? "Não informado" : formatPercent(averageReserveAnnualRate)}</td></tr>`;
   })();
   const pendingReviewCount = allSelectedItems.length - items.length;
-  target.innerHTML = `${renderQuotaReviewBannerForStudy(allSelectedItems)}<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos contratos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Contrato independente</th><th scope="col">Carta contratada</th><th scope="col">Crédito líquido</th><th scope="col">Lance embutido</th><th scope="col">Parcela (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th><th scope="col">Fundo reserva total</th><th scope="col">Fundo reserva ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Cada cota selecionada é apresentada como um contrato independente. No cenário com embutido, a carta contratada é a base do lance; o embutido é deduzido para apresentar o crédito líquido disponível ao cliente. O resumo consolidado soma todos os contratos dos cenários selecionados; valores financeiros são somados e prazo e percentuais são calculados pela média simples das cotas. As taxas e o fundo de reserva usam os valores do Motor 360; quando a taxa administrativa anual estiver ausente, a contratação estima a taxa total dividida pelo prazo em anos. A parcela não inclui seguro.</p>`;
+  target.innerHTML = `${renderQuotaReviewBannerForStudy(allSelectedItems)}<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos contratos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Contrato independente</th><th scope="col">Carta contratada</th><th scope="col">Crédito líquido</th><th scope="col">Lance embutido</th><th scope="col">Parcela (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th><th scope="col">Fundo reserva total</th><th scope="col">Fundo reserva ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Cada cota selecionada é apresentada como um contrato independente. No cenário com embutido, a carta contratada é a base do lance; o embutido é deduzido para apresentar o crédito líquido disponível ao cliente. O resumo consolidado soma todos os contratos dos cenários selecionados; valores financeiros são somados, prazo é calculado por cota e percentuais usam média ponderada pelo crédito contratado. As taxas e o fundo de reserva usam os valores do Motor 360; quando a taxa administrativa anual estiver ausente, a contratação estima a taxa total dividida pelo prazo em anos. A parcela não inclui seguro.</p>`;
   target.innerHTML = target.innerHTML.replaceAll("Carta contratada", "Crédito contratado");
   const contractTable = target.querySelector(".financial-study-part7-table");
   if (contractTable) {
@@ -1346,7 +1351,7 @@ function renderFinancialStudySummary() {
     const scenarioCredit = sumField(entries, "contractedCredit");
     const scenarioInstallment = sumField(entries, "installment");
     const scenarioEmbedded = sumField(entries, "embedded");
-    const scenarioTerms = entries.map((entry) => Number(entry.item.prazo_restante)).filter((value) => Number.isFinite(value) && value > 0);
+    const scenarioTerms = entries.map((entry) => Number(entry.item.prazo_restante ?? entry.item.prazo_remanescente)).filter((value) => Number.isFinite(value) && value > 0);
     const scenarioTerm = scenarioTerms.length === entries.length ? rangeLabel(scenarioTerms) : "Prazo incompleto";
     const scenarioRates = `<div class="financial-study-part4-rates-wrap"><table class="financial-study-part4-table financial-study-part4-rate-summary"><thead><tr><th>Encargo</th><th>Ao ano</th><th>Total</th><th>Valor total</th></tr></thead><tbody>${scenarioRateRows(entries)}</tbody></table></div>`;
     const quotaRows = entries.flatMap((entry) => {
@@ -1397,7 +1402,8 @@ function renderFinancialStudySummary() {
     td.textContent = formatMoney(value);
     bodyRow.insertBefore(td, bodyRow.cells[index]);
   };
-  insertSummaryColumn(target.querySelector(".financial-study-part4-consolidated-summary table"), 3, "Parcela pós-contemplação", consolidatedSum("installmentAfter"));
+  insertSummaryColumn(target.querySelector(".financial-study-part4-consolidated-summary table"), 1, "Crédito líquido", consolidatedSum("credit"));
+  insertSummaryColumn(target.querySelector(".financial-study-part4-consolidated-summary table"), 4, "Parcela pós-contemplação", consolidatedSum("installmentAfter"));
   target.querySelectorAll(".financial-study-part4-scenario-summary").forEach((section, index) => {
     const entries = metricsByScenario[scenarioIds[index]]?.entries || [];
     insertSummaryColumn(section.querySelector(".financial-study-part4-overview-table"), 4, "Parcela pós-contemplação", sumField(entries, "installmentAfter"));
@@ -5003,6 +5009,7 @@ function motor360ScenarioForSelectedCredit(item, scenario) {
   const postInstallment = term > 1 && initialInstallment !== null
     ? money((balance - initialInstallment - totalBid) / (term - 1))
     : null;
+  const { fundo_reserva: _legacyReserve, ...scenarioBase } = scenario;
   const desiredInstallment = Number(client.parcela_desejada || 0);
   const incomeLimit = Number(client.parcela_maxima || 0);
   const monthsFor = (amount, installment) => amount > 0 && installment > 0 ? Math.ceil(amount / installment) : null;
@@ -5036,12 +5043,12 @@ function motor360ScenarioForSelectedCredit(item, scenario) {
     };
   });
   return {
-    ...scenario,
+    ...scenarioBase,
     credito_contratado: credit,
     credito_liquido_projetado: money(credit - embedded),
     valor_lance_embutido: embedded,
     taxa_administracao: feeAmount,
-    fundo_reserva: reserve,
+    fundo_reserva_taxa: reserve,
     fundo_reserva_valor: reserveAmount,
     saldo_devedor: balance,
     lance_cliente_total: ownBidPerQuota,
