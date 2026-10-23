@@ -768,6 +768,10 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response, co
             request_id, len(groups), source_duration_ms, engine_duration_ms, audit_save_duration_ms, total_duration_ms,
         )
         result["audit_id"] = audit["metadata"]["audit_id"]
+        # Keep the audit attached to the execution result as a durable client
+        # fallback. The runtime JSON store can be lost on a Render restart or
+        # deploy, while the browser cache may still retain this result.
+        result["audit"] = audit
         result["request_id"] = request_id
         return result
     except ValueError as error:

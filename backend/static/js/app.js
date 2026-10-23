@@ -5629,7 +5629,15 @@ async function loadMotor360Audit(auditId) {
   motor360AuditLoadPromise = (async () => {
   try {
     const response = await fetch(`/api/viabilidade-360/auditorias/${encodeURIComponent(auditId)}`, { credentials: "same-origin" });
-    if (!response.ok) throw new Error("Auditoria não encontrada.");
+    if (!response.ok) {
+      const embeddedAudit = investorState.result?.audit;
+      if (embeddedAudit?.metadata?.audit_id === auditId) {
+        investorState.audit = embeddedAudit;
+        addMotor360ExecutionLog("Auditoria técnica recuperada do resultado salvo", `${auditId} · o registro histórico não estava disponível no armazenamento do servidor.`);
+        return embeddedAudit;
+      }
+      throw new Error("Auditoria não encontrada. Execute o Motor 360 novamente para gerar uma nova auditoria.");
+    }
     investorState.audit = await response.json();
     const audit = investorState.audit;
     syncMotor360BidExplorer();
