@@ -5685,6 +5685,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-profile-scenarios-title { margin: 0; padding: 9px 10px; background: #2e3f47; color: #fff; font-size: 0.8rem; text-align: center; }
 .financial-study-part4-scenario-summary { min-width: 0; border: 1px solid #c6cbcd; }
 .financial-study-part4-scenario-summary > h3 { margin: 0; padding: 8px 10px; background: #f3f4f4; color: #26383f; font-size: 0.75rem; text-align: left; }
+.financial-study-part4-scenario-portfolio { margin-top: 10px; border: 1px solid #c6cbcd; }
+.financial-study-part4-scenario-portfolio > h3 { margin: 0; padding: 8px 10px; background: #f3f4f4; color: #26383f; font-size: .75rem; font-weight: 700; line-height: 1.25; }
+.financial-study-part4-scenario-portfolio > p { margin: 0; padding: 7px 10px; color: #65747a; font-size: .68rem; line-height: 1.35; }
+.financial-study-part4-scenario-portfolio .financial-study-portfolio-totals { padding: 0 10px 10px; gap: 8px; }
+.financial-study-part4-scenario-portfolio .financial-study-portfolio-totals dt { font-size: .65rem; line-height: 1.25; }
+.financial-study-part4-scenario-portfolio .financial-study-portfolio-totals dd { margin-top: 3px; font-size: .72rem; line-height: 1.25; }
 .financial-study-part4-consolidated-summary { margin: 12px 0 14px; border: 2px solid #2e3f47; }
 .financial-study-part4-consolidated-summary > h3 { margin: 0; padding: 9px 10px; background: #2e3f47; color: #fff; font-size: .8rem; text-align: center; }
 .financial-study-part4-consolidated-summary .financial-study-part4-overview-table td { vertical-align: middle; }
