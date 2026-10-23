@@ -5456,7 +5456,11 @@ function renderMotor360AuditContent(audit) {
 }
 
 function renderMotor360Audit(audit, auditId) {
-  const id = auditId || audit?.metadata?.audit_id || "";
+  const embeddedAudit = audit || investorState.result?.audit || null;
+  const id = auditId || embeddedAudit?.metadata?.audit_id || "";
+  if (id && !embeddedAudit) {
+    return `<div class="motor360-audit-panel motor360-audit-unavailable"><strong>Auditoria da Análise</strong><small>A auditoria desta execução não está mais disponível no servidor. Execute o Motor 360 novamente para gerar uma nova auditoria.</small></div>`;
+  }
   return `<details class="motor360-audit-panel" data-motor360-audit data-audit-id="${escapeHtml(id)}"><summary><span><strong>Auditoria da Análise</strong><small>Entenda como o Motor 360 chegou aos grupos exibidos.</small></span><span class="audit-summary-action">Exibir auditoria completa</span></summary><div data-motor360-audit-content><p class="motor360-audit-loading">Abra para carregar a auditoria completa sob demanda.</p></div></details>`;
 }
 
@@ -5488,6 +5492,10 @@ function bindMotor360AuditPanel(results) {
 }
 
 function renderMotor360GroupAudit(groupId) {
+  if (investorState.result?.audit_id && !investorState.audit && !investorState.result?.audit) {
+    showToast("A auditoria desta execução não está mais disponível. Execute o Motor 360 novamente.", "warning");
+    return;
+  }
   if (investorState.result?.audit_id && investorState.audit?.metadata?.audit_id !== investorState.result.audit_id) {
     loadMotor360Audit(investorState.result.audit_id)
       .then(() => renderMotor360GroupAudit(groupId))
