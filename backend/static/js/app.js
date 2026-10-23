@@ -929,35 +929,27 @@ function renderFinancialStudyContracting() {
   }
 
   const body = rows.map((row) => `<tr><th scope="row" data-label="Contrato"><span class="financial-study-motor-value">${escapeHtml(row.label)}</span> · <strong class="financial-study-part7-scenario-emphasis">${row.scenarioWord}</strong> embutido</th><td data-label="Carta contratada">${formatMoney(row.contractedCredit)}</td><td data-label="Crédito líquido">${formatMoney(row.credit)}</td><td data-label="Lance embutido">${formatMoney(row.embeddedBid)}</td><td data-label="Parcela (sem seguro)">${formatMoney(row.installment)}</td><td data-label="Prazo">${row.term == null ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td><td data-label="Tx ADM total">${row.adminRate == null ? "Não informado" : formatPercent(row.adminRate)}</td><td data-label="Tx ADM ao ano" title="Origem: ${escapeHtml(row.annualRateSource)}">${row.annualRate == null ? "Não informado" : formatPercent(row.annualRate)}</td><td data-label="Fundo reserva total">${row.reserveRate == null ? "Não informado" : formatPercent(row.reserveRate)}</td><td data-label="Fundo reserva ao ano">${row.reserveAnnualRate == null ? "Não informado" : formatPercent(row.reserveAnnualRate)}</td></tr>`).join("");
-  const subtotalRows = scenarioIds.map((scenarioId) => {
-    const scenarioRows = rows.filter((row) => row.scenarioId === scenarioId);
-    if (!scenarioRows.length) return "";
+  const subtotalRows = (() => {
+    if (!rows.length) return "";
     const sumAvailable = (field) => {
-      const values = scenarioRows.map((row) => numericValue(row[field])).filter((value) => value !== null);
+      const values = rows.map((row) => numericValue(row[field])).filter((value) => value !== null);
       return values.length ? values.reduce((sum, value) => sum + value, 0) : null;
     };
-    const totals = { contractedCredit: sumAvailable("contractedCredit"), credit: sumAvailable("credit"), embeddedBid: sumAvailable("embeddedBid"), installment: sumAvailable("installment"), groups: scenarioRows.length };
     const average = (field) => {
-      const values = scenarioRows
-        .map((row) => row[field])
-        .map(numericValue)
-        .filter((value) => value !== null);
+      const values = rows.map((row) => numericValue(row[field])).filter((value) => value !== null);
       return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
     };
+    const totals = { contractedCredit: sumAvailable("contractedCredit"), credit: sumAvailable("credit"), embeddedBid: sumAvailable("embeddedBid"), installment: sumAvailable("installment"), contracts: rows.length };
     const averageTerm = average("term");
     const averageAdminRate = average("adminRate");
     const averageAnnualRate = average("annualRate");
     const averageReserveRate = average("reserveRate");
     const averageReserveAnnualRate = average("reserveAnnualRate");
-    const scenarioLabel = scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido";
-    const scenarioTitle = scenarioId === "with_embedded"
-      ? '<strong class="financial-study-part7-scenario-emphasis">Com</strong> embutido'
-      : '<strong class="financial-study-part7-scenario-emphasis">Sem</strong> embutido';
-    const termLabel = averageTerm == null ? "Não informado" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(averageTerm)} meses`;
-    return `<tr class="financial-study-part7-total"><th scope="row" data-label="Grupo">Subtotal ${scenarioTitle} · ${totals.groups} ${totals.groups === 1 ? "contrato" : "contratos"}</th><td data-label="Carta contratada">${formatMoney(totals.contractedCredit)}</td><td data-label="Crédito líquido">${formatMoney(totals.credit)}</td><td data-label="Lance embutido">${formatMoney(totals.embeddedBid)}</td><td data-label="Parcela (sem seguro)">${formatMoney(totals.installment)}</td><td data-label="Prazo">${termLabel}</td><td data-label="Tx ADM total">${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td data-label="Tx ADM ao ano">${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td><td data-label="Fundo reserva total">${averageReserveRate == null ? "Não informado" : formatPercent(averageReserveRate)}</td><td data-label="Fundo reserva ao ano">${averageReserveAnnualRate == null ? "Não informado" : formatPercent(averageReserveAnnualRate)}</td></tr>`;
-  }).join("");
+    const termLabel = averageTerm == null ? "Não informado" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(averageTerm)} meses`;
+    return `<tr class="financial-study-part7-total financial-study-part7-consolidated-total"><th scope="row" data-label="Grupo">Resumo consolidado · ${totals.contracts} contratos</th><td data-label="Carta contratada">${formatMoney(totals.contractedCredit)}</td><td data-label="Crédito líquido">${formatMoney(totals.credit)}</td><td data-label="Lance embutido">${formatMoney(totals.embeddedBid)}</td><td data-label="Parcela (sem seguro)">${formatMoney(totals.installment)}</td><td data-label="Prazo">${termLabel}</td><td data-label="Tx ADM total">${averageAdminRate == null ? "Não informado" : formatPercent(averageAdminRate)}</td><td data-label="Tx ADM ao ano">${averageAnnualRate == null ? "Não informado" : formatPercent(averageAnnualRate)}</td><td data-label="Fundo reserva total">${averageReserveRate == null ? "Não informado" : formatPercent(averageReserveRate)}</td><td data-label="Fundo reserva ao ano">${averageReserveAnnualRate == null ? "Não informado" : formatPercent(averageReserveAnnualRate)}</td></tr>`;
+  })();
   const pendingReviewCount = allSelectedItems.length - items.length;
-  target.innerHTML = `${renderQuotaReviewBannerForStudy(allSelectedItems)}<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos contratos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Contrato independente</th><th scope="col">Carta contratada</th><th scope="col">Crédito líquido</th><th scope="col">Lance embutido</th><th scope="col">Parcela (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th><th scope="col">Fundo reserva total</th><th scope="col">Fundo reserva ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Cada cota selecionada é apresentada como um contrato independente. No cenário com embutido, a carta contratada é a base do lance; o embutido é deduzido para apresentar o crédito líquido disponível ao cliente. Os subtotais somam somente contratos do mesmo cenário; sem embutido e com embutido são alternativas e não são somados entre si. As taxas e o fundo de reserva usam os valores do Motor 360; quando a taxa administrativa anual estiver ausente, a contratação estima a taxa total dividida pelo prazo em anos. A parcela não inclui seguro.</p>`;
+  target.innerHTML = `${renderQuotaReviewBannerForStudy(allSelectedItems)}<div class="financial-study-part7-table-wrap" role="region" aria-label="Dados de contratação dos contratos selecionados" tabindex="0"><table class="financial-study-part7-table"><thead><tr><th scope="col">Contrato independente</th><th scope="col">Carta contratada</th><th scope="col">Crédito líquido</th><th scope="col">Lance embutido</th><th scope="col">Parcela (sem seguro)</th><th scope="col">Prazo</th><th scope="col">Tx ADM total</th><th scope="col">Tx ADM ao ano</th><th scope="col">Fundo reserva total</th><th scope="col">Fundo reserva ao ano</th></tr></thead><tbody>${body}${subtotalRows}</tbody></table></div><p class="financial-study-part7-source-note">Cada cota selecionada é apresentada como um contrato independente. No cenário com embutido, a carta contratada é a base do lance; o embutido é deduzido para apresentar o crédito líquido disponível ao cliente. O resumo consolidado soma todos os contratos dos cenários selecionados; valores financeiros são somados e prazo e percentuais são calculados pela média simples das cotas. As taxas e o fundo de reserva usam os valores do Motor 360; quando a taxa administrativa anual estiver ausente, a contratação estima a taxa total dividida pelo prazo em anos. A parcela não inclui seguro.</p>`;
 }
 
 function renderFinancialStudyContemplationHistory() {
