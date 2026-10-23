@@ -57,6 +57,8 @@ class Motor360BrowserTest(unittest.TestCase):
         cls.production_functions = "\n".join((
             _between(source, "function formatMotor360Reason", "function formatMotor360Duration"),
             _between(source, "function motor360CompositionIdealBid", "function motor360ScenarioIdsForSort"),
+            _between(source, "function selectedCompositionAssessment", "function selectedScenarioCompositionSummary"),
+            _between(source, "function selectedScenarioCompositionSummary", "function motor360ClientProfileId"),
             _between(source, "function motor360ScenarioIdsForSort", "function motor360BidSortValue"),
             _between(source, "function motor360BidSortValue", "function motor360BidSortDescription"),
             _between(source, "function motor360BidSortLabel", "function sortMotor360ItemsByBid"),
@@ -103,6 +105,40 @@ document.querySelector("#result").textContent = JSON.stringify({
         )
         self.assertIn("@media (max-width: 560px)", css)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch", css)
+
+    def test_combined_scenarios_sum_liquid_credit_and_share_client_bid_once(self):
+        result = self._run_browser(r'''
+const makeEntry = (scenarioId, credit, installment, ideal) => ({
+  item: { grupo: scenarioId }, scenario: { id: scenarioId }, scenarioId,
+  quotas: scenarioId === "without_embedded" ? 2 : 1,
+  credit, contractedCredit: scenarioId === "without_embedded" ? 600000 : 300000,
+  embedded: scenarioId === "with_embedded" ? 90000 : 0,
+  installment, balance: 0, creditCompatible: true,
+  profiles: { moderate: { ideal, available: ideal } },
+});
+scenarioMetricsFixture = {
+  without_embedded: { entries: [makeEntry("without_embedded", 600000, 4153.84, 469500)], totalQuotas: 2, credit: 600000, installment: 4153.84, desiredCredit: 680000 },
+  with_embedded: { entries: [makeEntry("with_embedded", 210000, 2076.92, 144750)], totalQuotas: 1, credit: 210000, installment: 2076.92, desiredCredit: 680000 },
+};
+const combined = selectedCompositionCombinedMetrics([], 680000);
+const summary = selectedScenarioCompositionSummary([], 680000);
+document.querySelector("#result").textContent = JSON.stringify({
+  quotas: combined.totalQuotas, credit: combined.credit, shortfall: combined.shortfall,
+  installment: combined.installment, requiredBid: combined.portfolioProfileRequirements.moderate,
+  availableBid: combined.availableBidByProfile.moderate,
+  scenarioCredits: combined.entries.map(entry => [entry.scenarioId, entry.credit]), summary,
+});
+''')
+        self.assertEqual(result["quotas"], 3)
+        self.assertEqual(result["credit"], 810000)
+        self.assertEqual(result["shortfall"], 0)
+        self.assertEqual(result["installment"], 6230.76)
+        self.assertEqual(result["requiredBid"], 614250)
+        self.assertEqual(result["availableBid"], 460000)
+        self.assertEqual(result["scenarioCredits"], [["without_embedded", 600000], ["with_embedded", 210000]])
+        self.assertIn("Composição combinada", result["summary"])
+        self.assertIn("R$ 810.000,00", result["summary"])
+        self.assertIn("excedente de R$ 130.000,00", result["summary"])
 
     def test_selected_scenarios_support_persisted_group_selection(self):
         result = self._run_browser(r'''
@@ -272,7 +308,9 @@ const selectedScenarioIdsForGroup = id => groupScenarios.get(id) || new Set();
 const studyGroups = [];
 const activeStudyItems = () => studyGroups;
 const selectedMotor360Items = () => studyGroups;
-const selectedCompositionScenarioMetrics = () => ({ entries: [], totalQuotas: 0, credit: 0, installment: 0, installmentAfter: 0 });
+let scenarioMetricsFixture = {};
+const selectedCompositionScenarioMetrics = (_items, scenarioId) => scenarioMetricsFixture[scenarioId] || ({ entries: [], totalQuotas: 0, credit: 0, installment: 0, installmentAfter: 0 });
+const selectedGroupsClientFinancials = () => ({ availableBid: 460000 });
 const selectedPortfolioTotals = () => ({ credit: 0, installment: 0, availableBidByProfile: {}, portfolioProfileRequirements: {} });
 const minimumQuotasFor = (item, id) => item.minQuotas?.[id] ?? 1;
 const quotaCountFor = (item, scenarioId = null) => {

@@ -151,7 +151,8 @@ class StaticEmailTest(unittest.TestCase):
         self.assertIn("quotaCountFor(key) <= 0", quota_update)
         self.assertIn("const quotas = quotaCountFor(groupId, scenarioId)", metrics)
         self.assertIn("quotas_by_scenario", app_js)
-        self.assertIn("cenários alternativos", app_js)
+        self.assertIn("composição combinada", app_js)
+        self.assertIn("O lance próprio disponível é compartilhado uma única vez entre os contratos.", app_js)
         self.assertIn("allocatedPool * profile.ideal / portfolioRequired", metrics)
         self.assertNotIn("selectedPortfolioTotals", app_js)
 
@@ -912,7 +913,8 @@ console.log(JSON.stringify([formatMotor360Duration(56.528), formatMotor360Durati
 
         self.assertIn("contractedCredit: entries.reduce((sum, entry) => sum + entry.contractedCredit, 0)", app_js)
         self.assertIn("embedded: entries.reduce((sum, entry) => sum + entry.embedded, 0)", app_js)
-        self.assertIn("const cardClientBid = metrics ? Number(metricEntry?.profiles[focusProfileId]?.available || 0)", app_js)
+        self.assertIn("const cardClientBid = mixedSelectedScenarios", app_js)
+        self.assertIn("metrics ? Number(metricEntry?.profiles[focusProfileId]?.available || 0)", app_js)
         self.assertIn("const cardScenarioBid = metrics ? cardClientBid + cardEmbedded", app_js)
         self.assertIn("const cardContractedCredit = Number(metricEntry?.contractedCredit || 0)", app_js)
         self.assertIn("cardClientBid / cardContractedCredit", app_js)
