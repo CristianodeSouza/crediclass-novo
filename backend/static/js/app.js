@@ -953,19 +953,10 @@ function renderFinancialStudyContracting() {
   target.innerHTML = target.innerHTML.replaceAll("Carta contratada", "Crédito contratado");
   const contractTable = target.querySelector(".financial-study-part7-table");
   if (contractTable) {
-    const parseMoneyCell = (cell) => Number(String(cell?.textContent || "").replace(/[^0-9,-]/g, "").replace(/\./g, "").replace(",", ".")) || 0;
     const header = contractTable.tHead?.rows[0];
-    if (header) {
-      const creditHeader = document.createElement("th");
-      creditHeader.scope = "col";
-      creditHeader.textContent = "Crédito líquido";
-      header.insertBefore(creditHeader, header.cells[3]);
-    }
+    if (header?.cells[2]) header.insertBefore(header.cells[2], header.cells[3]);
     contractTable.tBodies[0]?.querySelectorAll("tr").forEach((row) => {
-      const creditCell = document.createElement("td");
-      creditCell.dataset.label = "Crédito líquido";
-      creditCell.textContent = formatMoney(parseMoneyCell(row.cells[1]) - parseMoneyCell(row.cells[2]));
-      row.insertBefore(creditCell, row.cells[3]);
+      if (row.cells[2]) row.insertBefore(row.cells[2], row.cells[3]);
     });
   }
 }
