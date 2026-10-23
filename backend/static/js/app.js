@@ -818,16 +818,28 @@ function printFinancialStudyHistoryItem() {
     showToast("Abra um estudo antes de imprimir.", "warning");
     return;
   }
-  const frame = document.getElementById("financialStudyHistoryFrame");
-  const printWindow = frame?.contentWindow;
+  const printWindow = window.open("", "_blank", "noopener,noreferrer");
   if (!printWindow) {
-    showToast("Não foi possível acessar o documento do estudo para impressão.", "danger");
+    showToast("Permita pop-ups para imprimir o estudo.", "warning");
     return;
   }
   try {
-    printWindow.focus();
-    printWindow.print();
+    const build = document.querySelector('meta[name="crediclass-build"]')?.content || "latest";
+    printWindow.document.open();
+    printWindow.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crediclass Dashboard V3</title><link rel="stylesheet" href="/static/css/style.css?v=${encodeURIComponent(build)}"><style>@page{size:A4 landscape!important;margin:10mm}html,body{width:277mm!important;min-width:277mm!important;margin:0!important;background:#fff!important}.financial-study-document{width:277mm!important;min-width:277mm!important;max-width:none!important;margin:0!important}</style></head><body>${financialStudyHistoryState.documentHtml}</body></html>`);
+    printWindow.document.close();
+    let printed = false;
+    const triggerPrint = () => {
+      if (printed) return;
+      printed = true;
+      printWindow.focus();
+      printWindow.print();
+      printWindow.addEventListener("afterprint", () => printWindow.close(), { once: true });
+    };
+    printWindow.addEventListener("load", triggerPrint, { once: true });
+    window.setTimeout(triggerPrint, 900);
   } catch (error) {
+    printWindow.close();
     showToast(error.message || "Não foi possível abrir a impressão deste estudo.", "danger");
   }
 }
