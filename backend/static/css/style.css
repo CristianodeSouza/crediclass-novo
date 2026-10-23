@@ -5685,6 +5685,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-profile-scenarios-title { margin: 0; padding: 9px 10px; background: #2e3f47; color: #fff; font-size: 0.8rem; text-align: center; }
 .financial-study-part4-scenario-summary { min-width: 0; border: 1px solid #c6cbcd; }
 .financial-study-part4-scenario-summary > h3 { margin: 0; padding: 8px 10px; background: #f3f4f4; color: #26383f; font-size: 0.75rem; text-align: left; }
+.financial-study-part4-consolidated-summary { margin: 12px 0 14px; border: 2px solid #2e3f47; }
+.financial-study-part4-consolidated-summary > h3 { margin: 0; padding: 9px 10px; background: #2e3f47; color: #fff; font-size: .8rem; text-align: center; }
+.financial-study-part4-consolidated-summary .financial-study-part4-overview-table td { vertical-align: middle; }
+.financial-study-part4-consolidated-summary .financial-study-part4-overview-table small { display: block; margin-top: 3px; font-size: .64rem; font-weight: 400; }
+.financial-study-part4-consolidated-note { margin: 0; padding: 7px 10px; color: #52636a; font-size: .7rem; }
 .financial-study-part4-quota-details { margin: 14px 0; border-top: 3px solid #2e3f47; }
 .financial-study-part4-quota-details h4 { margin: 0; padding: 8px 10px; background: #eef3f4; color: #2e3f47; font-size: .75rem; }
 .financial-study-part4-quota-table { min-width: 980px; }
