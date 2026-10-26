@@ -3708,6 +3708,11 @@ function openSelectedGroupsWorkspace() {
   const body = document.getElementById("selectedGroupsWorkspaceBody");
   const results = document.getElementById("selectedGroupsResults");
   if (!workspace || !body || !results) return;
+  if (!workspace.classList.contains("d-none")) {
+    closeSelectedGroupsWorkspace();
+    activateScreen("estudo");
+    return;
+  }
   const pendingReview = [...investorState.selectedGroupIds].find((groupId) => motor360QuotaReview.has(groupId));
   if (pendingReview) {
     showToast("Revise e confirme as quantidades antigas antes de analisar a composição.", "warning");
