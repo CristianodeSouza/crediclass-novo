@@ -3725,6 +3725,8 @@ function openSelectedGroupsWorkspace() {
   const compositionSummary = document.getElementById("selectedGroupsWorkspaceCompositionSummary");
   const activeItems = selectedFinancialStudyItems();
   if (compositionSummary) compositionSummary.textContent = `${activeItems.length} grupo(s) com cenário marcado · ${selectedScenarioCompositionSummary(activeItems)}`;
+  investorState.floatingSummaryMinimized = true;
+  renderMotor360FloatingSelectionSummaryIntoFold();
   workspace.classList.remove("d-none");
   document.body.classList.add("selected-groups-workspace-open");
   renderSelectedGroupsScreen();
