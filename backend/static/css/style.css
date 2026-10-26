@@ -1980,7 +1980,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 /* Vertical group cards keep the Motor 360 readable at normal desktop widths. */
 .motor360-group-list { display: grid; gap: 14px; }
 .motor360-group-list .motor360-group-card { content-visibility: auto; contain-intrinsic-size: 420px; }
-.motor360-group-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin: 12px 0; color: #52616b; font-size: .84rem; }
+.motor360-group-pagination { position: sticky; top: 10px; z-index: 25; display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin: 12px 0; padding: 8px 10px; border: 1px solid #d9e1e4; border-radius: 8px; background: rgb(255 255 255 / 96%); color: #52616b; font-size: .84rem; box-shadow: 0 6px 18px rgb(21 44 52 / 12%); backdrop-filter: blur(8px); }
+.motor360-group-pagination span { margin: 0 auto; font-weight: 700; text-align: center; }
+.motor360-group-pagination button { min-width: 84px; }
+@media (max-width: 700px) { .motor360-group-pagination { top: 6px; gap: 6px; justify-content: space-between; } .motor360-group-pagination span { font-size: .72rem; } .motor360-group-pagination button { min-width: 74px; padding-inline: 8px; } }
 .motor360-execution-panel { margin: 12px 0 14px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfc; }
 .motor360-execution-panel summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; color: var(--brand-navy); cursor: pointer; font-size: 0.78rem; font-weight: 800; list-style-position: inside; }
 .motor360-execution-panel summary span:last-child { color: var(--muted); font-size: 0.68rem; font-weight: 600; }
