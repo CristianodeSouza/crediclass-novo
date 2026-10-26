@@ -3711,6 +3711,11 @@ function renderMotor360FloatingSelectionSummary() {
 function renderMotor360FloatingSelectionSummaryIntoFold() {
   const host = document.getElementById("motor360FloatingSummary");
   if (!host) return;
+  const loading = document.getElementById("investorAnalysisLoading");
+  if (loading && !loading.classList.contains("d-none")) {
+    host.innerHTML = "";
+    return;
+  }
   host.innerHTML = renderMotor360FloatingSelectionSummary();
   host.querySelector("[data-floating-summary-toggle]")?.addEventListener("click", () => {
     investorState.floatingSummaryMinimized = !investorState.floatingSummaryMinimized;
@@ -6185,6 +6190,7 @@ function setInvestorAnalysisState(state) {
     ? `${renderedGroupCount} grupos disponíveis exibidos`
     : labels[normalizedState];
   status.dataset.state = normalizedState;
+  renderMotor360FloatingSelectionSummaryIntoFold();
 }
 
 function syncInvestorPreferencesFromInputs() {
