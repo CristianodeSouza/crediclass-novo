@@ -6705,10 +6705,14 @@ function renderCrmResponse(response) {
   if (!response) { panel.innerHTML = '<p class="text-muted">Importe uma oportunidade para visualizar os dados completos do CRM.</p>'; return; }
   const dados = response.dados || {};
   const summary = ["crm_oportunidade_id", "nota_id", "encontrado"].map((key) => `<article><small>${escapeHtml(key)}</small><strong>${escapeHtml(formatCrmValue(response[key]))}</strong></article>`).join("");
-  const renderRows = (object) => Object.entries(object || {}).map(([key, value]) => `<tr><th scope="row">${escapeHtml(key)}</th><td>${escapeHtml(formatCrmValue(value))}</td></tr>`).join("");
-  const holders = Array.isArray(dados.titulares) ? `<h4>Titulares (${dados.titulares.length})</h4><table class="crm-response-table"><tbody>${dados.titulares.map((item, index) => `<tr><th scope="row">Titular ${index + 1}</th><td>${escapeHtml(formatCrmValue(item))}</td></tr>`).join("")}</tbody></table>` : "";
-  const fields = dados.campos_formulario ? `<h4>Campos do formulário</h4><table class="crm-response-table"><tbody>${renderRows(dados.campos_formulario)}</tbody></table>` : "";
-  panel.innerHTML = `<h3>Response completo da oportunidade</h3><div class="crm-response-meta">${summary}</div><h4>Dados extraídos</h4><table class="crm-response-table"><tbody>${renderRows(dados)}</tbody></table>${holders}${fields}<h4>Metadados da importação</h4><table class="crm-response-table"><tbody>${renderRows({ nota_texto: response.nota_texto })}</tbody></table>`;
+  const renderRows = (object, excludedKeys = []) => Object.entries(object || {}).filter(([key]) => !excludedKeys.includes(key)).map(([key, value]) => `<tr><th scope="row">${escapeHtml(key)}</th><td>${escapeHtml(formatCrmValue(value))}</td></tr>`).join("");
+  const renderIndividualRows = (object) => Object.entries(object || {}).flatMap(([key, value]) => {
+    const values = Array.isArray(value) ? value : [value];
+    return values.map((item) => `<tr><th scope="row">${escapeHtml(key)}</th><td>${escapeHtml(formatCrmValue(item))}</td></tr>`);
+  }).join("");
+  const holders = Array.isArray(dados.titulares) ? `<h4>Titulares (${dados.titulares.length})</h4>${dados.titulares.map((item, index) => `<h4 class="crm-response-subheading">Titular ${index + 1}</h4><table class="crm-response-table"><tbody>${renderRows(item)}</tbody></table>`).join("")}` : "";
+  const fields = dados.campos_formulario ? `<h4>Campos do formulário — cada campo separado</h4><table class="crm-response-table"><thead><tr><th scope="col">Campo</th><th scope="col">Valor</th></tr></thead><tbody>${renderIndividualRows(dados.campos_formulario)}</tbody></table>` : "";
+  panel.innerHTML = `<h3>Response completo da oportunidade</h3><div class="crm-response-meta">${summary}</div><h4>Dados extraídos</h4><table class="crm-response-table"><tbody>${renderRows(dados, ["titulares", "campos_formulario"])}</tbody></table>${holders}${fields}<h4>Metadados da importação</h4><table class="crm-response-table"><tbody>${renderRows({ nota_texto: response.nota_texto })}</tbody></table>`;
 }
 
 async function importClientProfileFromCrm() {

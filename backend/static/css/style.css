@@ -941,6 +941,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-response-panel { grid-column: 1 / -1; max-height: 520px; overflow: auto; padding: 12px; border: 1px solid #d9e5f3; border-radius: 7px; background: #fff; }
 .crm-response-panel h3 { margin: 0 0 10px; color: var(--brand-navy); font-size: .92rem; }
 .crm-response-panel h4 { margin: 16px 0 7px; color: var(--brand-navy); font-size: .78rem; }
+.crm-response-panel h4.crm-response-subheading { margin-top: 12px; font-size: .72rem; color: var(--brand-orange); }
 .crm-response-table { width: 100%; border-collapse: collapse; font-size: .72rem; }
 .crm-response-table th, .crm-response-table td { padding: 7px 8px; border: 1px solid #e1e7ee; text-align: left; vertical-align: top; }
 .crm-response-table th { width: 30%; color: var(--brand-navy); background: #f5f8fc; font-weight: 800; }
