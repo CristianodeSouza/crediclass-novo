@@ -3214,8 +3214,7 @@ function motor360GroupAnchorId(groupId) {
 function focusMotor360Group(anchorId) {
   let target = document.getElementById(anchorId);
   if (!target) {
-    const groupId = String(anchorId || "").replace(/^motor360-group-/, "");
-    const itemIndex = motor360VisibleItems.findIndex((item) => String(item.grupo || item.grupo_id || "").replace(/[^a-zA-Z0-9_-]+/g, "-") === groupId);
+    const itemIndex = motor360VisibleItems.findIndex((item) => motor360GroupAnchorId(item.grupo || item.grupo_id || "-") === anchorId);
     const results = document.getElementById("investorAnalysisResults");
     const list = results?.querySelector(".motor360-group-list");
     const pager = results?.querySelector(".motor360-group-pagination");
