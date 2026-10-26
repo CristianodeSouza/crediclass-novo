@@ -818,26 +818,40 @@ function printFinancialStudyHistoryItem() {
     showToast("Abra um estudo antes de imprimir.", "warning");
     return;
   }
-  const printWindow = window.open("", "_blank", "noopener,noreferrer");
+  // A janela precisa permanecer acessível ao documento pai até que o HTML seja
+  // gravado e o diálogo de impressão seja aberto. Usar `noopener,noreferrer`
+  // aqui pode resultar em uma nova aba `about:blank` no Chrome antes da
+  // chamada de `document.write`.
+  const printWindow = window.open("", "_blank");
   if (!printWindow) {
     showToast("Permita pop-ups para imprimir o estudo.", "warning");
     return;
   }
   try {
     const build = document.querySelector('meta[name="crediclass-build"]')?.content || "latest";
+    const printableHtml = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crediclass Dashboard V3</title><link rel="stylesheet" href="/static/css/style.css?v=${encodeURIComponent(build)}"><style>@page{size:A4 landscape!important;margin:10mm}html,body{width:277mm!important;min-width:277mm!important;margin:0!important;background:#fff!important}.financial-study-document{width:277mm!important;min-width:277mm!important;max-width:none!important;margin:0!important}</style></head><body>${financialStudyHistoryState.documentHtml}</body></html>`;
     printWindow.document.open();
-    printWindow.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crediclass Dashboard V3</title><link rel="stylesheet" href="/static/css/style.css?v=${encodeURIComponent(build)}"><style>@page{size:A4 landscape!important;margin:10mm}html,body{width:277mm!important;min-width:277mm!important;margin:0!important;background:#fff!important}.financial-study-document{width:277mm!important;min-width:277mm!important;max-width:none!important;margin:0!important}</style></head><body>${financialStudyHistoryState.documentHtml}</body></html>`);
+    printWindow.document.write(printableHtml);
     printWindow.document.close();
     let printed = false;
     const triggerPrint = () => {
       if (printed) return;
       printed = true;
       printWindow.focus();
-      printWindow.print();
+      try {
+        printWindow.print();
+      } catch (printError) {
+        printed = false;
+        printWindow.close();
+        showToast(printError.message || "Não foi possível abrir a impressão deste estudo.", "danger");
+        return;
+      }
       printWindow.addEventListener("afterprint", () => printWindow.close(), { once: true });
     };
     printWindow.addEventListener("load", triggerPrint, { once: true });
-    window.setTimeout(triggerPrint, 900);
+    // O CSS pode responder lentamente ou retornar 502; isso não deve impedir
+    // a impressão do snapshot que já está disponível no histórico.
+    window.setTimeout(triggerPrint, 1200);
   } catch (error) {
     printWindow.close();
     showToast(error.message || "Não foi possível abrir a impressão deste estudo.", "danger");
