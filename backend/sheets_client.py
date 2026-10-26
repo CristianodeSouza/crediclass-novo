@@ -24,8 +24,8 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 CACHE_TTL_SECONDS = 300
 CACHE_REFRESH_INTERVAL_SECONDS = 240
 METADATA_CACHE_TTL_SECONDS = 900
-SHEETS_READ_ATTEMPTS = 4
-SHEETS_HTTP_TIMEOUT_SECONDS = 45
+SHEETS_READ_ATTEMPTS = 10
+SHEETS_HTTP_TIMEOUT_SECONDS = 120
 MAX_CREDIT_VALUE = 100_000_000
 _grupos_cache: dict[str, Any] = {
     "with_history": {"expires_at": 0.0, "items": None},
