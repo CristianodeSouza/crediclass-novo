@@ -330,6 +330,10 @@
                 <input id="clientProfileCrmOpportunityId" class="form-control" inputmode="numeric" placeholder="Ex.: 59393258">
                 <button id="importClientProfileCrmBtn" class="btn btn-outline-primary" type="button">Importar dados do CRM</button>
                 <small id="clientProfileCrmStatus" class="text-muted"></small>
+                <div class="crm-response-tabs" role="tablist" aria-label="Dados importados do CRM">
+                  <button id="clientProfileCrmDataTab" class="crm-response-tab" type="button" role="tab" aria-controls="clientProfileCrmDataPanel" aria-selected="false">Dados do CRM</button>
+                </div>
+                <section id="clientProfileCrmDataPanel" class="crm-response-panel d-none" role="tabpanel" aria-labelledby="clientProfileCrmDataTab"></section>
               </div>
 
               <form id="clientProfileForm" class="client-profile-form">

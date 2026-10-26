@@ -6627,6 +6627,9 @@ function collectClientProfile() {
     tipo_bem_explicit: Boolean(document.getElementById("clientProfileTipoBem").value),
     estado_bem: document.getElementById("clientProfileEstadoBem").value,
     crm_oportunidade_id: document.getElementById("clientProfileCrmOpportunityId")?.value.trim() || "",
+    crm_response: window.__lastCrmResponse || (() => {
+      try { return JSON.parse(window.localStorage.getItem(CLIENT_PROFILE_STORAGE_KEY) || "null")?.crm_response || null; } catch { return null; }
+    })(),
   };
 }
 
@@ -6672,6 +6675,7 @@ function applyImportedCrmData(data, opportunityId) {
     tipo_contratacao: imported.tipo_contratacao || (pessoas.length > 1 ? "pf_conjuge" : "pf_individual"),
     titulares,
     crm_oportunidade_id: String(opportunityId),
+    crm_response: window.__lastCrmResponse || null,
   };
   renderClientProfileTitulares(profile);
   setInputValue("clientProfileTipoContratacao", profile.tipo_contratacao);
@@ -6688,6 +6692,25 @@ function applyImportedCrmData(data, opportunityId) {
   saveClientProfile({ silent: true });
 }
 
+function formatCrmValue(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (Array.isArray(value)) return value.map((item) => formatCrmValue(item)).join("\n");
+  if (typeof value === "object") return Object.entries(value).map(([key, item]) => `${key}: ${formatCrmValue(item)}`).join("\n");
+  return String(value);
+}
+
+function renderCrmResponse(response) {
+  const panel = document.getElementById("clientProfileCrmDataPanel");
+  if (!panel) return;
+  if (!response) { panel.innerHTML = '<p class="text-muted">Importe uma oportunidade para visualizar os dados completos do CRM.</p>'; return; }
+  const dados = response.dados || {};
+  const summary = ["crm_oportunidade_id", "nota_id", "encontrado"].map((key) => `<article><small>${escapeHtml(key)}</small><strong>${escapeHtml(formatCrmValue(response[key]))}</strong></article>`).join("");
+  const renderRows = (object) => Object.entries(object || {}).map(([key, value]) => `<tr><th scope="row">${escapeHtml(key)}</th><td>${escapeHtml(formatCrmValue(value))}</td></tr>`).join("");
+  const holders = Array.isArray(dados.titulares) ? `<h4>Titulares (${dados.titulares.length})</h4><table class="crm-response-table"><tbody>${dados.titulares.map((item, index) => `<tr><th scope="row">Titular ${index + 1}</th><td>${escapeHtml(formatCrmValue(item))}</td></tr>`).join("")}</tbody></table>` : "";
+  const fields = dados.campos_formulario ? `<h4>Campos do formulário</h4><table class="crm-response-table"><tbody>${renderRows(dados.campos_formulario)}</tbody></table>` : "";
+  panel.innerHTML = `<h3>Response completo da oportunidade</h3><div class="crm-response-meta">${summary}</div><h4>Dados extraídos</h4><table class="crm-response-table"><tbody>${renderRows(dados)}</tbody></table>${holders}${fields}<h4>Metadados da importação</h4><table class="crm-response-table"><tbody>${renderRows({ nota_texto: response.nota_texto })}</tbody></table>`;
+}
+
 async function importClientProfileFromCrm() {
   const input = document.getElementById("clientProfileCrmOpportunityId");
   const status = document.getElementById("clientProfileCrmStatus");
@@ -6701,7 +6724,9 @@ async function importClientProfileFromCrm() {
   status.textContent = "Consultando PipeRun...";
   try {
     const result = await apiGet(`/piperun/${encodeURIComponent(opportunityId)}`);
+    window.__lastCrmResponse = result;
     applyImportedCrmData(result.dados, opportunityId);
+    renderCrmResponse(result);
     status.textContent = result.encontrado ? "Dados importados. Revise e ajuste se necessário." : "Nenhuma nota de formulário encontrada.";
     showToast(result.encontrado ? "Dados do CRM importados." : "Oportunidade encontrada, mas sem dados de formulário.", result.encontrado ? "success" : "warning");
   } finally {
@@ -6755,6 +6780,8 @@ function loadClientProfile() {
     updateClientProfileTotals();
     return;
   }
+  window.__lastCrmResponse = profile.crm_response || null;
+  renderCrmResponse(profile.crm_response);
   renderClientProfileTitulares(profile);
   setMoneyInputValue("clientProfileCredito", profile.credito_desejado);
   setMoneyInputValue("clientProfileLanceProprio", profile.lance_proprio);
@@ -6778,6 +6805,8 @@ function resetClientProfile() {
   invalidateInvestorAnalysisForProfileChange();
   document.getElementById("clientProfileForm").reset();
   window.localStorage.removeItem(CLIENT_PROFILE_STORAGE_KEY);
+  window.__lastCrmResponse = null;
+  renderCrmResponse(null);
   renderClientProfileTitulares({ tipo_contratacao: "pf_individual" });
   updateClientProfileTotals();
   investorState.simulatedBid = null;
@@ -7773,6 +7802,13 @@ document.getElementById("importClientProfileCrmBtn").addEventListener("click", (
     document.getElementById("clientProfileCrmStatus").textContent = "Falha ao consultar o CRM.";
     showToast("Nao foi possivel importar os dados do CRM.", "danger");
   });
+});
+document.getElementById("clientProfileCrmDataTab")?.addEventListener("click", () => {
+  const panel = document.getElementById("clientProfileCrmDataPanel");
+  const tab = document.getElementById("clientProfileCrmDataTab");
+  const isOpen = !panel.classList.contains("d-none");
+  panel.classList.toggle("d-none", isOpen);
+  tab.setAttribute("aria-selected", String(!isOpen));
 });
 document.getElementById("advanceClientProfileBtn").addEventListener("click", advanceClientProfile);
 renderInvestorPreferenceOptions();

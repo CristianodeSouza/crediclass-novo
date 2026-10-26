@@ -935,6 +935,21 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-import-toolbar label { margin: 0; color: var(--brand-navy); font-size: .78rem; font-weight: 800; }
 .crm-import-toolbar .form-control { min-height: 36px; }
 .crm-import-toolbar small { min-width: 0; color: var(--muted); font-size: .72rem; }
+.crm-response-tabs { grid-column: 1 / -1; display: flex; border-bottom: 1px solid #cbdcf4; margin-top: 3px; }
+.crm-response-tab { border: 0; border-bottom: 3px solid transparent; padding: 8px 12px 7px; background: transparent; color: var(--brand-navy); font-size: .76rem; font-weight: 800; cursor: pointer; }
+.crm-response-tab[aria-selected="true"] { border-bottom-color: var(--brand-orange); color: var(--brand-orange); }
+.crm-response-panel { grid-column: 1 / -1; max-height: 520px; overflow: auto; padding: 12px; border: 1px solid #d9e5f3; border-radius: 7px; background: #fff; }
+.crm-response-panel h3 { margin: 0 0 10px; color: var(--brand-navy); font-size: .92rem; }
+.crm-response-panel h4 { margin: 16px 0 7px; color: var(--brand-navy); font-size: .78rem; }
+.crm-response-table { width: 100%; border-collapse: collapse; font-size: .72rem; }
+.crm-response-table th, .crm-response-table td { padding: 7px 8px; border: 1px solid #e1e7ee; text-align: left; vertical-align: top; }
+.crm-response-table th { width: 30%; color: var(--brand-navy); background: #f5f8fc; font-weight: 800; }
+.crm-response-table td { white-space: pre-wrap; word-break: break-word; }
+.crm-response-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 12px; }
+.crm-response-meta article { padding: 8px; border: 1px solid #e1e7ee; border-radius: 6px; background: #f8fafc; }
+.crm-response-meta small { display: block; margin-bottom: 3px; color: var(--muted); font-size: .64rem; }
+.crm-response-meta strong { color: var(--brand-navy); font-size: .76rem; }
+@media (max-width: 700px) { .crm-response-meta { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .crm-import-toolbar { grid-template-columns: 1fr; } }
 
 .client-profile-form {
