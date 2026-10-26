@@ -3212,7 +3212,25 @@ function motor360GroupAnchorId(groupId) {
 }
 
 function focusMotor360Group(anchorId) {
-  const target = document.getElementById(anchorId);
+  let target = document.getElementById(anchorId);
+  if (!target) {
+    const groupId = String(anchorId || "").replace(/^motor360-group-/, "");
+    const itemIndex = motor360VisibleItems.findIndex((item) => String(item.grupo || item.grupo_id || "").replace(/[^a-zA-Z0-9_-]+/g, "-") === groupId);
+    const results = document.getElementById("investorAnalysisResults");
+    const list = results?.querySelector(".motor360-group-list");
+    const pager = results?.querySelector(".motor360-group-pagination");
+    if (itemIndex < 0 || !list || !pager) return;
+    investorState.motor360GroupPage = Math.floor(itemIndex / MOTOR360_GROUP_PAGE_SIZE);
+    const start = investorState.motor360GroupPage * MOTOR360_GROUP_PAGE_SIZE;
+    const pageCount = Math.max(1, Math.ceil(motor360VisibleItems.length / MOTOR360_GROUP_PAGE_SIZE));
+    list.innerHTML = motor360VisibleItems.slice(start, start + MOTOR360_GROUP_PAGE_SIZE).map(renderMotor360GroupCard).join("");
+    const [previous, status, next] = pager.querySelectorAll("button, span");
+    if (previous) previous.disabled = investorState.motor360GroupPage === 0;
+    if (status) status.textContent = `Grupos ${start + 1}–${Math.min(start + MOTOR360_GROUP_PAGE_SIZE, motor360VisibleItems.length)} de ${motor360VisibleItems.length} · Página ${investorState.motor360GroupPage + 1} de ${pageCount}`;
+    if (next) next.disabled = investorState.motor360GroupPage >= pageCount - 1;
+    bindMotor360GroupCardControls(list);
+    target = document.getElementById(anchorId);
+  }
   if (!target) return;
   target.scrollIntoView({ behavior: "smooth", block: "start" });
   target.classList.remove("motor360-group--focus");
