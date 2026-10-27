@@ -818,10 +818,21 @@ function printFinancialStudyHistoryItem() {
     showToast("Abra um estudo antes de imprimir.", "warning");
     return;
   }
-  // A janela precisa permanecer acessível ao documento pai até que o HTML seja
-  // gravado e o diálogo de impressão seja aberto. Usar `noopener,noreferrer`
-  // aqui pode resultar em uma nova aba `about:blank` no Chrome antes da
-  // chamada de `document.write`.
+  const frame = document.getElementById("financialStudyHistoryFrame");
+  const frameWindow = frame?.contentWindow;
+  if (frameWindow) {
+    try {
+      // Imprime o snapshot já carregado no iframe, sem abrir uma nova aba e
+      // sem criar um arquivo temporário que o Acrobat possa bloquear.
+      frameWindow.focus();
+      frameWindow.print();
+      return;
+    } catch (error) {
+      console.warn("Não foi possível imprimir pelo frame do histórico.", error);
+    }
+  }
+
+  // Fallback para navegadores que não permitem imprimir o iframe sandboxed.
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
     showToast("Permita pop-ups para imprimir o estudo.", "warning");
