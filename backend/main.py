@@ -164,19 +164,28 @@ def download_financial_study_pdf(study_id: str, request: Request):
         "</style></head><body>"
         f"{document_html}</body></html>"
     )
+    browser = None
     try:
         from playwright.sync_api import sync_playwright
 
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(headless=True)
+            browser = playwright.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+            )
             page = browser.new_page(viewport={"width": 1600, "height": 900}, device_scale_factor=1)
-            page.set_content(html, wait_until="networkidle")
+            page.set_content(html, wait_until="domcontentloaded", timeout=30000)
             page.emulate_media(media="print")
             pdf = page.pdf(format="A4", landscape=True, print_background=True, prefer_css_page_size=True, margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"})
-            browser.close()
     except Exception:
         logger.exception("Falha ao renderizar PDF do estudo %s", study_id)
         return JSONResponse(status_code=503, content={"success": False, "error": "O gerador de PDF está temporariamente indisponível."})
+    finally:
+        if browser is not None:
+            try:
+                browser.close()
+            except Exception:
+                logger.exception("Falha ao encerrar Chromium do estudo %s", study_id)
 
     filename = re.sub(r"[^A-Za-z0-9_-]+", "-", study_id).strip("-") or "estudo-financeiro"
     return Response(content=pdf, media_type="application/pdf", headers={
