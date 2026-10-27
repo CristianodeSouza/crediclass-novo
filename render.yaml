@@ -2,7 +2,7 @@ services:
   - type: web
     name: crediclass-dashboard-v3
     runtime: python
-    buildCommand: pip install --no-cache-dir -r requirements.txt
+    buildCommand: pip install --no-cache-dir -r requirements.txt && python -m playwright install --with-deps chromium
     startCommand: python -m uvicorn backend.main:app --host 0.0.0.0 --port $PORT --no-access-log --timeout-keep-alive 5
     envVars:
       - key: PYTHON_VERSION
@@ -10,7 +10,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: APP_VERSION
-        value: 4.0.260
+        value: 4.0.261
       - key: DEBUG
         value: "false"
       - key: GOOGLE_SHEETS_ID

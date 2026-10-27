@@ -107,6 +107,11 @@ def list_financial_studies(request: Request, query: str = Query(default="", max_
         return JSONResponse(status_code=503, content={"success": False, "error": "Não foi possível carregar o histórico de estudos."})
 
 
+@app.get("/api/financial-studies/{study_id}/pdf")
+def download_financial_study_pdf_route(study_id: str, request: Request):
+    return download_financial_study_pdf(study_id, request)
+
+
 @app.get("/api/financial-studies/{study_id}")
 def read_financial_study(study_id: str, request: Request):
     try:
@@ -123,6 +128,62 @@ def read_financial_study(study_id: str, request: Request):
     if public_link.get("active") and token:
         public_link["url"] = str(request.base_url).rstrip("/") + f"/estudo-compartilhado/{token}"
     return {"success": True, "study": study}
+
+
+def download_financial_study_pdf(study_id: str, request: Request):
+    """Render the immutable study snapshot with server-side Chromium."""
+    try:
+        study = financial_studies.get_study(study_id)
+    except RuntimeError as error:
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+    except Exception:
+        logger.exception("Falha ao carregar estudo para PDF %s", study_id)
+        return JSONResponse(status_code=503, content={"success": False, "error": "Não foi possível carregar o estudo para gerar o PDF."})
+    if study is None:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
+
+    document_html = study.get("document_html")
+    if not document_html:
+        return JSONResponse(status_code=422, content={"success": False, "error": "Este registro não possui snapshot visual para gerar PDF."})
+
+    # The snapshot is immutable application HTML. Remove executable content
+    # before handing it to Chromium and inline the same stylesheet used by the
+    # history preview so the PDF is independent of the Windows print driver.
+    document_html = re.sub(r"<script\b[^>]*>.*?</script>", "", document_html, flags=re.IGNORECASE | re.DOTALL)
+    stylesheet = (STATIC_DIR / "css" / "style.css").read_text(encoding="utf-8")
+    base_url = str(request.base_url).rstrip("/") + "/"
+    title = f"Estudo Financeiro {study_id}"
+    html = (
+        "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
+        f"<base href='{html_escape(base_url)}'><title>{html_escape(title)}</title>"
+        f"<style>{stylesheet}</style><style>@page{{size:A4 landscape;margin:10mm}}"
+        "html,body{width:277mm!important;min-width:277mm!important;margin:0!important;"
+        "background:#fff!important;writing-mode:horizontal-tb!important}"
+        ".financial-study-document{width:277mm!important;min-width:277mm!important;"
+        "max-width:none!important;margin:0!important;transform:none!important}"
+        "</style></head><body>"
+        f"{document_html}</body></html>"
+    )
+    try:
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as playwright:
+            browser = playwright.chromium.launch(headless=True)
+            page = browser.new_page(viewport={"width": 1600, "height": 900}, device_scale_factor=1)
+            page.set_content(html, wait_until="networkidle")
+            page.emulate_media(media="print")
+            pdf = page.pdf(format="A4", landscape=True, print_background=True, prefer_css_page_size=True, margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"})
+            browser.close()
+    except Exception:
+        logger.exception("Falha ao renderizar PDF do estudo %s", study_id)
+        return JSONResponse(status_code=503, content={"success": False, "error": "O gerador de PDF está temporariamente indisponível."})
+
+    filename = re.sub(r"[^A-Za-z0-9_-]+", "-", study_id).strip("-") or "estudo-financeiro"
+    return Response(content=pdf, media_type="application/pdf", headers={
+        "Content-Disposition": f'attachment; filename="{filename}.pdf"',
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+    })
 
 
 @app.post("/api/financial-studies/{study_id}/share")
