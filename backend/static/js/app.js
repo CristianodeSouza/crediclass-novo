@@ -892,7 +892,7 @@ async function downloadFinancialStudyHistoryPdf() {
     button.textContent = "Gerando PDF…";
   }
   try {
-    const response = await fetch(`/api/financial-studies/${encodeURIComponent(studyId)}/pdf`, {
+    let response = await fetch(`/api/financial-studies/${encodeURIComponent(studyId)}/pdf`, {
       credentials: "same-origin",
       headers: { Accept: "application/pdf, application/json" },
     });
