@@ -14,6 +14,7 @@ import time
 import copy
 import re
 import secrets
+import shutil
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import date
 from html import escape as html_escape
@@ -187,10 +188,19 @@ def download_financial_study_pdf(study_id: str, request: Request):
         from playwright.sync_api import sync_playwright
 
         with sync_playwright() as playwright:
-            browser = playwright.chromium.launch(
-                headless=True,
-                args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+            launch_options = {
+                "headless": True,
+                "args": ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+            }
+            # Render may expose a system Chromium even when the bundled
+            # Playwright browser is unavailable after a cold deploy.
+            system_browser = next(
+                (shutil.which(name) for name in ("chromium", "chromium-browser", "google-chrome") if shutil.which(name)),
+                None,
             )
+            if system_browser:
+                launch_options["executable_path"] = system_browser
+            browser = playwright.chromium.launch(**launch_options)
             page = browser.new_page(viewport={"width": 1600, "height": 900}, device_scale_factor=1)
             page.set_content(html, wait_until="domcontentloaded", timeout=30000)
             page.emulate_media(media="print")
