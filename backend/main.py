@@ -14,6 +14,7 @@ import time
 import copy
 import re
 import secrets
+from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import date
 from html import escape as html_escape
 from typing import Annotated
@@ -65,6 +66,8 @@ async def app_lifespan(_app: FastAPI):
 
 app = FastAPI(title="Crediclass Dashboard V3", lifespan=app_lifespan)
 PIPERUN_EXECUTIONS: set[str] = set()
+PDF_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="financial-study-pdf")
+PDF_JOBS: dict[str, Future] = {}
 
 
 class FinancialStudyApprovalRequest(BaseModel):
@@ -108,8 +111,23 @@ def list_financial_studies(request: Request, query: str = Query(default="", max_
 
 
 @app.get("/api/financial-studies/{study_id}/pdf")
-def download_financial_study_pdf_route(study_id: str, request: Request):
-    return download_financial_study_pdf(study_id, request)
+def download_financial_study_pdf_route(study_id: str, request: Request, job: str | None = None):
+    if job:
+        future = PDF_JOBS.get(job)
+        if future is None:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Tarefa de PDF não encontrada."})
+        if not future.done():
+            return JSONResponse(status_code=202, content={"success": True, "status": "processing", "job_id": job})
+        PDF_JOBS.pop(job, None)
+        try:
+            return future.result()
+        except Exception:
+            logger.exception("Falha na tarefa de PDF %s", job)
+            return JSONResponse(status_code=503, content={"success": False, "error": "O gerador de PDF está temporariamente indisponível."})
+
+    job_id = uuid4().hex
+    PDF_JOBS[job_id] = PDF_EXECUTOR.submit(download_financial_study_pdf, study_id, request)
+    return JSONResponse(status_code=202, content={"success": True, "status": "processing", "job_id": job_id})
 
 
 @app.get("/api/financial-studies/{study_id}")
