@@ -5822,12 +5822,17 @@ body[data-theme="escuro"] .btn-outline-secondary {
     break-inside: avoid;
   }
 
-  .financial-study-part--investment {
-    break-inside: avoid;
-  }
+  /* These sections contain long tables and must be allowed to flow across
+     pages; keeping the whole section together creates large blank areas. */
+  .financial-study-part--investment,
+  .financial-study-part--best-consortia { break-inside: auto; }
 
-  .financial-study-part--best-consortia {
-    break-inside: avoid;
+  .financial-study-part > h2,
+  .financial-study-part > h3,
+  .financial-study-part h2,
+  .financial-study-part h3 {
+    break-after: avoid;
+    page-break-after: avoid;
   }
 
   .financial-study-part--summary { break-inside: auto; }

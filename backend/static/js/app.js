@@ -778,7 +778,10 @@ async function openFinancialStudyHistoryItem(studyId) {
     const documentHtml = study.document_html || `<main style="font:16px system-ui;max-width:720px;margin:40px auto;color:#2e3f47"><h1>Registro legado</h1><p>Este registro já existia na planilha e não possui um snapshot visual arquivado. Os dados originais foram preservados.</p></main>`;
     financialStudyHistoryState.documentHtml = documentHtml;
     const printableStudyTitle = `Estudo Financeiro ${String(study.id || "").replace(/[^a-zA-Z0-9_-]+/g, "-")}`;
-    frame.srcdoc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(printableStudyTitle)}</title><link rel="stylesheet" href="/static/css/style.css"><style>body{margin:16px;background:#fff}.financial-study-document{max-width:1100px;margin:auto}@page{size:A4 landscape!important;margin:10mm}@media print{html,body{width:277mm!important;min-width:277mm!important;margin:0!important;writing-mode:horizontal-tb!important}.financial-study-document{width:277mm!important;min-width:277mm!important;max-width:none!important;margin:0!important;transform:none!important}}</style></head><body>${documentHtml}</body></html>`;
+    const build = document.querySelector('meta[name="crediclass-build"]')?.content || "latest";
+    frame.dataset.printReady = "false";
+    frame.onload = () => { frame.dataset.printReady = "true"; };
+    frame.srcdoc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(printableStudyTitle)}</title><link rel="stylesheet" href="/static/css/style.css?v=${encodeURIComponent(build)}"><style>body{margin:16px;background:#fff}.financial-study-document{max-width:1100px;margin:auto}@media print{html,body{width:277mm!important;min-width:277mm!important;margin:0!important;writing-mode:horizontal-tb!important}.financial-study-document{width:277mm!important;min-width:277mm!important;max-width:none!important;transform:none!important}}</style></head><body>${documentHtml}</body></html>`;
     const shareStatus = document.getElementById("financialStudyShareStatus");
     const shareLinkRow = document.getElementById("financialStudyShareLinkRow");
     const shareUrl = document.getElementById("financialStudyShareUrl");
@@ -822,6 +825,11 @@ function printFinancialStudyHistoryItem() {
   const frame = document.getElementById("financialStudyHistoryFrame");
   const frameWindow = frame?.contentWindow;
   if (frameWindow) {
+    if (frame.dataset.printReady !== "true" || frame.contentDocument?.readyState !== "complete") {
+      frame.addEventListener("load", () => printFinancialStudyHistoryItem(), { once: true });
+      showToast("Preparando o estudo para impressão…", "info");
+      return;
+    }
     try {
       // Imprime o snapshot já carregado no iframe, sem abrir uma nova aba e
       // sem criar um arquivo temporário que o Acrobat possa bloquear.
