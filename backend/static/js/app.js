@@ -168,6 +168,7 @@ const investorState = {
     without_embedded: normalizeManualBidValues(value?.without_embedded),
     with_embedded: normalizeManualBidValues(value?.with_embedded),
   }])),
+  invalidManualBids: new Map(),
   floatingSummaryMinimized: true,
   motor360GroupPage: 0,
 };
@@ -551,6 +552,8 @@ function financialStudyAuditFallback(items) {
 function updateFinancialStudyActionState() {
   const button = document.getElementById("approveFinancialStudyBtn");
   if (!button) return;
+  validatePersistedManualBids(investorState.result);
+  renderPersistedManualBidNotices();
   const items = selectedMotor360Items();
   const activeItems = activeStudyItems();
   const missingScenarios = items.some((item) => !motor360QuotaReview.has(motor360GroupKey(item)) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)));
@@ -558,7 +561,8 @@ function updateFinancialStudyActionState() {
     && [...selectedScenarioIdsForGroup(motor360GroupKey(item))].some((scenarioId) => quotaCountFor(item, scenarioId) > 0 && selectedCreditFor(item, scenarioId) === null));
   const pendingReview = selectedMotor360Items().some((item) => motor360QuotaReview.has(motor360GroupKey(item)));
   const missingCurrentMotor = !investorState.result?.audit_id;
-  button.disabled = !activeItems.length || missingScenarios || pendingReview || missingCurrentMotor;
+  const invalidManualBids = investorState.invalidManualBids.size > 0;
+  button.disabled = !activeItems.length || missingScenarios || pendingReview || missingCurrentMotor || invalidManualBids;
   const excludedNoQuota = items.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)));
   const exclusions = excludedNoQuota.map((item) => {
     const key = motor360GroupKey(item);
@@ -580,6 +584,7 @@ function updateFinancialStudyActionState() {
     ? "Revise as quantidades migradas no Motor 360 antes de aprovar o estudo."
     : !activeItems.length
     ? "Selecione grupos no Motor 360 antes de aprovar."
+    : invalidManualBids ? "Corrija os lances manuais destacados no Motor 360 antes de aprovar."
     : missingScenarios ? `${missingCredits ? "Escolha o crédito de cada cenário e depois informe as cotas. " : "Informe ao menos uma cota. "}Grupos pendentes: ${missingLabels.join(", ")}.` : "Salvar uma cópia imutável no Histórico de Estudos.";
 }
 
@@ -5185,6 +5190,47 @@ function manualBidLimitFor(item, scenarioId) {
   return Math.round((Number(scenario.saldo_devedor) - Number(scenario.parcela_inicial) - Number(scenario.lance_embutido || 0) + Number.EPSILON) * 100) / 100;
 }
 
+function validatePersistedManualBids(result = investorState.result) {
+  investorState.invalidManualBids.clear();
+  if (!result) return;
+  const itemsByGroup = motor360ItemsByGroup(result);
+  investorState.selectedGroupIds.forEach((groupId) => {
+    const item = itemsByGroup.get(String(groupId)) || investorState.selectedGroupData.get(String(groupId));
+    if (!item) return;
+    ["without_embedded", "with_embedded"].forEach((scenarioId) => {
+      const limit = manualBidLimitFor(item, scenarioId);
+      if (limit === null) return;
+      manualBidValuesFor(item, scenarioId).forEach((value, index) => {
+        if (Number(value) > limit + 0.01) {
+          investorState.invalidManualBids.set(`${groupId}|${scenarioId}|${index}`, { groupId, scenarioId, index, value: Number(value), limit });
+        }
+      });
+    });
+  });
+}
+
+function renderManualBidValidationNotice(item) {
+  const groupId = motor360GroupKey(item);
+  const invalid = [...investorState.invalidManualBids.values()].filter((entry) => String(entry.groupId) === String(groupId));
+  if (!invalid.length) return "";
+  const details = invalid.map((entry) => `${entry.scenarioId === "with_embedded" ? "Com embutido" : "Sem embutido"}, cota ${entry.index + 1}: ${formatMoney(entry.value)} (máximo ${formatMoney(Math.max(0, entry.limit))})`).join(" · ");
+  return `<div class="motor360-quota-review-alert" role="alert"><strong>Lance manual acima do limite financeiro</strong><span>${escapeHtml(details)}. Reduza o lance antes de continuar.</span></div>`;
+}
+
+function renderPersistedManualBidNotices() {
+  const results = document.getElementById("investorAnalysisResults");
+  if (!results) return;
+  const itemsByGroup = motor360ItemsByGroup(investorState.result);
+  results.querySelectorAll(".motor360-group-card").forEach((card) => {
+    const groupId = card.querySelector(".motor360-group-select-input")?.dataset.groupId;
+    const item = groupId ? (itemsByGroup.get(groupId) || investorState.selectedGroupData.get(groupId)) : null;
+    const current = card.querySelector("[data-persisted-bid-warning]");
+    const html = item ? renderManualBidValidationNotice(item) : "";
+    if (current) current.remove();
+    if (html) card.querySelector(".motor360-group-card-header")?.insertAdjacentHTML("afterend", html.replace("role=\"alert\"", "role=\"alert\" data-persisted-bid-warning"));
+  });
+}
+
 function setManualBid(groupId, scenarioId, value, quotaIndex = null) {
   const key = String(groupId);
   const quotaCount = quotaCountFor(key, scenarioId);
@@ -6054,6 +6100,7 @@ function renderMotor360ContemplationMatrix(items, selectedProfile, rejectedItems
 }
 
 function renderInvestorAnalysis(result) {
+  validatePersistedManualBids(result);
   motor360CompositionMetricsCache.clear();
   if (motor360AnalyticsCacheResult !== result) {
     motor360GroupAnalyticsCache.clear();
@@ -6169,6 +6216,7 @@ function renderInvestorAnalysis(result) {
       ? `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado para o perfil ${profileLabel}</strong><span>O lance do cliente (${formatMoney(client.lance_cliente_total)}) não atende ao percentual mínimo de contemplação dos grupos compatíveis. Ajuste o lance ou selecione um perfil com prazo maior.</span>${diagnosticButton}</div>`
       : `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado</strong><span>Nenhum grupo passou por todas as validações do Motor 360.</span>${diagnosticButton}</div>`;
     results.innerHTML = `${explicitMessage}${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}${rejectedHtml}${renderMotor360Audit(scopedAudit, result.audit_id)}`;
+    renderPersistedManualBidNotices();
     results.insertAdjacentHTML("afterbegin", renderMotor360FilterNotice(administratorItems, items));
     bindMotor360AuditPanel(results);
     results.querySelector("[data-motor360-blocking-diagnostics]")?.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit));
@@ -6194,6 +6242,7 @@ function renderInvestorAnalysis(result) {
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
     ${renderMotor360Audit(scopedAudit, result.audit_id)}
   `;
+  renderPersistedManualBidNotices();
   results.insertAdjacentHTML("afterbegin", renderMotor360FilterNotice(administratorItems, items));
   bindMotor360AuditPanel(results);
   results.querySelectorAll("[data-screen-jump]").forEach((button) => button.addEventListener("click", () => activateScreen(button.dataset.screenJump)));
