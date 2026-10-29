@@ -7869,7 +7869,7 @@ function syncMotor360BidExplorer() {
     marker.hidden = false;
     marker.title = `Primeiro grupo compatível a partir de ${formatMoney(firstRequired)}`;
     const firstRequiredPercent = desiredCredit > 0 ? firstRequired / desiredCredit : null;
-    marker.querySelector("span")?.replaceChildren(document.createTextNode(`Primeiro grupo: ${formatMoney(firstRequired)} · ${firstRequiredPercent == null ? "-" : formatPercent(firstRequiredPercent)}`));
+    marker.querySelector("[data-first-match-text]")?.replaceChildren(document.createTextNode(`${formatMoney(firstRequired)} · ${firstRequiredPercent == null ? "-" : formatPercent(firstRequiredPercent)}`));
   } else if (marker) marker.hidden = true;
 }
 document.getElementById("motor360BidRange")?.addEventListener("input", (event) => {

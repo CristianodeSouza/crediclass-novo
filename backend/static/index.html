@@ -9,8 +9,8 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <meta name="crediclass-build" content="4.0.264">
-    <link href="/static/css/style.css?v=4.0.264" rel="stylesheet">
+    <meta name="crediclass-build" content="4.0.265">
+    <link href="/static/css/style.css?v=4.0.265" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -429,7 +429,7 @@
             <section class="motor360-bid-explorer" aria-label="Simulador de lance">
               <div><strong>Lance inicial do cliente</strong></div>
               <label for="motor360BidRange">Lance considerado <output id="motor360BidValue">R$ 0,00</output></label>
-              <div class="motor360-bid-range-wrap"><input id="motor360BidRange" type="range" min="0" max="0" step="1000" value="0"><span id="motor360FirstMatchMarker" class="motor360-first-match-marker" hidden><i></i><span></span></span></div>
+              <div class="motor360-bid-range-wrap"><div id="motor360FirstMatchMarker" class="motor360-first-match-marker" hidden><span class="motor360-first-match-label"><strong>Primeiro grupo</strong><span data-first-match-text></span></span></div><input id="motor360BidRange" type="range" min="0" max="0" step="1000" value="0"></div>
               <small>Declarado pelo cliente: <strong id="motor360DeclaredBid">R$ 0,00</strong> · O resultado será recalculado automaticamente.</small>
             </section>
             <aside id="investorPreferencesPanel" class="investor-preferences-panel" aria-label="Filtro">
@@ -1131,9 +1131,9 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.264"></script>
-    <script src="/static/js/shared-study.js?v=4.0.264"></script>
-    <script src="/static/js/app.js?v=4.0.264"></script>
+    <script src="/static/js/api.js?v=4.0.265"></script>
+    <script src="/static/js/shared-study.js?v=4.0.265"></script>
+    <script src="/static/js/app.js?v=4.0.265"></script>
   </body>
 </html>
 
