@@ -1823,6 +1823,30 @@ function parseNumberInput(value) {
   return text;
 }
 
+function parseManualBidInput(value) {
+  const raw = String(value ?? "").replace("R$", "").replace("%", "").replace(/\s/g, "").trim();
+  if (!raw || !/^\d[\d.,]*$/.test(raw)) return null;
+  const commaIndex = raw.lastIndexOf(",");
+  const dotIndex = raw.lastIndexOf(".");
+  const decimalIndex = Math.max(commaIndex, dotIndex);
+  const decimalDigits = decimalIndex >= 0 ? raw.length - decimalIndex - 1 : 0;
+  if (commaIndex >= 0 && dotIndex >= 0) {
+    if (decimalDigits < 1 || decimalDigits > 2) return null;
+    const integer = raw.slice(0, decimalIndex);
+    if (!/^\d{1,3}(?:[.,]\d{3})*$/.test(integer)) return null;
+  } else if (commaIndex >= 0) {
+    if (raw.indexOf(",") !== commaIndex || decimalDigits < 1 || decimalDigits > 2 || !/^\d+$/.test(raw.slice(0, commaIndex))) return null;
+  } else if (dotIndex >= 0) {
+    const parts = raw.split(".");
+    const groupedInteger = parts.slice(0, -1).every((part) => /^\d{3}$/.test(part));
+    const decimalForm = parts.length === 2 && /^\d+$/.test(parts[0]) && decimalDigits >= 1 && decimalDigits <= 2;
+    const groupedForm = parts.length > 1 && /^\d{1,3}$/.test(parts[0]) && groupedInteger && /^\d{3}$/.test(parts.at(-1));
+    if (!decimalForm && !groupedForm) return null;
+  }
+  const parsed = Number(parseNumberInput(raw));
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
 function toNumber(value) {
   const parsed = Number(parseNumberInput(value));
   return Number.isFinite(parsed) ? parsed : 0;
@@ -6150,7 +6174,11 @@ function refreshMotor360VisibleCards(changedGroupId = null, focusSelector = null
   if (!document.getElementById("selectedGroupsWorkspace")?.classList.contains("d-none")) renderSelectedGroupsScreen();
   window.requestAnimationFrame(() => {
     window.scrollTo({ top: preservedScrollY, left: window.scrollX, behavior: "auto" });
-    if (focusSelector) document.querySelector(focusSelector)?.focus({ preventScroll: true });
+    const target = focusSelector ? document.querySelector(focusSelector) : null;
+    if (target) {
+      target.focus({ preventScroll: true });
+      if (target.matches('[data-bid-action="scenario"]')) target.select();
+    }
   });
 }
 
@@ -6177,14 +6205,34 @@ function installMotor360DelegatedControls(results) {
   results.addEventListener("keydown", (event) => {
     const control = event.target instanceof Element ? event.target.closest('[data-quota-action="scenario"], [data-bid-action="scenario"]') : null;
     if (!control || event.key !== "Tab") return;
-    const focusable = [...results.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')]
+    const card = control.closest(".motor360-group-card");
+    const focusable = [...(card || results).querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')]
       .filter((element) => element.getClientRects().length > 0);
     const index = focusable.indexOf(control);
-    pendingQuotaFocusSelector = motor360FocusSelector(focusable[index + (event.shiftKey ? -1 : 1)]);
-    if (control.matches('[data-bid-action="scenario"]') && pendingQuotaFocusSelector) {
+    const next = focusable[index + (event.shiftKey ? -1 : 1)] || null;
+    const nextSelector = motor360FocusSelector(next);
+    const currentSelector = motor360FocusSelector(control);
+    pendingQuotaFocusSelector = null;
+    if (control.matches('[data-bid-action="scenario"]')) {
+      const parsed = parseManualBidInput(control.value);
+      const current = manualBidFor(control.dataset.groupId, control.dataset.scenarioId, Number(control.dataset.bidQuotaIndex || 0));
+      const changed = parsed !== null && Math.abs(parsed - current) > 0.000001;
+      if (!changed) {
+        if (nextSelector) return;
+        event.preventDefault();
+        return;
+      }
       event.preventDefault();
+      pendingQuotaFocusSelector = nextSelector || currentSelector;
       control.blur();
+    } else if (nextSelector) {
+      pendingQuotaFocusSelector = nextSelector;
     }
+  });
+  results.addEventListener("focusin", (event) => {
+    pendingQuotaFocusSelector = null;
+    const input = event.target instanceof Element ? event.target.closest('[data-bid-action="scenario"]') : null;
+    if (input) window.requestAnimationFrame(() => input === document.activeElement && input.select());
   });
   results.addEventListener("change", (event) => {
     const control = event.target instanceof Element ? event.target : null;
@@ -6255,11 +6303,18 @@ function installMotor360DelegatedControls(results) {
       const groupId = String(control.dataset.groupId || "");
       const scenarioId = String(control.dataset.scenarioId || "");
       const quotaIndex = Math.max(0, Number(control.dataset.bidQuotaIndex || 0));
-      const parsedBid = Number(parseNumberInput(control.value));
-      setManualBid(groupId, scenarioId, Number.isFinite(parsedBid) && parsedBid >= 0 ? parsedBid : 0, quotaIndex);
+      const parsedBid = parseManualBidInput(control.value);
+      if (parsedBid === null) {
+        control.value = formatMoneyInputValue(manualBidFor(groupId, scenarioId, quotaIndex));
+        pendingQuotaFocusSelector = null;
+        showToast("Informe um valor de lance válido, sem letras, sinais negativos ou separadores incorretos.", "warning");
+        return;
+      }
+      setManualBid(groupId, scenarioId, parsedBid, quotaIndex);
       control.value = formatMoneyInputValue(manualBidFor(groupId, scenarioId, quotaIndex));
       persistMotor360Selection();
-      const focusSelector = pendingQuotaFocusSelector || motor360FocusSelector(control);
+      const relatedTarget = event.relatedTarget instanceof Element && event.relatedTarget.closest(".motor360-group-card") ? event.relatedTarget : null;
+      const focusSelector = pendingQuotaFocusSelector || motor360FocusSelector(relatedTarget);
       pendingQuotaFocusSelector = null;
       refreshMotor360VisibleCards(groupId, focusSelector);
       return;

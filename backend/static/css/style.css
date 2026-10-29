@@ -1979,7 +1979,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 /* Vertical group cards keep the Motor 360 readable at normal desktop widths. */
-.motor360-group-list { display: grid; gap: 14px; }
+.motor360-group-list { display: grid; gap: 14px; overflow-anchor: none; }
 .motor360-group-list .motor360-group-card { content-visibility: auto; contain-intrinsic-size: 420px; }
 .motor360-group-pagination { position: sticky; top: 10px; z-index: 25; display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin: 12px 0; padding: 8px 10px; border: 1px solid #d9e1e4; border-radius: 8px; background: rgb(255 255 255 / 96%); color: #52616b; font-size: .84rem; box-shadow: 0 6px 18px rgb(21 44 52 / 12%); backdrop-filter: blur(8px); }
 .motor360-group-pagination span { margin: 0 auto; font-weight: 700; text-align: center; }
