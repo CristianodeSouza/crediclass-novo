@@ -181,10 +181,10 @@ def download_financial_study_pdf(study_id: str, request: Request):
     html = (
         "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         f"<base href='{html_escape(base_url)}'><title>{html_escape(title)}</title>"
-        f"<style>{stylesheet}</style><style>@page{{size:A4 landscape;margin:10mm}}"
-        "html,body{width:277mm!important;min-width:277mm!important;margin:0!important;"
+        f"<style>{stylesheet}</style><style>@page{{size:A4 portrait;margin:10mm}}"
+        "html,body{width:190mm!important;min-width:190mm!important;margin:0!important;"
         "background:#fff!important;writing-mode:horizontal-tb!important}"
-        ".financial-study-document{width:277mm!important;min-width:277mm!important;"
+        ".financial-study-document{width:190mm!important;min-width:190mm!important;"
         "max-width:none!important;margin:0!important;transform:none!important}"
         "</style></head><body>"
         f"{document_html}</body></html>"
@@ -210,7 +210,7 @@ def download_financial_study_pdf(study_id: str, request: Request):
             page = browser.new_page(viewport={"width": 1600, "height": 900}, device_scale_factor=1)
             page.set_content(html, wait_until="domcontentloaded", timeout=30000)
             page.emulate_media(media="print")
-            pdf = page.pdf(format="A4", landscape=True, print_background=True, prefer_css_page_size=True, margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"})
+            pdf = page.pdf(format="A4", landscape=False, print_background=True, prefer_css_page_size=True, margin={"top": "10mm", "right": "10mm", "bottom": "10mm", "left": "10mm"})
     except Exception:
         logger.exception("Falha ao renderizar PDF do estudo %s", study_id)
         return JSONResponse(status_code=503, content={"success": False, "error": "O gerador de PDF está temporariamente indisponível."})

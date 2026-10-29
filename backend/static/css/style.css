@@ -6029,7 +6029,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 @media print {
   .financial-study-document {
-    width: 100%;
+    width: 190mm;
+    max-width: 190mm;
     margin: 0;
     padding: 0;
     border: 0;
@@ -6057,6 +6058,20 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-part--summary { break-inside: auto; }
 
   .financial-study-part--specialists { break-inside: avoid; }
+
+  .financial-study-part--important-considerations {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .financial-study-part > h2,
+  .financial-study-part > h3,
+  .financial-study-part > h4,
+  .financial-study-part4-content > :is(header, h3, h4),
+  .financial-study-part4-standard-simulation > :is(header, h3, h4) {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
 }
 
 /* Study provenance: fixed narrative in blue, Motor 360 values in green. */
@@ -6303,9 +6318,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 @media print {
-  /* Keep the wide study in landscape even when the browser print dialog
-     remembers portrait from a previous document. */
-  @page { size: 297mm 210mm; margin: 10mm; }
+  /* Keep the current vertical A4 presentation while making the printed
+     document use the page width efficiently. */
+  @page { size: A4 portrait; margin: 10mm; }
 
   html,
   body { width: auto !important; height: auto !important; margin: 0 !important; overflow: visible !important; }
@@ -6314,8 +6329,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-document * { box-sizing: border-box; }
 
   .financial-study-document {
-    width: 100% !important;
-    max-width: none !important;
+    width: 190mm !important;
+    max-width: 190mm !important;
     margin: 0 !important;
     padding: 0 !important;
     border: 0 !important;
@@ -6396,6 +6411,26 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-part10-table td,
   .financial-study-part11-table th,
   .financial-study-part11-table td { white-space: normal !important; overflow-wrap: anywhere; word-break: normal !important; }
+
+  .financial-study-part2-table tr,
+  .financial-study-part4-table tr,
+  .financial-study-part7-table tr,
+  .financial-study-part9-table tr,
+  .financial-study-part10-table tr,
+  .financial-study-part11-table tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .financial-study-part2-table thead,
+  .financial-study-part4-table thead,
+  .financial-study-part7-table thead,
+  .financial-study-part9-table thead,
+  .financial-study-part10-table thead,
+  .financial-study-part11-table thead {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
 }
 
 /* Shared financial study: mobile-first wrapper, overview and section navigation. */
