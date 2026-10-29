@@ -1545,6 +1545,8 @@ function renderFinancialStudySummary() {
   target.querySelector(".financial-study-part4-consolidated-summary > .financial-study-part4-standard-administrator")?.remove();
   target.querySelector(".financial-study-part4-consolidated-note")?.remove();
   target.querySelector(".financial-study-part4-standard-simulations > h4")?.remove();
+  const detailTitle = target.querySelector(".financial-study-part4-profile-scenarios-title");
+  if (detailTitle) detailTitle.textContent = "Detalhamento de cada cenário";
 }
 
 function clearRetiredFinancialStudyState() {

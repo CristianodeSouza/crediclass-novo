@@ -5811,6 +5811,26 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-standard-category small { color: #65747a; font-weight: 400; }
 .financial-study-part4-standard-lottery td { color: #26383f; font-weight: 500; }
 .financial-study-part4-standard-simulation-note { margin: 0; padding: 7px 9px; color: #52636a; font-size: .66rem; line-height: 1.35; }
+.financial-study-part4-overview-wrap,
+.financial-study-part4-rates-wrap,
+.financial-study-part4-table-wrap,
+.financial-study-part4-scenarios-wrap { overflow-x: visible; }
+.financial-study-part4-overview-table,
+.financial-study-part4-rate-summary,
+.financial-study-part4-scenarios-table,
+.financial-study-part4-quota-table { width: 100%; min-width: 0; table-layout: fixed; }
+.financial-study-part4-overview-table th,
+.financial-study-part4-overview-table td,
+.financial-study-part4-rate-summary th,
+.financial-study-part4-rate-summary td,
+.financial-study-part4-scenarios-table th,
+.financial-study-part4-scenarios-table td,
+.financial-study-part4-quota-table th,
+.financial-study-part4-quota-table td { overflow-wrap: anywhere; white-space: normal; }
+.financial-study-part4-quota-table th,
+.financial-study-part4-quota-table td,
+.financial-study-part4-overview-table th,
+.financial-study-part4-overview-table td { padding: 5px 4px; font-size: .64rem; }
 .financial-study-part4-quota-details { margin: 14px 0; border-top: 3px solid #2e3f47; }
 .financial-study-part4-quota-details h4 { margin: 0; padding: 8px 10px; background: #eef3f4; color: #2e3f47; font-size: .75rem; }
 .financial-study-part4-quota-table { min-width: 980px; }
