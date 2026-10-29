@@ -71,6 +71,12 @@ PDF_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="financial-s
 PDF_JOBS: dict[str, Future] = {}
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Serve the legacy browser favicon path using the maintained SVG asset."""
+    return FileResponse(STATIC_DIR / "favicon.svg", media_type="image/svg+xml", headers={"Cache-Control": "public, max-age=86400"})
+
+
 class FinancialStudyApprovalRequest(BaseModel):
     client_name: str = Field(min_length=1, max_length=180)
     approval_key: str = Field(min_length=36, max_length=36)
@@ -274,7 +280,7 @@ def read_public_financial_study(token: str):
     nonce = secrets.token_urlsafe(18)
     release_version = get_settings().version
     document = "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-    document += f"<title>{html_escape(study['client_name'])} | Estudo Financeiro CrediClass</title><link rel='stylesheet' href='/static/css/style.css?v={release_version}'>"
+    document += f"<title>{html_escape(study['client_name'])} | Estudo Financeiro CrediClass</title><link rel='icon' href='/static/favicon.svg?v={release_version}' type='image/svg+xml'><link rel='stylesheet' href='/static/css/style.css?v={release_version}'>"
     document += "<meta name='robots' content='noindex,nofollow,noarchive'></head><body class='shared-study-page'>"
     document += "<div class='shared-study-shell'>"
     document += "<header class='shared-study-header'><div class='shared-study-brand'>CREDICLASS <span>· Estudo Financeiro</span></div><button id='printSharedStudy' class='shared-study-print' type='button'>Imprimir / Salvar PDF</button></header>"
