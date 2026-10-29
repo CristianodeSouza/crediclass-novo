@@ -647,16 +647,32 @@ def _find_study_row_by_token_hash(token_hash: str) -> tuple[dict[str, int], list
     archive_index = _optional_index(indexes, "archive")
     if hash_index is None or archive_index is None:
         return None
-    hashes = _read_column(hash_index)
-    row_number = next((
-        index for index, row in enumerate(hashes, start=2)
+    settings = get_settings()
+    sheet = _quoted_sheet()
+    # Resolve the token and fetch its complete row in one Sheets request. The
+    # previous implementation made three sequential API calls for every
+    # public link, which could exceed Render's request timeout on a cold start.
+    response = get_service().spreadsheets().values().batchGet(
+        spreadsheetId=settings.google_sheets_id,
+        ranges=[f"{sheet}!{column_letter(hash_index)}2:{column_letter(hash_index)}", f"{sheet}!A2:ZZ"],
+    ).execute()
+    value_ranges = response.get("valueRanges", [])
+    hashes = value_ranges[0].get("values", []) if len(value_ranges) > 0 else []
+    rows = value_ranges[1].get("values", []) if len(value_ranges) > 1 else []
+    row_offset = next((
+        offset for offset, row in enumerate(hashes)
         if row and secrets.compare_digest(str(row[0]).strip().partition(".")[0], token_hash)
     ), None)
-    if row_number is None:
+    if row_offset is None or row_offset >= len(rows):
         return None
-    settings = get_settings()
-    row = get_service().spreadsheets().values().get(
-        spreadsheetId=settings.google_sheets_id,
-        range=f"{_quoted_sheet()}!A{row_number}:ZZ{row_number}",
-    ).execute().get("values", [[]])[0]
+    row = rows[row_offset]
+    if archive_index >= len(row):
+        # Keep compatibility with providers that omit trailing empty columns
+        # from batch responses, and with legacy Sheets adapters.
+        row = get_service().spreadsheets().values().get(
+            spreadsheetId=settings.google_sheets_id,
+            range=f"{sheet}!A{row_offset + 2}:ZZ{row_offset + 2}",
+        ).execute().get("values", [[]])[0]
+    if archive_index >= len(row) or not row[archive_index]:
+        return None
     return indexes, row
