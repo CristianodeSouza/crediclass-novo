@@ -1520,7 +1520,6 @@ function renderFinancialStudySummary() {
     const totalBid = sumField(entries, "totalBid");
     const termValues = entries.flatMap((entry) => Array.from({ length: Math.max(1, Number(entry.quotas || 1)) }, () => Number(entry.item.prazo_restante ?? entry.item.prazo_remanescente))).filter((value) => Number.isFinite(value) && value > 0);
     const consolidatedTerm = termValues.length ? rangeLabel(termValues) : "Prazo incompleto";
-    const historyText = historySummary().replace(/^Histórico informado:\s*/, "");
     const profileRows = ["conservative", "moderate", "aggressive", "super_aggressive"].map((profileId) => {
       const profileEntries = entries.filter((entry) => entry.profiles?.[profileId]);
       if (!profileEntries.length) return "";
@@ -1531,9 +1530,7 @@ function renderFinancialStudySummary() {
       const installmentAfter = sumField(profileEntries, "installmentAfter");
       const ideal = sumProfile(profileEntries, profileId, "ideal");
       const idealTotal = sumProfile(profileEntries, profileId, "idealTotal");
-      const references = profileEntries.map((entry) => Number(entry.profiles[profileId]?.percentual_referencia)).filter((value) => Number.isFinite(value));
-      const reference = references.length ? references.reduce((sum, value) => sum + value, 0) / references.length : null;
-      return `<tr class="financial-study-part4-profile-row"><th scope="row"><strong>${profileLabels[profileId]}</strong><small>${escapeHtml(historyText)}</small>${reference == null ? "" : `<small>Referência: ${formatPercent(reference)}</small>`}</th><td>${formatMoney(manual)}<small>Ideal: ${formatMoney(ideal)}</small></td><td>${formatMoney(embedded)}</td><td>${formatMoney(bidTotal)}<small>Ideal total: ${formatMoney(idealTotal)}</small></td><td>${formatMoney(credit)}</td><td>${formatMoney(installmentAfter)}</td><td>${escapeHtml(consolidatedTerm)}</td></tr>`;
+      return `<tr class="financial-study-part4-profile-row"><th scope="row"><strong>${profileLabels[profileId]}</strong></th><td>${formatMoney(manual)}<small>Ideal: ${formatMoney(ideal)}</small></td><td>${formatMoney(embedded)}</td><td>${formatMoney(bidTotal)}<small>Ideal total: ${formatMoney(idealTotal)}</small></td><td>${formatMoney(credit)}</td><td>${formatMoney(installmentAfter)}</td><td>${escapeHtml(consolidatedTerm)}</td></tr>`;
     }).join("");
     const lottery = `<tr class="financial-study-part4-standard-lottery"><th scope="row"><strong>1 · Sorteio Geral</strong><small>Não necessita lance</small></th><td>Não necessita</td><td>${formatMoney(0)}</td><td>${formatMoney(0)}</td><td>${formatMoney(totalCredit)}</td><td>${formatMoney(totalInstallment)}</td><td>${escapeHtml(consolidatedTerm)}</td></tr>`;
     return `<section class="financial-study-part4-standard-simulation"><h4>Simulação consolidada <span>· ${totalQuotas} ${totalQuotas === 1 ? "cota" : "cotas"} contratadas</span></h4><div class="financial-study-part4-table-wrap"><table class="financial-study-part4-table financial-study-part4-standard-simulation-table"><thead><tr><th>Simulação / Modalidade de contemplação</th><th>Lance / Recurso próprio</th><th>Lance embutido</th><th>Lance total</th><th>Carta de crédito disponível</th><th>Parcelas reduzidas / sem correção</th><th>Prazo / meses</th></tr></thead><tbody>${lottery}<tr class="financial-study-part4-standard-category"><th colspan="7">2 · Lance Livre <small>Perfis consolidados somando os cenários sem embutido e com embutido. Lance total = lance manual + lance embutido.</small></th></tr>${profileRows || '<tr><td colspan="7">Perfis de contemplação não disponíveis nos cenários selecionados.</td></tr>'}</tbody></table></div><p class="financial-study-part4-standard-simulation-note">Totais consolidados: carta contratada ${formatMoney(totalContractedCredit)}, parcela inicial ${formatMoney(totalInstallment)}, parcela pós-contemplação ${formatMoney(totalInstallmentAfter)}, lance manual ${formatMoney(totalManual)}, lance embutido ${formatMoney(totalEmbedded)} e lance total ${formatMoney(totalBid)}.</p></section>`;
@@ -1546,6 +1543,8 @@ function renderFinancialStudySummary() {
   target.querySelector(".financial-study-part4-consolidated-summary > h3")?.remove();
   target.querySelector(".financial-study-part4-consolidated-summary > .financial-study-part4-standard-subtitle")?.remove();
   target.querySelector(".financial-study-part4-consolidated-summary > .financial-study-part4-standard-administrator")?.remove();
+  target.querySelector(".financial-study-part4-consolidated-note")?.remove();
+  target.querySelector(".financial-study-part4-standard-simulations > h4")?.remove();
 }
 
 function clearRetiredFinancialStudyState() {

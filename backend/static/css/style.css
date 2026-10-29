@@ -5800,7 +5800,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-standard-simulation { margin-top: 10px; border: 1px solid #c6cbcd; }
 .financial-study-part4-standard-simulation > h4 { margin: 0; padding: 7px 9px; background: #f1f2f2; color: #26383f; font-size: .7rem; }
 .financial-study-part4-standard-simulation > h4 span { color: #087c55; }
-.financial-study-part4-standard-simulation-table { min-width: 1040px; }
+.financial-study-part4-standard-simulation-table { min-width: 0; table-layout: fixed; }
+.financial-study-part4-standard-simulation-table th:first-child { width: 30%; }
+.financial-study-part4-standard-simulation-table th, .financial-study-part4-standard-simulation-table td { overflow-wrap: anywhere; }
 .financial-study-part4-standard-simulation-table th, .financial-study-part4-standard-simulation-table td { vertical-align: middle; }
 .financial-study-part4-standard-simulation-table tbody th { text-align: left; }
 .financial-study-part4-standard-simulation-table tbody th small, .financial-study-part4-standard-simulation-table td small { display: block; margin-top: 3px; color: #65747a; font-size: .6rem; font-weight: 400; line-height: 1.25; }
@@ -5843,7 +5845,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-part4-standard-charge-grid > div { border-right: 0; border-bottom: 1px solid #d4d8da; }
   .financial-study-part4-standard-charge-grid > div:last-child { border-bottom: 0; }
   .financial-study-part4-standard-simulations { padding: 0 7px 7px; }
-  .financial-study-part4-standard-simulation-table { min-width: 960px; }
+  .financial-study-part4-standard-simulation-table { min-width: 0; table-layout: fixed; }
 
   .financial-study-document {
     margin-top: 0;
