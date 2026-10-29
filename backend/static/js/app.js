@@ -3770,7 +3770,9 @@ function renderMotor360FloatingSelectionSummary() {
     && !groupHasPositiveScenarioQuota(motor360GroupKey(item))
   )).length;
   const minimizedClass = investorState.floatingSummaryMinimized ? " is-minimized" : "";
-  const minimizeButton = `<button type="button" class="motor360-floating-minimize" data-floating-summary-toggle aria-expanded="${investorState.floatingSummaryMinimized ? "false" : "true"}" title="${investorState.floatingSummaryMinimized ? "Expandir composição" : "Minimizar composição"}">${investorState.floatingSummaryMinimized ? "+" : "−"}</button>`;
+  const minimizeButton = investorState.floatingSummaryMinimized
+    ? `<button type="button" class="motor360-floating-minimize" data-open-selected-groups-workspace aria-expanded="false" title="Abrir composição dos grupos selecionados">+</button>`
+    : `<button type="button" class="motor360-floating-minimize" data-floating-summary-toggle aria-expanded="true" title="Minimizar composição">−</button>`;
   if (!items.length) {
     return `<aside class="motor360-floating-summary is-empty${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div><span>Composição atual</span><strong>${pendingReviewCount ? `${pendingReviewCount} grupo(s) pendente(s) · 0 cotas confirmadas` : missingScenarioCount ? `${missingScenarioCount} grupo(s) sem cenário marcado` : "Nenhum grupo selecionado"}</strong></div><div class="motor360-floating-heading-actions"><span class="motor360-floating-count">0</span>${minimizeButton}</div></div>${pendingReviewCount ? `<p class="motor360-quota-review-alert" role="alert">${pendingReviewCount} grupo(s) aguardam revisão de quantidades. Não entram nos cálculos.</p>` : ""}${missingScenarioCount ? `<p class="motor360-quota-review-alert" role="status">${missingScenarioCount} grupo(s) sem cotas em cenário financeiro marcado não entram na composição nem no estudo.</p>` : ""}<p>Adicione grupos e cotas para acompanhar o atendimento ao crédito e à parcela do cliente.</p></aside>`;
   }
@@ -3847,7 +3849,7 @@ function openSelectedGroupsWorkspace() {
     return;
   }
   const profileSummary = document.getElementById("selectedGroupsWorkspaceProfileSummary");
-  if (profileSummary) profileSummary.innerHTML = renderMotor360ClientProfileSummary(motor360ClientProfile());
+  if (profileSummary) profileSummary.innerHTML = "";
   const compositionSummary = document.getElementById("selectedGroupsWorkspaceCompositionSummary");
   const activeItems = selectedFinancialStudyItems();
   if (compositionSummary) compositionSummary.textContent = `${activeItems.length} grupo(s) com cenário marcado · ${selectedScenarioCompositionSummary(activeItems)}`;
@@ -3863,6 +3865,27 @@ function closeSelectedGroupsWorkspace() {
   if (!workspace) return;
   workspace.classList.add("d-none");
   document.body.classList.remove("selected-groups-workspace-open");
+}
+
+function renderSelectedGroupsCompactComposition(items) {
+  const client = motor360ClientProfile();
+  const groupLabels = items.map((item) => {
+    const groupId = String(item.grupo || item.grupo_id || "-");
+    const label = `Grupo ${groupId}${String(item.tipo_bem || "").trim() ? ` · ${String(item.tipo_bem).trim()}` : ""}`;
+    return `<span class="selected-composition-group-chip"><strong>${escapeHtml(label)}</strong><small>Sem embutido: ${quotaCountFor(item, "without_embedded")} · Com embutido: ${quotaCountFor(item, "with_embedded")}</small></span>`;
+  }).join("");
+  const scenario = (scenarioId, label) => {
+    const metrics = selectedCompositionScenarioMetrics(items, scenarioId, Number(client.credito_liquido_desejado || 0));
+    if (!metrics.entries.length) return `<section class="selected-composition-scenario is-empty"><header><strong>${label}</strong><span>Nenhuma cota selecionada</span></header><p>Este cenário permanece independente e não recebe valores do outro cenário.</p></section>`;
+    const ownBid = metrics.entries.reduce((sum, entry) => sum + Number(entry.ownBid || 0), 0);
+    const totalBid = metrics.entries.reduce((sum, entry) => sum + Number(entry.totalBid || 0), 0);
+    const rows = metrics.entries.map((entry) => {
+      const groupId = String(entry.item.grupo || entry.item.grupo_id || "-");
+      return `<article><header><strong>Grupo ${escapeHtml(groupId)}</strong><span>${entry.quotas} ${entry.quotas === 1 ? "cota" : "cotas"}</span></header><dl><div><dt>Crédito líquido</dt><dd>${formatMoney(entry.credit)}</dd></div><div><dt>Parcela</dt><dd>${formatMoney(entry.installment)}</dd></div><div><dt>Saldo devedor</dt><dd>${formatMoney(entry.balance)}</dd></div><div><dt>Lance</dt><dd>${formatMoney(entry.ownBid)} <small>${formatMoney(entry.ownBidPerQuota)} por cota</small></dd></div><div><dt>Lance total</dt><dd>${formatMoney(entry.totalBid)}</dd></div></dl></article>`;
+    }).join("");
+    return `<section class="selected-composition-scenario"><header><strong>${label}</strong><span>${metrics.totalQuotas} ${metrics.totalQuotas === 1 ? "cota" : "cotas"}</span></header><div class="selected-composition-totals"><div><small>Crédito líquido</small><b>${formatMoney(metrics.credit)}</b></div><div><small>Parcela</small><b>${formatMoney(metrics.installment)}</b></div><div><small>Saldo devedor</small><b>${formatMoney(metrics.balance)}</b></div><div><small>Lance manual</small><b>${formatMoney(ownBid)}</b></div><div><small>Lance total</small><b>${formatMoney(totalBid)}</b></div></div><div class="selected-composition-scenario-groups">${rows}</div><p class="selected-composition-independent-note">Cenário avaliado separadamente; não compartilha lance ou saldo com a outra alternativa.</p></section>`;
+  };
+  return `<section class="selected-composition-compact"><div class="selected-composition-groups"><header><span>Grupos selecionados</span><strong>${items.length} ${items.length === 1 ? "grupo" : "grupos"}</strong></header><div>${groupLabels}</div></section>${renderMotor360ClientProfileSummary(client)}<div class="selected-composition-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div></section>`;
 }
 
 function renderSelectedGroupComparisonColumn(item, index) {
@@ -4950,8 +4973,7 @@ function renderSelectedGroupsScreen() {
     return;
   }
   const allItems = selectedMotor360Items();
-  const items = selectedFinancialStudyItems();
-  const activeItems = items;
+  const activeItems = selectedFinancialStudyItems();
   if (!activeItems.length && investorState.selectedGroupIds.size && !allItems.some((item) => motor360QuotaReview.has(motor360GroupKey(item)))) {
     empty.classList.add("d-none");
     results.classList.remove("d-none");
@@ -4960,7 +4982,7 @@ function renderSelectedGroupsScreen() {
   }
   empty.classList.toggle("d-none", allItems.length > 0);
   results.classList.toggle("d-none", allItems.length === 0);
-  results.innerHTML = activeItems.length ? `${renderSelectedGroupsAnalyticalPanel(activeItems)}${renderSelectedGroupsCartSummary(activeItems)}` : "";
+  results.innerHTML = activeItems.length ? renderSelectedGroupsCompactComposition(activeItems) : "";
   const pendingReviewItems = allItems.filter((item) => motor360QuotaReview.has(motor360GroupKey(item)));
   if (pendingReviewItems.length) {
     const notice = document.createElement("div");
@@ -4969,31 +4991,9 @@ function renderSelectedGroupsScreen() {
     notice.innerHTML = `<strong>Quantidades pendentes de revisão</strong><span>${pendingReviewItems.length} grupo(s) migrados com dados ambíguos foram mantidos na seleção, mas não entram nos cálculos nem neste estudo até o operador confirmar as quantidades por cenário no Motor 360.</span>`;
     results.prepend(notice);
   }
-  results.querySelectorAll(".selected-comparison-column").forEach((column) => {
-    const title = column.querySelector("h3");
-    const groupId = title?.textContent?.replace(/[^0-9A-Za-z_-]/g, "").trim();
-    if (!groupId || column.querySelector("[data-selected-group-anchor]")) return;
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "selected-group-jump";
-    button.textContent = "Ir para o grupo";
-    button.addEventListener("click", () => { closeSelectedGroupsWorkspace(); focusMotor360Group(motor360GroupAnchorId(groupId)); });
-    title?.parentElement?.appendChild(button);
-  });
-  const scenarioFact = results.querySelector(".sg-fact-strip span:nth-child(2)");
-  if (scenarioFact) scenarioFact.innerHTML = "<b>Totais por grupo</b> · cenários separados";
-  if (activeItems.length) renderSelectedGroupsECharts(activeItems);
-  if (activeItems.length) renderSelectedGroupsSafely("extra-visuals", renderSelectedGroupsExtraVisuals, activeItems);
-  if (activeItems.length) renderSelectedGroupsScoreBreakdown(activeItems);
-  if (activeItems.length) renderSelectedGroupsBidScenarios(activeItems);
-  if (activeItems.length) renderSelectedGroupsRiskProbability(activeItems);
-  if (activeItems.length) renderSelectedGroupsSafely("coverage-charts", renderSelectedGroupsCoverageCharts, activeItems);
-  if (activeItems.length) renderSelectedGroupsSafely("final-matrix", renderSelectedGroupsFinalMatrix, activeItems);
-  if (activeItems.length) renderSelectedGroupsAuditButton(activeItems);
-  results.querySelectorAll("[data-sg-metric]").forEach((button) => button.addEventListener("click", () => {
-    investorState.selectedGroupMetric = button.dataset.sgMetric || "credit";
-    results.querySelectorAll("[data-sg-metric]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-    renderSelectedGroupsECharts(activeItems);
+  results.querySelectorAll("[data-selected-group-anchor]").forEach((button) => button.addEventListener("click", () => {
+    closeSelectedGroupsWorkspace();
+    focusMotor360Group(button.dataset.selectedGroupAnchor);
   }));
 }
 
