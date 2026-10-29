@@ -6405,10 +6405,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .shared-study-brand { color: #2e3f47; font-size: 1rem; font-weight: 800; letter-spacing: .04em; }
 .shared-study-brand span { font-weight: 400; letter-spacing: 0; }
 .shared-study-print { min-height: 44px; padding: 9px 16px; border: 1px solid #74818a; border-radius: 24px; background: #fff; color: #34434a; font: inherit; font-weight: 700; cursor: pointer; }
-.shared-study-navigation { position: sticky; z-index: 20; top: 0; display: flex; align-items: flex-start; gap: 12px; margin: 0 0 14px; padding: 10px 12px; border: 1px solid #d9dfe1; border-radius: 10px; background: rgba(255, 255, 255, .98); box-shadow: 0 3px 12px rgba(23, 39, 45, .08); }
-.shared-study-navigation-label { flex: 0 0 auto; padding: 11px 0; color: #2e3f47; font-size: .82rem; }
-.shared-study-navigation-links { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; gap: 7px; }
-.shared-study-navigation-button { display: inline-flex; min-height: 42px; flex: 0 1 auto; align-items: center; justify-content: center; padding: 8px 12px; border: 1px solid #d9dfe1; border-radius: 999px; background: #f5f7f7; color: #2e3f47; font-size: .8rem; font-weight: 700; line-height: 1.25; text-align: center; text-decoration: none; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
+.shared-study-navigation { position: sticky; z-index: 20; top: 0; display: flex; align-items: flex-start; gap: 6px; margin: 0 0 10px; padding: 5px 6px; border: 1px solid #d9dfe1; border-radius: 8px; background: rgba(255, 255, 255, .98); box-shadow: 0 2px 7px rgba(23, 39, 45, .08); }
+.shared-study-navigation-label { flex: 0 0 auto; padding: 6px 0; color: #2e3f47; font-size: .7rem; }
+.shared-study-navigation-links { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; gap: 4px; }
+.shared-study-navigation-button { display: inline-flex; min-height: 27px; flex: 0 1 auto; align-items: center; justify-content: center; padding: 4px 6px; border: 1px solid #d9dfe1; border-radius: 999px; background: #f5f7f7; color: #2e3f47; font-size: .65rem; font-weight: 700; line-height: 1.15; text-align: center; text-decoration: none; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
 .shared-study-navigation-button:hover { border-color: #e06c1f; background: #fff7f1; color: #87400f; }
 .shared-study-navigation-button:focus-visible { outline: 3px solid rgba(224, 108, 31, .4); outline-offset: 2px; }
 .shared-study-navigation-button[aria-current="location"] { border-color: #e06c1f; background: #e06c1f; color: #fff; box-shadow: 0 2px 7px rgba(176, 77, 15, .2); }
@@ -6424,9 +6424,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .shared-study-brand { font-size: .9rem; }
   .shared-study-print { min-height: 42px; padding: 8px 11px; font-size: .82rem; white-space: nowrap; }
   .shared-study-navigation { top: 0; display: block; margin-bottom: 10px; padding: 7px 9px 8px; border-radius: 10px; }
-  .shared-study-navigation-label { display: block; padding: 3px 2px 7px; font-size: .76rem; }
-  .shared-study-navigation-links { display: flex; flex-wrap: nowrap; gap: 7px; margin: 0 -2px; padding: 1px 2px 5px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: thin; scrollbar-color: #aab5b9 transparent; -webkit-overflow-scrolling: touch; }
-  .shared-study-navigation-button { min-height: 44px; flex: 0 0 auto; max-width: min(78vw, 300px); padding: 9px 12px; font-size: .78rem; white-space: normal; scroll-snap-align: start; }
+  .shared-study-navigation-label { display: block; padding: 2px 2px 4px; font-size: .65rem; }
+  .shared-study-navigation-links { display: flex; flex-wrap: nowrap; gap: 4px; margin: 0 -2px; padding: 1px 2px 3px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: thin; scrollbar-color: #aab5b9 transparent; -webkit-overflow-scrolling: touch; }
+  .shared-study-navigation-button { min-height: 27px; flex: 0 0 auto; max-width: min(78vw, 300px); padding: 4px 7px; font-size: .65rem; white-space: normal; scroll-snap-align: start; }
   .shared-study-content { padding: 7px; border-radius: 10px; }
 
   .shared-study-content .financial-study-document { padding: 16px 12px 24px; font-size: 16px; line-height: 1.55; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
