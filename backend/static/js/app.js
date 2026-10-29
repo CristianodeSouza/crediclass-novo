@@ -6112,6 +6112,7 @@ function renderInvestorAnalysis(result) {
 function refreshMotor360VisibleCards(changedGroupId = null, focusSelector = null) {
   const results = document.getElementById("investorAnalysisResults");
   if (!results || !investorState.result) return;
+  const preservedScrollY = window.scrollY;
   const itemsByGroup = motor360ItemsByGroup(investorState.result);
   const changedKey = changedGroupId === null ? null : String(changedGroupId);
   const currentCards = [...results.querySelectorAll(".motor360-group-card")];
@@ -6136,7 +6137,10 @@ function refreshMotor360VisibleCards(changedGroupId = null, focusSelector = null
   renderMotor360FloatingSelectionSummaryIntoFold();
   updateFinancialStudyActionState();
   if (!document.getElementById("selectedGroupsWorkspace")?.classList.contains("d-none")) renderSelectedGroupsScreen();
-  if (focusSelector) window.setTimeout(() => document.querySelector(focusSelector)?.focus({ preventScroll: true }), 0);
+  window.requestAnimationFrame(() => {
+    window.scrollTo({ top: preservedScrollY, left: window.scrollX, behavior: "auto" });
+    if (focusSelector) document.querySelector(focusSelector)?.focus({ preventScroll: true });
+  });
 }
 
 function installMotor360DelegatedControls(results) {
@@ -6234,9 +6238,10 @@ function installMotor360DelegatedControls(results) {
     }
     if (control.matches('[data-credit-action="scenario"]')) {
       const groupId = String(control.dataset.groupId || "");
+      const focusSelector = motor360FocusSelector(control);
       setScenarioCredit(groupId, String(control.dataset.scenarioId || ""), control.value);
       persistMotor360Selection();
-      refreshMotor360VisibleCards(groupId);
+      refreshMotor360VisibleCards(groupId, focusSelector);
     }
   });
 }
