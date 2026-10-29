@@ -175,6 +175,7 @@ const MOTOR360_GROUP_PAGE_SIZE = 20;
 const motor360GroupAnalyticsCache = new Map();
 const motor360DelegatedResults = new WeakSet();
 let pendingQuotaFocusSelector = null;
+let pendingMotor360ClickFocusSelector = null;
 let motor360VisibleItemCount = 0;
 let motor360VisibleItems = [];
 let motor360AuditLoadPromise = null;
@@ -1838,7 +1839,7 @@ function parseManualBidInput(value) {
     if (raw.indexOf(",") !== commaIndex || decimalDigits < 1 || decimalDigits > 2 || !/^\d+$/.test(raw.slice(0, commaIndex))) return null;
   } else if (dotIndex >= 0) {
     const parts = raw.split(".");
-    const groupedInteger = parts.slice(0, -1).every((part) => /^\d{3}$/.test(part));
+    const groupedInteger = parts.slice(1, -1).every((part) => /^\d{3}$/.test(part));
     const decimalForm = parts.length === 2 && /^\d+$/.test(parts[0]) && decimalDigits >= 1 && decimalDigits <= 2;
     const groupedForm = parts.length > 1 && /^\d{1,3}$/.test(parts[0]) && groupedInteger && /^\d{3}$/.test(parts.at(-1));
     if (!decimalForm && !groupedForm) return null;
@@ -3646,7 +3647,7 @@ function renderMotor360GroupCardUncached(item) {
   const quotaReviewNotice = selected && legacyQuotaReview
     ? `<div class="motor360-quota-review-alert" role="alert"><strong>Revisar quantidades salvas na versão anterior</strong><span>Antes havia ${legacyQuotaReview.legacyCount} ${legacyQuotaReview.legacyCount === 1 ? "cota" : "cotas"}${legacyQuotaReview.selectedScenarios?.length > 1 ? " com os dois cenários marcados" : ""}. As quantidades foram zeradas para evitar duplicidade. Informe cada cenário e confirme; até lá, este grupo fica fora dos totais e do estudo financeiro.</span><button type="button" class="btn btn-warning btn-sm" data-confirm-legacy-quotas="${auditId}">Confirmar quantidades informadas</button></div>`
     : "";
-  return `<article id="${anchorId}" class="motor360-group-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>${escapeHtml(groupDisplayName)}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo</small><b>${formatMoney(item.credito_maximo)}</b></div><div><small>Lance embutido</small><b>${formatPercent(item.percentual_lance_embutido)}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><div class="motor360-group-actions"><span class="motor360-group-status is-${displayStatusTone}" title="${escapeHtml(displayStatusDetail)}" aria-label="${escapeHtml(`${displayStatus}. ${displayStatusDetail}`)}">${escapeHtml(displayStatus)}</span><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${auditId}" ${selected ? "checked" : ""}><span>Selecionar grupo</span></label><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></div></header>${quotaReviewNotice}<section class="motor360-group-section"><h4>Cenários financeiros${scenarioQuotaSummary}</h4><div class="motor360-scenario-list">${scaledScenarioCards}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div>${bidSortLabel ? `<p class="motor360-bid-sort-value" aria-label="${escapeHtml(bidSortLabel)}">${escapeHtml(bidSortLabel)}</p>` : ""}</article>`;
+  return `<article id="${anchorId}" tabindex="-1" class="motor360-group-card ${selected ? "is-selected" : ""}"><header class="motor360-group-card-header"><div class="motor360-group-identity"><span class="motor360-group-order">${escapeHtml(String(item.ranking || "-"))}</span><div><div class="motor360-group-title"><h3>${escapeHtml(groupDisplayName)}</h3>${motor360HistoryTrigger(item)}</div><p>${escapeHtml(item.administradora || "-")}</p>${motor360HistoricalAverages(item)}</div></div><div class="motor360-group-summary"><div><small>Data de Venc.</small><b>${escapeHtml(formatGroupDueDate(item.vencimento_parcela))}</b></div><div><small>Crédito máximo</small><b>${formatMoney(item.credito_maximo)}</b></div><div><small>Lance embutido</small><b>${formatPercent(item.percentual_lance_embutido)}</b></div><div><small>Prazo restante</small><b>${escapeHtml(String(item.prazo_restante ?? "-"))} meses</b></div><div class="motor360-group-actions"><span class="motor360-group-status is-${displayStatusTone}" title="${escapeHtml(displayStatusDetail)}" aria-label="${escapeHtml(`${displayStatus}. ${displayStatusDetail}`)}">${escapeHtml(displayStatus)}</span><label class="motor360-group-select"><input type="checkbox" class="motor360-group-select-input" data-group-id="${auditId}" ${selected ? "checked" : ""}><span>Selecionar grupo</span></label><button type="button" class="btn btn-outline-secondary btn-sm motor360-group-audit-btn" data-group-id="${auditId}">Ver</button></div></div></header>${quotaReviewNotice}<section class="motor360-group-section"><h4>Cenários financeiros${scenarioQuotaSummary}</h4><div class="motor360-scenario-list">${scaledScenarioCards}</div></section><div class="motor360-group-classification">Classificação: <strong>${escapeHtml(item.best_contemplation_strategy || "Não classificada")}</strong></div>${bidSortLabel ? `<p class="motor360-bid-sort-value" aria-label="${escapeHtml(bidSortLabel)}">${escapeHtml(bidSortLabel)}</p>` : ""}</article>`;
 }
 
 function renderMotor360GroupCard(item) {
@@ -6220,10 +6221,11 @@ function installMotor360DelegatedControls(results) {
       if (!changed) {
         if (nextSelector) return;
         event.preventDefault();
+        control.focus({ preventScroll: true });
         return;
       }
       event.preventDefault();
-      pendingQuotaFocusSelector = nextSelector || currentSelector;
+      pendingQuotaFocusSelector = nextSelector || (card?.id ? `#${CSS.escape(card.id)}` : currentSelector);
       control.blur();
     } else if (nextSelector) {
       pendingQuotaFocusSelector = nextSelector;
@@ -6233,6 +6235,14 @@ function installMotor360DelegatedControls(results) {
     pendingQuotaFocusSelector = null;
     const input = event.target instanceof Element ? event.target.closest('[data-bid-action="scenario"]') : null;
     if (input) window.requestAnimationFrame(() => input === document.activeElement && input.select());
+  });
+  results.addEventListener("pointerdown", (event) => {
+    const target = event.target instanceof Element ? event.target.closest('[data-quota-action="scenario"], [data-bid-action="scenario"], [data-credit-action="scenario"], .motor360-group-select-input') : null;
+    if (!target || !target.closest(".motor360-group-card") || target === document.activeElement) return;
+    pendingMotor360ClickFocusSelector = motor360FocusSelector(target);
+    window.setTimeout(() => {
+      if (document.activeElement === target) pendingMotor360ClickFocusSelector = null;
+    }, 0);
   });
   results.addEventListener("change", (event) => {
     const control = event.target instanceof Element ? event.target : null;
@@ -6314,8 +6324,9 @@ function installMotor360DelegatedControls(results) {
       control.value = formatMoneyInputValue(manualBidFor(groupId, scenarioId, quotaIndex));
       persistMotor360Selection();
       const relatedTarget = event.relatedTarget instanceof Element && event.relatedTarget.closest(".motor360-group-card") ? event.relatedTarget : null;
-      const focusSelector = pendingQuotaFocusSelector || motor360FocusSelector(relatedTarget);
+      const focusSelector = pendingQuotaFocusSelector || pendingMotor360ClickFocusSelector || motor360FocusSelector(relatedTarget);
       pendingQuotaFocusSelector = null;
+      pendingMotor360ClickFocusSelector = null;
       refreshMotor360VisibleCards(groupId, focusSelector);
       return;
     }
