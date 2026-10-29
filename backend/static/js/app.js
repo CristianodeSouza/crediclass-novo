@@ -1606,7 +1606,7 @@ function formatMoney(value) {
 }
 
 function formatMoneyInputValue(value) {
-  const number = Number(parseNumberInput(value));
+  const number = Number(typeof value === "number" ? value : parseNumberInput(value));
   if (!Number.isFinite(number)) return "";
   return new Intl.NumberFormat("pt-BR", {
     minimumFractionDigits: 2,
@@ -1615,7 +1615,7 @@ function formatMoneyInputValue(value) {
 }
 
 function formatDecimalInputValue(value, minimumFractionDigits = 2, maximumFractionDigits = 2) {
-  const number = Number(parseNumberInput(value));
+  const number = Number(typeof value === "number" ? value : parseNumberInput(value));
   if (!Number.isFinite(number)) return "";
   const key = `${minimumFractionDigits}:${maximumFractionDigits}`;
   if (!decimalInputFormatters.has(key)) decimalInputFormatters.set(key, new Intl.NumberFormat("pt-BR", { minimumFractionDigits, maximumFractionDigits }));
@@ -1805,9 +1805,22 @@ function addMotor360ExecutionLog(message, detail = "", level = "info") {
 }
 
 function parseNumberInput(value) {
-  const text = String(value || "").replace("R$", "").replace("%", "").trim();
+  if (typeof value === "number") return Number.isFinite(value) ? String(value) : "";
+  const text = String(value || "").replace("R$", "").replace("%", "").replace(/\s/g, "").trim();
   if (!text) return "";
-  return text.replace(/\./g, "").replace(",", ".");
+  const commaIndex = text.lastIndexOf(",");
+  const dotIndex = text.lastIndexOf(".");
+  if (commaIndex >= 0 && dotIndex >= 0) {
+    const decimalIndex = Math.max(commaIndex, dotIndex);
+    const integer = text.slice(0, decimalIndex).replace(/[.,]/g, "");
+    return `${integer}.${text.slice(decimalIndex + 1).replace(/[.,]/g, "")}`;
+  }
+  if (commaIndex >= 0) return text.replace(/\./g, "").replace(",", ".");
+  if (dotIndex >= 0) {
+    const decimalDigits = text.length - dotIndex - 1;
+    return decimalDigits === 1 || decimalDigits === 2 ? text : text.replace(/\./g, "");
+  }
+  return text;
 }
 
 function toNumber(value) {
@@ -3624,7 +3637,10 @@ function renderMotor360GroupCard(item) {
   const selectedScenarios = [...selectedScenarioIdsForGroup(groupKey)].sort().join(",");
   const reviewState = motor360QuotaReview.get(groupKey);
   const reviewKey = reviewState ? `${reviewState.legacyCount}:${(reviewState.selectedScenarios || []).join(",")}` : "confirmed";
-  const key = `${groupKey}|${item.tipo_bem || ""}|${investorState.selectedGroupProfile || "all"}|${investorState.selectedGroupScenario || "per_group"}|${investorState.selectedGroupSort || "credit_by_admin"}|${selected}|${selectedScenarios}|${reviewKey}|${compositionKey}|${desiredCredit}`;
+  const manualBidKey = selected
+    ? JSON.stringify(normalizeManualBidValues(investorState.manualBids.get(groupKey)?.without_embedded)) + JSON.stringify(normalizeManualBidValues(investorState.manualBids.get(groupKey)?.with_embedded))
+    : "";
+  const key = `${groupKey}|${item.tipo_bem || ""}|${investorState.selectedGroupProfile || "all"}|${investorState.selectedGroupScenario || "per_group"}|${investorState.selectedGroupSort || "credit_by_admin"}|${selected}|${selectedScenarios}|${reviewKey}|${compositionKey}|${manualBidKey}|${desiredCredit}`;
   if (!motor360GroupCardCache.has(key)) {
     if (motor360GroupCardCache.size >= 1500) {
       const oldestKey = motor360GroupCardCache.keys().next().value;
@@ -5224,6 +5240,7 @@ function motor360FocusSelector(element) {
   if (element.id) return `#${CSS.escape(element.id)}`;
   if (element.matches('[data-quota-action="scenario"]')) return `[data-quota-action="scenario"][data-group-id="${CSS.escape(element.dataset.groupId)}"][data-scenario-id="${CSS.escape(element.dataset.scenarioId)}"]`;
   if (element.matches('[data-bid-action="scenario"]')) return `[data-bid-action="scenario"][data-group-id="${CSS.escape(element.dataset.groupId)}"][data-scenario-id="${CSS.escape(element.dataset.scenarioId)}"][data-bid-quota-index="${CSS.escape(element.dataset.bidQuotaIndex || "0")}"]`;
+  if (element.matches("[data-motor360-history-group]")) return `.motor360-history-trigger[data-motor360-history-group="${CSS.escape(element.dataset.motor360HistoryGroup)}"]`;
   if (element.matches('[data-credit-action="scenario"]')) return `[data-credit-action="scenario"][data-group-id="${CSS.escape(element.dataset.groupId)}"][data-scenario-id="${CSS.escape(element.dataset.scenarioId)}"]`;
   if (element.matches(".motor360-group-select-input")) return `.motor360-group-select-input[data-group-id="${CSS.escape(element.dataset.groupId)}"]`;
   if (element.matches("[data-confirm-legacy-quotas]")) return `[data-confirm-legacy-quotas="${CSS.escape(element.dataset.confirmLegacyQuotas)}"]`;
@@ -6158,12 +6175,16 @@ function installMotor360DelegatedControls(results) {
     bindMotor360GroupCardControls(list);
   });
   results.addEventListener("keydown", (event) => {
-    const control = event.target instanceof Element ? event.target.closest('[data-quota-action="scenario"]') : null;
+    const control = event.target instanceof Element ? event.target.closest('[data-quota-action="scenario"], [data-bid-action="scenario"]') : null;
     if (!control || event.key !== "Tab") return;
     const focusable = [...results.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])')]
       .filter((element) => element.getClientRects().length > 0);
     const index = focusable.indexOf(control);
     pendingQuotaFocusSelector = motor360FocusSelector(focusable[index + (event.shiftKey ? -1 : 1)]);
+    if (control.matches('[data-bid-action="scenario"]') && pendingQuotaFocusSelector) {
+      event.preventDefault();
+      control.blur();
+    }
   });
   results.addEventListener("change", (event) => {
     const control = event.target instanceof Element ? event.target : null;
