@@ -431,6 +431,12 @@ def _validate_selected_credit_basis(snapshot: dict) -> None:
                     )
                 except ValueError as error:
                     raise ValueError(f"Não foi possível recalcular a cota do cenário {scenario_id}: {error}") from None
+                maximum_total_bid = calculated["remaining_balance"] - calculated["initial_installment"]
+                if calculated["total_bid"] > maximum_total_bid + 0.02:
+                    raise ValueError(
+                        f"O lance da cota {contract.get('contract_index', '?')} do grupo {group.get('group') or '-'} "
+                        f"({scenario_id}) excede o saldo disponível após a parcela inicial. Reduza o lance manual."
+                    )
                 for field, expected_key, label in (
                     ("contracted_credit", "contracted_credit", "Crédito bruto do contrato"),
                     ("liquid_credit", "liquid_credit", "Crédito líquido do contrato"),

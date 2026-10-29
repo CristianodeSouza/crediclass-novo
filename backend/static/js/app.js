@@ -659,9 +659,11 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
         return Array.from({ length: entry.quotas }, (_, index) => {
           const ownBid = Number(manualBids[index] || 0);
           const totalBid = ownBid + embeddedBid;
-          const postInstallment = remainingTerm > 1
-            ? Math.max(0, (remainingBalance - initialInstallment - totalBid) / (remainingTerm - 1))
-            : null;
+          const maximumOwnBid = remainingBalance - initialInstallment - embeddedBid;
+          if (ownBid > maximumOwnBid + 0.01) {
+            throw new Error(`O lance da cota ${index + 1} do grupo ${item.grupo || item.grupo_id || "-"} (${scenarioId === "with_embedded" ? "com embutido" : "sem embutido"}) excede o saldo disponível após a parcela inicial. Reduza o lance manual.`);
+          }
+          const postInstallment = calculatePostContemplationInstallment(remainingBalance, initialInstallment, totalBid, remainingTerm);
           return {
             contract_index: index + 1,
             scenario: scenarioId,
@@ -4139,7 +4141,8 @@ function selectedCompositionScenarioMetrics(items, scenarioId, desiredCreditOver
         const term = Number(item.prazo_restante ?? scenario.prazo_restante ?? 0);
         const balance = Number(scenario.saldo_devedor || 0);
         const embedded = Number(scenario.lance_embutido || 0);
-        return sum + (term > 1 ? Math.max(0, (balance - embedded - Number(bid || 0)) / (term - 1)) : 0);
+        const initialInstallment = Number(scenario.parcela_inicial || 0);
+        return sum + (term > 1 ? (calculatePostContemplationInstallment(balance, initialInstallment, embedded + Number(bid || 0), term) || 0) : 0);
       }, 0),
       balance: total("saldo_devedor"),
       embedded: total("lance_embutido"),
@@ -5165,6 +5168,21 @@ function manualBidFor(itemOrGroup, scenarioId, quotaIndex = 0) {
 
 function manualBidTotalFor(itemOrGroup, scenarioId, countOverride = null) {
   return manualBidValuesFor(itemOrGroup, scenarioId, countOverride).reduce((sum, value) => sum + Number(value || 0), 0);
+}
+
+function calculatePostContemplationInstallment(balance, initialInstallment, totalBid, term) {
+  const remainingTerm = Number(term);
+  if (!Number.isFinite(remainingTerm) || remainingTerm <= 1) return null;
+  const value = (Number(balance || 0) - Number(initialInstallment || 0) - Number(totalBid || 0)) / (remainingTerm - 1);
+  return Number.isFinite(value) ? Math.round((value + Number.EPSILON) * 100) / 100 : null;
+}
+
+function manualBidLimitFor(item, scenarioId) {
+  const sourceScenario = (item?.cenarios || item?.scenarios || []).find((entry) => entry.id === scenarioId);
+  if (!sourceScenario) return null;
+  const scenario = motor360ScenarioForSelectedCredit(item, sourceScenario);
+  if (!scenario || scenario.saldo_devedor == null || scenario.parcela_inicial == null) return null;
+  return Math.round((Number(scenario.saldo_devedor) - Number(scenario.parcela_inicial) - Number(scenario.lance_embutido || 0) + Number.EPSILON) * 100) / 100;
 }
 
 function setManualBid(groupId, scenarioId, value, quotaIndex = null) {
@@ -6368,6 +6386,14 @@ function installMotor360DelegatedControls(results) {
         control.value = formatMoneyInputValue(manualBidFor(groupId, scenarioId, quotaIndex));
         pendingQuotaFocusSelector = null;
         showToast("Informe um valor de lance válido, sem letras, sinais negativos ou separadores incorretos.", "warning");
+        return;
+      }
+      const selectedItem = motor360ItemsByGroup(investorState.result).get(groupId) || investorState.selectedGroupData.get(groupId);
+      const maximumOwnBid = manualBidLimitFor(selectedItem, scenarioId);
+      if (maximumOwnBid !== null && parsedBid > maximumOwnBid + 0.01) {
+        control.value = formatMoneyInputValue(manualBidFor(groupId, scenarioId, quotaIndex));
+        pendingQuotaFocusSelector = null;
+        showToast(`O lance informado excede o saldo disponível desta cota (${formatMoney(Math.max(0, maximumOwnBid))}). Reduza o valor manual.`, "warning");
         return;
       }
       setManualBid(groupId, scenarioId, parsedBid, quotaIndex);
