@@ -563,6 +563,21 @@ function updateFinancialStudyActionState() {
   const missingCurrentMotor = !investorState.result?.audit_id;
   const invalidManualBids = investorState.invalidManualBids.size > 0;
   button.disabled = !activeItems.length || missingScenarios || pendingReview || missingCurrentMotor || invalidManualBids;
+  const approvalNotice = document.getElementById("financialStudyApprovalNotice");
+  if (approvalNotice) {
+    if (invalidManualBids) {
+      const details = [...investorState.invalidManualBids.values()].map((entry) => {
+        const scenarioLabel = entry.scenarioId === "with_embedded" ? "com embutido" : "sem embutido";
+        return `Grupo ${entry.groupId.split("|").pop() || entry.groupId}, ${scenarioLabel}, cota ${entry.index + 1}: ${formatMoney(entry.value)} (máximo ${formatMoney(Math.max(0, entry.limit))})`;
+      }).join(" · ");
+      approvalNotice.innerHTML = `<strong>Não é possível aprovar este estudo ainda.</strong><span>Há lance(s) manual(is) acima do limite financeiro: ${escapeHtml(details)}. Reduza o valor antes de aprovar.</span><button type="button" class="btn btn-outline-secondary" data-screen-jump="motor360">Corrigir no Motor 360</button>`;
+      approvalNotice.hidden = false;
+      approvalNotice.querySelector("[data-screen-jump='motor360']")?.addEventListener("click", () => activateScreen("motor360"));
+    } else {
+      approvalNotice.replaceChildren();
+      approvalNotice.hidden = true;
+    }
+  }
   const excludedNoQuota = items.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)));
   const exclusions = excludedNoQuota.map((item) => {
     const key = motor360GroupKey(item);

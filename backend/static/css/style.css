@@ -570,6 +570,21 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-weight: 700;
 }
 .financial-study-actions-buttons { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; }
+.financial-study-approval-notice {
+  flex: 1 1 360px;
+  max-width: 520px;
+  padding: 10px 12px;
+  border: 1px solid #e7a2a2;
+  border-radius: 8px;
+  color: #8f2525;
+  background: #fff1f1;
+  font-size: .86rem;
+}
+.financial-study-approval-notice[hidden] { display: none !important; }
+.financial-study-approval-notice strong,
+.financial-study-approval-notice span { display: block; }
+.financial-study-approval-notice span { margin-top: 3px; }
+.financial-study-approval-notice .btn { margin-top: 7px; padding: 4px 9px; font-size: .78rem; }
 .financial-study-history { padding: 22px; }
 .financial-study-history-toolbar { margin-bottom: 20px; }
 .financial-study-history-search { display: block; margin-bottom: 6px; font-weight: 700; }
