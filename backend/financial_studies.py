@@ -420,24 +420,8 @@ def _validate_selected_credit_basis(snapshot: dict) -> None:
                 ):
                     assert_amount(contract, field, calculated[expected_key], label)
 
-        if strict_calculation:
-            client = snapshot.get("client") or {}
-            budget = client.get("available_bid")
-            if budget is None:
-                budget = (client.get("own_resources") or 0) + (client.get("fgts") or 0)
-            try:
-                budget_value = float(budget or 0)
-            except (TypeError, ValueError):
-                budget_value = math.nan
-            if not math.isfinite(budget_value) or budget_value < 0:
-                raise ValueError("O orçamento de lance do cliente é inválido.")
-            for scenario_id in ("without_embedded", "with_embedded"):
-                scenario_own_bid = sum(
-                    float(contract.get("own_bid") or 0)
-                    for contract in contracts if contract.get("scenario") == scenario_id
-                )
-                if scenario_own_bid > budget_value + 0.02:
-                    raise ValueError(f"O lance próprio do cenário {scenario_id} excede os recursos compartilhados do cliente.")
+        # O lance é uma decisão manual do operador. Não há mais orçamento
+        # compartilhado entre cenários nem limite derivado do perfil do cliente.
 
 
 def create_study(*, client_name: str, approved_by: str, app_version: str, snapshot: dict, document_html: str, approval_key: str) -> dict:
