@@ -106,7 +106,7 @@ document.querySelector("#result").textContent = JSON.stringify({
         self.assertIn("@media (max-width: 560px)", css)
         self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch", css)
 
-    def test_combined_scenarios_sum_liquid_credit_and_share_client_bid_once(self):
+    def test_scenarios_remain_independent_in_summary(self):
         result = self._run_browser(r'''
 const makeEntry = (scenarioId, credit, installment, ideal) => ({
   item: { grupo: scenarioId }, scenario: { id: scenarioId }, scenarioId,
@@ -120,25 +120,21 @@ scenarioMetricsFixture = {
   without_embedded: { entries: [makeEntry("without_embedded", 600000, 4153.84, 469500)], totalQuotas: 2, credit: 600000, installment: 4153.84, desiredCredit: 680000 },
   with_embedded: { entries: [makeEntry("with_embedded", 210000, 2076.92, 144750)], totalQuotas: 1, credit: 210000, installment: 2076.92, desiredCredit: 680000 },
 };
-const combined = selectedCompositionCombinedMetrics([], 680000);
 const summary = selectedScenarioCompositionSummary([], 680000);
 document.querySelector("#result").textContent = JSON.stringify({
-  quotas: combined.totalQuotas, credit: combined.credit, shortfall: combined.shortfall,
-  installment: combined.installment, requiredBid: combined.portfolioProfileRequirements.moderate,
-  availableBid: combined.availableBidByProfile.moderate,
-  scenarioCredits: combined.entries.map(entry => [entry.scenarioId, entry.credit]), summary,
+  scenarios: ["without_embedded", "with_embedded"].map(id => {
+    const metrics = selectedCompositionScenarioMetrics([], id, 680000);
+    return { id, quotas: metrics.totalQuotas, credit: metrics.credit, installment: metrics.installment };
+  }), summary,
 });
 ''')
-        self.assertEqual(result["quotas"], 3)
-        self.assertEqual(result["credit"], 810000)
-        self.assertEqual(result["shortfall"], 0)
-        self.assertEqual(result["installment"], 6230.76)
-        self.assertEqual(result["requiredBid"], 614250)
-        self.assertEqual(result["availableBid"], 460000)
-        self.assertEqual(result["scenarioCredits"], [["without_embedded", 600000], ["with_embedded", 210000]])
-        self.assertIn("Composição combinada", result["summary"])
-        self.assertIn("R$ 810.000,00", result["summary"])
-        self.assertIn("excedente de R$ 130.000,00", result["summary"])
+        self.assertEqual(result["scenarios"], [
+            {"id": "without_embedded", "quotas": 2, "credit": 600000, "installment": 4153.84},
+            {"id": "with_embedded", "quotas": 1, "credit": 210000, "installment": 2076.92},
+        ])
+        self.assertIn("Sem embutido", result["summary"])
+        self.assertIn("Com embutido", result["summary"])
+        self.assertNotIn("Composição combinada", result["summary"])
 
     def test_selected_scenarios_support_persisted_group_selection(self):
         result = self._run_browser(r'''

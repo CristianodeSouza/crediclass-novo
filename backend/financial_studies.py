@@ -346,24 +346,23 @@ def _validate_selected_credit_basis(snapshot: dict) -> None:
             scenario_contracts = [contract for contract in contracts if contract.get("scenario") == scenario_id]
             if len(scenario_contracts) != count or any(abs(float(contract.get("contracted_credit") or 0) - credit) > 0.01 for contract in scenario_contracts):
                 raise ValueError("A quantidade ou o crédito dos contratos do cenário não corresponde à seleção.")
+            manual_values = (group.get("manual_bid_by_quota") or {}).get(scenario_id)
+            if isinstance(manual_values, list):
+                if len(manual_values) != count:
+                    raise ValueError("A quantidade de valores de lance manual não corresponde à quantidade de cotas.")
+                for index, value in enumerate(manual_values):
+                    try:
+                        declared_bid = float(value or 0)
+                        contract_bid = float(scenario_contracts[index].get("own_bid") or 0)
+                    except (TypeError, ValueError):
+                        raise ValueError("O valor de lance manual de uma cota é inválido.") from None
+                    if not math.isfinite(declared_bid) or declared_bid < 0 or abs(declared_bid - contract_bid) > 0.02:
+                        raise ValueError("O lance manual por cota diverge do contrato enviado para o estudo.")
             if not strict_calculation:
                 continue
             embedded_percent = group.get("percentual_lance_embutido") if scenario_id == "with_embedded" else 0
             if scenario_id == "with_embedded" and embedded_percent is None:
                 raise ValueError("O percentual de lance embutido do grupo não foi informado.")
-            first_own_bid = scenario_contracts[0].get("own_bid", 0)
-            try:
-                calculated = calculate_selected_credit(
-                    credit=credit,
-                    embedded_percent=embedded_percent,
-                    administration_rate=group.get("taxa_adm"),
-                    reserve_rate=group.get("fundo_reserva"),
-                    remaining_term=group.get("remaining_term"),
-                    own_bid=first_own_bid,
-                )
-            except ValueError as error:
-                raise ValueError(f"Não foi possível recalcular o cenário {scenario_id}: {error}") from None
-
             def assert_amount(container: dict, field: str, expected: float | None, label: str) -> None:
                 actual = container.get(field)
                 if expected is None:
@@ -377,6 +376,21 @@ def _validate_selected_credit_basis(snapshot: dict) -> None:
                 if not math.isfinite(actual_value) or abs(actual_value - expected) > 0.02:
                     raise ValueError(f"{label} diverge do recálculo financeiro do servidor.")
 
+            # Os campos estruturais do cenário são iguais para todas as cotas.
+            # Os campos dependentes do lance são validados individualmente abaixo.
+            first_own_bid = scenario_contracts[0].get("own_bid", 0)
+            try:
+                reference_calculated = calculate_selected_credit(
+                    credit=credit,
+                    embedded_percent=embedded_percent,
+                    administration_rate=group.get("taxa_adm"),
+                    reserve_rate=group.get("fundo_reserva"),
+                    remaining_term=group.get("remaining_term"),
+                    own_bid=first_own_bid,
+                )
+            except ValueError as error:
+                raise ValueError(f"Não foi possível recalcular o cenário {scenario_id}: {error}") from None
+
             scenario_fields = (
                 ("credito_contratado", "contracted_credit", "Crédito contratado"),
                 ("credito_liquido_projetado", "liquid_credit", "Crédito líquido"),
@@ -387,27 +401,29 @@ def _validate_selected_credit_basis(snapshot: dict) -> None:
                 ("parcela_inicial", "initial_installment", "Parcela inicial"),
             )
             for field, expected_key, label in scenario_fields:
-                assert_amount(scenario, field, calculated[expected_key], label)
-            assert_amount(scenario, "lance_embutido", calculated["embedded_bid"], "Lance embutido do cenário")
-            assert_amount(scenario, "lance_total_cenario", calculated["total_bid"], "Lance total do cenário")
-            assert_amount(scenario, "lance_cliente_total", calculated["own_bid"], "Lance próprio do cenário")
-            assert_amount(scenario, "parcela_pos_contemplacao", calculated["post_contemplation_installment"], "Parcela pós-contemplação")
+                assert_amount(scenario, field, reference_calculated[expected_key], label)
+            assert_amount(scenario, "lance_embutido", reference_calculated["embedded_bid"], "Lance embutido do cenário")
             for profile in scenario.get("perfis_contemplacao") or []:
                 threshold = normalize_percent(profile.get("percentual_referencia"))
                 if threshold is None:
                     continue
                 ideal_total = money(Decimal(str(credit)) * threshold)
-                ideal_own = max(0, ideal_total - calculated["embedded_bid"])
+                ideal_own = max(0, ideal_total - reference_calculated["embedded_bid"])
                 assert_amount(profile, "lance_ideal_total", ideal_total, "Lance total ideal do perfil")
                 assert_amount(profile, "lance_ideal", ideal_own, "Lance próprio ideal do perfil")
-                assert_amount(profile, "lance_cliente", calculated["own_bid"], "Lance disponível por perfil")
-                assert_amount(profile, "lance_embutido", calculated["embedded_bid"], "Embutido por perfil")
-                assert_amount(profile, "falta_para_ideal", max(0, ideal_own - calculated["own_bid"]), "Déficit de lance do perfil")
-                assert_amount(profile, "percentual_lance_efetivo", calculated["total_bid"] / credit, "Percentual efetivo do perfil")
-                expected_attainment = calculated["total_bid"] / credit >= float(threshold)
-                if profile.get("atinge_perfil") is not expected_attainment:
-                    raise ValueError("A classificação de aderência do perfil diverge do lance recalculado pelo servidor.")
             for contract in scenario_contracts:
+                own_bid = contract.get("own_bid", 0)
+                try:
+                    calculated = calculate_selected_credit(
+                        credit=credit,
+                        embedded_percent=embedded_percent,
+                        administration_rate=group.get("taxa_adm"),
+                        reserve_rate=group.get("fundo_reserva"),
+                        remaining_term=group.get("remaining_term"),
+                        own_bid=own_bid,
+                    )
+                except ValueError as error:
+                    raise ValueError(f"Não foi possível recalcular a cota do cenário {scenario_id}: {error}") from None
                 for field, expected_key, label in (
                     ("contracted_credit", "contracted_credit", "Crédito bruto do contrato"),
                     ("liquid_credit", "liquid_credit", "Crédito líquido do contrato"),
