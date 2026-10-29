@@ -5848,6 +5848,24 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-quota-table tbody th small { display: inline; margin: 0 0 0 3px; white-space: nowrap; }
 .financial-study-part4-standard-simulation-table th,
 .financial-study-part4-standard-simulation-table td { white-space: nowrap; overflow: hidden; overflow-wrap: normal; text-overflow: clip; }
+
+/* Design system da Etapa 4: leitura rápida, densidade equilibrada e escala única. */
+.financial-study-part4-consolidated-summary,
+.financial-study-part4-profile-scenarios { --study-label-size: .66rem; --study-value-size: .72rem; --study-note-size: .6rem; --study-cell-x: 3px; }
+.financial-study-part4-table th,
+.financial-study-part4-table td { padding: 5px var(--study-cell-x); }
+.financial-study-part4-table thead th { font-size: var(--study-label-size); line-height: 1.15; }
+.financial-study-part4-table tbody td { font-size: var(--study-value-size); line-height: 1.2; }
+.financial-study-part4-table tbody th { font-size: var(--study-label-size); line-height: 1.2; }
+.financial-study-part4-table tbody th small,
+.financial-study-part4-table tbody td small { font-size: var(--study-note-size); line-height: 1.15; }
+.financial-study-part4-standard-simulation-table th:first-child { width: 27%; }
+.financial-study-part4-standard-simulation-table th:not(:first-child),
+.financial-study-part4-standard-simulation-table td:not(:first-child) { width: 12.16%; }
+.financial-study-part4-overview-table th,
+.financial-study-part4-overview-table td,
+.financial-study-part4-quota-table th,
+.financial-study-part4-quota-table td { padding-inline: 2px; }
 .financial-study-part4-quota-details { margin: 14px 0; border-top: 3px solid #2e3f47; }
 .financial-study-part4-quota-details h4 { margin: 0; padding: 8px 10px; background: #eef3f4; color: #2e3f47; font-size: .75rem; }
 .financial-study-part4-quota-table { min-width: 980px; }
