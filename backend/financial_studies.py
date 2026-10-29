@@ -260,9 +260,16 @@ def _validate_selected_credit_basis(snapshot: dict) -> None:
     audited_groups = {}
     if has_strict_contract:
         audit = get_motor360_audit(snapshot["motor360_audit_id"])
+        # The Motor audit is also kept in the browser result so an approval
+        # can still be validated after a Render restart or when the request
+        # lands on another instance. The runtime JSON file is not durable.
+        if not audit:
+            audit = snapshot.get("motor360_audit_snapshot")
         if not audit:
             raise ValueError("A auditoria do Motor 360 não está mais disponível. Execute o Motor novamente antes de aprovar.")
         metadata = audit.get("metadata") or {}
+        if str(metadata.get("audit_id") or "") != str(snapshot.get("motor360_audit_id") or ""):
+            raise ValueError("A auditoria do Motor 360 não corresponde à execução vinculada ao estudo.")
         if str(metadata.get("engine_version") or "") != str(snapshot.get("motor_engine_version") or ""):
             raise ValueError("A versão do Motor no estudo diverge da execução auditada.")
         for audited in audit.get("group_results") or []:
@@ -451,7 +458,12 @@ def create_study(*, client_name: str, approved_by: str, app_version: str, snapsh
     if not isinstance(snapshot, dict) or not isinstance(snapshot.get("groups"), list) or not snapshot["groups"]:
         raise ValueError("O estudo precisa conter ao menos um grupo selecionado.")
     _validate_selected_credit_basis(snapshot)
-    archive = _compress_archive(snapshot, document_html, app_version)
+    # Keep the audit available only for request-time validation. The durable
+    # study archive already contains the validated financial snapshot and
+    # should not duplicate the large Motor 360 audit payload.
+    archive_snapshot = dict(snapshot)
+    archive_snapshot.pop("motor360_audit_snapshot", None)
+    archive = _compress_archive(archive_snapshot, document_html, app_version)
     settings = get_settings()
     headers, indexes = _headers()
     headers, indexes = _ensure_archive_columns(headers, indexes)
