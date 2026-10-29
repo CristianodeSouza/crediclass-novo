@@ -5831,6 +5831,23 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-quota-table td,
 .financial-study-part4-overview-table th,
 .financial-study-part4-overview-table td { padding: 5px 4px; font-size: .64rem; }
+.financial-study-part4-overview-table th,
+.financial-study-part4-overview-table td,
+.financial-study-part4-rate-summary th,
+.financial-study-part4-rate-summary td,
+.financial-study-part4-scenarios-table th,
+.financial-study-part4-scenarios-table td,
+.financial-study-part4-quota-table th,
+.financial-study-part4-quota-table td { white-space: nowrap; overflow: hidden; overflow-wrap: normal; text-overflow: clip; }
+.financial-study-part4-overview-table th,
+.financial-study-part4-overview-table td,
+.financial-study-part4-scenarios-table th,
+.financial-study-part4-scenarios-table td,
+.financial-study-part4-quota-table th,
+.financial-study-part4-quota-table td { padding: 4px 2px; font-size: .56rem; }
+.financial-study-part4-quota-table tbody th small { display: inline; margin: 0 0 0 3px; white-space: nowrap; }
+.financial-study-part4-standard-simulation-table th,
+.financial-study-part4-standard-simulation-table td { white-space: nowrap; overflow: hidden; overflow-wrap: normal; text-overflow: clip; }
 .financial-study-part4-quota-details { margin: 14px 0; border-top: 3px solid #2e3f47; }
 .financial-study-part4-quota-details h4 { margin: 0; padding: 8px 10px; background: #eef3f4; color: #2e3f47; font-size: .75rem; }
 .financial-study-part4-quota-table { min-width: 980px; }
@@ -5916,6 +5933,18 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-part4-category-row th { grid-column: auto !important; }
   .financial-study-part4-embedded-total { font-size: .8rem; }
 }
+
+/* Etapa 4: tabelas compactas sem quebra de linha nem rolagem horizontal. */
+.financial-study-part4-overview-table th,
+.financial-study-part4-overview-table td,
+.financial-study-part4-rate-summary th,
+.financial-study-part4-rate-summary td,
+.financial-study-part4-scenarios-table th,
+.financial-study-part4-scenarios-table td,
+.financial-study-part4-quota-table th,
+.financial-study-part4-quota-table td,
+.financial-study-part4-standard-simulation-table th,
+.financial-study-part4-standard-simulation-table td { white-space: nowrap !important; overflow: hidden; overflow-wrap: normal; text-overflow: clip; }
 
 @media print {
   .financial-study-document {
