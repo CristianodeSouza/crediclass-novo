@@ -655,10 +655,13 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
         const embeddedBid = Number(entry.scenario.lance_embutido || 0);
         const remainingBalance = Number(entry.scenario.saldo_devedor || 0);
         const remainingTerm = Number(item.prazo_restante || 0);
+        const initialInstallment = Number(entry.installmentPerQuota ?? entry.scenario.parcela_inicial ?? 0);
         return Array.from({ length: entry.quotas }, (_, index) => {
           const ownBid = Number(manualBids[index] || 0);
           const totalBid = ownBid + embeddedBid;
-          const postInstallment = remainingTerm > 1 ? Math.max(0, (remainingBalance - totalBid) / (remainingTerm - 1)) : null;
+          const postInstallment = remainingTerm > 1
+            ? Math.max(0, (remainingBalance - initialInstallment - totalBid) / (remainingTerm - 1))
+            : null;
           return {
             contract_index: index + 1,
             scenario: scenarioId,
