@@ -284,8 +284,21 @@ function setLoginError(message) {
   errorBox.classList.toggle("d-none", !message);
 }
 
+function isMotor360Administrator() {
+  return String(authState.user?.perfil || "").trim().toLocaleLowerCase("pt-BR") === "administrador";
+}
+
+function syncAdministratorOnlyControls() {
+  const visible = isMotor360Administrator();
+  document.querySelectorAll("[data-admin-only]").forEach((element) => {
+    element.classList.toggle("d-none", !visible);
+    element.setAttribute("aria-hidden", String(!visible));
+  });
+}
+
 function showLogin(message = "") {
   authState.user = null;
+  syncAdministratorOnlyControls();
   document.body.classList.remove("auth-pending", "authenticated");
   document.body.classList.add("auth-login");
   setLoginError(message);
@@ -294,6 +307,7 @@ function showLogin(message = "") {
 
 function showApp(user) {
   authState.user = user;
+  syncAdministratorOnlyControls();
   document.body.classList.remove("auth-pending", "auth-login");
   document.body.classList.add("authenticated");
   setLoginError("");
@@ -3591,7 +3605,7 @@ function renderMotor360GroupCardUncached(item) {
       const bidGap = { gap: Math.max(0, totalIdeal - available) };
       const bidStatusLabel = totalIdeal <= 0 ? "" : meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(bidGap.gap)}`;
       const focused = profile.id === focusProfileId;
-      return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"} ${focused ? "is-focused" : ""}" ${focused ? 'aria-current="true"' : ""}><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}${focused ? '<span class="motor360-profile-focus-tag">Em foco</span>' : ""}</small><b>${formatPercent(value.percentual_referencia)}</b>${bidStatusLabel ? `<span>${bidStatusLabel}</span>` : ""}<em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
+      return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"} ${focused ? "is-focused" : ""}" ${focused ? 'aria-current="true"' : ""}><div class="motor360-profile-card-heading"><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}</small><span class="motor360-profile-card-top-value"><b>${formatPercent(value.percentual_referencia)}</b>${focused ? '<span class="motor360-profile-focus-tag">Em foco</span>' : ""}</span></div>${bidStatusLabel ? `<span>${bidStatusLabel}</span>` : ""}<em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
     }).join("");
     const scenarioLabel = scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
     const compositionTotals = item.composition_candidate ? scenario.composition_totals : null;
@@ -4803,6 +4817,15 @@ function renderMotor360FilterNotice(sourceItems, visibleItems) {
   return `<div class="motor360-filter-notice" role="status"><strong>${filteredCount} grupo(s) fora da lista atual pelos filtros.</strong><span>${preserved}</span></div>`;
 }
 
+function renderMotor360AdminAuditAccess(audit, auditId, sourceItems, visibleItems, buttonLabel = "Ver impedimentos e orientações") {
+  if (!isMotor360Administrator()) return "";
+  return `<section class="motor360-admin-audit-access" data-admin-only>
+    ${renderMotor360FilterNotice(sourceItems, visibleItems)}
+    <button type="button" class="btn btn-outline-secondary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>${buttonLabel}</button>
+    ${renderMotor360Audit(audit, auditId)}
+  </section>`;
+}
+
 function renderSelectedGroupsScoreBreakdown(items) {
   const dashboard = document.querySelector("[data-sg-dashboard]");
   if (!dashboard || dashboard.querySelector("[data-sg-score-breakdown]")) return;
@@ -5775,7 +5798,7 @@ function renderMotor360AuditContent(audit) {
 }
 
 function renderMotor360Audit(audit, auditId) {
-  if (authState.user?.perfil !== "Administrador") return "";
+  if (!isMotor360Administrator()) return "";
   const embeddedAudit = audit || investorState.result?.audit || null;
   const id = auditId || embeddedAudit?.metadata?.audit_id || "";
   if (id && !embeddedAudit) {
@@ -5785,6 +5808,7 @@ function renderMotor360Audit(audit, auditId) {
 }
 
 function bindMotor360AuditPanel(results) {
+  if (!isMotor360Administrator()) return;
   results.querySelectorAll(".motor360-audit-panel:not([data-audit-toggle-bound])").forEach((panel) => {
     panel.dataset.auditToggleBound = "true";
     panel.addEventListener("toggle", async () => {
@@ -5870,6 +5894,7 @@ function motor360BlockingReasonAdvice(reason) {
 }
 
 function renderMotor360BlockingDiagnostics(audit) {
+  if (!isMotor360Administrator()) return;
   const currentAuditId = typeof investorState === "undefined" ? null : investorState.result?.audit_id;
   if (currentAuditId && audit?.metadata?.audit_id !== currentAuditId) {
     loadMotor360Audit(investorState.result.audit_id)
@@ -5947,6 +5972,7 @@ function motor360ExecutionStepMessage(step) {
 }
 
 async function loadMotor360Audit(auditId) {
+  if (!isMotor360Administrator()) return;
   if (!auditId) return;
   if (investorState.audit?.metadata?.audit_id === auditId) return investorState.audit;
   if (motor360AuditLoadPromise) {
@@ -6240,16 +6266,14 @@ function renderInvestorAnalysis(result) {
   if (!items.length) {
     const profileLabel = { urgent: "Urgente", fast: "Rápido", moderate: "Moderado", conservative: "Conservador", long_term: "Investidor" }[result.perfil_contemplacao] || "selecionado";
     const rejectedHtml = contemplationRejected.length ? `<details class="motor360-credit-excluded" open><summary>${contemplationRejected.length} grupo(s) não atingem o perfil ${profileLabel}</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th></tr></thead><tbody>${contemplationRejected.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>Lance disponível abaixo da faixa do perfil selecionado.</td></tr>`).join("")}</tbody></table></div></details>` : "";
-    const diagnosticButton = '<button type="button" class="btn btn-primary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>Ver por que nenhum grupo foi encontrado</button>';
     const hasActiveSelectionFilters = Object.values(selectedGroupsFilterValues()).some((value) => value !== "" && value !== false);
     const explicitMessage = hasActiveSelectionFilters
       ? `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo atende aos filtros atuais.</strong><span>Ajuste os filtros ou use “Limpar filtros” para voltar a visualizar os grupos.</span></div>`
       : result.perfil_contemplacao
-      ? `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado para o perfil ${profileLabel}</strong><span>O lance do cliente (${formatMoney(client.lance_cliente_total)}) não atende ao percentual mínimo de contemplação dos grupos compatíveis. Ajuste o lance ou selecione um perfil com prazo maior.</span>${diagnosticButton}</div>`
-      : `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado</strong><span>Nenhum grupo passou por todas as validações do Motor 360.</span>${diagnosticButton}</div>`;
-    results.innerHTML = `${explicitMessage}${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}${rejectedHtml}${renderMotor360Audit(scopedAudit, result.audit_id)}`;
+      ? `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado para o perfil ${profileLabel}</strong><span>O lance do cliente (${formatMoney(client.lance_cliente_total)}) não atende ao percentual mínimo de contemplação dos grupos compatíveis. Ajuste o lance ou selecione um perfil com prazo maior.</span></div>`
+      : `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado</strong><span>Nenhum grupo passou por todas as validações do Motor 360.</span></div>`;
+    results.innerHTML = `${explicitMessage}${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}${rejectedHtml}${renderMotor360AdminAuditAccess(scopedAudit, result.audit_id, administratorItems, items, "Ver por que nenhum grupo foi encontrado")}`;
     renderPersistedManualBidNotices();
-    results.insertAdjacentHTML("afterbegin", renderMotor360FilterNotice(administratorItems, items));
     bindMotor360AuditPanel(results);
     results.querySelector("[data-motor360-blocking-diagnostics]")?.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit));
     setInvestorAnalysisState("results");
@@ -6257,7 +6281,6 @@ function renderInvestorAnalysis(result) {
     return;
   }
   results.innerHTML = `
-    <button type="button" class="btn btn-outline-secondary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>Ver impedimentos e orientações</button>
     ${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}
     <nav class="motor360-group-pagination" aria-label="Páginas de grupos">
       <button type="button" class="btn btn-outline-secondary btn-sm" data-group-page="previous" ${investorState.motor360GroupPage === 0 ? "disabled" : ""}>Anterior</button>
@@ -6268,10 +6291,9 @@ function renderInvestorAnalysis(result) {
 
     ${scopedContemplationRejected.length ? `<details class="motor360-credit-excluded" open><summary>Grupos fora do perfil de contemplação selecionado (${scopedContemplationRejected.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th></tr></thead><tbody>${scopedContemplationRejected.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>Lance disponível abaixo da faixa do perfil selecionado.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
-    ${renderMotor360Audit(scopedAudit, result.audit_id)}
+    ${renderMotor360AdminAuditAccess(scopedAudit, result.audit_id, administratorItems, items)}
   `;
   renderPersistedManualBidNotices();
-  results.insertAdjacentHTML("afterbegin", renderMotor360FilterNotice(administratorItems, items));
   bindMotor360AuditPanel(results);
   results.querySelectorAll("[data-screen-jump]").forEach((button) => button.addEventListener("click", () => activateScreen(button.dataset.screenJump)));
   results.querySelectorAll("[data-open-selected-groups-workspace]").forEach((button) => button.addEventListener("click", openSelectedGroupsWorkspace));

@@ -9,8 +9,8 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <meta name="crediclass-build" content="4.0.330">
-    <link href="/static/css/style.css?v=4.0.330" rel="stylesheet">
+    <meta name="crediclass-build" content="4.0.331">
+    <link href="/static/css/style.css?v=4.0.331" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -447,7 +447,13 @@
                 <label class="investor-compatible-filter"><input id="investorFilterCompatible" type="checkbox"> Apenas crédito compatível</label>
               </div>
             </aside>
-            <details class="motor360-execution-panel">
+            <div id="investorAnalysisSummary" class="smart-engine-phase-two-summary d-none" aria-hidden="true"></div>
+            <div id="investorAnalysisError" class="table-state table-state-error d-none">Não foi possível calcular os grupos do Motor 360.</div>
+            <div id="investorAnalysisEmpty" class="placeholder-card compact-placeholder">
+              <p>Salve o Perfil do Cliente para analisar todas as estratégias de consórcio.</p>
+            </div>
+            <div id="investorAnalysisResults" class="investor-engine-results d-none"></div>
+            <details class="motor360-execution-panel d-none" data-admin-only aria-hidden="true">
               <summary><span>Auditoria da execução</span><span id="motor360ExecutionLogsCount">0 evento(s)</span></summary>
               <div class="motor360-execution-panel-toolbar">
                 <p>Registros técnicos desta sessão para acompanhar o acionamento, a requisição e o retorno do Motor 360.</p>
@@ -455,12 +461,6 @@
               </div>
               <ul id="motor360ExecutionLogsList" class="motor360-execution-logs"></ul>
             </details>
-            <div id="investorAnalysisSummary" class="smart-engine-phase-two-summary d-none" aria-hidden="true"></div>
-            <div id="investorAnalysisError" class="table-state table-state-error d-none">Não foi possível calcular os grupos do Motor 360.</div>
-            <div id="investorAnalysisEmpty" class="placeholder-card compact-placeholder">
-              <p>Salve o Perfil do Cliente para analisar todas as estratégias de consórcio.</p>
-            </div>
-            <div id="investorAnalysisResults" class="investor-engine-results d-none"></div>
             <div id="motor360HistoryHoverModal" class="history-hover-modal d-none" role="dialog" aria-hidden="true"></div>
             <div id="selectedGroupsWorkspace" class="selected-groups-workspace d-none" role="dialog" aria-modal="true" aria-labelledby="selectedGroupsWorkspaceTitle">
               <div class="selected-groups-workspace-dialog">
@@ -1130,9 +1130,9 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.330"></script>
-    <script src="/static/js/shared-study.js?v=4.0.330"></script>
-    <script src="/static/js/app.js?v=4.0.330"></script>
+    <script src="/static/js/api.js?v=4.0.331"></script>
+    <script src="/static/js/shared-study.js?v=4.0.331"></script>
+    <script src="/static/js/app.js?v=4.0.331"></script>
   </body>
 </html>
 
