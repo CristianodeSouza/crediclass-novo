@@ -1685,6 +1685,11 @@ function formatMoneyInputValue(value) {
   }).format(number);
 }
 
+function formatCurrencyInputValue(value) {
+  const formatted = formatMoneyInputValue(value);
+  return formatted ? `R$ ${formatted}` : "";
+}
+
 function formatDecimalInputValue(value, minimumFractionDigits = 2, maximumFractionDigits = 2) {
   const number = Number(typeof value === "number" ? value : parseNumberInput(value));
   if (!Number.isFinite(number)) return "";
@@ -3674,7 +3679,7 @@ function renderMotor360GroupCardUncached(item) {
     const creditOptions = motor360CreditOptions(item);
     const creditInput = selected ? `<label class="motor360-scenario-credit"><span>Etapa 1 · Crédito</span><select data-credit-action="scenario" data-group-id="${auditId}" data-scenario-id="${scenario.id}" aria-label="Etapa 1: escolha o crédito para o cenário ${scenario.id === "with_embedded" ? "com lance embutido" : "sem lance embutido"}"><option value="">Escolha uma opção</option>${creditOptions.map((option) => `<option value="${option.value}" ${chosenCredit !== null && Math.round(chosenCredit * 100) === Math.round(option.value * 100) ? "selected" : ""}>${escapeHtml(option.label)} · ${formatMoney(option.value)}</option>`).join("")}</select></label>` : "";
     const bidInputs = scenarioQuotaCount > 0
-      ? Array.from({ length: scenarioQuotaCount }, (_, index) => `<label class="motor360-scenario-bid-item"><span>Cota ${index + 1}</span><input class="motor360-bid-input" type="text" inputmode="decimal" autocomplete="off" value="${formatMoneyInputValue(manualBidValuesFor(groupKey, scenario.id, scenarioQuotaCount)[index] || 0)}" ${chosenCredit === null ? "disabled" : ""} data-bid-action="scenario" data-bid-quota-index="${index}" data-group-id="${auditId}" data-scenario-id="${scenario.id}" aria-label="Etapa 3: valor do lance da cota ${index + 1} no cenário ${scenario.id === "with_embedded" ? "com lance embutido" : "sem lance embutido"} no grupo ${auditId}"></label>`).join("")
+      ? Array.from({ length: scenarioQuotaCount }, (_, index) => `<label class="motor360-scenario-bid-item"><span>Cota ${index + 1}</span><input class="motor360-bid-input" type="text" inputmode="decimal" autocomplete="off" value="${formatCurrencyInputValue(manualBidValuesFor(groupKey, scenario.id, scenarioQuotaCount)[index] || 0)}" ${chosenCredit === null ? "disabled" : ""} data-bid-action="scenario" data-bid-quota-index="${index}" data-group-id="${auditId}" data-scenario-id="${scenario.id}" aria-label="Etapa 3: valor do lance da cota ${index + 1} no cenário ${scenario.id === "with_embedded" ? "com lance embutido" : "sem lance embutido"} no grupo ${auditId}"></label>`).join("")
       : `<span class="motor360-scenario-bid-empty">Defina a Qte. para informar o lance.</span>`;
     const quotaInput = selected ? `${creditInput}<label class="motor360-scenario-quota"><span>Etapa 2 · Qte. de cotas</span><input class="motor360-quota-input" type="number" min="0" max="50" step="1" value="${scenarioQuotaCount}" ${chosenCredit === null ? "disabled" : ""} data-quota-action="scenario" data-group-id="${auditId}" data-scenario-id="${scenario.id}" aria-label="Etapa 2: quantidade de cotas do cenário ${scenario.id === "with_embedded" ? "com lance embutido" : "sem lance embutido"} no grupo ${auditId}"></label><div class="motor360-scenario-bids"><span class="motor360-scenario-bids-title">Etapa 3 · Lance por cota</span>${bidInputs}</div>${quotaLimit !== null && scenarioQuotaCount > quotaLimit ? `<small class="motor360-quota-warning" role="status"><strong>Acima da média histórica:</strong> ${scenarioQuotaCount} cotas; referência de ${quotaLimit}.</small>` : ""}` : "";
     const liquidCredit = scenario.id === "with_embedded" ? Math.max(0, cardCredit - cardEmbedded) : cardCredit;
@@ -6382,6 +6387,14 @@ function installMotor360DelegatedControls(results) {
       if (document.activeElement === target) pendingMotor360ClickFocusSelector = null;
     }, 0);
   });
+  results.addEventListener("input", (event) => {
+    const control = event.target instanceof Element ? event.target : null;
+    if (!control?.matches('[data-bid-action="scenario"]')) return;
+    const parsedBid = parseManualBidInput(control.value);
+    if (parsedBid === null) return;
+    control.value = formatCurrencyInputValue(parsedBid);
+    control.setSelectionRange(control.value.length, control.value.length);
+  });
   results.addEventListener("change", (event) => {
     const control = event.target instanceof Element ? event.target : null;
     if (!control) return;
@@ -6453,7 +6466,7 @@ function installMotor360DelegatedControls(results) {
       const quotaIndex = Math.max(0, Number(control.dataset.bidQuotaIndex || 0));
       const parsedBid = parseManualBidInput(control.value);
       if (parsedBid === null) {
-        control.value = formatMoneyInputValue(manualBidFor(groupId, scenarioId, quotaIndex));
+        control.value = formatCurrencyInputValue(manualBidFor(groupId, scenarioId, quotaIndex));
         pendingQuotaFocusSelector = null;
         showToast("Informe um valor de lance válido, sem letras, sinais negativos ou separadores incorretos.", "warning");
         return;
@@ -6461,13 +6474,13 @@ function installMotor360DelegatedControls(results) {
       const selectedItem = motor360ItemsByGroup(investorState.result).get(groupId) || investorState.selectedGroupData.get(groupId);
       const maximumOwnBid = manualBidLimitFor(selectedItem, scenarioId);
       if (maximumOwnBid !== null && parsedBid > maximumOwnBid + 0.01) {
-        control.value = formatMoneyInputValue(manualBidFor(groupId, scenarioId, quotaIndex));
+        control.value = formatCurrencyInputValue(manualBidFor(groupId, scenarioId, quotaIndex));
         pendingQuotaFocusSelector = null;
         showToast(`O lance informado excede o saldo disponível desta cota (${formatMoney(Math.max(0, maximumOwnBid))}). Reduza o valor manual.`, "warning");
         return;
       }
       setManualBid(groupId, scenarioId, parsedBid, quotaIndex);
-      control.value = formatMoneyInputValue(manualBidFor(groupId, scenarioId, quotaIndex));
+      control.value = formatCurrencyInputValue(manualBidFor(groupId, scenarioId, quotaIndex));
       persistMotor360Selection();
       const relatedTarget = event.relatedTarget instanceof Element && event.relatedTarget.closest(".motor360-group-card") ? event.relatedTarget : null;
       const focusSelector = pendingQuotaFocusSelector || pendingMotor360ClickFocusSelector || motor360FocusSelector(relatedTarget);
