@@ -6545,6 +6545,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
 #screen-motor360 .motor360-profile-card-value.is-gap em { color: var(--m360-danger); }
 #screen-motor360 .motor360-profile-focus-tag { font-size: 9px !important; }
 
+/* Valores numéricos usam uma única cor de leitura; estados continuam semânticos. */
+#screen-motor360 .motor360-group-summary b,
+#screen-motor360 .motor360-scenario-grid > div:not(.motor360-scenario-source-metrics) b,
+#screen-motor360 .motor360-scenario-source-metrics b,
+#screen-motor360 .motor360-profile-card-value b,
+#screen-motor360 .motor360-profile-client-bid b {
+  color: var(--m360-text) !important;
+}
+
 @media (max-width: 1100px) {
   #screen-motor360 .motor360-group-card-header { grid-template-columns: minmax(270px, .85fr) minmax(0, 1.35fr); }
   #screen-motor360 .motor360-scenario-source-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); }
