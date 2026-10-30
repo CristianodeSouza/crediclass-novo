@@ -1462,6 +1462,21 @@ def list_grupos(include_history: bool = True, force_reload: bool = False) -> lis
         _grupos_refresh_lock.release()
 
 
+def motor360_cache_status(include_history: bool = True) -> dict[str, bool]:
+    """Expose cache readiness without forcing a Google Sheets request.
+
+    The analysis route uses this during deploy/cold start so a proxy timeout is
+    not mistaken for an application failure while the background warmup holds
+    the refresh lock.
+    """
+    cache_key = "with_history" if include_history else "light"
+    now = time.time()
+    with _cache_lock:
+        cache = _grupos_cache[cache_key]
+        ready = cache["items"] is not None and now < cache["expires_at"]
+    return {"ready": ready, "refreshing": _grupos_refresh_lock.locked()}
+
+
 def warm_motor360_cache_async() -> bool:
     """Warm Motor 360 data after startup and refresh before the TTL expires."""
     global _motor360_warm_started

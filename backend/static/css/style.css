@@ -6240,6 +6240,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 /* Motor 360: sistema visual unificado para cartões de grupos.
    Esta camada final substitui os overrides históricos por tokens previsíveis. */
 #screen-motor360 {
+  --m360-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
   --m360-text: #000;
   --m360-muted: #000;
   --m360-subtle: #000;
@@ -6258,7 +6259,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
   --m360-value: 14px;
   --m360-title: 13px;
   color: var(--m360-text);
+  font-family: var(--m360-font);
   font-variant-numeric: tabular-nums;
+}
+
+#screen-motor360 :is(h1, h2, h3, h4, h5, h6, button, input, select, textarea,
+  .motor360-group-summary, .motor360-scenario-title, .motor360-scenario-failure,
+  .motor360-scenario-grid, .motor360-scenario-source-metrics,
+  .motor360-profile-card, .motor360-profile-card-value, .motor360-scenario-bid-item) {
+  font-family: var(--m360-font);
 }
 
 #screen-motor360 .motor360-group-card,

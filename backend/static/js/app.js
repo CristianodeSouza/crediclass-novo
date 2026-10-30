@@ -6723,7 +6723,7 @@ async function loadInvestorAnalysis() {
   setInvestorAnalysisState("loading");
   addMotor360ExecutionLog("Requisição enviada", `Crédito ${formatMoney(profile.credito_desejado)} · parcela ${formatMoney(profile.parcela_desejada)} · RP ${formatMoney(profile.lance_recursos_proprios ?? profile.lance_maximo_recursos_proprios)} · FGTS ${formatMoney(profile.fgts_total)} · renda ${formatMoney(profile.renda_total)}.`);
   try {
-    const retryableStatuses = new Set([408, 425, 429, 500, 502, 503, 504]);
+    const retryableStatuses = new Set([202, 408, 425, 429, 500, 502, 503, 504]);
     const maxAttempts = MOTOR360_ANALYSIS_MAX_ATTEMPTS;
     let response;
     let result = {};
@@ -6751,8 +6751,13 @@ async function loadInvestorAnalysis() {
         addMotor360ExecutionLog("Resposta recebida", `Tentativa ${attempt}/${maxAttempts} · HTTP ${response.status} · ${formatMotor360Duration(performance.now() - startedAt)} · ${result.request_id || "sem ID"}.`);
         const serverTiming = formatMotor360ServerTiming(response.headers.get("Server-Timing"));
         if (serverTiming) addMotor360ExecutionLog("Tempos detalhados do servidor", serverTiming);
-        if (response.ok || !retryableStatuses.has(response.status)) break;
-        retryReason = `serviço temporariamente indisponível (HTTP ${response.status})`;
+        if (response.status === 202) {
+          retryReason = "base do Motor 360 em aquecimento";
+        } else if (response.ok || !retryableStatuses.has(response.status)) {
+          break;
+        } else {
+          retryReason = `serviço temporariamente indisponível (HTTP ${response.status})`;
+        }
       } catch (error) {
         if (controller.signal.aborted || requestId !== investorAnalysisRequestId) throw error;
         if (attemptTimedOut || error instanceof TypeError) {

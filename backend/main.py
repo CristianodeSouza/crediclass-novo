@@ -37,7 +37,7 @@ from .defasagem import build_defasagem_report, update_defasagem_task
 from . import financial_studies
 from .piperun import fetch_opportunities_preview, fetch_opportunity_notes
 from .models import GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
-from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
+from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, motor360_cache_status, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
 from .viabilidade import compatible_tipo_bem
 
 # Uvicorn's default configuration does not attach a handler to the root
@@ -766,6 +766,28 @@ def viabilidade_360_analisar(payload: ViabilidadeRequest, response: Response, re
     request_id = f"REQ-{uuid4().hex[:12].upper()}"
     logger.info("POST /api/viabilidade-360/analisar request_id=%s credito=%s", request_id, payload.credito_desejado)
     try:
+        cache_status = motor360_cache_status(include_history=True)
+        if not cache_status["ready"] and (cache_status["refreshing"] or get_settings().environment == "production"):
+            # The startup worker is the single owner of the cold refresh. Do
+            # not make the request thread wait behind Google Sheets long enough
+            # for Render's proxy to emit a misleading 502.
+            if not cache_status["refreshing"]:
+                warm_motor360_cache_async()
+            logger.info(
+                "Motor 360 aguardando cache request_id=%s ready=%s refreshing=%s",
+                request_id, cache_status["ready"], cache_status["refreshing"],
+            )
+            return JSONResponse(
+                status_code=202,
+                content={
+                    "success": False,
+                    "status": "warming",
+                    "retry_after_ms": 1500,
+                    "error": "A base do Motor 360 está sendo preparada. Tente novamente em instantes.",
+                    "request_id": request_id,
+                },
+                headers={"Retry-After": "2", "Cache-Control": "no-store"},
+            )
         # O histórico completo alimenta o tooltip do Motor 360. A leitura é
         # cacheada pelo cliente da planilha, portanto não há uma nova consulta
         # ao Google Sheets para cada grupo exibido.
