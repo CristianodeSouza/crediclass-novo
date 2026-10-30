@@ -6350,16 +6350,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 #screen-motor360 .motor360-scenario-title strong {
   color: var(--m360-text);
-  font-size: var(--m360-title);
+  font-size: 15px;
   font-weight: 600;
-  line-height: 17px;
+  line-height: 19px;
 }
 
 #screen-motor360 .motor360-scenario-title > span:not(.motor360-scenario-mode) {
   color: var(--m360-danger);
-  font-size: var(--m360-label);
+  font-size: 9px;
   font-weight: 600;
-  line-height: 14px;
+  line-height: 12px;
 }
 
 #screen-motor360 .motor360-scenario-mode {
@@ -6383,12 +6383,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
   border-radius: 4px;
   background: #fff3f1;
   color: var(--m360-danger);
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 500;
-  line-height: 15px;
+  line-height: 12px;
 }
 
-#screen-motor360 .motor360-scenario-failure > span:first-child {
+#screen-motor360 .motor360-scenario-failure-message {
   min-width: 0;
   display: -webkit-box;
   overflow: hidden;
@@ -6397,12 +6397,28 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 #screen-motor360 .motor360-scenario-failure-detail {
+  margin: 0;
+  padding: 0;
   flex: 0 0 auto;
+  border: 0;
+  background: transparent;
   color: #7d3128;
-  font-size: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 9px;
   font-weight: 600;
   text-decoration: underline;
   white-space: nowrap;
+}
+
+#screen-motor360 .motor360-scenario-failure-detail:focus-visible {
+  outline: 2px solid var(--m360-danger);
+  outline-offset: 2px;
+}
+
+#screen-motor360 .motor360-scenario-failure.is-expanded .motor360-scenario-failure-message {
+  display: block;
+  overflow: visible;
 }
 
 #screen-motor360 .motor360-scenario-grid {
@@ -6504,8 +6520,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 #screen-motor360 .motor360-profile-card-heading small {
   color: var(--m360-muted);
-  font-size: var(--m360-label);
-  line-height: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 16px;
 }
 
 #screen-motor360 .motor360-profile-card-top-value b {
