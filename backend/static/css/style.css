@@ -30,8 +30,9 @@
   --success-soft: #ecf9f0;
   --warning: #f59e0b;
   --danger: #dc2626;
-  --font-body: "DM Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --font-heading: Raleway, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Pilha nativa semelhante à usada pelo ChatGPT: prioriza a fonte do sistema. */
+  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-heading: var(--font-body);
 }
 
 /* Dados do cliente: cada rótulo fica imediatamente acima do seu valor. */
@@ -2065,7 +2066,25 @@ body[data-theme="escuro"] .btn-outline-secondary {
 #screen-motor360 .motor360-scenario-quota input,
 #screen-motor360 .motor360-scenario-bid-item,
 #screen-motor360 .motor360-scenario-bid-item input {
-  font-family: "DM Sans", Arial, sans-serif;
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+#screen-motor360,
+#screen-motor360 input,
+#screen-motor360 select,
+#screen-motor360 button {
+  font-family: var(--font-body);
+}
+#screen-motor360 .motor360-group-order,
+#screen-motor360 .motor360-group-summary,
+#screen-motor360 .motor360-scenario-grid,
+#screen-motor360 .motor360-scenario-source-metrics,
+#screen-motor360 .motor360-profile-card,
+#screen-motor360 .motor360-floating-summary,
+#screen-motor360 .motor360-client-profile-summary,
+#screen-motor360 .motor360-scenario-bid-item,
+#screen-motor360 .motor360-quota-input {
   font-variant-numeric: tabular-nums lining-nums;
   font-feature-settings: "tnum" 1, "lnum" 1;
 }
@@ -6552,7 +6571,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 /* Shared financial study: mobile-first wrapper, overview and section navigation. */
-.shared-study-page { margin: 0; background: #f7f6f4; color: #2e3f47; font-family: "DM Sans", Arial, sans-serif; }
+.shared-study-page { margin: 0; background: #f7f6f4; color: #2e3f47; font-family: var(--font-body); }
 .shared-study-shell { width: min(100% - 32px, 1180px); margin: 0 auto; padding: 18px 0 36px; }
 .shared-study-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 0 14px; }
 .shared-study-brand { color: #2e3f47; font-size: 1rem; font-weight: 800; letter-spacing: .04em; }
