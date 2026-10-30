@@ -4520,17 +4520,55 @@ function renderSelectedGroupsAnalyticalPanel(items) {
 }
 
 let motor360EChartsLoadPromise = null;
-function ensureMotor360ECharts() {
-  if (window.echarts) return Promise.resolve(true);
-  if (motor360EChartsLoadPromise) return motor360EChartsLoadPromise;
-  motor360EChartsLoadPromise = new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://cdn.jsdelivr.net/npm/echarts@6.1.0/dist/echarts.min.js";
-    script.async = true;
-    script.onload = () => window.echarts ? resolve(true) : reject(new Error("ECharts carregou sem expor a API esperada."));
-    script.onerror = () => reject(new Error("Não foi possível carregar a biblioteca ECharts."));
-    document.head.appendChild(script);
+function createMotor360ChartAdapter() {
+  if (window.echarts || !window.Chart) return Boolean(window.echarts);
+  const colors = ["#1d7188", "#ef7a24", "#5a8d5b", "#8b5e9d", "#a44a52"];
+  const colorFor = (series, index) => series?.data?.[index]?.itemStyle?.color || series?.itemStyle?.color || colors[index % colors.length];
+  const categoryAxis = (option) => option?.xAxis?.type === "category" ? option.xAxis : option?.yAxis?.type === "category" ? option.yAxis : null;
+  const chartType = (series) => series?.type === "line" ? "line" : series?.type === "scatter" ? "scatter" : series?.type === "radar" ? "radar" : "bar";
+  const normalizeData = (series, type, labels) => (series?.data || []).map((item, index) => {
+    const value = typeof item === "object" && item !== null ? item.value : item;
+    if (type === "scatter") return { x: Array.isArray(value) ? Number(value[0] || 0) : 0, y: Array.isArray(value) ? Number(value[1] || 0) : Number(value || 0), label: item?.name || "" };
+    return Array.isArray(value) ? Number(value[value.length - 1] || 0) : Number(value || 0);
   });
+  const buildConfig = (option) => {
+    const series = option?.series || [];
+    const primary = series[0] || {};
+    if (primary.type === "radar") {
+      const labels = (option.radar?.indicator || []).map((indicator) => indicator.name);
+      return { type: "radar", data: { labels, datasets: series[0].data.map((item, index) => ({ label: item.name || `Grupo ${index + 1}`, data: item.value || [], borderColor: colorFor(item, index), backgroundColor: `${colorFor(item, index)}18`, pointBackgroundColor: colorFor(item, index), pointRadius: 3, borderWidth: 2 })) }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } }, scales: { r: { beginAtZero: true, max: 100, ticks: { backdropColor: "transparent" } } } } };
+    }
+    if (primary.type === "heatmap") {
+      const xLabels = option.xAxis?.data || [];
+      const yLabels = option.yAxis?.data || [];
+      const values = primary.data || [];
+      return { type: "bar", data: { labels: yLabels, datasets: xLabels.map((label, column) => ({ label, data: yLabels.map((_, row) => Number(values.find((entry) => entry[0] === column && entry[1] === row)?.[2] || 0) * 100), backgroundColor: colors[column % colors.length] })) }, options: { responsive: true, maintainAspectRatio: false, indexAxis: "y", scales: { x: { beginAtZero: true, max: 100, ticks: { callback: (value) => `${value}%` } } }, plugins: { legend: { position: "bottom" } } } };
+    }
+    const axis = categoryAxis(option);
+    const labels = axis?.data || [];
+    const isHorizontal = option?.yAxis?.type === "category";
+    const datasets = series.map((entry, seriesIndex) => ({ label: entry.name || "", data: normalizeData(entry, chartType(entry), labels), backgroundColor: entry.type === "line" ? "transparent" : entry.data?.map((_, index) => colorFor(entry, index)) || colorFor(entry, seriesIndex), borderColor: entry.itemStyle?.color || colorFor(entry, seriesIndex), borderWidth: entry.lineStyle?.width || 2, borderDash: entry.lineStyle?.type === "dashed" ? [6, 4] : [], tension: .25, fill: false, stack: entry.stack, pointRadius: entry.type === "scatter" ? (entry.symbolSize ? 5 : 3) : 2 }));
+    return { type: chartType(primary), data: { labels: labels.length ? labels : undefined, datasets }, options: { responsive: true, maintainAspectRatio: false, indexAxis: isHorizontal ? "y" : "x", scales: { x: { beginAtZero: true, title: { display: Boolean(option.xAxis?.name), text: option.xAxis?.name || "" } }, y: { beginAtZero: true, title: { display: Boolean(option.yAxis?.name), text: option.yAxis?.name || "" } } }, plugins: { legend: { position: "bottom" } } } };
+  };
+  window.echarts = {
+    init(element) {
+      const canvas = document.createElement("canvas");
+      canvas.setAttribute("aria-hidden", "true");
+      element.replaceChildren(canvas);
+      let chart = null;
+      return {
+        setOption(option) { chart?.destroy(); chart = new window.Chart(canvas.getContext("2d"), buildConfig(option)); },
+        resize() { chart?.resize(); },
+        dispose() { chart?.destroy(); chart = null; canvas.remove(); },
+      };
+    },
+  };
+  return true;
+}
+function ensureMotor360ECharts() {
+  if (window.echarts || createMotor360ChartAdapter()) return Promise.resolve(true);
+  if (motor360EChartsLoadPromise) return motor360EChartsLoadPromise;
+  motor360EChartsLoadPromise = Promise.resolve(false);
   return motor360EChartsLoadPromise;
 }
 
