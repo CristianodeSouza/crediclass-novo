@@ -6237,6 +6237,312 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 }
 
+/* Motor 360: sistema visual unificado para cartões de grupos.
+   Esta camada final substitui os overrides históricos por tokens previsíveis. */
+#screen-motor360 {
+  --m360-text: #17343e;
+  --m360-muted: #526b74;
+  --m360-subtle: #6d7f86;
+  --m360-line: #d7e1e3;
+  --m360-surface-muted: #f5f8f8;
+  --m360-surface-input: #fffaf5;
+  --m360-success: #087a4b;
+  --m360-warning: #a34d12;
+  --m360-danger: #b42318;
+  --m360-space-1: 4px;
+  --m360-space-2: 8px;
+  --m360-space-3: 12px;
+  --m360-space-4: 16px;
+  --m360-label: 10px;
+  --m360-body: 11px;
+  --m360-value: 14px;
+  --m360-title: 13px;
+  color: var(--m360-text);
+  font-variant-numeric: tabular-nums;
+}
+
+#screen-motor360 .motor360-group-card,
+#screen-motor360 .motor360-scenario-card,
+#screen-motor360 .motor360-profile-card-value,
+#screen-motor360 .motor360-group-summary,
+#screen-motor360 .motor360-scenario-grid,
+#screen-motor360 .motor360-scenario-source-metrics {
+  font-variant-numeric: tabular-nums;
+}
+
+#screen-motor360 .motor360-group-card-header {
+  min-height: 82px;
+  padding: var(--m360-space-3) var(--m360-space-4);
+  gap: var(--m360-space-3);
+  border-bottom: 1px solid var(--m360-line);
+  background: #eef5f6;
+}
+
+#screen-motor360 .motor360-group-identity h3 {
+  color: var(--m360-text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+#screen-motor360 .motor360-group-identity p,
+#screen-motor360 .motor360-group-summary small,
+#screen-motor360 .motor360-history-averages,
+#screen-motor360 .motor360-history-averages span {
+  color: var(--m360-muted);
+  font-size: var(--m360-label);
+  line-height: 14px;
+}
+
+#screen-motor360 .motor360-history-averages {
+  padding: var(--m360-space-2) var(--m360-space-3);
+  border: 1px solid #f0c9a7;
+  border-radius: 8px;
+  background: #fffaf5;
+}
+
+#screen-motor360 .motor360-history-averages strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--m360-text);
+  font-size: var(--m360-label);
+  font-weight: 600;
+}
+
+#screen-motor360 .motor360-group-summary {
+  gap: var(--m360-space-2);
+}
+
+#screen-motor360 .motor360-group-summary b {
+  color: var(--m360-text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+#screen-motor360 .motor360-group-status,
+#screen-motor360 .motor360-group-select,
+#screen-motor360 .motor360-group-audit-btn {
+  min-height: 28px;
+  font-size: var(--m360-label);
+  line-height: 14px;
+}
+
+#screen-motor360 .motor360-group-status {
+  padding: 5px 8px;
+  font-weight: 600;
+}
+
+#screen-motor360 .motor360-scenario-card {
+  padding: var(--m360-space-3);
+  border-color: var(--m360-line);
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+#screen-motor360 .motor360-scenario-card.is-compatible { border-left-color: var(--m360-success); }
+#screen-motor360 .motor360-scenario-card.is-incompatible { border-left-color: var(--m360-danger); }
+
+#screen-motor360 .motor360-scenario-title {
+  gap: var(--m360-space-2);
+  margin-bottom: var(--m360-space-2);
+}
+
+#screen-motor360 .motor360-scenario-title strong {
+  color: var(--m360-text);
+  font-size: var(--m360-title);
+  font-weight: 600;
+  line-height: 17px;
+}
+
+#screen-motor360 .motor360-scenario-title > span:not(.motor360-scenario-mode) {
+  color: var(--m360-danger);
+  font-size: var(--m360-label);
+  font-weight: 600;
+  line-height: 14px;
+}
+
+#screen-motor360 .motor360-scenario-mode {
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: var(--m360-label);
+  font-weight: 600;
+  line-height: 13px;
+}
+
+#screen-motor360 .motor360-scenario-failure {
+  display: flex;
+  min-height: 32px;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m360-space-2);
+  margin: 0 0 var(--m360-space-3);
+  padding: 6px 8px;
+  border-left: 3px solid var(--m360-danger);
+  border-radius: 4px;
+  background: #fff3f1;
+  color: var(--m360-danger);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 15px;
+}
+
+#screen-motor360 .motor360-scenario-failure > span:first-child {
+  min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+#screen-motor360 .motor360-scenario-failure-detail {
+  flex: 0 0 auto;
+  color: #7d3128;
+  font-size: 10px;
+  font-weight: 600;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+#screen-motor360 .motor360-scenario-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--m360-space-3) var(--m360-space-2);
+}
+
+#screen-motor360 .motor360-scenario-grid > div:not(.motor360-scenario-source-metrics) {
+  min-width: 0;
+  gap: 2px;
+  text-align: center;
+}
+
+#screen-motor360 .motor360-scenario-grid > div:not(.motor360-scenario-source-metrics) small {
+  color: var(--m360-muted);
+  font-size: var(--m360-label);
+  font-weight: 500;
+  line-height: 13px;
+}
+
+#screen-motor360 .motor360-scenario-grid > div:not(.motor360-scenario-source-metrics) b {
+  color: var(--m360-success);
+  font-size: var(--m360-value);
+  font-weight: 700;
+  line-height: 17px;
+}
+
+#screen-motor360 .motor360-scenario-grid em {
+  color: var(--m360-muted);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 400;
+}
+
+#screen-motor360 .motor360-scenario-source-metrics {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--m360-space-2);
+  margin-top: 0;
+  padding-top: var(--m360-space-2);
+  border-top: 1px solid var(--m360-line);
+}
+
+#screen-motor360 .motor360-scenario-source-metrics div {
+  gap: 2px;
+  text-align: center;
+}
+
+#screen-motor360 .motor360-scenario-source-metrics small {
+  color: var(--m360-subtle);
+  font-size: 10px;
+  line-height: 13px;
+}
+
+#screen-motor360 .motor360-scenario-source-metrics b {
+  color: var(--m360-muted);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 15px;
+}
+
+#screen-motor360 .motor360-scenario-note {
+  margin-top: var(--m360-space-2);
+  color: var(--m360-muted);
+  font-size: 10px;
+  line-height: 14px;
+}
+
+#screen-motor360 .motor360-scenario-profiles {
+  margin-top: var(--m360-space-3);
+  padding-top: var(--m360-space-2);
+}
+
+#screen-motor360 .motor360-profile-section-title h4 {
+  color: var(--m360-text);
+  font-size: var(--m360-title);
+  font-weight: 600;
+  line-height: 17px;
+}
+
+#screen-motor360 .motor360-profile-section-title small,
+#screen-motor360 .motor360-profile-quota-bids {
+  color: var(--m360-muted);
+  font-size: var(--m360-label);
+  line-height: 14px;
+}
+
+#screen-motor360 .motor360-profile-card-values {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--m360-space-2);
+}
+
+#screen-motor360 .motor360-profile-card-value {
+  min-height: 58px;
+  box-sizing: border-box;
+  gap: 3px;
+  padding: var(--m360-space-2);
+  border-radius: 6px;
+}
+
+#screen-motor360 .motor360-profile-card-heading small {
+  color: var(--m360-muted);
+  font-size: var(--m360-label);
+  line-height: 14px;
+}
+
+#screen-motor360 .motor360-profile-card-top-value b {
+  color: var(--m360-success);
+  font-size: var(--m360-value);
+  font-weight: 700;
+  line-height: 17px;
+}
+
+#screen-motor360 .motor360-profile-card-value span,
+#screen-motor360 .motor360-profile-card-value em,
+#screen-motor360 .motor360-profile-card-value small {
+  color: var(--m360-muted);
+  font-size: 10px;
+  line-height: 13px;
+}
+
+#screen-motor360 .motor360-profile-card-value.is-gap b,
+#screen-motor360 .motor360-profile-card-value.is-gap span,
+#screen-motor360 .motor360-profile-card-value.is-gap em { color: var(--m360-danger); }
+#screen-motor360 .motor360-profile-focus-tag { font-size: 9px !important; }
+
+@media (max-width: 1100px) {
+  #screen-motor360 .motor360-group-card-header { grid-template-columns: minmax(270px, .85fr) minmax(0, 1.35fr); }
+  #screen-motor360 .motor360-scenario-source-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
+  #screen-motor360 .motor360-scenario-source-metrics { grid-template-columns: repeat(5, minmax(70px, 1fr)); overflow-x: auto; }
+}
+
+@media (max-width: 560px) {
+  #screen-motor360 .motor360-scenario-grid,
+  #screen-motor360 .motor360-profile-card-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #screen-motor360 .motor360-scenario-source-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+}
+
 /* Motor 360: sistema tipográfico para leitura financeira. */
 #screen-motor360 {
   --motor360-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;

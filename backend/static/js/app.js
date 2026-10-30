@@ -3706,7 +3706,7 @@ function renderMotor360GroupCardUncached(item) {
         : "Dados de crédito insuficientes para avaliar";
     });
     const failureMessage = compositionCreditGuidance || readableFailures.join(" · ") || requirement.title;
-    const visibleFailure = !requirement.ok ? `<p class="motor360-scenario-failure" role="status">${escapeHtml(failureMessage)}</p>` : "";
+    const visibleFailure = !requirement.ok ? `<p class="motor360-scenario-failure" role="status" title="${escapeHtml(failureMessage)}" aria-label="${escapeHtml(failureMessage)}"><span>${escapeHtml(failureMessage)}</span><span class="motor360-scenario-failure-detail">Ver detalhes</span></p>` : "";
     const creditOptions = motor360CreditOptions(item);
     const creditInput = selected ? `<label class="motor360-scenario-credit"><span>Etapa 1 · Crédito</span><select data-credit-action="scenario" data-group-id="${auditId}" data-scenario-id="${scenario.id}" aria-label="Etapa 1: escolha o crédito para o cenário ${scenario.id === "with_embedded" ? "com lance embutido" : "sem lance embutido"}"><option value="">Escolha uma opção</option>${creditOptions.map((option) => `<option value="${option.value}" ${chosenCredit !== null && Math.round(chosenCredit * 100) === Math.round(option.value * 100) ? "selected" : ""}>${escapeHtml(option.label)} · ${formatMoney(option.value)}</option>`).join("")}</select></label>` : "";
     const bidInputs = scenarioQuotaCount > 0
