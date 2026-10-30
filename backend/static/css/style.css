@@ -6350,16 +6350,17 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 #screen-motor360 .motor360-scenario-title strong {
   color: var(--m360-text);
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
-  line-height: 19px;
+  line-height: 16px;
+  white-space: nowrap;
 }
 
 #screen-motor360 .motor360-scenario-title > span:not(.motor360-scenario-mode) {
   color: var(--m360-danger);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
-  line-height: 12px;
+  line-height: 15px;
 }
 
 #screen-motor360 .motor360-scenario-mode {
@@ -6383,9 +6384,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
   border-radius: 4px;
   background: #fff3f1;
   color: var(--m360-danger);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 500;
-  line-height: 12px;
+  line-height: 15px;
 }
 
 #screen-motor360 .motor360-scenario-failure-message {
@@ -6394,6 +6395,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+  font-size: 11px;
+  line-height: 15px;
 }
 
 #screen-motor360 .motor360-scenario-failure-detail {
@@ -6405,8 +6408,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
   color: #7d3128;
   cursor: pointer;
   font: inherit;
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 15px;
   text-decoration: underline;
   white-space: nowrap;
 }
@@ -6520,16 +6524,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 #screen-motor360 .motor360-profile-card-heading small {
   color: var(--m360-muted);
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
-  line-height: 16px;
+  line-height: 15px;
 }
 
 #screen-motor360 .motor360-profile-card-top-value b {
   color: var(--m360-success);
-  font-size: var(--m360-value);
+  font-size: 12px;
   font-weight: 700;
-  line-height: 17px;
+  line-height: 15px;
 }
 
 #screen-motor360 .motor360-profile-card-value span,
@@ -6572,10 +6576,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 /* Motor 360: etapas 1, 2 e 3 usam o mesmo componente de entrada. */
 #screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit,
 #screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota,
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-bid,
 #screen-motor360 .motor360-scenario-title > .motor360-scenario-bids {
   box-sizing: border-box;
-  min-height: 62px;
+  min-height: 54px;
   padding: 7px 8px;
   border: 1px solid #e7c9ae;
   border-radius: 6px;
@@ -6601,6 +6604,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 #screen-motor360 .motor360-scenario-title > .motor360-scenario-bids {
   align-content: center;
+  min-width: 0;
+  overflow: hidden;
 }
 
 #screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit > span,
@@ -6640,207 +6645,30 @@ body[data-theme="escuro"] .btn-outline-secondary {
 #screen-motor360 .motor360-scenario-credit select { width: 100%; padding: 4px 7px; }
 #screen-motor360 .motor360-scenario-quota .motor360-quota-input { width: 58px; padding: 4px 6px; text-align: center; }
 #screen-motor360 .motor360-scenario-bid .motor360-bid-input,
-#screen-motor360 .motor360-scenario-bid-item .motor360-bid-input { width: 120px; padding: 4px 7px; font-weight: 600; }
+#screen-motor360 .motor360-scenario-bid-item .motor360-bid-input { width: 100%; min-width: 0; padding: 4px 7px; font-weight: 600; }
 
 #screen-motor360 .motor360-scenario-bid-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
   min-height: 30px;
   padding: 2px 4px;
+  box-sizing: border-box;
+  gap: 5px;
+  justify-content: stretch;
+  overflow: hidden;
   border: 1px solid #e1d4c9;
   border-radius: 5px;
   background: #fff;
 }
 
-/* Motor 360: sistema tipográfico para leitura financeira. */
-#screen-motor360 {
-  --motor360-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
-  font-family: var(--motor360-font);
-  font-size: 13px;
-  line-height: 1.35;
-}
-#screen-motor360 :is(h1, h2, h3, h4, h5, h6, button, input, select, textarea) {
-  font-family: var(--motor360-font);
-}
-#screen-motor360 :is(.motor360-group-summary, .motor360-scenario-grid, .motor360-scenario-source-metrics, .motor360-profile-card, .motor360-floating-summary, .motor360-client-profile-summary, .motor360-scenario-bid-item, .motor360-quota-input, .motor360-group-order) {
-  font-variant-numeric: tabular-nums lining-nums;
-  font-feature-settings: "tnum" 1, "lnum" 1;
-}
-#screen-motor360 :is(.motor360-group-summary b, .motor360-scenario-grid b, .motor360-scenario-source-metrics b, .motor360-profile-card-value b, .motor360-profile-value b, .motor360-floating-summary dd, .motor360-client-profile-summary b) {
-  font-family: var(--motor360-font);
-  font-size: .88rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  font-variant-numeric: tabular-nums lining-nums;
-}
-#screen-motor360 :is(.motor360-group-summary small, .motor360-scenario-grid small, .motor360-scenario-source-metrics small, .motor360-profile-card-value small, .motor360-profile-value small, .motor360-floating-summary dt) {
-  font-family: var(--motor360-font);
-  font-size: .7rem;
-  font-weight: 500;
-  line-height: 1.25;
-  letter-spacing: 0;
-}
-#screen-motor360 :is(.motor360-group-summary, .motor360-scenario-grid, .motor360-scenario-source-metrics, .motor360-profile-card, .motor360-floating-summary, .motor360-client-profile-summary) em {
-  font-family: var(--motor360-font);
-  font-variant-numeric: tabular-nums lining-nums;
-  font-style: normal;
-}
-#screen-motor360 :is(.motor360-scenario-credit select, .motor360-scenario-quota input, .motor360-scenario-bid-item input) {
-  font-family: var(--motor360-font);
-  font-size: .82rem;
-  font-weight: 500;
-  font-variant-numeric: tabular-nums lining-nums;
-}
-#screen-motor360 .motor360-profile-value b { font-size: .86rem; }
-#screen-motor360 .motor360-scenario-mode {
-  display: inline-block;
-  padding: 1px 5px;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  font-weight: 700;
-  line-height: 1.2;
+#screen-motor360 .motor360-scenario-bid-item > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
-#screen-motor360 .motor360-scenario-mode.is-without-embedded {
-  border-color: #b9d5db;
-  background: #e7f2f4;
-  color: #2e5a65;
-}
-#screen-motor360 .motor360-scenario-mode.is-with-embedded {
-  border-color: #f0c39f;
-  background: #fff0e4;
-  color: #a64f16;
-}
-#screen-motor360 .motor360-group-status,
-#screen-motor360 .motor360-group-select,
-#screen-motor360 .motor360-scenario-title,
-#screen-motor360 .motor360-scenario-failure {
-  font-family: var(--motor360-font);
-}
-
-/* Motor 360: leitura centralizada por coluna nos cenários financeiros. */
-#screen-motor360 .motor360-scenario-title {
-  text-align: center;
-}
-#screen-motor360 .motor360-scenario-title strong,
-#screen-motor360 .motor360-scenario-title > span,
-#screen-motor360 .motor360-scenario-bids-title {
-  text-align: center;
-}
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit,
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota {
-  align-items: center;
-  text-align: center;
-}
-#screen-motor360 .motor360-scenario-bid-item {
-  justify-content: center;
-  text-align: center;
-}
-#screen-motor360 .motor360-scenario-bid-item .motor360-bid-input {
-  text-align: center;
-}
-#screen-motor360 .motor360-scenario-grid,
-#screen-motor360 .motor360-scenario-source-metrics,
-#screen-motor360 .motor360-profile-card-values {
-  justify-items: stretch;
-  text-align: center;
-}
-#screen-motor360 .motor360-scenario-grid > div,
-#screen-motor360 .motor360-scenario-source-metrics > div,
-#screen-motor360 .motor360-profile-card-values > div {
-  justify-items: center;
-  text-align: center;
-}
-#screen-motor360 .motor360-scenario-grid small,
-#screen-motor360 .motor360-scenario-grid b,
-#screen-motor360 .motor360-scenario-source-metrics small,
-#screen-motor360 .motor360-scenario-source-metrics b,
-#screen-motor360 .motor360-profile-card > strong,
-#screen-motor360 .motor360-profile-section-title,
-#screen-motor360 .motor360-profile-section-title small {
-  text-align: center;
-}
-#screen-motor360 .motor360-profile-section-title {
-  justify-content: center;
-}
-
-/* Motor 360: compactação espacial sem ampliar a tipografia padrão. */
-#screen-motor360 .motor360-group-card-header { padding: 8px 12px; gap: 12px; }
-#screen-motor360 .motor360-group-summary { gap: 8px; }
-#screen-motor360 .motor360-group-summary div { min-width: 82px; }
-#screen-motor360 .motor360-group-section { padding: 8px 10px 0; }
-#screen-motor360 .motor360-scenario-list { gap: 6px; }
-#screen-motor360 .motor360-scenario-card { padding: 7px 9px; }
-#screen-motor360 .motor360-scenario-title { margin-bottom: 5px; }
-#screen-motor360 .motor360-scenario-grid { gap: 5px 8px; }
-#screen-motor360 .motor360-scenario-source-metrics { gap: 5px; margin-top: 1px; padding-top: 5px; }
-#screen-motor360 .motor360-scenario-note { margin-top: 5px; }
-#screen-motor360 .motor360-scenario-profiles { margin-top: 7px; padding-top: 6px; }
-#screen-motor360 .motor360-profile-card-list { gap: 5px; }
-#screen-motor360 .motor360-profile-card { padding: 6px; }
-#screen-motor360 .motor360-profile-card-values { gap: 3px; }
-#screen-motor360 .motor360-profile-card-value { padding: 4px; }
-
-/* Motor 360: redução adicional de 10% no conteúdo interno dos grupos. */
-#screen-motor360 .motor360-group-card-header { padding: 7px 10px; gap: 10px; }
-#screen-motor360 .motor360-group-summary { gap: 6px; }
-#screen-motor360 .motor360-group-summary div { min-width: 76px; }
-#screen-motor360 .motor360-group-summary small { font-size: .63rem; }
-#screen-motor360 .motor360-group-summary b { font-size: .792rem; }
-#screen-motor360 .motor360-group-section { padding: 7px 8px 0; }
-#screen-motor360 .motor360-scenario-list { gap: 5px; }
-#screen-motor360 .motor360-scenario-card { padding: 6px 8px; }
-#screen-motor360 .motor360-scenario-title { margin-bottom: 4px; }
-#screen-motor360 .motor360-scenario-title strong { font-size: .684rem; }
-#screen-motor360 .motor360-scenario-title > span { font-size: .612rem; }
-#screen-motor360 .motor360-scenario-grid { gap: 4px 6px; }
-#screen-motor360 .motor360-scenario-grid small,
-#screen-motor360 .motor360-scenario-source-metrics small,
-#screen-motor360 .motor360-profile-card-value small { font-size: .63rem; }
-#screen-motor360 .motor360-scenario-grid b,
-#screen-motor360 .motor360-scenario-source-metrics b { font-size: .792rem; }
-#screen-motor360 .motor360-scenario-grid em { font-size: .585rem; }
-#screen-motor360 .motor360-scenario-source-metrics { gap: 4px; padding-top: 4px; }
-#screen-motor360 .motor360-scenario-note { margin-top: 4px; font-size: .612rem; }
-#screen-motor360 .motor360-scenario-profiles { margin-top: 6px; padding-top: 5px; }
-#screen-motor360 .motor360-profile-card-list { gap: 4px; }
-#screen-motor360 .motor360-profile-card { padding: 5px; }
-#screen-motor360 .motor360-profile-card > strong { font-size: .666rem; }
-#screen-motor360 .motor360-profile-card-values { gap: 3px; }
-#screen-motor360 .motor360-profile-card-value { padding: 3px; }
-#screen-motor360 .motor360-profile-card-value b { font-size: .756rem; }
-#screen-motor360 .motor360-profile-card-value span,
-#screen-motor360 .motor360-profile-card-value em { font-size: .594rem; }
-#screen-motor360 .motor360-profile-section-title small { font-size: .612rem; }
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit,
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota { font-size: .522rem; }
-#screen-motor360 .motor360-scenario-credit select { font-size: .576rem; }
-#screen-motor360 .motor360-scenario-quota .motor360-quota-input { font-size: .738rem; }
-#screen-motor360 .motor360-scenario-bid-item { font-size: .522rem; }
-#screen-motor360 .motor360-scenario-bid .motor360-bid-input { font-size: .684rem; }
-
-/* Ajuste fino adicional para manter o grupo inteiro visível sem rolagem. */
-#screen-motor360 .motor360-group-section { padding: 5px 6px 0; }
-#screen-motor360 .motor360-scenario-list { gap: 4px; }
-#screen-motor360 .motor360-scenario-card { padding: 4px 6px; }
-#screen-motor360 .motor360-scenario-title { gap: 4px 6px; margin-bottom: 3px; line-height: 1.1; }
-#screen-motor360 .motor360-scenario-grid { gap: 2px 4px; line-height: 1.1; }
-#screen-motor360 .motor360-scenario-grid div,
-#screen-motor360 .motor360-scenario-source-metrics div { gap: 1px; }
-#screen-motor360 .motor360-scenario-grid small,
-#screen-motor360 .motor360-scenario-source-metrics small { font-size: .56rem; line-height: 1.1; }
-#screen-motor360 .motor360-scenario-grid b,
-#screen-motor360 .motor360-scenario-source-metrics b { font-size: .7rem; line-height: 1.1; }
-#screen-motor360 .motor360-scenario-grid em { font-size: .52rem; }
-#screen-motor360 .motor360-scenario-source-metrics { gap: 3px; padding-top: 3px; }
-#screen-motor360 .motor360-scenario-note { margin-top: 3px; font-size: .56rem; line-height: 1.1; }
-#screen-motor360 .motor360-scenario-profiles { margin-top: 4px; padding-top: 4px; }
-#screen-motor360 .motor360-profile-card-list { gap: 3px; }
-#screen-motor360 .motor360-profile-card { padding: 4px; }
-#screen-motor360 .motor360-profile-card > strong { font-size: .6rem; line-height: 1.1; }
-#screen-motor360 .motor360-profile-card-value { padding: 2px; }
-#screen-motor360 .motor360-profile-card-value small { font-size: .56rem; line-height: 1.1; }
-#screen-motor360 .motor360-profile-card-value b { font-size: .68rem; line-height: 1.1; }
-#screen-motor360 .motor360-profile-card-value span,
-#screen-motor360 .motor360-profile-card-value em { font-size: .54rem; line-height: 1.1; }
 
 /* Perfil do Cliente: mesma linguagem tipográfica e cromática do Motor 360. */
 #screen-perfil {
@@ -7387,161 +7215,4 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .shared-study-content .financial-study-document { max-width: none !important; }
   .financial-study-part2-table-wrap { display: block !important; }
   .financial-study-part2-mobile { display: none !important; }
-}
-
-/* Motor 360 final component layer: overrides legacy compacting rules. */
-#screen-motor360 .motor360-scenario-title strong {
-  font-size: 15px !important;
-  font-weight: 600 !important;
-  line-height: 19px !important;
-}
-
-#screen-motor360 .motor360-scenario-title > span:not(.motor360-scenario-mode) {
-  font-size: 9px !important;
-  line-height: 12px !important;
-}
-
-#screen-motor360 .motor360-scenario-failure {
-  min-height: 32px !important;
-  margin-bottom: 8px !important;
-  padding: 6px 8px !important;
-  font-size: 9px !important;
-  line-height: 12px !important;
-}
-
-#screen-motor360 .motor360-scenario-failure-message {
-  font-size: 9px !important;
-  line-height: 12px !important;
-}
-
-#screen-motor360 .motor360-scenario-failure-detail {
-  font-size: 9px !important;
-  line-height: 12px !important;
-}
-
-#screen-motor360 .motor360-profile-card-heading small {
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  line-height: 16px !important;
-}
-
-#screen-motor360 .motor360-profile-card-top-value b {
-  font-size: 14px !important;
-  line-height: 17px !important;
-}
-
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit,
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota,
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-bid,
-#screen-motor360 .motor360-scenario-title > .motor360-scenario-bids {
-  min-height: 62px !important;
-  box-sizing: border-box;
-  padding: 7px 8px !important;
-  border: 1px solid #e7c9ae !important;
-  border-radius: 6px !important;
-  background: #fffaf5 !important;
-  font-size: 10px !important;
-  line-height: 14px !important;
-}
-
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit > span,
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota > span,
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-bid > span,
-#screen-motor360 .motor360-scenario-bids-title {
-  font-size: 10px !important;
-  font-weight: 600 !important;
-  line-height: 14px !important;
-}
-
-#screen-motor360 .motor360-scenario-credit select,
-#screen-motor360 .motor360-scenario-quota .motor360-quota-input,
-#screen-motor360 .motor360-scenario-bid .motor360-bid-input,
-#screen-motor360 .motor360-scenario-bid-item .motor360-bid-input {
-  height: 30px !important;
-  min-height: 30px !important;
-  border: 1px solid #c7d5d9 !important;
-  border-radius: 5px !important;
-  background: #fff !important;
-  color: var(--m360-text) !important;
-  font-size: 11px !important;
-  line-height: 14px !important;
-}
-
-#screen-motor360 .motor360-scenario-credit select { width: 100%; }
-#screen-motor360 .motor360-scenario-quota .motor360-quota-input { width: 58px; text-align: center; }
-#screen-motor360 .motor360-scenario-bid .motor360-bid-input,
-#screen-motor360 .motor360-scenario-bid-item .motor360-bid-input { width: 120px; font-weight: 600 !important; }
-
-/* Motor 360 audit fix: final responsive rules for the real Stage 3 DOM. */
-#screen-motor360 .motor360-scenario-title {
-  grid-template-columns: minmax(0, 1.25fr) minmax(88px, .72fr) minmax(0, 1.1fr) !important;
-}
-
-#screen-motor360 .motor360-scenario-title strong {
-  font-size: 13px !important;
-  line-height: 16px !important;
-  white-space: nowrap;
-}
-
-#screen-motor360 .motor360-scenario-failure,
-#screen-motor360 .motor360-scenario-failure-message,
-#screen-motor360 .motor360-scenario-failure-detail {
-  font-size: 11px !important;
-  line-height: 15px !important;
-}
-
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit,
-#screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota,
-#screen-motor360 .motor360-scenario-title > .motor360-scenario-bids {
-  min-width: 0 !important;
-  min-height: 54px !important;
-  overflow: hidden;
-}
-
-#screen-motor360 .motor360-scenario-credit select {
-  min-width: 0;
-  width: 100% !important;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px !important;
-}
-
-#screen-motor360 .motor360-scenario-bids {
-  grid-template-columns: minmax(0, 1fr) !important;
-  min-width: 0 !important;
-}
-
-#screen-motor360 .motor360-scenario-bid-item {
-  display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr) !important;
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  justify-content: stretch !important;
-  gap: 5px;
-  overflow: hidden;
-}
-
-#screen-motor360 .motor360-scenario-bid-item > span {
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-#screen-motor360 .motor360-scenario-bid-item .motor360-bid-input {
-  width: 100% !important;
-  min-width: 0;
-  max-width: none;
-}
-
-#screen-motor360 .motor360-profile-card-heading small {
-  font-size: 12px !important;
-  line-height: 15px !important;
-}
-
-#screen-motor360 .motor360-profile-card-top-value b {
-  font-size: 12px !important;
-  line-height: 15px !important;
 }
