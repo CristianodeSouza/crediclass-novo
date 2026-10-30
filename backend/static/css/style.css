@@ -5177,23 +5177,23 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-summary .motor360-quota-area,
 .motor360-group-summary .motor360-group-audit-btn { flex: 0 0 auto; }
 .motor360-group-actions .motor360-group-select,
-.motor360-scenario-title > label { white-space: nowrap; }
+.motor360-scenario-title > label { white-space: normal; }
 .motor360-scenario-title { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(100px, .65fr) minmax(0, 1.4fr); align-items: stretch; gap: 5px 8px; }
 .motor360-scenario-title strong { grid-column: 1 / -1; grid-row: 1; min-width: 0; line-height: 1.35; }
 .motor360-scenario-title > span { grid-column: 1; grid-row: 2; min-width: 0; line-height: 1.35; }
-.motor360-scenario-title > label.motor360-scenario-quota { display: flex; grid-column: 2; grid-row: 3; width: 100%; min-width: 0; min-height: 39px; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-navy); font-size: .62rem; font-weight: 700; }
+.motor360-scenario-title > label.motor360-scenario-quota { display: flex; grid-column: 2; grid-row: 3; width: 100%; min-width: 0; min-height: 54px; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 3px; padding: 5px 7px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-navy); font-size: .58rem; font-weight: 700; }
 .motor360-scenario-title > label.motor360-scenario-bid { display: flex; grid-column: 3; grid-row: 3; width: 100%; min-width: 0; min-height: 39px; flex-direction: row; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 8px; border: 1px solid #c5e5cf; border-radius: 6px; background: #effaf3; color: #176b40; font-size: .62rem; font-weight: 700; }
-.motor360-scenario-title > .motor360-scenario-bids { display: grid; grid-column: 3; grid-row: 3; grid-template-columns: repeat(auto-fit, minmax(125px, 1fr)); align-content: start; gap: 5px; width: 100%; padding: 6px 8px; border: 1px solid #c5e5cf; border-radius: 6px; background: #effaf3; color: #176b40; }
-.motor360-scenario-bids-title { grid-column: 1 / -1; color: #176b40; font-size: .62rem; font-weight: 800; }
+.motor360-scenario-title > .motor360-scenario-bids { display: grid; grid-column: 3; grid-row: 3; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); align-content: start; gap: 4px; width: 100%; min-height: 54px; padding: 5px 7px; border: 1px solid #c5e5cf; border-radius: 6px; background: #effaf3; color: #176b40; }
+.motor360-scenario-bids-title { grid-column: 1 / -1; color: #176b40; font-size: .58rem; font-weight: 800; line-height: 1.15; }
 .motor360-scenario-bid-item { display: flex; align-items: center; justify-content: space-between; gap: 5px; min-width: 0; padding: 3px 5px; border: 1px solid #d7ebdc; border-radius: 4px; background: #fff; color: #176b40; font-size: .58rem; font-weight: 700; }
-.motor360-scenario-bid-item .motor360-bid-input { width: 82px; height: 27px; }
-.motor360-scenario-bid-empty { grid-column: 1 / -1; color: #52715f; font-size: .6rem; }
-.motor360-scenario-title > label.motor360-scenario-credit { display: flex; grid-column: 1; grid-row: 3; min-width: 0; flex-direction: column; align-items: flex-start; gap: 3px; padding: 4px 6px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-navy); font-size: .62rem; font-weight: 700; }
+.motor360-scenario-bid-item .motor360-bid-input { width: 76px; height: 27px; }
+.motor360-scenario-bid-empty { grid-column: 1 / -1; color: #52715f; font-size: .58rem; line-height: 1.2; }
+.motor360-scenario-title > label.motor360-scenario-credit { display: flex; grid-column: 1; grid-row: 3; min-width: 0; min-height: 54px; flex-direction: column; align-items: flex-start; gap: 3px; padding: 5px 7px; border: 1px solid #f0d7bd; border-radius: 6px; background: #fff8f2; color: var(--brand-navy); font-size: .58rem; font-weight: 700; }
 .motor360-scenario-quota span { color: var(--brand-navy) !important; font-size: .62rem !important; }
 .motor360-scenario-bid span { color: #176b40 !important; font-size: .62rem !important; }
 .motor360-scenario-credit span { color: var(--brand-navy) !important; font-size: .62rem !important; }
-.motor360-scenario-credit select { width: 100%; min-height: 30px; border: 1px solid #d7dfe3; border-radius: 5px; padding: 3px 6px; color: var(--brand-navy); background: #fff; font-size: .7rem; }
-.motor360-scenario-quota .motor360-quota-input { width: 66px; height: 30px; font-size: .9rem; }
+.motor360-scenario-credit select { width: 100%; min-height: 29px; border: 1px solid #d7dfe3; border-radius: 5px; padding: 3px 5px; color: var(--brand-navy); background: #fff; font-size: .64rem; }
+.motor360-scenario-quota .motor360-quota-input { width: 58px; height: 27px; font-size: .82rem; }
 .motor360-scenario-bid .motor360-bid-input { width: 120px; height: 30px; border: 1px solid #9bd3b0; border-radius: 5px; padding: 3px 6px; color: #176b40; background: #fff; font-size: .85rem; font-weight: 700; }
 .motor360-scenario-card .motor360-quota-warning { display: block; margin: 0 0 6px; color: #9a5300; font-size: .65rem; font-weight: 700; }
 
