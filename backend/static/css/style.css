@@ -2313,7 +2313,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-scenario-profiles .motor360-profile-card-values { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .motor360-profile-section-title { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .motor360-profile-section-title small { color: var(--muted); font-size: 0.68rem; }
-.motor360-profile-quota-bids { display: block; margin-top: 2px; color: var(--brand-navy); font-size: 0.6rem; font-weight: 800; }
+.motor360-profile-quota-bids { display: inline; margin-left: 4px; color: var(--brand-navy); font-size: 0.68rem; font-weight: 800; white-space: normal; }
 .motor360-profile-card-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .motor360-profile-card { padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: #fbfcfc; }
 .motor360-profile-card > strong { display: block; margin-bottom: 7px; color: var(--brand-navy); font-size: 0.74rem; }
