@@ -6246,10 +6246,6 @@ function renderInvestorAnalysis(result) {
   results.innerHTML = `
     <button type="button" class="btn btn-outline-secondary btn-sm motor360-blocking-diagnostics-trigger" data-motor360-blocking-diagnostics>Ver impedimentos e orientações</button>
     ${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}
-    <div class="motor360-single-quota-note" role="note">
-      <strong>Grupos compatíveis para composição da carteira</strong>
-      <span>Exibimos grupos com crédito e prazo compatíveis. O perfil pode ser atingido pela composição de múltiplas cotas ou grupos; confira os requisitos de cada cenário antes de selecionar.</span>
-    </div>
     <nav class="motor360-group-pagination" aria-label="Páginas de grupos">
       <button type="button" class="btn btn-outline-secondary btn-sm" data-group-page="previous" ${investorState.motor360GroupPage === 0 ? "disabled" : ""}>Anterior</button>
       <span>Grupos ${items.length ? pageStart + 1 : 0}–${Math.min(pageStart + MOTOR360_GROUP_PAGE_SIZE, items.length)} de ${items.length} · Página ${investorState.motor360GroupPage + 1} de ${pageCount}</span>
