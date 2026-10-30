@@ -4320,7 +4320,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .investor-administrator-filter {
   display: grid;
-  grid-template-columns: minmax(120px, 150px) minmax(220px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(120px, 150px) minmax(220px, 320px) minmax(0, 1fr) auto;
   gap: 8px 12px;
   align-items: center;
   margin-top: 0;
@@ -4373,6 +4373,22 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .investor-scenario-filter input {
   margin: 0;
 }
+
+.investor-compatible-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 7px 9px;
+  border: 1px solid #d9e0e0;
+  background: #fff;
+  color: var(--brand-navy);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.investor-compatible-filter input { margin: 0; }
 
 @media (max-width: 760px) {
   .investor-administrator-filter {
@@ -5354,12 +5370,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-quick-filters label { display:inline-flex; align-items:center; gap:6px; color:var(--brand-navy); font-size:.74rem; font-weight:700; cursor:pointer; }
 .motor360-quick-filters input { width:15px; height:15px; margin:0; accent-color:var(--brand-orange); }
 .motor360-quick-filters-hint { margin:5px 14px 10px; color:var(--muted); font-size:.68rem; }
-.motor360-selection-filter-grid { display:grid; grid-template-columns:repeat(4,minmax(150px,1fr)); gap:10px; padding:0 14px 14px; }
+.motor360-selection-filter-grid { display:grid; grid-template-columns:repeat(6,minmax(110px,1fr)); gap:10px; padding:0 14px 14px; }
 .motor360-selection-filter-grid label { display:flex; flex-direction:column; gap:4px; color:var(--brand-navy); font-size:.66rem; font-weight:700; }
 .motor360-selection-filter-grid input,.motor360-selection-filter-grid select { min-height:34px; padding:7px 9px; border:1px solid #cfdbdf; border-radius:6px; background:#fff; color:var(--brand-navy); }
 .motor360-filter-check { flex-direction:row !important; align-items:center; align-self:end; }
+.motor360-selection-filter-grid .motor360-filter-check { display:none; }
 .motor360-selection-filter-grid button { align-self:end; }
-@media (max-width:900px) { .motor360-selection-filter-grid { grid-template-columns:repeat(2,minmax(140px,1fr)); } }
+@media (max-width:900px) { .motor360-selection-filter-grid { grid-template-columns:repeat(3,minmax(140px,1fr)); } }
 @media (max-width:520px) { .motor360-selection-filter-grid { grid-template-columns:1fr; } }
 .motor360-bid-sort-help,
 .motor360-bid-sort-value {

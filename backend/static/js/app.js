@@ -4727,6 +4727,7 @@ function applySelectedGroupsFiltersAndSort(items) {
 function renderMotor360SelectionFilters() {
   const host = document.getElementById("investorPreferencesPanel");
   if (!host) return;
+  const compatibleToggle = document.getElementById("investorFilterCompatible");
   const existing = host.querySelector("[data-motor360-selection-filters]");
   if (existing) {
     const profileSelect = existing.querySelector('[data-motor360-filter="profile"]');
@@ -4734,6 +4735,7 @@ function renderMotor360SelectionFilters() {
     if (profileSelect) profileSelect.value = investorState.selectedGroupProfile || "all";
     if (sortSelect) sortSelect.value = investorState.selectedGroupSort || "credit_by_admin";
     const filters = selectedGroupsFilterValues();
+    if (compatibleToggle) compatibleToggle.checked = Boolean(filters.compatibleOnly);
     existing.querySelectorAll("[data-motor360-advanced]").forEach((input) => {
       const value = filters[input.dataset.motor360Advanced];
       if (input.type === "checkbox") input.checked = Boolean(value);
@@ -4742,6 +4744,7 @@ function renderMotor360SelectionFilters() {
     return;
   }
   const filters = selectedGroupsFilterValues();
+  if (compatibleToggle) compatibleToggle.checked = Boolean(filters.compatibleOnly);
   const panel = document.createElement("details");
   panel.open = true;
   panel.dataset.motor360SelectionFilters = "true";
@@ -8200,6 +8203,10 @@ document.getElementById("investorAdministratorFilter")?.addEventListener("change
   if (hadSelectedGroups) showToast("A seleção anterior foi limpa para manter apenas uma administradora na composição.", "warning");
   if (investorState.result) renderInvestorAnalysis(investorState.result);
   renderSelectedGroupsScreen();
+});
+document.getElementById("investorFilterCompatible")?.addEventListener("change", (event) => {
+  selectedGroupsFilterValues().compatibleOnly = event.target.checked;
+  if (investorState.result) renderInvestorAnalysis(investorState.result);
 });
 document.getElementById("recalculateInvestorAnalysisBtn")?.addEventListener("click", () => {
   investorState.result = null;
