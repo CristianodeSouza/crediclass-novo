@@ -6212,6 +6212,53 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 }
 
+/* Motor 360: sistema tipográfico para leitura financeira. */
+#screen-motor360 {
+  --motor360-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: var(--motor360-font);
+  font-size: 13px;
+  line-height: 1.35;
+}
+#screen-motor360 :is(h1, h2, h3, h4, h5, h6, button, input, select, textarea) {
+  font-family: var(--motor360-font);
+}
+#screen-motor360 :is(.motor360-group-summary, .motor360-scenario-grid, .motor360-scenario-source-metrics, .motor360-profile-card, .motor360-floating-summary, .motor360-client-profile-summary, .motor360-scenario-bid-item, .motor360-quota-input, .motor360-group-order) {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+#screen-motor360 :is(.motor360-group-summary b, .motor360-scenario-grid b, .motor360-scenario-source-metrics b, .motor360-profile-card-value b, .motor360-profile-value b, .motor360-floating-summary dd, .motor360-client-profile-summary b) {
+  font-family: var(--motor360-font);
+  font-size: .88rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+#screen-motor360 :is(.motor360-group-summary small, .motor360-scenario-grid small, .motor360-scenario-source-metrics small, .motor360-profile-card-value small, .motor360-profile-value small, .motor360-floating-summary dt) {
+  font-family: var(--motor360-font);
+  font-size: .7rem;
+  font-weight: 500;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+#screen-motor360 :is(.motor360-group-summary, .motor360-scenario-grid, .motor360-scenario-source-metrics, .motor360-profile-card, .motor360-floating-summary, .motor360-client-profile-summary) em {
+  font-family: var(--motor360-font);
+  font-variant-numeric: tabular-nums lining-nums;
+  font-style: normal;
+}
+#screen-motor360 :is(.motor360-scenario-credit select, .motor360-scenario-quota input, .motor360-scenario-bid-item input) {
+  font-family: var(--motor360-font);
+  font-size: .82rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+#screen-motor360 .motor360-profile-value b { font-size: .86rem; }
+#screen-motor360 .motor360-group-status,
+#screen-motor360 .motor360-group-select,
+#screen-motor360 .motor360-scenario-title,
+#screen-motor360 .motor360-scenario-failure {
+  font-family: var(--motor360-font);
+}
+
 /* Study provenance: fixed narrative in blue, Motor 360 values in green. */
 .financial-study-document .financial-study-part1-context,
 .financial-study-document .financial-study-part1-copy,
