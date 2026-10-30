@@ -4793,7 +4793,7 @@ function renderMotor360SelectionFilters() {
   panel.open = true;
   panel.dataset.motor360SelectionFilters = "true";
   panel.className = "motor360-selection-filters";
-  panel.innerHTML = `<summary aria-label="Expandir filtros"><span class="visually-hidden">Filtros</span></summary><div class="motor360-quick-filters" role="group" aria-label="Filtros rápidos de compatibilidade"><label><input type="checkbox" data-motor360-advanced="singleQuotaOnly" ${filters.singleQuotaOnly ? "checked" : ""}> Cota única</label><label><input type="checkbox" data-motor360-advanced="compositionOnly" ${filters.compositionOnly ? "checked" : ""}> Composição</label><label><input type="checkbox" data-motor360-advanced="incomeOnly" ${filters.incomeOnly ? "checked" : ""}> Parcela na renda</label><label><input type="checkbox" data-motor360-advanced="nearestInstallmentFirst" ${filters.nearestInstallmentFirst ? "checked" : ""}> Parcela desejada · ordenar</label><label><input type="checkbox" data-motor360-advanced="fullApprovalOnly" ${filters.fullApprovalOnly ? "checked" : ""}> Aprovação completa</label></div><div class="motor360-selection-filter-grid"><label>Perfil em foco<select data-motor360-filter="profile"><option value="all">Todos os perfis</option><option value="conservative">Conservador</option><option value="moderate">Moderado</option><option value="aggressive">Agressivo</option><option value="super_aggressive">Superagressivo</option></select></label><label>Ordenar grupos<select data-motor360-filter="sort"><option value="credit_by_admin">Maior crédito por administradora</option><option value="original">Ordem original</option><option value="score">Melhor aderência</option><option value="credit">Maior crédito (geral)</option><option value="installment">Menor parcela</option><option value="bid">Menor lance ideal</option><option value="history">Maior histórico</option></select></label><label>Taxa adm. máxima (%)<input type="number" data-motor360-advanced="maxAdmin" value="${filters.maxAdmin}" min="0" max="100"></label><label>Fundo reserva máx. (%)<input type="number" data-motor360-advanced="maxReserve" value="${filters.maxReserve}" min="0" max="100"></label><label>Prazo máximo (meses)<input type="number" data-motor360-advanced="maxTerm" value="${filters.maxTerm}" min="0"></label><label class="motor360-filter-check"><input type="checkbox" data-motor360-advanced="compatibleOnly" ${filters.compatibleOnly ? "checked" : ""}> Apenas crédito compatível</label><button type="button" class="btn btn-outline-secondary btn-sm" data-motor360-clear-filters>Limpar filtros</button></div>`;
+  panel.innerHTML = `<summary aria-label="Expandir filtros"><span>Filtros avançados</span></summary><div class="motor360-filter-row-heading">Filtros rápidos</div><div class="motor360-quick-filters" role="group" aria-label="Filtros rápidos de compatibilidade"><label><input type="checkbox" data-motor360-advanced="singleQuotaOnly" ${filters.singleQuotaOnly ? "checked" : ""}> Cota única</label><label><input type="checkbox" data-motor360-advanced="compositionOnly" ${filters.compositionOnly ? "checked" : ""}> Composição</label><label><input type="checkbox" data-motor360-advanced="incomeOnly" ${filters.incomeOnly ? "checked" : ""}> Parcela na renda</label><label><input type="checkbox" data-motor360-advanced="nearestInstallmentFirst" ${filters.nearestInstallmentFirst ? "checked" : ""}> Parcela desejada · ordenar</label><label><input type="checkbox" data-motor360-advanced="fullApprovalOnly" ${filters.fullApprovalOnly ? "checked" : ""}> Aprovação completa</label></div><div class="motor360-filter-row-heading motor360-filter-row-heading-advanced">Parâmetros de análise</div><div class="motor360-selection-filter-grid"><label>Perfil em foco<select data-motor360-filter="profile"><option value="all">Todos os perfis</option><option value="conservative">Conservador</option><option value="moderate">Moderado</option><option value="aggressive">Agressivo</option><option value="super_aggressive">Superagressivo</option></select></label><label>Ordenar grupos<select data-motor360-filter="sort"><option value="credit_by_admin">Maior crédito por administradora</option><option value="original">Ordem original</option><option value="score">Melhor aderência</option><option value="credit">Maior crédito (geral)</option><option value="installment">Menor parcela</option><option value="bid">Menor lance ideal</option><option value="history">Maior histórico</option></select></label><label>Taxa adm. máxima (%)<input type="number" data-motor360-advanced="maxAdmin" value="${filters.maxAdmin}" min="0" max="100"></label><label>Fundo reserva máx. (%)<input type="number" data-motor360-advanced="maxReserve" value="${filters.maxReserve}" min="0" max="100"></label><label>Prazo máximo (meses)<input type="number" data-motor360-advanced="maxTerm" value="${filters.maxTerm}" min="0"></label><label class="motor360-filter-check"><input type="checkbox" data-motor360-advanced="compatibleOnly" ${filters.compatibleOnly ? "checked" : ""}> Apenas crédito compatível</label><button type="button" class="btn btn-outline-secondary btn-sm" data-motor360-clear-filters>Limpar filtros</button></div>`;
   host.appendChild(panel);
   panel.querySelector('[data-motor360-filter="profile"]').value = investorState.selectedGroupProfile || "all";
   panel.querySelector('[data-motor360-filter="sort"]').value = investorState.selectedGroupSort || "credit_by_admin";
@@ -5117,7 +5117,9 @@ function renderSelectedGroupsScreen() {
   }
   empty.classList.toggle("d-none", allItems.length > 0);
   results.classList.toggle("d-none", allItems.length === 0);
-  results.innerHTML = activeItems.length ? renderSelectedGroupsCompactComposition(activeItems) : "";
+  results.innerHTML = activeItems.length
+    ? `${renderSelectedGroupsAnalyticalPanel(activeItems)}${renderSelectedGroupsCartSummary(activeItems)}`
+    : "";
   const pendingReviewItems = allItems.filter((item) => motor360QuotaReview.has(motor360GroupKey(item)));
   if (pendingReviewItems.length) {
     const notice = document.createElement("div");
@@ -5126,6 +5128,23 @@ function renderSelectedGroupsScreen() {
     notice.innerHTML = `<strong>Quantidades pendentes de revisão</strong><span>${pendingReviewItems.length} grupo(s) migrados com dados ambíguos foram mantidos na seleção, mas não entram nos cálculos nem neste estudo até o operador confirmar as quantidades por cenário no Motor 360.</span>`;
     results.prepend(notice);
   }
+  if (activeItems.length) renderSelectedGroupsECharts(activeItems);
+  if (activeItems.length) renderSelectedGroupsSafely("extra-visuals", renderSelectedGroupsExtraVisuals, activeItems);
+  if (activeItems.length) renderSelectedGroupsAdvancedFilters();
+  if (activeItems.length) renderSelectedGroupsScoreBreakdown(activeItems);
+  if (activeItems.length) renderSelectedGroupsBidScenarios(activeItems);
+  if (activeItems.length) renderSelectedGroupsRiskProbability(activeItems);
+  if (activeItems.length) renderSelectedGroupsSafely("coverage-charts", renderSelectedGroupsCoverageCharts, activeItems);
+  if (activeItems.length) renderSelectedGroupsSafely("final-matrix", renderSelectedGroupsFinalMatrix, activeItems);
+  if (activeItems.length) renderSelectedGroupsExecutiveAudit(activeItems);
+  if (activeItems.length) renderSelectedGroupsAuditButton(activeItems);
+  const scenarioFact = results.querySelector(".sg-fact-strip span:nth-child(2)");
+  if (scenarioFact) scenarioFact.innerHTML = "<b>Totais por grupo</b> · cenários separados";
+  results.querySelectorAll("[data-sg-metric]").forEach((button) => button.addEventListener("click", () => {
+    investorState.selectedGroupMetric = button.dataset.sgMetric || "credit";
+    results.querySelectorAll("[data-sg-metric]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
+    renderSelectedGroupsECharts(activeItems);
+  }));
   results.querySelectorAll("[data-selected-group-anchor]").forEach((button) => button.addEventListener("click", () => {
     closeSelectedGroupsWorkspace();
     focusMotor360Group(button.dataset.selectedGroupAnchor);
