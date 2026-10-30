@@ -6272,7 +6272,7 @@ function renderInvestorAnalysis(result) {
       : result.perfil_contemplacao
       ? `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado para o perfil ${profileLabel}</strong><span>O lance do cliente (${formatMoney(client.lance_cliente_total)}) não atende ao percentual mínimo de contemplação dos grupos compatíveis. Ajuste o lance ou selecione um perfil com prazo maior.</span></div>`
       : `<div class="motor360-no-match-alert" role="alert"><strong>Nenhum grupo encontrado</strong><span>Nenhum grupo passou por todas as validações do Motor 360.</span></div>`;
-    results.innerHTML = `${explicitMessage}${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}${rejectedHtml}${renderMotor360AdminAuditAccess(scopedAudit, result.audit_id, administratorItems, items, "Ver por que nenhum grupo foi encontrado")}`;
+    results.innerHTML = `${explicitMessage}${rejectedHtml}${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}${renderMotor360AdminAuditAccess(scopedAudit, result.audit_id, administratorItems, items, "Ver por que nenhum grupo foi encontrado")}`;
     renderPersistedManualBidNotices();
     bindMotor360AuditPanel(results);
     results.querySelector("[data-motor360-blocking-diagnostics]")?.addEventListener("click", () => renderMotor360BlockingDiagnostics(investorState.audit || result.audit));
@@ -6281,7 +6281,6 @@ function renderInvestorAnalysis(result) {
     return;
   }
   results.innerHTML = `
-    ${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}
     <nav class="motor360-group-pagination" aria-label="Páginas de grupos">
       <button type="button" class="btn btn-outline-secondary btn-sm" data-group-page="previous" ${investorState.motor360GroupPage === 0 ? "disabled" : ""}>Anterior</button>
       <span>Grupos ${items.length ? pageStart + 1 : 0}–${Math.min(pageStart + MOTOR360_GROUP_PAGE_SIZE, items.length)} de ${items.length} · Página ${investorState.motor360GroupPage + 1} de ${pageCount}</span>
@@ -6292,6 +6291,7 @@ function renderInvestorAnalysis(result) {
     ${scopedContemplationRejected.length ? `<details class="motor360-credit-excluded" open><summary>Grupos fora do perfil de contemplação selecionado (${scopedContemplationRejected.length})</summary><div class="table-responsive"><table class="table"><thead><tr><th>Grupo</th><th>Administradora</th><th>Motivo</th></tr></thead><tbody>${scopedContemplationRejected.map((item) => `<tr><td>${escapeHtml(item.grupo || "-")}</td><td>${escapeHtml(item.administradora || "-")}</td><td>Lance disponível abaixo da faixa do perfil selecionado.</td></tr>`).join("")}</tbody></table></div></details>` : ""}
     <div class="investor-engine-audit"><strong>Demonstrativo:</strong> ${escapeHtml((result.passos || []).join(" "))}</div>
     ${renderMotor360AdminAuditAccess(scopedAudit, result.audit_id, administratorItems, items)}
+    ${renderMotor360ContemplationMatrix(scopedMatrixItems, result.perfil_contemplacao)}
   `;
   renderPersistedManualBidNotices();
   bindMotor360AuditPanel(results);
