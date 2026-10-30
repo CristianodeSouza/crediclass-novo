@@ -2010,10 +2010,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-composition-fold .motor360-floating-summary-heading > div:first-child { justify-items: center; }
 .motor360-composition-fold .motor360-floating-heading-actions { position: absolute; right: 12px; }
 .motor360-composition-fold .motor360-floating-summary { position: relative; }
-.motor360-composition-fold .motor360-floating-summary { border-color: #f08a35; background: linear-gradient(135deg, #fff1df 0%, #ffe0bd 48%, #fff7ed 100%); box-shadow: 0 9px 24px rgb(190 84 18 / 22%); }
-.motor360-composition-fold .motor360-floating-summary-heading { border-bottom-color: rgb(202 102 33 / 28%); }
-.motor360-composition-fold .motor360-floating-summary-heading span { color: #b95116; }
-.motor360-composition-fold .motor360-floating-summary-heading strong { color: #263f4a; }
+.motor360-composition-fold .motor360-floating-summary { border-color: #294c5a; background: linear-gradient(135deg, #19343e 0%, #2c5966 100%); box-shadow: 0 8px 20px rgb(20 46 57 / 28%); color: #fff; }
+.motor360-composition-fold .motor360-floating-summary-heading { border-bottom-color: rgb(255 255 255 / 24%); }
+.motor360-composition-fold .motor360-floating-summary-heading span { color: #d9edf0; }
+.motor360-composition-fold .motor360-floating-summary-heading strong { color: #fff; }
+.motor360-composition-fold .motor360-selected-group-label { border-color: rgb(255 255 255 / 38%); background: rgb(255 255 255 / 12%); color: #fff; }
+.motor360-composition-fold .motor360-selected-group-label:hover, .motor360-composition-fold .motor360-selected-group-label:focus-visible { border-color: #fff; background: rgb(255 255 255 / 20%); box-shadow: 0 0 0 2px rgb(255 255 255 / 18%); }
+.motor360-composition-fold .motor360-selected-group-label strong { color: #fff; }
+.motor360-composition-fold .motor360-selected-group-label small { color: #d9edf0; }
+.motor360-composition-fold .motor360-floating-minimize { color: #fff; }
+.motor360-composition-fold .motor360-floating-minimize:hover, .motor360-composition-fold .motor360-floating-minimize:focus-visible { color: #d9edf0; }
 .motor360-group-pagination { border-color: #294c5a; background: linear-gradient(135deg, #19343e 0%, #2c5966 100%); color: #fff; box-shadow: 0 8px 20px rgb(20 46 57 / 28%); }
 .motor360-group-pagination button { border-color: rgb(255 255 255 / 52%); background: rgb(255 255 255 / 12%); color: #fff; }
 .motor360-group-pagination button:hover:not(:disabled), .motor360-group-pagination button:focus-visible:not(:disabled) { border-color: #ffd19e; background: #fff3e5; color: #8c3f12; }
