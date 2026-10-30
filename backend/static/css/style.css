@@ -4320,11 +4320,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .investor-administrator-filter {
   display: grid;
-  grid-template-columns: minmax(120px, 160px) minmax(220px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(120px, 150px) minmax(220px, 320px) minmax(0, 1fr);
   gap: 8px 12px;
   align-items: center;
-  margin-top: 12px;
-  padding: 10px 12px;
+  margin-top: 0;
+  padding: 8px 10px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: var(--surface-soft);
@@ -4344,14 +4344,43 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.76rem;
 }
 
-.investor-administrator-filter small {
-  color: var(--muted);
-  font-size: 0.68rem;
+.investor-scenario-filter {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  min-width: 0;
+  color: var(--brand-navy);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.investor-scenario-filter > span {
+  margin-right: 2px;
+}
+
+.investor-scenario-filter label {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin: 0;
+  color: var(--brand-navy);
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.investor-scenario-filter input {
+  margin: 0;
 }
 
 @media (max-width: 760px) {
   .investor-administrator-filter {
     grid-template-columns: 1fr;
+  }
+
+  .investor-scenario-filter {
+    align-items: flex-start;
   }
 }
 
