@@ -7471,3 +7471,77 @@ body[data-theme="escuro"] .btn-outline-secondary {
 #screen-motor360 .motor360-scenario-quota .motor360-quota-input { width: 58px; text-align: center; }
 #screen-motor360 .motor360-scenario-bid .motor360-bid-input,
 #screen-motor360 .motor360-scenario-bid-item .motor360-bid-input { width: 120px; font-weight: 600 !important; }
+
+/* Motor 360 audit fix: final responsive rules for the real Stage 3 DOM. */
+#screen-motor360 .motor360-scenario-title {
+  grid-template-columns: minmax(0, 1.25fr) minmax(88px, .72fr) minmax(0, 1.1fr) !important;
+}
+
+#screen-motor360 .motor360-scenario-title strong {
+  font-size: 13px !important;
+  line-height: 16px !important;
+  white-space: nowrap;
+}
+
+#screen-motor360 .motor360-scenario-failure,
+#screen-motor360 .motor360-scenario-failure-message,
+#screen-motor360 .motor360-scenario-failure-detail {
+  font-size: 11px !important;
+  line-height: 15px !important;
+}
+
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit,
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota,
+#screen-motor360 .motor360-scenario-title > .motor360-scenario-bids {
+  min-width: 0 !important;
+  min-height: 54px !important;
+  overflow: hidden;
+}
+
+#screen-motor360 .motor360-scenario-credit select {
+  min-width: 0;
+  width: 100% !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px !important;
+}
+
+#screen-motor360 .motor360-scenario-bids {
+  grid-template-columns: minmax(0, 1fr) !important;
+  min-width: 0 !important;
+}
+
+#screen-motor360 .motor360-scenario-bid-item {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  justify-content: stretch !important;
+  gap: 5px;
+  overflow: hidden;
+}
+
+#screen-motor360 .motor360-scenario-bid-item > span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+#screen-motor360 .motor360-scenario-bid-item .motor360-bid-input {
+  width: 100% !important;
+  min-width: 0;
+  max-width: none;
+}
+
+#screen-motor360 .motor360-profile-card-heading small {
+  font-size: 12px !important;
+  line-height: 15px !important;
+}
+
+#screen-motor360 .motor360-profile-card-top-value b {
+  font-size: 12px !important;
+  line-height: 15px !important;
+}
