@@ -30,9 +30,11 @@
   --success-soft: #ecf9f0;
   --warning: #f59e0b;
   --danger: #dc2626;
-  /* Pilha nativa semelhante à usada pelo ChatGPT: prioriza a fonte do sistema. */
-  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Tipografia universal da plataforma: Inter em todas as telas e componentes. */
+  --font-body: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
   --font-heading: var(--font-body);
+  --motor360-font: var(--font-body);
+  --profile-font: var(--font-body);
 }
 
 /* Dados do cliente: cada rótulo fica imediatamente acima do seu valor. */
@@ -103,6 +105,13 @@ body[data-theme="escuro"] {
 
 * {
   box-sizing: border-box;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
 
 html {
@@ -6240,7 +6249,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 /* Motor 360: sistema visual unificado para cartões de grupos.
    Esta camada final substitui os overrides históricos por tokens previsíveis. */
 #screen-motor360 {
-  --m360-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  --m360-font: var(--font-body);
   --m360-text: #000;
   --m360-muted: #000;
   --m360-subtle: #000;
@@ -6758,7 +6767,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 /* Perfil do Cliente: mesma linguagem tipográfica e cromática do Motor 360. */
 #screen-perfil {
-  --profile-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  --profile-font: var(--font-body);
   font-family: var(--profile-font);
   font-size: 13px;
   line-height: 1.35;
