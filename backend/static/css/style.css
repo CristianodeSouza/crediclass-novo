@@ -6706,6 +6706,95 @@ body[data-theme="escuro"] .btn-outline-secondary {
   text-overflow: clip;
 }
 
+/* Motor 360: textos auxiliares compactos, sem reduzir os valores financeiros. */
+#screen-motor360 .motor360-scenario-status,
+#screen-motor360 .motor360-requirement-info {
+  font-size: 6px;
+  line-height: 8px;
+}
+
+#screen-motor360 .motor360-requirement-info {
+  width: 10px;
+  height: 10px;
+  margin-left: 2px;
+}
+
+#screen-motor360 .motor360-scenario-failure {
+  min-height: 22px;
+  margin-bottom: 8px;
+  padding: 3px 5px;
+  gap: 0;
+  font-size: 6px;
+  line-height: 8px;
+}
+
+#screen-motor360 .motor360-scenario-failure-message {
+  font-size: 6px;
+  line-height: 8px;
+}
+
+#screen-motor360 .motor360-scenario-note {
+  margin-top: 4px;
+  font-size: 6px;
+  line-height: 8px;
+}
+
+#screen-motor360 .motor360-profile-section-title {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+#screen-motor360 .motor360-profile-section-title h4,
+#screen-motor360 .motor360-profile-quota-bids,
+#screen-motor360 .motor360-profile-section-title > small {
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: 7px;
+  line-height: 9px;
+  white-space: nowrap;
+}
+
+#screen-motor360 .motor360-profile-section-title > small {
+  font-size: 6px;
+}
+
+#screen-motor360 .motor360-profile-card-heading {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+#screen-motor360 .motor360-profile-card-heading small {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+  font-size: 10px;
+  line-height: 13px;
+}
+
+#screen-motor360 .motor360-profile-card-top-value,
+#screen-motor360 .motor360-profile-card-top-value b {
+  flex: 0 0 auto;
+  font-size: 10px;
+  line-height: 13px;
+  white-space: nowrap;
+}
+
+#screen-motor360 .motor360-profile-card-value > .motor360-profile-focus-tag {
+  font-size: 6px !important;
+  line-height: 8px;
+}
+
 /* Motor 360: evita regressões de largura nas resoluções intermediárias. */
 #screen-motor360 .motor360-profile-card-heading small {
   overflow-wrap: normal;
