@@ -6344,6 +6344,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 #screen-motor360 .motor360-scenario-card.is-incompatible { border-left-color: var(--m360-danger); }
 
 #screen-motor360 .motor360-scenario-title {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(125px, .8fr) minmax(0, 1.15fr);
   gap: var(--m360-space-2);
   margin-bottom: var(--m360-space-2);
 }
@@ -6353,7 +6355,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 13px;
   font-weight: 600;
   line-height: 16px;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 #screen-motor360 .motor360-scenario-title > span:not(.motor360-scenario-mode) {
@@ -6391,10 +6393,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 #screen-motor360 .motor360-scenario-failure-message {
   min-width: 0;
-  display: -webkit-box;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  display: block;
+  overflow: visible;
   font-size: 11px;
   line-height: 15px;
 }
@@ -6423,6 +6423,22 @@ body[data-theme="escuro"] .btn-outline-secondary {
 #screen-motor360 .motor360-scenario-failure.is-expanded .motor360-scenario-failure-message {
   display: block;
   overflow: visible;
+}
+
+#screen-motor360 .motor360-scenario-failure-message,
+#screen-motor360 .motor360-scenario-note,
+#screen-motor360 .motor360-profile-card-value span,
+#screen-motor360 .motor360-profile-card-value em,
+#screen-motor360 .motor360-profile-card-value small,
+#screen-motor360 .motor360-scenario-source-metrics small,
+#screen-motor360 .motor360-scenario-grid em {
+  font-size: 11px;
+  line-height: 14px;
+}
+
+#screen-motor360 .motor360-scenario-source-metrics b {
+  font-size: 12px;
+  line-height: 15px;
 }
 
 #screen-motor360 .motor360-scenario-grid {
@@ -6668,6 +6684,56 @@ body[data-theme="escuro"] .btn-outline-secondary {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+@media (max-width: 1100px) {
+  #screen-motor360 .motor360-scenario-title {
+    grid-template-columns: minmax(0, 1fr) minmax(110px, .7fr);
+    gap: var(--m360-space-2);
+  }
+
+  #screen-motor360 .motor360-scenario-title strong,
+  #screen-motor360 .motor360-scenario-title > span:not(.motor360-scenario-mode) {
+    grid-column: 1 / -1;
+  }
+
+  #screen-motor360 .motor360-scenario-title > span:not(.motor360-scenario-mode) {
+    grid-row: 2;
+  }
+
+  #screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit {
+    grid-column: 1;
+    grid-row: 3;
+  }
+
+  #screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota {
+    grid-column: 2;
+    grid-row: 3;
+  }
+
+  #screen-motor360 .motor360-scenario-title > .motor360-scenario-bids {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #screen-motor360 .motor360-scenario-bid-item {
+    grid-template-columns: auto minmax(92px, 1fr);
+  }
+
+  #screen-motor360 .motor360-scenario-bid-item .motor360-bid-input {
+    min-width: 92px;
+  }
+
+  #screen-motor360 .motor360-scenario-failure {
+    align-items: flex-start;
+  }
+
+  #screen-motor360 .motor360-scenario-failure-message {
+    display: block;
+    min-width: 0;
+    overflow: visible;
+  }
 }
 
 /* Perfil do Cliente: mesma linguagem tipográfica e cromática do Motor 360. */
