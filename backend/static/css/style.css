@@ -2002,7 +2002,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-pagination span { margin: 0 auto; font-weight: 700; text-align: center; }
 .motor360-group-pagination button { min-width: 84px; }
 @media (max-width: 700px) { .motor360-group-pagination { top: 6px; gap: 6px; justify-content: space-between; } .motor360-group-pagination span { font-size: .72rem; } .motor360-group-pagination button { min-width: 74px; padding-inline: 8px; } }
-.motor360-composition-fold { position: sticky; top: 10px; z-index: 26; margin: 12px 0 8px; }
+.motor360-composition-fold { position: sticky; top: 72px; z-index: 26; margin: 0 0 8px; }
 .motor360-composition-fold .motor360-floating-summary { width: 100%; margin: 0; }
 .motor360-composition-fold .motor360-floating-summary-heading { justify-content: center; text-align: center; }
 .motor360-composition-fold .motor360-floating-summary-heading > div:first-child { justify-items: center; }
@@ -2017,7 +2017,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-pagination button { border-color: rgb(255 255 255 / 52%); background: rgb(255 255 255 / 12%); color: #fff; }
 .motor360-group-pagination button:hover:not(:disabled), .motor360-group-pagination button:focus-visible:not(:disabled) { border-color: #ffd19e; background: #fff3e5; color: #8c3f12; }
 .motor360-group-pagination button:disabled { border-color: rgb(255 255 255 / 24%); background: rgb(255 255 255 / 8%); color: rgb(255 255 255 / 55%); }
-@media (max-width: 700px) { .motor360-composition-fold { top: 6px; } .motor360-group-pagination { top: 82px; } }
+@media (max-width: 700px) { .motor360-composition-fold { top: 64px; } .motor360-group-pagination { top: 82px; } }
 .motor360-execution-panel { margin: 12px 0 14px; border: 1px solid var(--line); border-radius: 8px; background: #fbfcfc; }
 .motor360-execution-panel summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; color: var(--brand-navy); cursor: pointer; font-size: 0.78rem; font-weight: 800; list-style-position: inside; }
 .motor360-execution-panel summary span:last-child { color: var(--muted); font-size: 0.68rem; font-weight: 600; }
@@ -2141,12 +2141,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-floating-summary.is-minimized .motor360-floating-scenarios,
 .motor360-floating-summary.is-minimized .motor360-floating-action,
 .motor360-floating-summary.is-minimized > p { display: none; }
-.motor360-composition-fold { margin: 12px 0 14px; }
+.motor360-composition-fold { margin: 0 0 8px; }
 .motor360-composition-fold.is-hidden { display: none; }
-.motor360-composition-fold > div { min-height: 54px; }
-.motor360-composition-fold .motor360-floating-summary { width: 100%; margin: 0; padding: 9px 12px; box-shadow: none; }
+.motor360-composition-fold > div { min-height: 0; }
+.motor360-composition-fold .motor360-floating-summary { width: 100%; margin: 0; padding: 4px 12px 5px; box-shadow: none; }
 .motor360-composition-fold .motor360-floating-summary.is-minimized { width: 100%; }
-.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-summary-heading { position: relative; padding-bottom: 17px; }
+.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-summary-heading { position: relative; padding-bottom: 13px; }
 .motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-heading-actions { position: absolute; right: 50%; bottom: 1px; transform: translateX(50%); }
 .motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-minimize { width: 16px; height: 10px; font-size: .68rem; }
 .motor360-composition-fold .motor360-floating-summary:not(.is-minimized) { position: fixed; inset: 24px; z-index: 1100; width: auto; max-height: calc(100vh - 48px); margin: 0; padding: 22px; overflow: auto; background: #fff; box-shadow: 0 20px 70px rgb(21 44 52 / 35%); }
