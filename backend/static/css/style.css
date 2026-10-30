@@ -6341,6 +6341,28 @@ body[data-theme="escuro"] .btn-outline-secondary {
   justify-content: center;
 }
 
+/* Motor 360: reforço de legibilidade das informações de cada grupo (+20%). */
+#screen-motor360 .motor360-group-identity h3 { font-size: 1.14rem; }
+#screen-motor360 .motor360-group-identity p { font-size: .9rem; }
+#screen-motor360 .motor360-group-summary small { font-size: .84rem; }
+#screen-motor360 .motor360-group-summary b { font-size: 1.056rem; }
+#screen-motor360 .motor360-scenario-title strong { font-size: .912rem; }
+#screen-motor360 .motor360-scenario-title > span { font-size: .816rem; }
+#screen-motor360 .motor360-scenario-failure { font-size: .912rem; }
+#screen-motor360 .motor360-scenario-grid small,
+#screen-motor360 .motor360-scenario-source-metrics small,
+#screen-motor360 .motor360-profile-card-value small { font-size: .84rem; }
+#screen-motor360 .motor360-scenario-grid b,
+#screen-motor360 .motor360-scenario-source-metrics b,
+#screen-motor360 .motor360-profile-card-value b { font-size: 1.056rem; }
+#screen-motor360 .motor360-scenario-grid em,
+#screen-motor360 .motor360-profile-card-value span,
+#screen-motor360 .motor360-profile-card-value em { font-size: .78rem; }
+#screen-motor360 .motor360-scenario-note,
+#screen-motor360 .motor360-profile-section-title small { font-size: .816rem; }
+#screen-motor360 .motor360-profile-card > strong { font-size: .888rem; }
+#screen-motor360 .motor360-profile-card-value { font-size: .84rem; }
+
 /* Perfil do Cliente: mesma linguagem tipográfica e cromática do Motor 360. */
 #screen-perfil {
   --profile-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
