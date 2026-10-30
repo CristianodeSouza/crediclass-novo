@@ -5195,15 +5195,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
 /* Motor 360: cabeçalhos dos grupos com colunas estáveis e leitura alinhada. */
 .motor360-group-card-header {
   display: grid;
-  grid-template-columns: minmax(280px, .85fr) minmax(0, 1.85fr);
+  grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto auto;
-  align-items: center;
-  gap: 6px 12px;
+  align-items: stretch;
+  gap: 6px;
   padding: 8px 12px;
 }
 .motor360-group-identity {
   grid-template-columns: auto minmax(180px, 1fr) minmax(205px, 240px);
-  grid-row: 1 / span 2;
+  grid-column: 1;
+  grid-row: 1;
   align-items: center;
   min-width: 0;
 }
@@ -5220,10 +5221,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 .motor360-group-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  grid-column: 2;
-  grid-row: 1 / span 2;
-  grid-template-rows: minmax(28px, auto) minmax(26px, auto);
+  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(250px, auto);
+  grid-column: 1;
+  grid-row: 2;
+  grid-template-rows: auto;
   grid-auto-flow: row;
   align-items: center;
   gap: 6px 8px;
@@ -5234,7 +5235,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 .motor360-group-summary > div:not(.motor360-group-actions) small,
 .motor360-group-summary > div:not(.motor360-group-actions) b { white-space: nowrap; }
-.motor360-group-summary .motor360-group-actions { display: flex; grid-column: 1 / -1; grid-row: 2; min-width: 0; align-items: center; justify-content: flex-end; gap: 6px; justify-items: initial; text-align: left; }
+.motor360-group-summary .motor360-group-actions { display: flex; grid-column: 5; grid-row: 1; min-width: 0; align-items: center; justify-content: flex-end; gap: 6px; justify-items: initial; text-align: left; }
 .motor360-group-summary .motor360-group-select,
 .motor360-group-summary .motor360-group-status,
 .motor360-group-summary .motor360-quota-area,
@@ -5261,9 +5262,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-scenario-card .motor360-quota-warning { display: block; margin: 0 0 6px; color: #9a5300; font-size: .65rem; font-weight: 700; }
 
 @media (max-width: 1100px) and (min-width: 901px) {
-  .motor360-group-card-header { grid-template-columns: minmax(260px, .78fr) minmax(0, 1.4fr); gap: 14px; }
+  .motor360-group-card-header { gap: 6px; }
   .motor360-group-identity { grid-template-columns: auto minmax(145px, 1fr) 190px; }
-  .motor360-group-summary { gap: 8px 6px; }
+  .motor360-group-summary { grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(220px, auto); gap: 8px 6px; }
 }
 
 @media (max-width: 900px) {
@@ -5274,7 +5275,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .motor360-group-identity p { grid-column: auto; }
   .motor360-history-averages { width: auto; }
   .motor360-group-summary { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); justify-content: flex-start; }
-  .motor360-group-summary .motor360-group-actions { justify-content: flex-start; flex-wrap: wrap; }
+  .motor360-group-summary .motor360-group-actions { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; }
 }
 
 @media (max-width: 560px) {
