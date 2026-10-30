@@ -2318,9 +2318,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-profile-card { padding: 9px; border: 1px solid var(--line); border-radius: 6px; background: #fbfcfc; }
 .motor360-profile-card > strong { display: block; margin-bottom: 7px; color: var(--brand-navy); font-size: 0.74rem; }
 .motor360-profile-card-values { display: grid; gap: 5px; }
-.motor360-profile-card-value { display: grid; gap: 2px; padding: 6px; border-radius: 5px; background: #f2f5f5; }
+.motor360-profile-card-value { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px; align-items: baseline; padding: 6px; border-radius: 5px; background: #f2f5f5; }
+.motor360-profile-card-value small { grid-column: 1; min-width: 0; }
 .motor360-profile-card-value b { color: var(--brand-navy); font-size: 0.84rem; }
-.motor360-profile-card-value span, .motor360-profile-card-value em { color: #687980; font-size: 0.66rem; font-style: normal; }
+.motor360-profile-card-value b { grid-column: 2; grid-row: 1; }
+.motor360-profile-card-value span, .motor360-profile-card-value em { grid-column: 1 / -1; color: #687980; font-size: 0.66rem; font-style: normal; }
 .motor360-profile-card-value em { margin-top: 2px; }
 .motor360-profile-card-value.is-hit { border-left: 3px solid #1d9b59; background: #effaf3; }
 .motor360-profile-card-value.is-hit b { color: #147a48; }

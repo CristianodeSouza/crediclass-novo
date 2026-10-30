@@ -3589,9 +3589,9 @@ function renderMotor360GroupCardUncached(item) {
         : allocatedClientBidFor(item, scenario, value.id);
       const meetsBid = totalIdeal <= 0 || available >= totalIdeal;
       const bidGap = { gap: Math.max(0, totalIdeal - available) };
-      const bidStatusLabel = totalIdeal <= 0 ? "Sem lance próprio necessário" : meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(bidGap.gap)}`;
+      const bidStatusLabel = totalIdeal <= 0 ? "" : meetsBid ? "Atinge o perfil" : `Faltam ${formatMoney(bidGap.gap)}`;
       const focused = profile.id === focusProfileId;
-      return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"} ${focused ? "is-focused" : ""}" ${focused ? 'aria-current="true"' : ""}><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}${focused ? '<span class="motor360-profile-focus-tag">Em foco</span>' : ""}</small><b>${formatPercent(value.percentual_referencia)}</b><span>${bidStatusLabel}</span><em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
+      return `<div class="motor360-profile-card-value ${meetsBid ? "is-hit" : "is-gap"} ${focused ? "is-focused" : ""}" ${focused ? 'aria-current="true"' : ""}><small>${escapeHtml(profileDisplayLabels[profile.id] || profile.label)}${focused ? '<span class="motor360-profile-focus-tag">Em foco</span>' : ""}</small><b>${formatPercent(value.percentual_referencia)}</b>${bidStatusLabel ? `<span>${bidStatusLabel}</span>` : ""}<em>${idealLabel}: ${formatMoney(totalIdeal)}</em>${embeddedNote}</div>`;
     }).join("");
     const scenarioLabel = scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
     const compositionTotals = item.composition_candidate ? scenario.composition_totals : null;
