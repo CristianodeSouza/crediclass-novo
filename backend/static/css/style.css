@@ -2052,6 +2052,38 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-summary .motor360-group-status { text-align: center; }
 .motor360-group-summary small, .motor360-scenario-grid small, .motor360-profile-card-value small { color: var(--muted); font-size: 0.68rem; }
 .motor360-group-summary b { color: var(--brand-navy); font-size: 0.82rem; }
+
+/* Motor 360: padrão tipográfico único para valores e números operacionais. */
+#screen-motor360 .motor360-group-summary b,
+#screen-motor360 .motor360-scenario-grid b,
+#screen-motor360 .motor360-scenario-grid em,
+#screen-motor360 .motor360-scenario-source-metrics b,
+#screen-motor360 .motor360-profile-card-value b,
+#screen-motor360 .motor360-floating-summary dd,
+#screen-motor360 .motor360-client-profile-summary b,
+#screen-motor360 .motor360-scenario-credit select,
+#screen-motor360 .motor360-scenario-quota input,
+#screen-motor360 .motor360-scenario-bid-item,
+#screen-motor360 .motor360-scenario-bid-item input {
+  font-family: "DM Sans", Arial, sans-serif;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+#screen-motor360 .motor360-group-summary b,
+#screen-motor360 .motor360-scenario-grid b,
+#screen-motor360 .motor360-scenario-source-metrics b,
+#screen-motor360 .motor360-profile-card-value b,
+#screen-motor360 .motor360-floating-summary dd,
+#screen-motor360 .motor360-client-profile-summary b {
+  font-size: .8rem;
+  font-weight: 700;
+  letter-spacing: .01em;
+}
+#screen-motor360 .motor360-scenario-grid em,
+#screen-motor360 .motor360-profile-card-value b,
+#screen-motor360 .motor360-scenario-bid-item input {
+  font-variant-numeric: tabular-nums lining-nums;
+}
 .motor360-scenario-source-metrics { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin-top: 2px; padding-top: 8px; border-top: 1px solid var(--line); }
 .motor360-scenario-source-metrics div { display: grid; gap: 2px; min-width: 0; }
 .motor360-scenario-source-metrics small { color: var(--muted); font-size: 0.66rem; }
