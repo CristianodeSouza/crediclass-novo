@@ -3964,10 +3964,8 @@ function renderMotor360FloatingSelectionSummary() {
   const selectedGroupLabels = items.map((item) => {
     const groupId = String(item.grupo || item.grupo_id || "-");
     const anchorId = motor360GroupAnchorId(groupId);
-    const withoutQuotas = quotaCountFor(item, "without_embedded");
-    const withQuotas = quotaCountFor(item, "with_embedded");
-    const displayName = `Grupo ${groupId}${String(item.tipo_bem || "").trim() ? ` - ${String(item.tipo_bem).trim()}` : ""}`;
-    return `<button type="button" class="motor360-selected-group-label" data-selected-group-anchor="${escapeHtml(anchorId)}" title="Ir para ${escapeHtml(displayName)}"><strong>${escapeHtml(displayName)}</strong><small>Sem embutido: ${withoutQuotas} · Com embutido: ${withQuotas}</small></button>`;
+    const displayName = `Grupo ${groupId}`;
+    return `<button type="button" class="motor360-selected-group-label" data-selected-group-anchor="${escapeHtml(anchorId)}" title="Ir para ${escapeHtml(displayName)}"><strong>${escapeHtml(displayName)}</strong></button>`;
   }).join("");
   const pendingReview = pendingReviewCount;
   return `<aside class="motor360-floating-summary${minimizedClass}" aria-live="polite"><div class="motor360-floating-summary-heading"><div class="motor360-floating-summary-heading-content"><div class="motor360-selected-group-labels" aria-label="Grupos selecionados">${selectedGroupLabels}</div></div><div class="motor360-floating-heading-actions">${minimizeButton}</div></div>${pendingReview ? `<p class="motor360-quota-review-alert" role="alert">${pendingReview} grupo(s) precisam de revisão de quantidades antigas. Não são incluídos nos totais.</p>` : ""}<p class="motor360-composition-credit-summary">Cada cenário é avaliado separadamente. Apenas cotas efetivamente selecionadas entram nos totais de seu próprio cenário.</p>${renderMotor360ClientProfileSummary(client)}<div class="motor360-floating-scenarios">${scenario("without_embedded", "Sem embutido")}${scenario("with_embedded", "Com embutido")}</div><button class="btn btn-primary btn-sm motor360-floating-action" type="button" data-open-selected-groups-workspace>Analisar grupos selecionados</button></aside>`;
