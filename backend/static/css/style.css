@@ -7023,6 +7023,143 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 }
 
+/* Motor 360: ajuste final de legibilidade sem perder densidade. */
+#screen-motor360 {
+  --m360-type-title: 14px;
+  --m360-type-headline: 13px;
+  --m360-type-body: 11px;
+  --m360-type-label: 9px;
+  --m360-type-micro: 8px;
+  --m360-space-compact: 6px;
+}
+
+#screen-motor360 .motor360-scenario-heading strong {
+  font-size: var(--m360-type-title);
+}
+
+#screen-motor360 .motor360-scenario-status {
+  font-size: var(--m360-type-label);
+  line-height: 11px;
+}
+
+#screen-motor360 .motor360-scenario-failure {
+  display: block;
+  min-height: 24px;
+  margin-bottom: var(--m360-space-compact);
+  padding: 4px 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--m360-type-label);
+  line-height: 15px;
+}
+
+#screen-motor360 .motor360-scenario-failure-message {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--m360-type-label);
+  line-height: 15px;
+}
+
+#screen-motor360 .motor360-scenario-grid {
+  gap: var(--m360-space-compact) 8px;
+}
+
+#screen-motor360 .motor360-scenario-grid > div:not(.motor360-scenario-source-metrics) small {
+  font-size: var(--m360-type-label);
+  line-height: 12px;
+}
+
+#screen-motor360 .motor360-scenario-grid > div:not(.motor360-scenario-source-metrics) b {
+  font-size: var(--m360-type-headline);
+  line-height: 15px;
+}
+
+#screen-motor360 .motor360-scenario-grid em {
+  font-size: var(--m360-type-micro);
+  line-height: 10px;
+}
+
+#screen-motor360 .motor360-scenario-source-metrics {
+  gap: 4px;
+  padding-top: var(--m360-space-compact);
+}
+
+#screen-motor360 .motor360-scenario-source-metrics small {
+  min-height: 22px;
+  font-size: var(--m360-type-micro);
+  line-height: 10px;
+}
+
+#screen-motor360 .motor360-scenario-source-metrics b {
+  font-size: 10px;
+  line-height: 12px;
+}
+
+#screen-motor360 .motor360-scenario-note {
+  margin-top: 3px;
+  font-size: var(--m360-type-micro);
+  line-height: 10px;
+}
+
+#screen-motor360 .motor360-profile-section-title {
+  gap: 3px;
+  line-height: 11px;
+}
+
+#screen-motor360 .motor360-profile-section-title h4 {
+  font-size: 9px;
+  line-height: 11px;
+}
+
+#screen-motor360 .motor360-profile-quota-bids,
+#screen-motor360 .motor360-profile-section-title > small {
+  font-size: var(--m360-type-micro);
+  line-height: 10px;
+}
+
+#screen-motor360 .motor360-profile-card-values {
+  gap: 5px;
+}
+
+#screen-motor360 .motor360-profile-card-value {
+  min-height: 60px;
+  padding: 6px;
+}
+
+#screen-motor360 .motor360-profile-card-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+#screen-motor360 .motor360-profile-card-heading small,
+#screen-motor360 .motor360-profile-card-top-value,
+#screen-motor360 .motor360-profile-card-top-value b {
+  font-size: var(--m360-type-body);
+  line-height: 14px;
+}
+
+#screen-motor360 .motor360-profile-card-heading small {
+  overflow: visible;
+  white-space: nowrap;
+}
+
+#screen-motor360 .motor360-profile-card-value span,
+#screen-motor360 .motor360-profile-card-value em {
+  font-size: 9px;
+  line-height: 11px;
+}
+
+#screen-motor360 .motor360-profile-card-value > .motor360-profile-focus-tag {
+  font-size: var(--m360-type-micro) !important;
+  line-height: 10px;
+}
+
 /* Motor 360: evita regressões de largura nas resoluções intermediárias. */
 #screen-motor360 .motor360-profile-card-heading small {
   overflow-wrap: normal;
