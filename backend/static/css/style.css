@@ -6706,6 +6706,40 @@ body[data-theme="escuro"] .btn-outline-secondary {
   text-overflow: clip;
 }
 
+/* Motor 360: evita regressões de largura nas resoluções intermediárias. */
+#screen-motor360 .motor360-profile-card-heading small {
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+@media (max-width: 1100px) {
+  #screen-motor360 .motor360-group-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-rows: auto auto;
+    align-items: start;
+    gap: 6px 8px;
+  }
+
+  #screen-motor360 .motor360-group-summary > div:not(.motor360-group-actions) small,
+  #screen-motor360 .motor360-group-summary > div:not(.motor360-group-actions) b {
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: normal;
+    line-height: 14px;
+  }
+
+  #screen-motor360 .motor360-group-summary .motor360-group-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-content: flex-end;
+  }
+
+  #screen-motor360 .motor360-scenario-source-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
 /* Valores numéricos usam uma única cor de leitura; estados continuam semânticos. */
 #screen-motor360 .motor360-group-summary b,
 #screen-motor360 .motor360-scenario-grid > div:not(.motor360-scenario-source-metrics) b,
