@@ -5200,6 +5200,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
   align-items: center;
   gap: 6px 14px;
   padding: 8px 12px;
+  border-bottom: 1px solid #cbdde1;
+  background: #eef4f5;
 }
 .motor360-group-identity {
   grid-template-columns: auto minmax(180px, 1fr) minmax(205px, 240px);
