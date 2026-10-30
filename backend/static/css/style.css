@@ -7388,3 +7388,86 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-part2-table-wrap { display: block !important; }
   .financial-study-part2-mobile { display: none !important; }
 }
+
+/* Motor 360 final component layer: overrides legacy compacting rules. */
+#screen-motor360 .motor360-scenario-title strong {
+  font-size: 15px !important;
+  font-weight: 600 !important;
+  line-height: 19px !important;
+}
+
+#screen-motor360 .motor360-scenario-title > span:not(.motor360-scenario-mode) {
+  font-size: 9px !important;
+  line-height: 12px !important;
+}
+
+#screen-motor360 .motor360-scenario-failure {
+  min-height: 32px !important;
+  margin-bottom: 8px !important;
+  padding: 6px 8px !important;
+  font-size: 9px !important;
+  line-height: 12px !important;
+}
+
+#screen-motor360 .motor360-scenario-failure-message {
+  font-size: 9px !important;
+  line-height: 12px !important;
+}
+
+#screen-motor360 .motor360-scenario-failure-detail {
+  font-size: 9px !important;
+  line-height: 12px !important;
+}
+
+#screen-motor360 .motor360-profile-card-heading small {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 16px !important;
+}
+
+#screen-motor360 .motor360-profile-card-top-value b {
+  font-size: 14px !important;
+  line-height: 17px !important;
+}
+
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit,
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota,
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-bid,
+#screen-motor360 .motor360-scenario-title > .motor360-scenario-bids {
+  min-height: 62px !important;
+  box-sizing: border-box;
+  padding: 7px 8px !important;
+  border: 1px solid #e7c9ae !important;
+  border-radius: 6px !important;
+  background: #fffaf5 !important;
+  font-size: 10px !important;
+  line-height: 14px !important;
+}
+
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit > span,
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota > span,
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-bid > span,
+#screen-motor360 .motor360-scenario-bids-title {
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  line-height: 14px !important;
+}
+
+#screen-motor360 .motor360-scenario-credit select,
+#screen-motor360 .motor360-scenario-quota .motor360-quota-input,
+#screen-motor360 .motor360-scenario-bid .motor360-bid-input,
+#screen-motor360 .motor360-scenario-bid-item .motor360-bid-input {
+  height: 30px !important;
+  min-height: 30px !important;
+  border: 1px solid #c7d5d9 !important;
+  border-radius: 5px !important;
+  background: #fff !important;
+  color: var(--m360-text) !important;
+  font-size: 11px !important;
+  line-height: 14px !important;
+}
+
+#screen-motor360 .motor360-scenario-credit select { width: 100%; }
+#screen-motor360 .motor360-scenario-quota .motor360-quota-input { width: 58px; text-align: center; }
+#screen-motor360 .motor360-scenario-bid .motor360-bid-input,
+#screen-motor360 .motor360-scenario-bid-item .motor360-bid-input { width: 120px; font-weight: 600 !important; }
