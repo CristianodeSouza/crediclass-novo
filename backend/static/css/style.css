@@ -6482,14 +6482,20 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 #screen-motor360 .motor360-scenario-source-metrics div {
+  grid-template-rows: minmax(30px, auto) auto;
   gap: 2px;
   text-align: center;
+  align-items: end;
 }
 
 #screen-motor360 .motor360-scenario-source-metrics small {
+  display: flex;
+  min-height: 30px;
+  align-items: end;
+  justify-content: center;
   color: var(--m360-subtle);
-  font-size: 10px;
-  line-height: 13px;
+  font-size: 11px;
+  line-height: 14px;
 }
 
 #screen-motor360 .motor360-scenario-source-metrics b {
@@ -6502,8 +6508,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 #screen-motor360 .motor360-scenario-note {
   margin-top: var(--m360-space-2);
   color: var(--m360-muted);
-  font-size: 10px;
-  line-height: 14px;
+  font-size: 11px;
+  line-height: 15px;
 }
 
 #screen-motor360 .motor360-scenario-profiles {
@@ -6521,8 +6527,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 #screen-motor360 .motor360-profile-section-title small,
 #screen-motor360 .motor360-profile-quota-bids {
   color: var(--m360-muted);
-  font-size: var(--m360-label);
-  line-height: 14px;
+  font-size: 11px;
+  line-height: 15px;
 }
 
 #screen-motor360 .motor360-profile-card-values {
@@ -6556,14 +6562,18 @@ body[data-theme="escuro"] .btn-outline-secondary {
 #screen-motor360 .motor360-profile-card-value em,
 #screen-motor360 .motor360-profile-card-value small {
   color: var(--m360-muted);
-  font-size: 10px;
-  line-height: 13px;
+  font-size: 11px;
+  line-height: 14px;
 }
 
 #screen-motor360 .motor360-profile-card-value.is-gap b,
 #screen-motor360 .motor360-profile-card-value.is-gap span,
 #screen-motor360 .motor360-profile-card-value.is-gap em { color: var(--m360-danger); }
-#screen-motor360 .motor360-profile-focus-tag { font-size: 9px !important; }
+#screen-motor360 .motor360-profile-focus-tag { font-size: 11px !important; }
+
+#screen-motor360 .motor360-profile-card-values { align-items: stretch; }
+#screen-motor360 .motor360-profile-card-value { min-height: 72px; }
+#screen-motor360 .motor360-profile-card-heading { align-items: start; }
 
 /* Valores numéricos usam uma única cor de leitura; estados continuam semânticos. */
 #screen-motor360 .motor360-group-summary b,
@@ -6723,6 +6733,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
   #screen-motor360 .motor360-scenario-bid-item .motor360-bid-input {
     min-width: 92px;
+    max-width: 180px;
   }
 
   #screen-motor360 .motor360-scenario-failure {
