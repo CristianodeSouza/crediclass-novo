@@ -8066,9 +8066,8 @@ function motor360FirstRequiredBid() {
 function syncMotor360BidExplorer() {
   const range = document.getElementById("motor360BidRange");
   const value = document.getElementById("motor360BidValue");
-  const declared = document.getElementById("motor360DeclaredBid");
   const marker = document.getElementById("motor360FirstMatchMarker");
-  if (!range || !value || !declared) return;
+  if (!range || !value) return;
   const totals = updateClientProfileTotals();
   const declaredBid = Number(totals.lance || 0);
   const desiredCredit = toNumber(document.getElementById("clientProfileCredito")?.value) || 0;
@@ -8091,9 +8090,7 @@ function syncMotor360BidExplorer() {
   range.value = String(boundedBid);
   const simulatedBid = boundedBid;
   const bidPercent = desiredCredit > 0 ? simulatedBid / desiredCredit : null;
-  const declaredPercent = desiredCredit > 0 ? declaredBid / desiredCredit : null;
   value.textContent = `${formatMoney(simulatedBid)} · ${bidPercent == null ? "-" : formatPercent(bidPercent)}`;
-  declared.textContent = `${formatMoney(declaredBid)} · ${declaredPercent == null ? "-" : formatPercent(declaredPercent)}`;
   const firstRequired = motor360FirstRequiredBid();
   if (marker && firstRequired != null) {
     const position = max > 0 ? Math.max(0, Math.min(100, (firstRequired / max) * 100)) : 0;

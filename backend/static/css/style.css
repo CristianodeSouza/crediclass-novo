@@ -1049,11 +1049,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
   grid-column: 1 / -1;
 }
 .profile-filter-pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; grid-column:1 / -1; }
-.motor360-bid-explorer { display:grid; gap:8px; margin:12px 0; padding:14px 16px; border:1px solid #d9e0e0; border-left:4px solid var(--brand-orange, #e8751a); border-radius:8px; background:#fffaf5; }
+.motor360-bid-explorer { display:grid; gap:4px; margin:8px 0; padding:9px 12px; border:1px solid #d9e0e0; border-left:4px solid var(--brand-orange, #e8751a); border-radius:8px; background:#fffaf5; }
 .motor360-bid-explorer p { margin:3px 0; color:#647277; font-size:.86rem; }
 .motor360-bid-explorer label { display:flex; justify-content:space-between; gap:12px; font-weight:700; }
+.motor360-bid-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; font-weight:700; }
 .motor360-bid-explorer output { color:#b84f08; font-size:1.05rem; }
-.motor360-bid-range-wrap { display:grid; gap:8px; padding:0 0 8px; }
+.motor360-bid-range-wrap { display:grid; gap:5px; padding:0 0 3px; }
 .motor360-bid-explorer input[type=range] { width:100%; accent-color:#e8751a; }
 .motor360-first-match-marker { min-height:34px; color:#176b40; font-size:.76rem; font-weight:700; pointer-events:none; }
 .motor360-first-match-label { display:block; width:fit-content; max-width:100%; padding:6px 9px; border:1px solid #9bd3b0; border-radius:6px; background:#effaf3; line-height:1.25; overflow-wrap:anywhere; }
