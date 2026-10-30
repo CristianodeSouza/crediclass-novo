@@ -2144,11 +2144,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-composition-fold { margin: 0 0 8px; }
 .motor360-composition-fold.is-hidden { display: none; }
 .motor360-composition-fold > div { min-height: 0; }
-.motor360-composition-fold .motor360-floating-summary { width: 100%; margin: 0; padding: 4px 12px 5px; box-shadow: none; }
+.motor360-composition-fold .motor360-floating-summary { width: 100%; margin: 0; padding: 2px 8px 3px; box-shadow: none; }
 .motor360-composition-fold .motor360-floating-summary.is-minimized { width: 100%; }
-.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-summary-heading { position: relative; padding-bottom: 13px; }
-.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-heading-actions { position: absolute; right: 50%; bottom: 1px; transform: translateX(50%); }
-.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-minimize { width: 16px; height: 10px; font-size: .68rem; }
+.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-summary-heading { position: relative; align-items: center; padding-bottom: 0; border-bottom: 0; }
+.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-heading-actions { position: static; margin-left: auto; transform: none; }
+.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-selected-group-labels { margin: 0; }
+.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-selected-group-label { gap: 4px; padding: 3px 6px; }
+.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-selected-group-label strong { font-size: .6rem; }
+.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-selected-group-label small { font-size: .52rem; }
+.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-minimize { width: 18px; height: 18px; font-size: .72rem; }
 .motor360-composition-fold .motor360-floating-summary:not(.is-minimized) { position: fixed; inset: 24px; z-index: 1100; width: auto; max-height: calc(100vh - 48px); margin: 0; padding: 22px; overflow: auto; background: #fff; box-shadow: 0 20px 70px rgb(21 44 52 / 35%); }
 .motor360-composition-fold .motor360-floating-summary:not(.is-minimized)::before { content: "Composição dos grupos selecionados"; display: block; margin-bottom: 14px; color: var(--brand-navy); font-size: 1.15rem; font-weight: 800; }
 .motor360-composition-fold .motor360-floating-summary:not(.is-minimized) .motor360-floating-summary-heading strong { font-size: 1rem; }
