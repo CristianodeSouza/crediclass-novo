@@ -2109,12 +2109,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-floating-summary { position: relative; z-index: 2; width: min(390px, calc(100% - 24px)); margin: 12px 12px 12px auto; padding: 12px; border: 1px solid #efb477; border-radius: 7px; background: rgb(255 255 255 / 97%); box-shadow: 0 14px 36px rgb(21 44 52 / 22%); backdrop-filter: blur(8px); }
 .motor360-floating-summary-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 9px; border-bottom: 1px solid var(--line); }
 .motor360-floating-summary-heading > div { display: grid; gap: 2px; }
+.motor360-floating-summary-heading-content { min-width: 0; }
 .motor360-floating-summary-heading span { color: var(--brand-bronze-dark); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; }
 .motor360-floating-summary-heading strong { color: var(--brand-navy); font-size: 0.82rem; }
 .motor360-floating-heading-actions { display: flex; align-items: center; gap: 6px; }
 .motor360-floating-count { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; background: var(--brand-orange); color: #fff !important; font-size: 0.72rem !important; }
-.motor360-floating-minimize { display: grid; width: 28px; height: 28px; place-items: center; padding: 0; border: 1px solid #d4dadd; border-radius: 5px; background: #fff; color: var(--brand-navy); cursor: pointer; font-size: 1rem; font-weight: 800; line-height: 1; }
-.motor360-floating-minimize:hover, .motor360-floating-minimize:focus-visible { border-color: var(--brand-orange); color: var(--brand-orange); outline: none; }
+.motor360-floating-minimize { display: grid; width: 18px; height: 12px; place-items: center; padding: 0; border: 0; background: transparent; color: #65747a; cursor: pointer; font-size: .76rem; font-weight: 700; line-height: 1; }
+.motor360-floating-minimize:hover, .motor360-floating-minimize:focus-visible { color: var(--brand-orange); outline: none; }
 .motor360-floating-scenarios { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 9px; }
 .motor360-floating-scenario { padding: 8px; border: 1px solid var(--line); border-left: 3px solid var(--brand-orange); border-radius: 5px; background: #fffaf5; }
 .motor360-floating-scenario.is-ok { border-left-color: var(--success); background: #f4fbf7; }
@@ -2141,9 +2142,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-floating-summary.is-minimized .motor360-floating-action,
 .motor360-floating-summary.is-minimized > p { display: none; }
 .motor360-composition-fold { margin: 12px 0 14px; }
+.motor360-composition-fold.is-hidden { display: none; }
 .motor360-composition-fold > div { min-height: 54px; }
 .motor360-composition-fold .motor360-floating-summary { width: 100%; margin: 0; padding: 9px 12px; box-shadow: none; }
 .motor360-composition-fold .motor360-floating-summary.is-minimized { width: 100%; }
+.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-summary-heading { position: relative; padding-bottom: 17px; }
+.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-heading-actions { position: absolute; right: 50%; bottom: 1px; transform: translateX(50%); }
+.motor360-composition-fold .motor360-floating-summary.is-minimized .motor360-floating-minimize { width: 16px; height: 10px; font-size: .68rem; }
 .motor360-composition-fold .motor360-floating-summary:not(.is-minimized) { position: fixed; inset: 24px; z-index: 1100; width: auto; max-height: calc(100vh - 48px); margin: 0; padding: 22px; overflow: auto; background: #fff; box-shadow: 0 20px 70px rgb(21 44 52 / 35%); }
 .motor360-composition-fold .motor360-floating-summary:not(.is-minimized)::before { content: "Composição dos grupos selecionados"; display: block; margin-bottom: 14px; color: var(--brand-navy); font-size: 1.15rem; font-weight: 800; }
 .motor360-composition-fold .motor360-floating-summary:not(.is-minimized) .motor360-floating-summary-heading strong { font-size: 1rem; }
