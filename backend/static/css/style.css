@@ -6250,9 +6250,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
    Esta camada final substitui os overrides históricos por tokens previsíveis. */
 #screen-motor360 {
   --m360-font: var(--font-body);
-  --m360-text: #000;
-  --m360-muted: #000;
-  --m360-subtle: #000;
+  --m360-text: #19343e;
+  --m360-muted: #19343e;
+  --m360-subtle: #19343e;
   --m360-line: #d7e1e3;
   --m360-surface-muted: #f5f8f8;
   --m360-surface-input: #fffaf5;
