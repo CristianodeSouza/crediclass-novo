@@ -3475,11 +3475,25 @@ function focusMotor360Group(anchorId) {
     target = document.getElementById(anchorId);
   }
   if (!target) return;
-  target.scrollIntoView({ behavior: "smooth", block: "start" });
-  target.classList.remove("motor360-group--focus");
-  void target.offsetWidth;
-  target.classList.add("motor360-group--focus");
-  window.setTimeout(() => target.classList.remove("motor360-group--focus"), 1800);
+  const scrollToGroupHeader = () => {
+    if (!target.isConnected) return;
+    const fixedHeader = document.querySelector(".sidebar");
+    const headerHeight = fixedHeader && getComputedStyle(fixedHeader).position === "fixed"
+      ? fixedHeader.getBoundingClientRect().height
+      : 0;
+    const groupHeader = target.querySelector(".motor360-group-card-header") || target;
+    const targetTop = headerHeight + 16;
+    const currentTop = groupHeader.getBoundingClientRect().top;
+    window.scrollBy({ top: currentTop - targetTop, left: 0, behavior: "smooth" });
+    window.setTimeout(() => {
+      if (!target.isConnected) return;
+      target.classList.remove("motor360-group--focus");
+      void target.offsetWidth;
+      target.classList.add("motor360-group--focus");
+      window.setTimeout(() => target.classList.remove("motor360-group--focus"), 1800);
+    }, 350);
+  };
+  window.requestAnimationFrame(scrollToGroupHeader);
 }
 
 const motor360GroupCardCache = new Map();
