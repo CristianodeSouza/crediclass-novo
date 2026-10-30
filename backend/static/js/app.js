@@ -4441,28 +4441,42 @@ function selectedGroupAnalyticsUncached(item, forcedScenarioId = null) {
   const commitment = income > 0 ? installment / income : null;
   const riskLabel = commitment == null ? "Não informado" : commitment <= .15 ? "Baixo" : commitment <= .25 ? "Moderado" : commitment <= .30 ? "Elevado" : "Crítico";
   const riskFit = commitment == null ? .5 : Math.max(0, 1 - Math.min(1, commitment / .30));
-  const score = Math.round((creditFit * .30 + installmentFit * .20 + bidFit * .20 + historyFit * .15 + costFit * .05 + termFit * .05 + riskFit * .05) * 100);
+  const totalBid = scenarioTotalBidFor(item, scenario);
+  const economicEfficiency = credit > 0 ? Math.min(1, credit / Math.max(totalBid, credit)) : 0;
+  const baseScore = Math.round((creditFit * .30 + installmentFit * .20 + bidFit * .20 + historyFit * .15 + costFit * .05 + termFit * .05 + riskFit * .05) * 100);
+  // Nunca classificar acima da eficiência econômica quando o lance total
+  // supera o crédito líquido recebido no cenário.
+  const score = totalBid > credit && credit > 0
+    ? Math.min(baseScore, Math.round(economicEfficiency * 100))
+    : baseScore;
   const scoreLabel = score >= 80 ? "Excelente" : score >= 65 ? "Adequada" : score >= 50 ? "Atenção" : "Inadequada";
   return {
     item, groupId, scenario, profile, history, quotaCount,
     credit, desiredCredit, contractedCredit, groupMaxCredit,
     installment,
     installmentAfter: compositionEntry?.installmentAfter ?? (scenario.parcela_pos_contemplacao == null ? null : Number(scenario.parcela_pos_contemplacao) * quotaCount),
-    bid: scenarioTotalBidFor(item, scenario),
+    bid: totalBid,
     ownBidPerQuota: manualBidFor(item, scenario.id),
     balance: compositionEntry?.balance ?? Number(scenario.saldo_devedor || 0) * quotaCount,
     idealBid, availableBid, score, scoreLabel, focusProfile, adminRate, reserveRate, totalPaid, embedded, creditLossRate, creditFit, installmentFit, bidFit, historyFit, costFit, termFit,
-    incomeCommitment: commitment, probability, probabilityLabel, riskLabel,
+    incomeCommitment: commitment, probability, probabilityLabel, riskLabel, economicEfficiency,
   };
 }
 
 function selectedGroupsAnalyticsEntries(items) {
+  const seen = new Set();
   return items.flatMap((item) => {
     const ids = [...selectedScenarioIdsForGroup(motor360GroupKey(item))]
       .filter((scenarioId) => quotaCountFor(item, scenarioId) > 0);
     return (ids.length ? ids : [null])
       .map((scenarioId) => selectedGroupAnalytics(item, scenarioId))
-      .filter((entry) => entry?.scenario);
+      .filter((entry) => {
+        if (!entry?.scenario) return false;
+        const key = `${motor360GroupKey(entry.item)}|${entry.scenario.id}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
   });
 }
 
@@ -4507,10 +4521,9 @@ function renderSelectedGroupsAnalyticalPanel(items) {
     ["Índice de aderência", (entry) => `${entry.score}/100 · ${entry.scoreLabel}`],
   ];
   const profileRows = Object.entries(profileNames).map(([id, label]) => `<tr class="${profileFilter === id ? "is-focus" : ""}"><th>${label}</th>${analytics.map((entry) => { const value = entry.profile(id); const bidGap = profileBidGap(entry.item, entry.scenario, value); const passes = bidGap.ideal > 0 && bidGap.gap === 0; const state = passes ? "is-positive" : bidGap.ideal > 0 ? "is-negative" : "is-warning"; return `<td class="${state}"><strong>${formatPercent(value.percentual_referencia)}</strong><small>${passes ? "Lance suficiente" : bidGap.ideal > 0 ? `Faltam ${formatMoney(bidGap.gap)}` : "Sem referência"}</small></td>`; }).join("")}</tr>`).join("");
-  const comparativeEntries = analytics.flatMap((entry) => {
-    const selectedScenarioIds = currentScenario === "per_group" ? [...selectedScenarioIdsForGroup(motor360GroupKey(entry.item))].filter((id) => quotaCountFor(entry.item, id) > 0) : [currentScenario];
-    return selectedScenarioIds.map((scenarioId) => selectedGroupAnalytics(entry.item, scenarioId)).filter((value) => value?.scenario);
-  });
+  const comparativeEntries = currentScenario === "per_group"
+    ? analytics
+    : analytics.filter((entry) => entry.scenario.id === currentScenario);
   const comparativeRows = comparativeEntries.map((entry) => `<tr><th>Grupo ${escapeHtml(entry.groupId)}<small>${escapeHtml(entry.item.administradora || "-")} · ${entry.scenario.id === "with_embedded" ? "Com embutido" : "Sem embutido"}</small></th>${metricRows.map(([, formatter]) => `<td>${formatter(entry)}</td>`).join("")}</tr>`).join("");
   const comparativeHeaders = metricRows.map(([label]) => `<th>${label.replace(" ", "<br>")}</th>`).join("");
   const controls = `<div class="sg-toolbar"><div><span>Visão final</span><h2>Comparação de grupos</h2><p>Confira a composição final da carteira selecionada.</p></div></div>`;
@@ -4597,7 +4610,7 @@ function renderSelectedGroupsECharts(items) {
     try { const chart = window.echarts.init(element, null, { renderer: "svg" }); chart.setOption(option); selectedGroupsCharts.push(chart); } catch (error) { console.error("[selected-groups-chart]", id, error); element.innerHTML = '<div class="sg-chart-error">Dados indisponíveis para este gráfico.</div>'; }
   };
   const moneyAxis = (value) => value >= 1000000 ? `R$ ${(value / 1000000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} mi` : `R$ ${(value / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })} mil`;
-  const metricMap = { credit: ["Crédito máximo do grupo", "groupMaxCredit"], installment: ["Parcela inicial", "installment"], bid: ["Lance total", "bid"], balance: ["Saldo devedor", "balance"] };
+  const metricMap = { credit: ["Crédito líquido", "credit"], installment: ["Parcela inicial", "installment"], bid: ["Lance total", "bid"], balance: ["Saldo devedor", "balance"] };
   const metricKey = investorState.selectedGroupMetric || "credit";
   const [metricLabel, field] = metricMap[metricKey] || metricMap.credit;
   init("sgFinancialChart", {
@@ -5070,6 +5083,7 @@ function renderSelectedGroupsExecutiveAudit(items) {
     if (!entry.item.capacidade_contemplacoes) warnings.push(`Grupo ${entry.groupId}: histórico de contemplações não informado.`);
     if (!entry.item.taxa_adm && !entry.item.taxa_total) warnings.push(`Grupo ${entry.groupId}: taxa de administração não informada.`);
     if (entry.scenario.id === "with_embedded" && !entry.scenario.lance_embutido) warnings.push(`Grupo ${entry.groupId}: lance embutido não calculado.`);
+    if (entry.credit > 0 && entry.bid > entry.credit) warnings.push(`Grupo ${entry.groupId}: o lance total supera o crédito líquido no cenário ${entry.scenario.id === "with_embedded" ? "com" : "sem"} embutido.`);
   });
   const dataQuality = Math.max(0, 100 - warnings.length * 15);
   const confidence = dataQuality >= 85 && best?.score >= 70 ? "Alta" : dataQuality >= 60 ? "Média" : "Baixa";
@@ -5156,6 +5170,16 @@ function renderSelectedGroupsScreen() {
   results.innerHTML = activeItems.length
     ? `${renderSelectedGroupsAnalyticalPanel(activeItems)}${renderSelectedGroupsCartSummary(activeItems)}`
     : "";
+  const analyticalFact = results.querySelector(".sg-fact-strip");
+  if (analyticalFact) {
+    const analytics = selectedGroupsAnalyticsEntries(activeItems);
+    const groupCount = new Set(analytics.map((entry) => motor360GroupKey(entry.item))).size;
+    const scenarioIds = new Set(analytics.map((entry) => entry.scenario.id));
+    const scenarioLabel = scenarioIds.size > 1 ? "Sem e com lance embutido" : scenarioIds.has("with_embedded") ? "Com lance embutido" : "Sem lance embutido";
+    const facts = analyticalFact.querySelectorAll("span");
+    if (facts[0]) facts[0].innerHTML = `<b>${groupCount}</b> grupos comparados`;
+    if (facts[1]) facts[1].innerHTML = `<b>${scenarioLabel}</b>`;
+  }
   const pendingReviewItems = allItems.filter((item) => motor360QuotaReview.has(motor360GroupKey(item)));
   if (pendingReviewItems.length) {
     const notice = document.createElement("div");
@@ -5166,7 +5190,6 @@ function renderSelectedGroupsScreen() {
   }
   if (activeItems.length) renderSelectedGroupsECharts(activeItems);
   if (activeItems.length) renderSelectedGroupsSafely("extra-visuals", renderSelectedGroupsExtraVisuals, activeItems);
-  if (activeItems.length) renderSelectedGroupsAdvancedFilters();
   if (activeItems.length) renderSelectedGroupsScoreBreakdown(activeItems);
   if (activeItems.length) renderSelectedGroupsBidScenarios(activeItems);
   if (activeItems.length) renderSelectedGroupsRiskProbability(activeItems);
@@ -5174,8 +5197,6 @@ function renderSelectedGroupsScreen() {
   if (activeItems.length) renderSelectedGroupsSafely("final-matrix", renderSelectedGroupsFinalMatrix, activeItems);
   if (activeItems.length) renderSelectedGroupsExecutiveAudit(activeItems);
   if (activeItems.length) renderSelectedGroupsAuditButton(activeItems);
-  const scenarioFact = results.querySelector(".sg-fact-strip span:nth-child(2)");
-  if (scenarioFact) scenarioFact.innerHTML = "<b>Totais por grupo</b> · cenários separados";
   results.querySelectorAll("[data-sg-metric]").forEach((button) => button.addEventListener("click", () => {
     investorState.selectedGroupMetric = button.dataset.sgMetric || "credit";
     results.querySelectorAll("[data-sg-metric]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));

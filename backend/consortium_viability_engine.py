@@ -552,7 +552,9 @@ def analyze_client_consortium_viability(
                 liquid_credit = maximum - embedded_amount
                 minimum_quotas = math.ceil(desired / liquid_credit) if liquid_credit > 0 else None
                 fee_amount = maximum * fee
-                fund_amount = maximum * fund
+                # No cenário com lance embutido, o fundo de reserva incide
+                # sobre o crédito líquido, conforme a regra financeira.
+                fund_amount = liquid_credit * fund if with_embedded else maximum * fund
                 balance = maximum + fee_amount + fund_amount
                 initial_installment = balance / Decimal(remaining_term)
                 profile_rows = []
