@@ -6366,6 +6366,69 @@ body[data-theme="escuro"] .btn-outline-secondary {
 #screen-motor360 .motor360-profile-card-values { gap: 3px; }
 #screen-motor360 .motor360-profile-card-value { padding: 4px; }
 
+/* Motor 360: redução adicional de 10% no conteúdo interno dos grupos. */
+#screen-motor360 .motor360-group-card-header { padding: 7px 10px; gap: 10px; }
+#screen-motor360 .motor360-group-summary { gap: 6px; }
+#screen-motor360 .motor360-group-summary div { min-width: 76px; }
+#screen-motor360 .motor360-group-summary small { font-size: .63rem; }
+#screen-motor360 .motor360-group-summary b { font-size: .792rem; }
+#screen-motor360 .motor360-group-section { padding: 7px 8px 0; }
+#screen-motor360 .motor360-scenario-list { gap: 5px; }
+#screen-motor360 .motor360-scenario-card { padding: 6px 8px; }
+#screen-motor360 .motor360-scenario-title { margin-bottom: 4px; }
+#screen-motor360 .motor360-scenario-title strong { font-size: .684rem; }
+#screen-motor360 .motor360-scenario-title > span { font-size: .612rem; }
+#screen-motor360 .motor360-scenario-grid { gap: 4px 6px; }
+#screen-motor360 .motor360-scenario-grid small,
+#screen-motor360 .motor360-scenario-source-metrics small,
+#screen-motor360 .motor360-profile-card-value small { font-size: .63rem; }
+#screen-motor360 .motor360-scenario-grid b,
+#screen-motor360 .motor360-scenario-source-metrics b { font-size: .792rem; }
+#screen-motor360 .motor360-scenario-grid em { font-size: .585rem; }
+#screen-motor360 .motor360-scenario-source-metrics { gap: 4px; padding-top: 4px; }
+#screen-motor360 .motor360-scenario-note { margin-top: 4px; font-size: .612rem; }
+#screen-motor360 .motor360-scenario-profiles { margin-top: 6px; padding-top: 5px; }
+#screen-motor360 .motor360-profile-card-list { gap: 4px; }
+#screen-motor360 .motor360-profile-card { padding: 5px; }
+#screen-motor360 .motor360-profile-card > strong { font-size: .666rem; }
+#screen-motor360 .motor360-profile-card-values { gap: 3px; }
+#screen-motor360 .motor360-profile-card-value { padding: 3px; }
+#screen-motor360 .motor360-profile-card-value b { font-size: .756rem; }
+#screen-motor360 .motor360-profile-card-value span,
+#screen-motor360 .motor360-profile-card-value em { font-size: .594rem; }
+#screen-motor360 .motor360-profile-section-title small { font-size: .612rem; }
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit,
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota { font-size: .522rem; }
+#screen-motor360 .motor360-scenario-credit select { font-size: .576rem; }
+#screen-motor360 .motor360-scenario-quota .motor360-quota-input { font-size: .738rem; }
+#screen-motor360 .motor360-scenario-bid-item { font-size: .522rem; }
+#screen-motor360 .motor360-scenario-bid .motor360-bid-input { font-size: .684rem; }
+
+/* Ajuste fino adicional para manter o grupo inteiro visível sem rolagem. */
+#screen-motor360 .motor360-group-section { padding: 5px 6px 0; }
+#screen-motor360 .motor360-scenario-list { gap: 4px; }
+#screen-motor360 .motor360-scenario-card { padding: 4px 6px; }
+#screen-motor360 .motor360-scenario-title { gap: 4px 6px; margin-bottom: 3px; line-height: 1.1; }
+#screen-motor360 .motor360-scenario-grid { gap: 2px 4px; line-height: 1.1; }
+#screen-motor360 .motor360-scenario-grid div,
+#screen-motor360 .motor360-scenario-source-metrics div { gap: 1px; }
+#screen-motor360 .motor360-scenario-grid small,
+#screen-motor360 .motor360-scenario-source-metrics small { font-size: .56rem; line-height: 1.1; }
+#screen-motor360 .motor360-scenario-grid b,
+#screen-motor360 .motor360-scenario-source-metrics b { font-size: .7rem; line-height: 1.1; }
+#screen-motor360 .motor360-scenario-grid em { font-size: .52rem; }
+#screen-motor360 .motor360-scenario-source-metrics { gap: 3px; padding-top: 3px; }
+#screen-motor360 .motor360-scenario-note { margin-top: 3px; font-size: .56rem; line-height: 1.1; }
+#screen-motor360 .motor360-scenario-profiles { margin-top: 4px; padding-top: 4px; }
+#screen-motor360 .motor360-profile-card-list { gap: 3px; }
+#screen-motor360 .motor360-profile-card { padding: 4px; }
+#screen-motor360 .motor360-profile-card > strong { font-size: .6rem; line-height: 1.1; }
+#screen-motor360 .motor360-profile-card-value { padding: 2px; }
+#screen-motor360 .motor360-profile-card-value small { font-size: .56rem; line-height: 1.1; }
+#screen-motor360 .motor360-profile-card-value b { font-size: .68rem; line-height: 1.1; }
+#screen-motor360 .motor360-profile-card-value span,
+#screen-motor360 .motor360-profile-card-value em { font-size: .54rem; line-height: 1.1; }
+
 /* Perfil do Cliente: mesma linguagem tipográfica e cromática do Motor 360. */
 #screen-perfil {
   --profile-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
