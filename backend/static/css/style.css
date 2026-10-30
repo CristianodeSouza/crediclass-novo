@@ -6795,6 +6795,33 @@ body[data-theme="escuro"] .btn-outline-secondary {
   line-height: 8px;
 }
 
+/* Motor 360: valores numéricos compactados em 20%, mantendo os rótulos. */
+#screen-motor360 .motor360-group-summary b {
+  font-size: 9.6px;
+  line-height: 13px;
+}
+
+#screen-motor360 .motor360-scenario-grid > div:not(.motor360-scenario-source-metrics) b {
+  font-size: 11.2px;
+  line-height: 14px;
+}
+
+#screen-motor360 .motor360-scenario-grid em {
+  font-size: 8px;
+  line-height: 11px;
+}
+
+#screen-motor360 .motor360-scenario-source-metrics b {
+  font-size: 9.6px;
+  line-height: 13px;
+}
+
+#screen-motor360 .motor360-profile-card-top-value b,
+#screen-motor360 .motor360-profile-card-value b {
+  font-size: 8px;
+  line-height: 11px;
+}
+
 /* Motor 360: evita regressões de largura nas resoluções intermediárias. */
 #screen-motor360 .motor360-profile-card-heading small {
   overflow-wrap: normal;
