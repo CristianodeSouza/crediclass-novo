@@ -6254,11 +6254,143 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-variant-numeric: tabular-nums lining-nums;
 }
 #screen-motor360 .motor360-profile-value b { font-size: .86rem; }
+#screen-motor360 .motor360-scenario-mode {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+#screen-motor360 .motor360-scenario-mode.is-without-embedded {
+  border-color: #b9d5db;
+  background: #e7f2f4;
+  color: #2e5a65;
+}
+#screen-motor360 .motor360-scenario-mode.is-with-embedded {
+  border-color: #f0c39f;
+  background: #fff0e4;
+  color: #a64f16;
+}
 #screen-motor360 .motor360-group-status,
 #screen-motor360 .motor360-group-select,
 #screen-motor360 .motor360-scenario-title,
 #screen-motor360 .motor360-scenario-failure {
   font-family: var(--motor360-font);
+}
+
+/* Perfil do Cliente: mesma linguagem tipográfica e cromática do Motor 360. */
+#screen-perfil {
+  --profile-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
+  font-family: var(--profile-font);
+  font-size: 13px;
+  line-height: 1.35;
+}
+#screen-perfil :is(h1, h2, h3, h4, h5, h6, button, input, select, textarea) {
+  font-family: var(--profile-font);
+}
+#screen-perfil .client-profile-card {
+  padding: 22px;
+  border-color: #d5e0e3;
+  box-shadow: 0 8px 22px rgba(31, 45, 51, .06);
+}
+#screen-perfil .client-profile-toolbar h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+#screen-perfil .client-profile-toolbar p {
+  color: #526970;
+  font-size: .82rem;
+}
+#screen-perfil .client-profile-eyebrow {
+  color: #d8661b;
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+#screen-perfil .client-profile-toolbar .btn,
+#screen-perfil .client-profile-actions .btn {
+  font-size: .78rem;
+  font-weight: 600;
+}
+#screen-perfil .client-profile-section,
+#screen-perfil .client-preliminary-section {
+  border-color: #d5e0e3;
+  background: #fff;
+}
+#screen-perfil .client-profile-section h3,
+#screen-perfil .client-preliminary-section h3 {
+  color: #2e3f47;
+  font-size: .92rem;
+  font-weight: 650;
+}
+#screen-perfil .client-profile-section h3 span,
+#screen-perfil .client-preliminary-section h3 span {
+  width: 24px;
+  height: 24px;
+  border: 1px solid #cbdde1;
+  background: #eef4f5;
+  color: #2e5a65;
+  font-size: .62rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+#screen-perfil .client-profile-section label,
+#screen-perfil .profile-holder-fields label {
+  color: #526970;
+  font-size: .7rem;
+  font-weight: 600;
+}
+#screen-perfil .client-profile-section .form-control,
+#screen-perfil .client-profile-section .form-select,
+#screen-perfil .profile-holder-fields .form-control {
+  font-family: var(--profile-font);
+  color: #2e3f47;
+  font-size: .82rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+#screen-perfil .client-profile-section .form-control:focus,
+#screen-perfil .client-profile-section .form-select:focus,
+#screen-perfil .profile-holder-fields .form-control:focus {
+  border-color: #8fb8c1;
+  box-shadow: 0 0 0 .2rem rgba(143, 184, 193, .2);
+}
+#screen-perfil .crm-import-toolbar,
+#screen-perfil .profile-holder-title {
+  border-color: #cbdde1;
+  background: #eef4f5;
+}
+#screen-perfil .crm-import-toolbar label,
+#screen-perfil .profile-holder-title,
+#screen-perfil .profile-holder-table header {
+  color: #2e3f47;
+  font-weight: 650;
+}
+#screen-perfil .profile-holder-group {
+  border-color: #d5e0e3;
+  background: #f8fbfb;
+}
+#screen-perfil .profile-holder-band {
+  background: #2e3f47;
+  font-size: .68rem;
+  font-weight: 700;
+}
+#screen-perfil .profile-holder-table header {
+  background: #f1f6f7;
+  font-size: .72rem;
+}
+#screen-perfil .profile-holder-fields span {
+  color: #2e3f47;
+}
+#screen-perfil .profile-holder-fields .form-control {
+  text-align: right;
+}
+#screen-perfil .profile-capacity-section label {
+  border-color: #d5e0e3;
+  background: #f8fbfb;
 }
 
 /* Study provenance: fixed narrative in blue, Motor 360 values in green. */

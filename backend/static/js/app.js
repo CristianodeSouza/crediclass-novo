@@ -3607,7 +3607,10 @@ function renderMotor360GroupCardUncached(item) {
   const scaledScenarioCards = scenarios.map((scenario) => {
     const chosenCredit = selectedCreditFor(groupKey, scenario.id);
     const scenarioQuotaCount = selected ? (chosenCredit === null ? 0 : quotaCountFor(groupKey, scenario.id)) : 1;
-    const title = (scenario.id === "with_embedded" ? "Cenários financeiros - Crédito contratado com lance embutido" : "Cenários financeiros - Crédito contratado sem lance embutido") + (minimumQuotasFor(item, scenario.id) > 1 ? ` · Composição: mínimo de ${minimumQuotasFor(item, scenario.id)} cotas` : "");
+    const scenarioMode = scenario.id === "with_embedded"
+      ? '<span class="motor360-scenario-mode is-with-embedded">Com lance</span> embutido'
+      : '<span class="motor360-scenario-mode is-without-embedded">Sem lance</span> embutido';
+    const title = `Cenários financeiros - Crédito contratado ${scenarioMode}` + (minimumQuotasFor(item, scenario.id) > 1 ? ` · Composição: mínimo de ${minimumQuotasFor(item, scenario.id)} cotas` : "");
     const requirement = selected && chosenCredit === null
       ? { ok: false, failed: ["Crédito"], title: "Escolha o crédito desta cota antes de informar a quantidade." }
       : selected && scenarioQuotaCount === 0
