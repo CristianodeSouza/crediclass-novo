@@ -6295,6 +6295,52 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-family: var(--motor360-font);
 }
 
+/* Motor 360: leitura centralizada por coluna nos cenários financeiros. */
+#screen-motor360 .motor360-scenario-title {
+  text-align: center;
+}
+#screen-motor360 .motor360-scenario-title strong,
+#screen-motor360 .motor360-scenario-title > span,
+#screen-motor360 .motor360-scenario-bids-title {
+  text-align: center;
+}
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit,
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota {
+  align-items: center;
+  text-align: center;
+}
+#screen-motor360 .motor360-scenario-bid-item {
+  justify-content: center;
+  text-align: center;
+}
+#screen-motor360 .motor360-scenario-bid-item .motor360-bid-input {
+  text-align: center;
+}
+#screen-motor360 .motor360-scenario-grid,
+#screen-motor360 .motor360-scenario-source-metrics,
+#screen-motor360 .motor360-profile-card-values {
+  justify-items: stretch;
+  text-align: center;
+}
+#screen-motor360 .motor360-scenario-grid > div,
+#screen-motor360 .motor360-scenario-source-metrics > div,
+#screen-motor360 .motor360-profile-card-values > div {
+  justify-items: center;
+  text-align: center;
+}
+#screen-motor360 .motor360-scenario-grid small,
+#screen-motor360 .motor360-scenario-grid b,
+#screen-motor360 .motor360-scenario-source-metrics small,
+#screen-motor360 .motor360-scenario-source-metrics b,
+#screen-motor360 .motor360-profile-card > strong,
+#screen-motor360 .motor360-profile-section-title,
+#screen-motor360 .motor360-profile-section-title small {
+  text-align: center;
+}
+#screen-motor360 .motor360-profile-section-title {
+  justify-content: center;
+}
+
 /* Perfil do Cliente: mesma linguagem tipográfica e cromática do Motor 360. */
 #screen-perfil {
   --profile-font: "Inter", "Segoe UI", Roboto, Arial, sans-serif;
