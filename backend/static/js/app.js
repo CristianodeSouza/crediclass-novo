@@ -3591,7 +3591,13 @@ function renderMotor360GroupCardUncached(item) {
     const scenarioLabel = scenario.id === "with_embedded" ? "Com lance embutido" : "Sem lance embutido";
     const compositionTotals = item.composition_candidate ? scenario.composition_totals : null;
     const referenceBid = compositionTotals?.lance_cliente_total ?? scenario.lance_cliente_total;
-    return `<section class="motor360-scenario-profiles"><div class="motor360-profile-section-title"><h4>Perfis · ${scenarioLabel}</h4><small>Foco: ${escapeHtml(focusProfileLabel)} · Referência: ${formatMoney(referenceBid)}</small></div><div class="motor360-profile-card-values">${values || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section>`;
+    const profileQuotaCount = selected ? quotaCountFor(groupKey, scenario.id) : 1;
+    const profileQuotaBids = profileQuotaCount > 0
+      ? manualBidValuesFor(item, scenario.id, profileQuotaCount)
+        .map((value, index) => `Cota ${index + 1} · ${formatMoney(value)}`)
+        .join(" · ")
+      : "Nenhuma cota selecionada";
+    return `<section class="motor360-scenario-profiles"><div class="motor360-profile-section-title"><h4>Perfis · ${scenarioLabel}</h4><small>Foco: ${escapeHtml(focusProfileLabel)} · Referência: ${formatMoney(referenceBid)}<span class="motor360-profile-quota-bids">${escapeHtml(profileQuotaBids)}</span></small></div><div class="motor360-profile-card-values">${values || "<p class=\"motor360-empty-inline\">Perfis não informados.</p>"}</div></section>`;
   };
   const scaledScenarioCards = scenarios.map((scenario) => {
     const chosenCredit = selectedCreditFor(groupKey, scenario.id);
