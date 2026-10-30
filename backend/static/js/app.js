@@ -6386,14 +6386,6 @@ function installMotor360DelegatedControls(results) {
       if (document.activeElement === target) pendingMotor360ClickFocusSelector = null;
     }, 0);
   });
-  results.addEventListener("input", (event) => {
-    const control = event.target instanceof Element ? event.target : null;
-    if (!control?.matches('[data-bid-action="scenario"]')) return;
-    const parsedBid = parseManualBidInput(control.value);
-    if (parsedBid === null) return;
-    control.value = formatCurrencyInputValue(parsedBid);
-    control.setSelectionRange(control.value.length, control.value.length);
-  });
   results.addEventListener("change", (event) => {
     const control = event.target instanceof Element ? event.target : null;
     if (!control) return;

@@ -10,7 +10,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: APP_VERSION
-        value: 4.0.322
+        value: 4.0.323
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: "0"
       - key: DEBUG
