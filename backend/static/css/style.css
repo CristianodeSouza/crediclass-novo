@@ -2000,8 +2000,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-group-list .motor360-group-card { content-visibility: auto; contain-intrinsic-size: 420px; }
 .motor360-group-pagination { position: sticky; top: 132px; z-index: 25; display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin: 8px 0; padding: 4px 8px; border: 1px solid #d9e1e4; border-radius: 8px; background: rgb(255 255 255 / 96%); color: #52616b; font-size: .72rem; box-shadow: 0 4px 12px rgb(21 44 52 / 12%); backdrop-filter: blur(8px); }
 .motor360-group-pagination span { margin: 0 auto; font-weight: 700; text-align: center; font-size: .72rem; }
-.motor360-group-pagination button { min-width: 68px; min-height: 24px; padding: 3px 8px; font-size: .68rem; }
-@media (max-width: 700px) { .motor360-group-pagination { top: 124px; gap: 4px; justify-content: space-between; padding: 4px 6px; } .motor360-group-pagination span { font-size: .66rem; } .motor360-group-pagination button { min-width: 62px; min-height: 23px; padding: 3px 6px; font-size: .64rem; } }
+.motor360-group-pagination button { min-width: 42px; min-height: 18px; padding: 2px 5px; font-size: .56rem; line-height: 1.1; }
+@media (max-width: 700px) { .motor360-group-pagination { top: 124px; gap: 4px; justify-content: space-between; padding: 4px 6px; } .motor360-group-pagination span { font-size: .66rem; } .motor360-group-pagination button { min-width: 38px; min-height: 17px; padding: 2px 4px; font-size: .54rem; } }
 .motor360-composition-fold { position: sticky; top: 72px; z-index: 26; margin: 0 0 8px; }
 .motor360-composition-fold .motor360-floating-summary { width: 100%; margin: 0; }
 .motor360-composition-fold .motor360-floating-summary-heading { justify-content: center; text-align: center; }
