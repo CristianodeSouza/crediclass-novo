@@ -5195,16 +5195,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
 /* Motor 360: cabeçalhos dos grupos com colunas estáveis e leitura alinhada. */
 .motor360-group-card-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: minmax(310px, .85fr) minmax(0, 1.5fr);
   grid-template-rows: auto auto;
-  align-items: stretch;
-  gap: 6px;
+  align-items: center;
+  gap: 6px 14px;
   padding: 8px 12px;
 }
 .motor360-group-identity {
   grid-template-columns: auto minmax(180px, 1fr) minmax(205px, 240px);
   grid-column: 1;
-  grid-row: 1;
+  grid-row: 1 / span 2;
   align-items: center;
   min-width: 0;
 }
@@ -5221,10 +5221,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 .motor360-group-summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(250px, auto);
-  grid-column: 1;
-  grid-row: 2;
-  grid-template-rows: auto;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  grid-template-rows: minmax(28px, auto) minmax(26px, auto);
   grid-auto-flow: row;
   align-items: center;
   gap: 6px 8px;
@@ -5262,9 +5262,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .motor360-scenario-card .motor360-quota-warning { display: block; margin: 0 0 6px; color: #9a5300; font-size: .65rem; font-weight: 700; }
 
 @media (max-width: 1100px) and (min-width: 901px) {
-  .motor360-group-card-header { gap: 6px; }
+  .motor360-group-card-header { grid-template-columns: minmax(260px, .78fr) minmax(0, 1.4fr); gap: 6px 10px; }
   .motor360-group-identity { grid-template-columns: auto minmax(145px, 1fr) 190px; }
-  .motor360-group-summary { grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(220px, auto); gap: 8px 6px; }
+  .motor360-group-summary { gap: 8px 6px; }
 }
 
 @media (max-width: 900px) {
@@ -5275,7 +5275,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .motor360-group-identity p { grid-column: auto; }
   .motor360-history-averages { width: auto; }
   .motor360-group-summary { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); justify-content: flex-start; }
-  .motor360-group-summary .motor360-group-actions { grid-column: 1 / -1; justify-content: flex-start; flex-wrap: wrap; }
+  .motor360-group-summary .motor360-group-actions { justify-content: flex-start; flex-wrap: wrap; }
 }
 
 @media (max-width: 560px) {
