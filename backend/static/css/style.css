@@ -6593,6 +6593,119 @@ body[data-theme="escuro"] .btn-outline-secondary {
 #screen-motor360 .motor360-profile-card-value { min-height: 72px; }
 #screen-motor360 .motor360-profile-card-heading { align-items: start; }
 
+/* Motor 360: hierarquia estável para títulos, perfis e estados. */
+#screen-motor360 .motor360-scenario-heading {
+  display: flex;
+  min-width: 0;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  line-height: 16px;
+}
+
+#screen-motor360 .motor360-scenario-heading strong {
+  flex: 0 0 auto;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+#screen-motor360 .motor360-scenario-mode {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 1px 6px;
+  border: 1px solid #a7cbd5;
+  border-radius: 999px;
+  background: #edf7f9;
+  color: var(--m360-text);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  white-space: nowrap;
+}
+
+#screen-motor360 .motor360-scenario-mode.is-with-embedded {
+  border-color: #efbd91;
+  background: #fff4e9;
+}
+
+#screen-motor360 .motor360-scenario-composition {
+  min-width: 0;
+  color: var(--m360-muted);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 14px;
+}
+
+#screen-motor360 .motor360-scenario-status {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-width: 0;
+  color: var(--m360-danger);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 15px;
+}
+
+#screen-motor360 .motor360-profile-section-title {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2px;
+  align-items: start;
+}
+
+#screen-motor360 .motor360-profile-section-title h4 {
+  min-width: 0;
+  margin: 0;
+  line-height: 17px;
+}
+
+#screen-motor360 .motor360-profile-quota-bids,
+#screen-motor360 .motor360-profile-section-title > small {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  line-height: 15px;
+}
+
+#screen-motor360 .motor360-profile-card-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 3px 6px;
+}
+
+#screen-motor360 .motor360-profile-card-heading small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 15px;
+}
+
+#screen-motor360 .motor360-profile-card-value > .motor360-profile-focus-tag {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin: 0;
+  font-size: 11px !important;
+  line-height: 14px;
+}
+
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-credit > span,
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-quota > span,
+#screen-motor360 .motor360-scenario-title > label.motor360-scenario-bid > span,
+#screen-motor360 .motor360-scenario-bids-title,
+#screen-motor360 .motor360-scenario-bid-item > span {
+  font-size: 11px !important;
+  line-height: 14px;
+}
+
+#screen-motor360 .motor360-scenario-bid-item > span {
+  overflow: visible;
+  text-overflow: clip;
+}
+
 /* Valores numéricos usam uma única cor de leitura; estados continuam semânticos. */
 #screen-motor360 .motor360-group-summary b,
 #screen-motor360 .motor360-scenario-grid > div:not(.motor360-scenario-source-metrics) b,
