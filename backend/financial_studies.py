@@ -41,6 +41,7 @@ ARCHIVE_COLUMNS = {
     "group_count": "financial_study_group_count",
     "approval_key": "financial_study_approval_key",
     "archive": "financial_study_archive_v1",
+    "crm_opportunity_id": "financial_study_crm_opportunity_id",
 }
 SHARE_COLUMNS = {
     "token_hash": "financial_study_public_token_sha256",
@@ -491,6 +492,7 @@ def create_study(*, client_name: str, approved_by: str, app_version: str, snapsh
         "client_name": client_name,
         "administrator": ", ".join(administrators),
         "group_count": str(len(groups)),
+        "crm_opportunity_id": str((snapshot.get("client") or {}).get("crm_opportunity_id") or ""),
         "approval_key": approval_key,
         "archive": archive,
     }
@@ -527,7 +529,7 @@ def create_study(*, client_name: str, approved_by: str, app_version: str, snapsh
 
 def list_studies(*, query: str = "", limit: int = 100) -> list[dict]:
     _, indexes = _headers()
-    fields = ["study_id", "created_at", "status", "operator", "client_name", "administrator", "group_count", "archive"]
+    fields = ["study_id", "created_at", "status", "operator", "client_name", "administrator", "group_count", "crm_opportunity_id", "archive"]
     field_indexes = {field: (_optional_index(indexes, field) if field in ARCHIVE_COLUMNS else _index(indexes, field)) for field in fields}
     readable_fields = [field for field in fields if field_indexes[field] is not None]
     ranges = [f"{_quoted_sheet()}!{column_letter(field_indexes[field])}2:{column_letter(field_indexes[field])}" for field in readable_fields]
@@ -541,11 +543,12 @@ def list_studies(*, query: str = "", limit: int = 100) -> list[dict]:
         record = {field: (columns[field][row_index][0] if field in columns and row_index < len(columns[field]) and columns[field][row_index] else "") for field in fields}
         if not record["study_id"]:
             continue
-        if normalized_query and normalized_query not in record["client_name"].casefold() and normalized_query not in record["study_id"].casefold():
+        if normalized_query and normalized_query not in record["client_name"].casefold() and normalized_query not in record["study_id"].casefold() and normalized_query not in record["crm_opportunity_id"].casefold():
             continue
         items.append({"id": record["study_id"], "client_name": record["client_name"], "approved_at": record["created_at"],
                       "approved_by": record["operator"], "administrator": record["administrator"],
                       "group_count": int(record["group_count"]) if str(record["group_count"]).isdigit() else 0,
+                      "crm_opportunity_id": record["crm_opportunity_id"],
                       "has_snapshot": bool(record["archive"]), "status": record["status"]})
     return list(reversed(items))[:max(1, min(int(limit), 200))]
 
@@ -561,10 +564,13 @@ def get_study(study_id: str) -> dict | None:
         range=f"{_quoted_sheet()}!A{row_number}:ZZ{row_number}",
     ).execute().get("values", [[]])[0]
     field = lambda key: str(row[_index(indexes, key)] if _index(indexes, key) < len(row) else "")
+    crm_column = _optional_index(indexes, "crm_opportunity_id")
+    crm_opportunity_id = str(row[crm_column]) if crm_column is not None and crm_column < len(row) else ""
     archive_column = _optional_index(indexes, "archive")
     archive = _decompress_archive(field("archive")) if archive_column is not None else None
     return {"id": study_id, "client_name": field("client_name"), "approved_at": field("created_at"),
             "approved_by": field("operator"), "status": field("status"),
+            "crm_opportunity_id": crm_opportunity_id,
             "app_version": archive.get("app_version", "") if archive else "",
             "snapshot": archive.get("snapshot") if archive else None,
             "document_html": archive.get("document_html") if archive else None,

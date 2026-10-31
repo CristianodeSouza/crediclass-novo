@@ -648,6 +648,8 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
       maximum_installment: client.parcela_maxima ?? null,
       income: client.renda_total ?? null,
       contemplation_profile: client.contemplacao_perfil || investorState.result?.perfil_contemplacao || null,
+      crm_opportunity_id: String(profile.crm_oportunidade_id || client.crm_oportunidade_id || "").trim() || null,
+      crm_response: profile.crm_response || client.crm_response || null,
     },
     investment_simulation: investmentSimulation,
     groups: items.map((item) => ({
@@ -838,15 +840,31 @@ function financialStudyHistoryDate(value) {
   return Number.isNaN(date.getTime()) ? "Data indisponível" : date.toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" });
 }
 
+function renderFinancialStudyCrmHistory(response, opportunityId) {
+  if (!response) {
+    return '<p class="financial-study-crm-empty">Este estudo não possui dados importados do CRM. Ele foi criado manualmente ou é um registro legado.</p>';
+  }
+  const dados = response.dados || {};
+  const renderRows = (object, excludedKeys = []) => Object.entries(object || {})
+    .filter(([key]) => !excludedKeys.includes(key))
+    .map(([key, value]) => `<tr><th scope="row">${escapeHtml(key)}</th><td>${escapeHtml(formatCrmValue(value))}</td></tr>`)
+    .join("");
+  const people = Array.isArray(dados.titulares)
+    ? dados.titulares.map((person, index) => `<section class="financial-study-crm-person"><h4>${escapeHtml(index === 0 ? "Titular" : `Pessoa ${index + 1}`)}</h4><table><tbody>${renderRows(person)}</tbody></table></section>`).join("")
+    : "";
+  return `<div class="financial-study-crm-meta"><span><strong>ID da oportunidade</strong>${escapeHtml(String(opportunityId || response.crm_oportunidade_id || "—"))}</span><span><strong>Status da extração</strong>${response.encontrado ? "Encontrada" : "Sem dados de formulário"}</span>${response.nota_id ? `<span><strong>ID da nota</strong>${escapeHtml(String(response.nota_id))}</span>` : ""}</div><h4>Dados extraídos</h4><table class="financial-study-crm-table"><tbody>${renderRows(dados, ["titulares", "campos_formulario"])}</tbody></table>${people}${dados.campos_formulario ? `<details class="financial-study-crm-fields"><summary>Campos originais do formulário</summary><table class="financial-study-crm-table"><tbody>${renderRows(dados.campos_formulario)}</tbody></table></details>` : ""}${response.nota_texto ? `<details class="financial-study-crm-fields"><summary>Nota original</summary><pre>${escapeHtml(String(response.nota_texto))}</pre></details>` : ""}`;
+}
+
 function renderFinancialStudyHistory(items) {
   const rows = document.getElementById("financialStudyHistoryRows");
   const state = document.getElementById("financialStudyHistoryState");
   if (!rows || !state) return;
-  rows.innerHTML = items.map((item) => `<tr><td data-label="Estudo"><strong>${escapeHtml(item.id)}</strong></td><td data-label="Cliente">${escapeHtml(item.client_name)}</td><td data-label="Aprovado em">${escapeHtml(financialStudyHistoryDate(item.approved_at))}</td><td data-label="Responsável">${escapeHtml(item.approved_by)}</td><td data-label="Grupos">${Number(item.group_count) || 0}</td><td data-label="Arquivo"><span class="financial-study-history-file ${item.has_snapshot ? "is-complete" : ""}">${item.has_snapshot ? "Estudo Completo" : "Registro legado"}</span></td><td data-label="Ação"><button class="btn btn-outline-secondary btn-sm" type="button" data-financial-study-open="${escapeHtml(item.id)}">Visualizar</button></td></tr>`).join("");
+  rows.innerHTML = items.map((item) => `<tr><td data-label="Estudo"><strong>${escapeHtml(item.id)}</strong></td><td data-label="Cliente">${escapeHtml(item.client_name)}</td><td data-label="Oportunidade CRM">${item.crm_opportunity_id ? `<button class="financial-study-crm-link" type="button" data-financial-study-crm="${escapeHtml(item.id)}" title="Abrir dados importados desta oportunidade">${escapeHtml(item.crm_opportunity_id)}</button>` : "—"}</td><td data-label="Aprovado em">${escapeHtml(financialStudyHistoryDate(item.approved_at))}</td><td data-label="Responsável">${escapeHtml(item.approved_by)}</td><td data-label="Grupos">${Number(item.group_count) || 0}</td><td data-label="Arquivo"><span class="financial-study-history-file ${item.has_snapshot ? "is-complete" : ""}">${item.has_snapshot ? "Estudo Completo" : "Registro legado"}</span></td><td data-label="Ação"><button class="btn btn-outline-secondary btn-sm" type="button" data-financial-study-open="${escapeHtml(item.id)}">Visualizar</button></td></tr>`).join("");
   state.hidden = items.length > 0;
   state.textContent = "Nenhum estudo aprovado encontrado.";
   document.querySelector(".financial-study-history-list-wrap")?.classList.toggle("d-none", items.length === 0);
   rows.querySelectorAll("[data-financial-study-open]").forEach((button) => button.addEventListener("click", () => openFinancialStudyHistoryItem(button.dataset.financialStudyOpen)));
+  rows.querySelectorAll("[data-financial-study-crm]").forEach((button) => button.addEventListener("click", () => openFinancialStudyHistoryItem(button.dataset.financialStudyCrm, { showCrm: true })));
 }
 
 async function loadFinancialStudyHistory() {
@@ -867,13 +885,20 @@ async function loadFinancialStudyHistory() {
   }
 }
 
-async function openFinancialStudyHistoryItem(studyId) {
+async function openFinancialStudyHistoryItem(studyId, { showCrm = false } = {}) {
   const detail = document.getElementById("financialStudyHistoryDetail");
   try {
     const payload = await apiGet(`/financial-studies/${encodeURIComponent(studyId)}`);
     const study = payload.study;
     document.getElementById("financialStudyHistoryDetailTitle").textContent = `${study.id} · ${study.client_name}`;
     document.getElementById("financialStudyHistoryDetailMeta").textContent = `Aprovado em ${financialStudyHistoryDate(study.approved_at)} por ${study.approved_by} · versão ${study.app_version}`;
+    const crmDetail = document.getElementById("financialStudyCrmDetail");
+    const crmContent = document.getElementById("financialStudyCrmContent");
+    const crmResponse = study.snapshot?.client?.crm_response || null;
+    if (crmDetail && crmContent) {
+      crmContent.innerHTML = renderFinancialStudyCrmHistory(crmResponse, study.crm_opportunity_id || study.snapshot?.client?.crm_opportunity_id);
+      crmDetail.classList.toggle("d-none", !showCrm || !study.crm_opportunity_id);
+    }
     const frame = document.getElementById("financialStudyHistoryFrame");
     const documentHtml = study.document_html || `<main style="font:16px system-ui;max-width:720px;margin:40px auto;color:#2e3f47"><h1>Registro legado</h1><p>Este registro já existia na planilha e não possui um snapshot visual arquivado. Os dados originais foram preservados.</p></main>`;
     financialStudyHistoryState.documentHtml = documentHtml;
@@ -904,6 +929,7 @@ async function openFinancialStudyHistoryItem(studyId) {
     revokeButton.dataset.studyId = studyId;
     detail.classList.remove("d-none");
     financialStudyHistoryState.selectedId = studyId;
+    if (showCrm) crmDetail?.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (error) {
     showToast(error.message || "Não foi possível abrir o estudo.", "danger");
   }
@@ -8468,6 +8494,9 @@ document.getElementById("approveFinancialStudyBtn")?.addEventListener("click", a
 document.getElementById("rejectFinancialStudyBtn")?.addEventListener("click", rejectCurrentFinancialStudy);
 document.getElementById("reloadFinancialStudyHistoryBtn")?.addEventListener("click", loadFinancialStudyHistory);
 document.getElementById("searchFinancialStudyHistoryBtn")?.addEventListener("click", loadFinancialStudyHistory);
+document.getElementById("closeFinancialStudyCrmBtn")?.addEventListener("click", () => {
+  document.getElementById("financialStudyCrmDetail")?.classList.add("d-none");
+});
 document.getElementById("financialStudyHistorySearch")?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") loadFinancialStudyHistory();
 });

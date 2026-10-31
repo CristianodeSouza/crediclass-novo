@@ -605,11 +605,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-history-table { width: 100%; min-width: 880px; table-layout: fixed; border-collapse: collapse; }
 .financial-study-history-table .study-col-id { width: 23%; }
 .financial-study-history-table .study-col-client { width: 10%; }
-.financial-study-history-table .study-col-date { width: 17%; }
-.financial-study-history-table .study-col-operator { width: 16%; }
-.financial-study-history-table .study-col-groups { width: 7%; }
-.financial-study-history-table .study-col-file { width: 16%; }
-.financial-study-history-table .study-col-action { width: 11%; }
+.financial-study-history-table .study-col-crm { width: 13%; }
+.financial-study-history-table .study-col-date { width: 14%; }
+.financial-study-history-table .study-col-operator { width: 13%; }
+.financial-study-history-table .study-col-groups { width: 6%; }
+.financial-study-history-table .study-col-file { width: 12%; }
+.financial-study-history-table .study-col-action { width: 9%; }
 .financial-study-history-table th,
 .financial-study-history-table td { padding: 10px 9px; vertical-align: middle; text-align: left; }
 .financial-study-history-table th { white-space: nowrap; }
@@ -617,9 +618,24 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-history-table td:nth-child(5) { text-align: center; }
 .financial-study-history-file { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 9px; background: #f1f4f5; color: #53666e; font-size: .82rem; font-weight: 700; white-space: nowrap; }
 .financial-study-history-file.is-complete { background: #eaf6ef; color: #247448; }
+.financial-study-crm-link { padding: 0; border: 0; background: transparent; color: var(--brand-navy); cursor: pointer; font: inherit; font-weight: 800; text-decoration: underline; text-underline-offset: 2px; }
+.financial-study-crm-link:hover, .financial-study-crm-link:focus-visible { color: var(--brand-orange); }
 .financial-study-history-detail { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
 .financial-study-history-detail-heading { margin-bottom: 14px; }
 .financial-study-history-detail-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.financial-study-crm-detail { margin: 14px 0; padding: 14px; border: 1px solid #d4e1e4; border-radius: 9px; background: #f7fafb; }
+.financial-study-crm-detail-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; color: var(--brand-navy); }
+.financial-study-crm-detail h4 { margin: 12px 0 6px; color: var(--brand-navy); font-size: .86rem; }
+.financial-study-crm-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.financial-study-crm-meta span { display: grid; gap: 2px; min-width: 150px; padding: 7px 9px; border: 1px solid #dce7e9; border-radius: 6px; background: #fff; color: var(--brand-navy); font-size: .78rem; }
+.financial-study-crm-meta strong { color: var(--muted); font-size: .68rem; text-transform: uppercase; }
+.financial-study-crm-table { width: 100%; border-collapse: collapse; background: #fff; font-size: .78rem; }
+.financial-study-crm-table th, .financial-study-crm-table td { padding: 6px 8px; border-bottom: 1px solid #e5ecee; text-align: left; vertical-align: top; }
+.financial-study-crm-table th { width: 28%; color: var(--muted); font-weight: 700; }
+.financial-study-crm-fields { margin-top: 10px; padding: 8px 10px; border: 1px solid #dce7e9; border-radius: 6px; background: #fff; }
+.financial-study-crm-fields summary { color: var(--brand-navy); cursor: pointer; font-size: .78rem; font-weight: 700; }
+.financial-study-crm-fields pre { max-height: 220px; margin: 8px 0 0; overflow: auto; white-space: pre-wrap; color: var(--muted); font: .75rem/1.4 var(--font-body); }
+.financial-study-crm-empty { margin: 0; color: var(--muted); font-size: .82rem; }
 .financial-study-history-detail iframe { display: block; width: 100%; min-height: 78vh; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
 .financial-study-share { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 16px 0; padding: 16px; border: 1px solid var(--border); border-radius: 10px; background: #fbfaf8; }
 .financial-study-share-copy { min-width: 220px; }

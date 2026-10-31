@@ -9,8 +9,8 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <meta name="crediclass-build" content="4.0.362">
-    <link href="/static/css/style.css?v=4.0.362" rel="stylesheet">
+    <meta name="crediclass-build" content="4.0.363">
+    <link href="/static/css/style.css?v=4.0.363" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -847,16 +847,16 @@
               </div>
               <button id="reloadFinancialStudyHistoryBtn" class="btn btn-outline-secondary" type="button">Atualizar</button>
             </div>
-            <label class="financial-study-history-search" for="financialStudyHistorySearch">Buscar por cliente ou número do estudo</label>
+            <label class="financial-study-history-search" for="financialStudyHistorySearch">Buscar por cliente, estudo ou ID da oportunidade CRM</label>
             <div class="financial-study-history-search-row">
-              <input id="financialStudyHistorySearch" class="form-control" type="search" maxlength="180" placeholder="Nome do cliente ou EF-…">
+              <input id="financialStudyHistorySearch" class="form-control" type="search" maxlength="180" placeholder="Cliente, EF-… ou ID PipeRun">
               <button id="searchFinancialStudyHistoryBtn" class="btn btn-primary" type="button">Buscar</button>
             </div>
             <div id="financialStudyHistoryState" class="financial-study-history-state" aria-live="polite">Carregando histórico…</div>
             <div class="table-wrap financial-study-history-list-wrap">
               <table class="data-table financial-study-history-table">
-                <colgroup><col class="study-col-id"><col class="study-col-client"><col class="study-col-date"><col class="study-col-operator"><col class="study-col-groups"><col class="study-col-file"><col class="study-col-action"></colgroup>
-                <thead><tr><th>Estudo</th><th>Cliente</th><th>Aprovado em</th><th>Responsável</th><th>Grupos</th><th>Arquivo</th><th>Ação</th></tr></thead>
+                <colgroup><col class="study-col-id"><col class="study-col-client"><col class="study-col-crm"><col class="study-col-date"><col class="study-col-operator"><col class="study-col-groups"><col class="study-col-file"><col class="study-col-action"></colgroup>
+                <thead><tr><th>Estudo</th><th>Cliente</th><th>Oportunidade CRM</th><th>Aprovado em</th><th>Responsável</th><th>Grupos</th><th>Arquivo</th><th>Ação</th></tr></thead>
                 <tbody id="financialStudyHistoryRows"></tbody>
               </table>
             </div>
@@ -868,6 +868,10 @@
                   <button id="printFinancialStudyHistoryBtn" class="btn btn-outline-secondary" type="button">Baixar PDF</button>
                 </div>
               </div>
+              <section id="financialStudyCrmDetail" class="financial-study-crm-detail d-none" aria-label="Dados importados do CRM">
+                <div class="financial-study-crm-detail-heading"><strong>Dados extraídos da oportunidade CRM</strong><button id="closeFinancialStudyCrmBtn" class="btn btn-outline-secondary btn-sm" type="button">Ocultar</button></div>
+                <div id="financialStudyCrmContent"></div>
+              </section>
               <section class="financial-study-share" aria-label="Link público do estudo">
                 <div class="financial-study-share-copy">
                   <strong>Compartilhar com o cliente</strong>
@@ -1130,9 +1134,9 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.362"></script>
-    <script src="/static/js/shared-study.js?v=4.0.362"></script>
-    <script src="/static/js/app.js?v=4.0.362"></script>
+    <script src="/static/js/api.js?v=4.0.363"></script>
+    <script src="/static/js/shared-study.js?v=4.0.363"></script>
+    <script src="/static/js/app.js?v=4.0.363"></script>
   </body>
 </html>
 
