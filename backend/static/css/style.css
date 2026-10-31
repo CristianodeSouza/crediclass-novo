@@ -1102,25 +1102,25 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .profile-holder-grid {
   grid-column: 1 / -1;
   display: grid;
-  gap: 12px;
+  gap: 8px;
 }
 
 .profile-holder-title {
-  padding: 9px 12px;
+  padding: 6px 9px;
   border: 1px solid #d8e5fb;
   border-radius: 6px;
   background: #edf4ff;
   color: var(--brand-navy);
-  font-size: 0.76rem;
+  font-size: 0.7rem;
   font-weight: 900;
   text-align: left;
 }
 
 .profile-holder-group {
   display: grid;
-  grid-template-columns: minmax(130px, 160px) minmax(0, 1fr);
-  gap: 14px;
-  padding: 14px;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  padding: 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: #fbfaf8;
@@ -1128,9 +1128,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .profile-holder-band {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: flex-start;
-  padding: 10px;
+  min-height: 26px;
+  padding: 5px 8px;
   border-radius: 6px;
   background: var(--brand-navy);
   color: #fff;
@@ -1143,8 +1144,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .profile-holder-list {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .profile-holder-table {
@@ -1156,11 +1157,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .profile-holder-table header {
-  padding: 8px 10px;
+  padding: 6px 8px;
   border-bottom: 1px solid var(--border);
   background: #f7f5f2;
   color: var(--brand-navy);
-  font-size: 0.76rem;
+  font-size: 0.7rem;
   font-weight: 900;
   text-align: left;
 }
@@ -1172,31 +1173,31 @@ body[data-theme="escuro"] .btn-outline-secondary {
 
 .profile-holder-fields label {
   display: grid;
-  grid-template-columns: 118px minmax(0, 1fr);
+  grid-template-columns: 108px minmax(0, 1fr);
   align-items: center;
-  gap: 8px;
-  min-height: 38px;
+  gap: 5px;
+  min-height: 31px;
   margin: 0;
-  padding: 0 9px;
+  padding: 0 7px;
   border-bottom: 1px solid #ebe7e1;
   color: var(--muted);
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   font-weight: 800;
 }
 
 .profile-holder-fields span {
-  padding: 0 6px;
+  padding: 0 3px;
   color: #111827;
 }
 
 .profile-holder-fields .form-control {
-  height: 29px;
-  min-height: 29px;
-  padding: 3px 7px;
+  height: 26px;
+  min-height: 26px;
+  padding: 2px 6px;
   border: 1px solid transparent;
   border-radius: 4px;
   background: #fffdf7;
-  font-size: 0.76rem;
+  font-size: 0.7rem;
   font-weight: 700;
   text-align: right;
 }
@@ -1210,12 +1211,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
 }
 
 .profile-capacity-section {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   background: #fbfaf8;
 }
 
 .profile-capacity-section label {
-  padding: 8px;
+  padding: 6px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: #fff;
@@ -1228,7 +1229,23 @@ body[data-theme="escuro"] .btn-outline-secondary {
   border-bottom: 1px solid #e7e1da;
   padding: 4px 0;
   background: transparent;
-  font-size: 0.86rem;
+  font-size: 0.78rem;
+}
+
+.profile-add-socio-btn {
+  grid-column: 1 / -1;
+  justify-self: start;
+  min-height: 28px;
+  padding: 4px 9px;
+  font-size: .68rem;
+}
+
+@media (min-width: 1280px) {
+  .profile-holder-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1600px) {
+  .profile-holder-list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
 .client-calculated {

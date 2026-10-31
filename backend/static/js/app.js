@@ -3176,6 +3176,10 @@ function renderPessoaJuridicaCards(data) {
   `;
 }
 
+function pessoaJuridicaHasData(socio = {}) {
+  return Boolean(String(socio.nome || socio.nascimento || socio.lance_recursos_proprios || socio.renda || "").trim());
+}
+
 function renderClientProfileTitulares(profile = {}) {
   const data = normalizeClientTitulares(profile);
   const grid = document.getElementById("clientProfileTitularesGrid");
@@ -3183,15 +3187,24 @@ function renderClientProfileTitulares(profile = {}) {
   const selector = document.getElementById("clientProfileTipoContratacao");
   if (selector) selector.value = data.tipo_contratacao;
   if (data.tipo_contratacao === "pj") {
+    const populatedSocioIndexes = data.pessoa_juridica.socios.reduce((indexes, socio, index) => {
+      if (pessoaJuridicaHasData(socio)) indexes.push(index);
+      return indexes;
+    }, []);
+    const requestedVisible = Number(grid.dataset.pjVisibleSocios || 1);
+    const visibleSocios = Math.min(CLIENT_PJ_SOCIOS_LIMIT, Math.max(1, requestedVisible, (populatedSocioIndexes.length ? Math.max(...populatedSocioIndexes) + 1 : 1)));
+    grid.dataset.pjVisibleSocios = String(visibleSocios);
     grid.innerHTML = `
       <div class="profile-holder-title">Dados da empresa e socios</div>
       <div class="profile-holder-group">
         <div class="profile-holder-band">pessoa juridica</div>
-        <div class="profile-holder-list">${renderPessoaJuridicaCards(data)}</div>
+        <div class="profile-holder-list">${renderPessoaJuridicaCards({ ...data, pessoa_juridica: { ...data.pessoa_juridica, socios: data.pessoa_juridica.socios.slice(0, visibleSocios) } })}</div>
+        ${visibleSocios < CLIENT_PJ_SOCIOS_LIMIT ? '<button class="profile-add-socio-btn btn btn-outline-secondary" type="button">Adicionar sócio</button>' : ''}
       </div>
     `;
     return;
   }
+  delete grid.dataset.pjVisibleSocios;
   const count = CLIENT_CONTRACTING_MODES[data.tipo_contratacao]?.pfCount || 1;
   grid.innerHTML = `
     <div class="profile-holder-title">Dados das pessoas</div>
@@ -7227,8 +7240,17 @@ function formatCrmValue(value) {
 
 function renderCrmResponse(response) {
   const panel = document.getElementById("clientProfileCrmDataPanel");
+  const tabs = document.querySelector(".crm-response-tabs");
+  const tab = document.getElementById("clientProfileCrmDataTab");
   if (!panel) return;
-  if (!response) { panel.innerHTML = '<p class="text-muted">Importe uma oportunidade para visualizar os dados completos do CRM.</p>'; return; }
+  if (!response) {
+    panel.innerHTML = "";
+    panel.classList.add("d-none");
+    tabs?.classList.add("d-none");
+    tab?.setAttribute("aria-selected", "false");
+    return;
+  }
+  tabs?.classList.remove("d-none");
   const dados = response.dados || {};
   const summary = ["crm_oportunidade_id", "nota_id", "encontrado"].map((key) => `<article><small>${escapeHtml(key)}</small><strong>${escapeHtml(formatCrmValue(response[key]))}</strong></article>`).join("");
   const renderRows = (object, excludedKeys = []) => Object.entries(object || {}).filter(([key]) => !excludedKeys.includes(key)).map(([key, value]) => `<tr><th scope="row">${escapeHtml(key)}</th><td>${escapeHtml(formatCrmValue(value))}</td></tr>`).join("");
@@ -8278,6 +8300,15 @@ document.getElementById("clientProfileTipoContratacao").addEventListener("change
   current.tipo_contratacao = event.target.value;
   renderClientProfileTitulares(current);
   updateClientProfileTotals();
+});
+
+document.getElementById("clientProfileTitularesGrid")?.addEventListener("click", (event) => {
+  const button = event.target.closest(".profile-add-socio-btn");
+  if (!button) return;
+  const grid = event.currentTarget;
+  const current = collectClientTitularesFromForm();
+  grid.dataset.pjVisibleSocios = String(Math.min(CLIENT_PJ_SOCIOS_LIMIT, Number(grid.dataset.pjVisibleSocios || 1) + 1));
+  renderClientProfileTitulares({ tipo_contratacao: "pj", titulares: current });
 });
 
 document.getElementById("clientProfileForm").addEventListener("input", (event) => {
