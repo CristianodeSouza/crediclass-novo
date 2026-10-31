@@ -364,27 +364,13 @@
                   <label><span>Credito Desejado Liquido</span><input id="clientProfileCredito" class="form-control" inputmode="decimal"></label>
                   <label><span>Parcela maxima desejada</span><input id="clientProfileParcelaIdeal" class="form-control" inputmode="decimal"></label>
                   <label><span>Lance maximo com recurso proprio</span><input id="clientProfileLanceProprio" class="form-control" inputmode="decimal"></label>
-                  <label class="profile-objective-field">
-                    <span>Objetivo do consorcio</span>
-                    <select id="clientProfileObjetivo" class="form-select">
-                      <option value="Contemplar - urgente - 3 meses">Contemplar - urgente - 3 meses</option>
-                      <option value="Contemplar - rapido - 6 meses">Contemplar - rapido - 6 meses</option>
-                      <option value="Contemplar - moderado - 12 meses">Contemplar - moderado - 12 meses</option>
-                      <option value="Contemplar - conservador - 24 meses">Contemplar - conservador - 24 meses</option>
-                      <option value="Contemplar - investidor - 36 meses">Contemplar - investidor - 36 meses</option>
-                      <option value="Investidor - Adquirir imovel e alugar (pagar parcelas com aluguel)">Investidor - Adquirir imovel e alugar (pagar parcelas com aluguel)</option>
-                      <option value="Investidor - Adquirir terreno, construir e alugar (pagar parcelas com aluguel)">Investidor - Adquirir terreno, construir e alugar (pagar parcelas com aluguel)</option>
-                      <option value="Investidor - Adquirir terreno, construir e vender (ganhar lucro)">Investidor - Adquirir terreno, construir e vender (ganhar lucro)</option>
-                      <option value="Investidor - Vender carta contemplada (ganhar agil)">Investidor - Vender carta contemplada (ganhar agil)</option>
-                      <option value="Investidor - Carta de credito aposentadoria (alavancagem, rendimento e flexibilidade)">Investidor - Carta de credito aposentadoria (alavancagem, rendimento e flexibilidade)</option>
-                    </select>
-                  </label>
+                  <input id="clientProfileObjetivo" type="hidden" value="Contemplar - urgente - 3 meses">
                   <div class="profile-filter-pair">
                     <label><span>Modalidade de lance embutido?</span><select id="clientProfileFiltroLanceEmbutido" class="form-select"><option value="">Todos</option><option value="sim">Sim</option><option value="nao">Não</option></select></label>
                     <label><span>Grupos com parcela reduzida?</span><select id="clientProfileFiltroParcelaReduzida" class="form-select"><option value="">Todos</option><option value="sim">Sim</option><option value="nao">Não</option></select></label>
                   </div>
                   <label class="profile-objective-field">
-                    <span>Perfil de contemplação para seleção dos grupos</span>
+                    <span>Perfil de contemplação</span>
                     <select id="clientProfileContemplacaoPerfil" class="form-select">
                       <option value="urgent">Urgente · até 3 meses</option>
                       <option value="fast">Rápido · até 6 meses</option>

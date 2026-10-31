@@ -202,6 +202,39 @@ const CLIENT_OBJECTIVE_RULES = {
   "Investidor - Vender carta contemplada (ganhar agil)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Indefinido" },
   "Investidor - Carta de credito aposentadoria (alavancagem, rendimento e flexibilidade)": { prazo: 36, conceito: "Investidor", tipoBem: "Imovel", estadoBem: "Indefinido" },
 };
+// Perfil de contemplação é a fonte canônica da estratégia. O objetivo textual
+// permanece somente como contrato legado para Motor 360, snapshots e PDFs.
+const CONTEMPLATION_PROFILE_OBJECTIVES = Object.freeze({
+  urgent: "Contemplar - urgente - 3 meses",
+  fast: "Contemplar - rapido - 6 meses",
+  moderate: "Contemplar - moderado - 12 meses",
+  conservative: "Contemplar - conservador - 24 meses",
+  long_term: "Contemplar - investidor - 36 meses",
+});
+const CONTEMPLATION_PROFILE_IDS = new Set(Object.keys(CONTEMPLATION_PROFILE_OBJECTIVES));
+
+function contemplationProfileFromObjective(objective) {
+  const text = String(objective || "").toLocaleLowerCase("pt-BR");
+  if (text.includes("urgente")) return "urgent";
+  if (text.includes("rapido")) return "fast";
+  if (text.includes("moderado")) return "moderate";
+  if (text.includes("conservador")) return "conservative";
+  if (text.includes("investidor")) return "long_term";
+  return "urgent";
+}
+
+function syncCanonicalContemplationProfile() {
+  const profileInput = document.getElementById("clientProfileContemplacaoPerfil");
+  const objectiveInput = document.getElementById("clientProfileObjetivo");
+  const requestedProfile = profileInput?.value;
+  const profile = CONTEMPLATION_PROFILE_IDS.has(requestedProfile)
+    ? requestedProfile
+    : contemplationProfileFromObjective(objectiveInput?.value);
+  const objective = CONTEMPLATION_PROFILE_OBJECTIVES[profile];
+  if (profileInput && profileInput.value !== profile) profileInput.value = profile;
+  if (objectiveInput) objectiveInput.value = objective;
+  return { profile, objective };
+}
 const CLIENT_CONTRACTING_MODES = {
   pf_individual: { label: "Pessoa fisica individual", pfCount: 1 },
   pf_conjuge: { label: "Pessoa fisica com conjuge", pfCount: 2 },
@@ -6897,16 +6930,7 @@ function evaluatePjCapacityScenarios({
 }
 
 function calculateClientPreliminaryAnalysis(titulares, holderSummary) {
-  const objectiveByContemplationProfile = {
-    urgent: "Contemplar - urgente - 3 meses",
-    fast: "Contemplar - rapido - 6 meses",
-    moderate: "Contemplar - moderado - 12 meses",
-    conservative: "Contemplar - conservador - 24 meses",
-    long_term: "Contemplar - investidor - 36 meses",
-  };
-  const selectedContemplationProfile = document.getElementById("clientProfileContemplacaoPerfil")?.value;
-  const objetivo = objectiveByContemplationProfile[selectedContemplationProfile]
-    || document.getElementById("clientProfileObjetivo").value;
+  const { objective: objetivo } = syncCanonicalContemplationProfile();
   const credito = toNumber(document.getElementById("clientProfileCredito").value);
   const parcelaDesejada = toNumber(document.getElementById("clientProfileParcelaIdeal").value);
   const lanceManual = toNumber(document.getElementById("clientProfileLanceProprio").value);
@@ -7094,7 +7118,8 @@ function updateClientProfileTotals() {
     setMoneyInputValue("clientProfileLanceProprio", lanceParticipantes);
   }
   const renda = holderSummary.renda_total;
-  const objectiveRule = clientObjectiveRule(document.getElementById("clientProfileObjetivo").value);
+  const { objective } = syncCanonicalContemplationProfile();
+  const objectiveRule = clientObjectiveRule(objective);
   const conceito = objectiveRule.conceito || clientProfileConcept(objectiveRule.prazo);
   document.getElementById("clientProfileNome").value = holderSummary.nome;
   document.getElementById("clientProfileConjuge").value = holderSummary.nome_conjuge;
@@ -7121,8 +7146,7 @@ function updateClientProfileTotals() {
 function collectClientProfile() {
   const totals = updateClientProfileTotals();
   const summary = totals.holderSummary;
-  const objective = document.getElementById("clientProfileObjetivo").value;
-  const objectiveProfile = objective.includes("urgente") ? "urgent" : objective.includes("rapido") ? "fast" : objective.includes("moderado") ? "moderate" : objective.includes("conservador") ? "conservative" : objective.includes("investidor") && objective.includes("36") ? "long_term" : "";
+  const { profile: objectiveProfile, objective } = syncCanonicalContemplationProfile();
   const declaredBid = totals.lance;
   const hasSimulatedBid = investorState.simulatedBid !== null
     && investorState.simulatedBid !== undefined
@@ -7226,6 +7250,9 @@ function applyImportedCrmData(data, opportunityId) {
     tipoBem.dataset.pendingType = profile.tipo_bem || "";
     tipoBem.value = profile.tipo_bem || "";
   }
+  const importedProfile = contemplationProfileFromObjective(profile.objetivo);
+  setInputValue("clientProfileContemplacaoPerfil", importedProfile);
+  setInputValue("clientProfileObjetivo", CONTEMPLATION_PROFILE_OBJECTIVES[importedProfile]);
   setInputValue("clientProfileCrmOpportunityId", opportunityId);
   updateClientProfileTotals();
   saveClientProfile({ silent: true });
@@ -7343,10 +7370,12 @@ function loadClientProfile() {
     tipoBem.dataset.pendingType = profile.tipo_bem || "";
     tipoBem.value = profile.tipo_bem || "";
   }
-  const objective = CLIENT_OBJECTIVE_RULES[profile.objetivo] ? profile.objetivo : "Contemplar - urgente - 3 meses";
-  setInputValue("clientProfileObjetivo", objective);
-  const objectiveProfile = objective.includes("urgente") ? "urgent" : objective.includes("rapido") ? "fast" : objective.includes("moderado") ? "moderate" : objective.includes("conservador") ? "conservative" : "long_term";
-  setInputValue("clientProfileContemplacaoPerfil", profile.contemplacao_perfil || objectiveProfile);
+  const objectiveProfile = profile.contemplacao_perfil && CONTEMPLATION_PROFILE_IDS.has(profile.contemplacao_perfil)
+    ? profile.contemplacao_perfil
+    : contemplationProfileFromObjective(profile.objetivo);
+  setInputValue("clientProfileContemplacaoPerfil", objectiveProfile);
+  setInputValue("clientProfileObjetivo", CONTEMPLATION_PROFILE_OBJECTIVES[objectiveProfile]);
+  syncCanonicalContemplationProfile();
   updateClientProfileTotals();
   investorState.simulatedBid = null;
   applyClientProfileToFlow(collectClientProfile());
@@ -8222,7 +8251,7 @@ document.getElementById("groupFormModal").addEventListener("blur", (event) => {
   document.getElementById(id).addEventListener("input", updateClientProfileTotals);
 });
 
-["clientProfilePrazo", "clientProfileObjetivo", "clientProfileContemplacaoPerfil", "clientProfileFiltroLanceEmbutido", "clientProfileFiltroParcelaReduzida", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
+["clientProfilePrazo", "clientProfileContemplacaoPerfil", "clientProfileFiltroLanceEmbutido", "clientProfileFiltroParcelaReduzida", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
   document.getElementById(id).addEventListener("change", updateClientProfileTotals);
 });
 
