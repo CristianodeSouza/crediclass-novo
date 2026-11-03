@@ -441,19 +441,17 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("financial-study-part2-mobile", html)
         self.assertIn("rows.map((row, index)", helper)
         self.assertIn('headings[4]', helper)
-        self.assertIn("sharedStudyNavigation", helper)
+        self.assertNotIn("sharedStudyNavigation", helper)
         self.assertIn("financial-study-part9-mobile-total > div { display: grid", css)
         self.assertIn("financial-study-part2-table-wrap.has-mobile-cards", css)
 
-    def test_public_study_navigation_uses_section_buttons_without_repeated_summary(self):
+    def test_public_study_does_not_render_section_navigation(self):
         helper = (ROOT / "backend/static/js/shared-study.js").read_text(encoding="utf-8")
         css = (ROOT / "backend/static/css/style.css").read_text(encoding="utf-8")
 
-        self.assertIn('class="shared-study-navigation-button" href=', helper)
-        self.assertIn('setAttribute("aria-current", "location")', helper)
-        self.assertIn('new IntersectionObserver(', helper)
-        self.assertIn(".shared-study-navigation-links { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap;", css)
-        self.assertIn(".shared-study-navigation-button { min-height: 44px;", css)
+        self.assertNotIn("shared-study-navigation", helper)
+        self.assertNotIn("shared-study-navigation", css)
+        self.assertNotIn('new IntersectionObserver(', helper)
         main = (ROOT / "backend/main.py").read_text(encoding="utf-8")
         self.assertNotIn("sharedStudyQuickSummary", helper)
         self.assertNotIn("shared-study-summary", main)

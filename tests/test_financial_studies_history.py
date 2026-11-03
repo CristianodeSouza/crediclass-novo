@@ -259,7 +259,7 @@ class FinancialStudiesHistoryApiTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Snapshot aprovado", response.text)
         self.assertNotIn("<iframe", response.text)
-        self.assertIn("sharedStudyNavigation", response.text)
+        self.assertNotIn("sharedStudyNavigation", response.text)
         self.assertNotIn("sharedStudyQuickSummary", response.text)
         self.assertNotIn("Resumo do estudo", response.text)
         self.assertIn("<main class='shared-study-content'>", response.text)

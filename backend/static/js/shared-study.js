@@ -77,42 +77,6 @@
     summaries.forEach((section) => content.insertBefore(section, projectionStart));
   }
 
-  function buildPublicStudyNavigation() {
-    const documentNode = document.querySelector(".financial-study-document");
-    const nav = document.getElementById("sharedStudyNavigation");
-    if (!documentNode || !nav) return;
-
-    const sections = [...documentNode.querySelectorAll(":scope > .financial-study-part")];
-    nav.innerHTML = `<strong class="shared-study-navigation-label">Navegar pelo estudo</strong><div class="shared-study-navigation-links">${sections.map((section, index) => {
-      const heading = section.querySelector("h1, h2, h3");
-      if (!heading) return "";
-      if (!heading.id) heading.id = `shared-study-section-${index + 1}`;
-      return `<a class="shared-study-navigation-button" href="#${escapeMarkup(heading.id)}" aria-label="Ir para ${escapeMarkup(heading.textContent.trim())}">${escapeMarkup(heading.textContent.trim())}</a>`;
-    }).join("")}</div>`;
-    const links = [...nav.querySelectorAll(".shared-study-navigation-button")];
-    const markActive = (activeLink) => {
-      links.forEach((link) => {
-        if (link === activeLink) {
-          link.setAttribute("aria-current", "location");
-          if (window.matchMedia("(max-width: 760px)").matches) link.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
-        } else {
-          link.removeAttribute("aria-current");
-        }
-      });
-    };
-    links.forEach((link) => link.addEventListener("click", () => markActive(link)));
-    if ("IntersectionObserver" in window) {
-      const observer = new IntersectionObserver((entries) => {
-        const visible = entries.filter((entry) => entry.isIntersecting).sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
-        if (!visible) return;
-        const activeLink = links.find((link) => link.hash === `#${visible.target.id}`);
-        if (activeLink) markActive(activeLink);
-      }, { rootMargin: "-15% 0px -70% 0px", threshold: [0, 0.15, 0.4] });
-      sections.forEach((section) => observer.observe(section));
-    }
-
-  }
-
   window.prepareFinancialStudyMobileViews = function (root = document) {
     prepareInvestmentCards(root);
     annotateMissingValues(root);
@@ -122,7 +86,6 @@
     repositionScenarioSummaries();
     prepareInvestmentCards();
     annotateMissingValues();
-    buildPublicStudyNavigation();
     document.getElementById("printSharedStudy")?.addEventListener("click", () => window.print());
   });
 })();

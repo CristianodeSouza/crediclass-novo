@@ -7911,20 +7911,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 }
 
-/* Shared financial study: mobile-first wrapper, overview and section navigation. */
+/* Shared financial study: mobile-first wrapper and document presentation. */
 .shared-study-page { margin: 0; background: #f7f6f4; color: #2e3f47; font-family: var(--font-body); }
 .shared-study-shell { width: min(100% - 32px, 1180px); margin: 0 auto; padding: 18px 0 36px; }
 .shared-study-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 0 14px; }
 .shared-study-brand { color: #2e3f47; font-size: 1rem; font-weight: 800; letter-spacing: .04em; }
 .shared-study-brand span { font-weight: 400; letter-spacing: 0; }
 .shared-study-print { min-height: 44px; padding: 9px 16px; border: 1px solid #74818a; border-radius: 24px; background: #fff; color: #34434a; font: inherit; font-weight: 700; cursor: pointer; }
-.shared-study-navigation { position: sticky; z-index: 20; top: 0; display: flex; align-items: flex-start; gap: 6px; margin: 0 0 10px; padding: 5px 6px; border: 1px solid #d9dfe1; border-radius: 8px; background: rgba(255, 255, 255, .98); box-shadow: 0 2px 7px rgba(23, 39, 45, .08); }
-.shared-study-navigation-label { flex: 0 0 auto; padding: 6px 0; color: #2e3f47; font-size: .7rem; }
-.shared-study-navigation-links { display: flex; min-width: 0; flex: 1 1 auto; flex-wrap: wrap; gap: 4px; }
-.shared-study-navigation-button { display: inline-flex; min-height: 27px; flex: 0 1 auto; align-items: center; justify-content: center; padding: 4px 6px; border: 1px solid #d9dfe1; border-radius: 999px; background: #f5f7f7; color: #2e3f47; font-size: .65rem; font-weight: 700; line-height: 1.15; text-align: center; text-decoration: none; transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease; }
-.shared-study-navigation-button:hover { border-color: #e06c1f; background: #fff7f1; color: #87400f; }
-.shared-study-navigation-button:focus-visible { outline: 3px solid rgba(224, 108, 31, .4); outline-offset: 2px; }
-.shared-study-navigation-button[aria-current="location"] { border-color: #e06c1f; background: #e06c1f; color: #fff; box-shadow: 0 2px 7px rgba(176, 77, 15, .2); }
 .shared-study-content { padding: 14px; border: 1px solid #d9dfe1; border-radius: 12px; background: #fff; box-shadow: 0 4px 16px rgba(23, 39, 45, .06); }
 .shared-study-content .financial-study-document { width: 100%; max-width: 1100px; margin: 0 auto; }
 .shared-study-content .financial-study-part { scroll-margin-top: 84px; }
@@ -7936,10 +7929,6 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .shared-study-header { align-items: center; gap: 10px; padding-bottom: 12px; }
   .shared-study-brand { font-size: .9rem; }
   .shared-study-print { min-height: 42px; padding: 8px 11px; font-size: .82rem; white-space: nowrap; }
-  .shared-study-navigation { top: 0; display: block; margin-bottom: 10px; padding: 7px 9px 8px; border-radius: 10px; }
-  .shared-study-navigation-label { display: block; padding: 2px 2px 4px; font-size: .65rem; }
-  .shared-study-navigation-links { display: flex; flex-wrap: nowrap; gap: 4px; margin: 0 -2px; padding: 1px 2px 3px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: thin; scrollbar-color: #aab5b9 transparent; -webkit-overflow-scrolling: touch; }
-  .shared-study-navigation-button { min-height: 27px; flex: 0 0 auto; max-width: min(78vw, 300px); padding: 4px 7px; font-size: .65rem; white-space: normal; scroll-snap-align: start; }
   .shared-study-content { padding: 7px; border-radius: 10px; }
 
   .shared-study-content .financial-study-document { padding: 16px 12px 24px; font-size: 16px; line-height: 1.55; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
@@ -7979,7 +7968,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 @media print {
   .shared-study-page { background: #fff !important; }
   .shared-study-shell { width: auto !important; max-width: none !important; margin: 0 !important; padding: 0 !important; }
-  .shared-study-header, .shared-study-navigation { display: none !important; }
+  .shared-study-header { display: none !important; }
   .shared-study-content { padding: 0 !important; border: 0 !important; border-radius: 0 !important; box-shadow: none !important; }
   .shared-study-content .financial-study-document { max-width: none !important; }
   .financial-study-part2-table-wrap { display: block !important; }
