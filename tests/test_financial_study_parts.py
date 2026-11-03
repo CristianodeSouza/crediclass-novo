@@ -37,6 +37,7 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("A seleção atual será mantida", app_js)
         self.assertIn("id='printSharedStudy' class='shared-study-print' type='button'>Imprimir</button>", main_py)
         self.assertNotIn("Imprimir / Salvar PDF", main_py)
+        self.assertIn("<title>{html_escape(study['client_name'])}</title>", main_py)
 
     def test_old_study_apis_and_public_routes_remain_unregistered(self):
         paths = {route.path for route in app.routes}
