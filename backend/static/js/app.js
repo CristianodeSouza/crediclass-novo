@@ -8275,7 +8275,7 @@ document.getElementById("groupFormModal").addEventListener("blur", (event) => {
   document.getElementById(id).addEventListener("input", updateClientProfileTotals);
 });
 
-["clientProfilePrazo", "clientProfileContemplacaoPerfil", "clientProfileFiltroLanceEmbutido", "clientProfileFiltroParcelaReduzida", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
+["clientProfilePrazo", "clientProfileContemplacaoPerfil", "clientProfileTipoBem", "clientProfileEstadoBem"].forEach((id) => {
   document.getElementById(id).addEventListener("change", updateClientProfileTotals);
 });
 

@@ -9,8 +9,8 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <meta name="crediclass-build" content="4.0.374">
-    <link href="/static/css/style.css?v=4.0.374" rel="stylesheet">
+    <meta name="crediclass-build" content="4.0.375">
+    <link href="/static/css/style.css?v=4.0.375" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -366,8 +366,6 @@
                   <label><span>Lance maximo com recurso proprio</span><input id="clientProfileLanceProprio" class="form-control" inputmode="decimal"></label>
                   <input id="clientProfileObjetivo" type="hidden" value="Contemplar - urgente - 3 meses">
                   <div class="profile-filter-pair">
-                    <label><span>Modalidade de lance embutido?</span><select id="clientProfileFiltroLanceEmbutido" class="form-select"><option value="">Todos</option><option value="sim">Sim</option><option value="nao">Não</option></select></label>
-                    <label><span>Grupos com parcela reduzida?</span><select id="clientProfileFiltroParcelaReduzida" class="form-select"><option value="">Todos</option><option value="sim">Sim</option><option value="nao">Não</option></select></label>
                   </div>
                   <label class="profile-objective-field">
                     <span>Perfil de contemplação</span>
@@ -862,21 +860,27 @@
                   <strong>Compartilhar com o cliente</strong>
                   <p id="financialStudyShareStatus">O link não é criado automaticamente e ficará válido por 30 dias.</p>
                 </div>
-                <div class="financial-study-share-controls">
-                  <button id="generateFinancialStudyShareBtn" class="btn btn-primary" type="button">Gerar link público</button>
-                  <button id="revokeFinancialStudyShareBtn" class="btn btn-outline-secondary d-none" type="button">Revogar link</button>
-                  <div id="financialStudyShareLinkRow" class="financial-study-share-link-row d-none">
-                    <input id="financialStudyShareUrl" class="form-control" type="url" readonly aria-label="Link público gerado">
-                    <button id="copyFinancialStudyShareBtn" class="btn btn-outline-secondary" type="button">Copiar link</button>
+                <div class="financial-study-share-side">
+                  <div class="financial-study-share-controls">
+                    <button id="generateFinancialStudyShareBtn" class="btn btn-primary" type="button">Gerar link público</button>
+                    <button id="revokeFinancialStudyShareBtn" class="btn btn-outline-secondary d-none" type="button">Revogar link</button>
+                    <div id="financialStudyShareLinkRow" class="financial-study-share-link-row d-none">
+                      <input id="financialStudyShareUrl" class="form-control" type="url" readonly aria-label="Link público gerado">
+                      <button id="copyFinancialStudyShareBtn" class="btn btn-outline-secondary" type="button">Copiar link</button>
+                    </div>
                   </div>
-                </div>
-                <div class="financial-study-piperun-send" aria-label="Enviar estudo ao PipeRun">
-                  <label for="financialStudyPipeRunOpportunityId">ID da oportunidade PipeRun</label>
-                  <div class="financial-study-share-link-row">
-                    <input id="financialStudyPipeRunOpportunityId" class="form-control" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="Ex.: 63416847" aria-describedby="financialStudyPipeRunStatus">
-                    <button id="sendFinancialStudyPipeRunBtn" class="btn btn-primary" type="button" disabled>Enviar URL ao PipeRun</button>
+                  <div class="financial-study-piperun-send" aria-label="Enviar estudo ao PipeRun">
+                    <div class="financial-study-piperun-heading">
+                      <span>Integração PipeRun</span>
+                      <small>Envie o link para a oportunidade vinculada.</small>
+                    </div>
+                    <label for="financialStudyPipeRunOpportunityId">ID da oportunidade</label>
+                    <div class="financial-study-share-link-row">
+                      <input id="financialStudyPipeRunOpportunityId" class="form-control" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="Ex.: 63416847" aria-describedby="financialStudyPipeRunStatus">
+                      <button id="sendFinancialStudyPipeRunBtn" class="btn btn-primary" type="button" disabled>Enviar URL</button>
+                    </div>
+                    <small id="financialStudyPipeRunStatus">Gere um link público ativo para liberar o envio.</small>
                   </div>
-                  <small id="financialStudyPipeRunStatus">Gere um link público ativo para liberar o envio.</small>
                 </div>
               </section>
               <iframe id="financialStudyHistoryFrame" title="Snapshot imutável do estudo aprovado" sandbox="allow-same-origin allow-modals" loading="eager"></iframe>
@@ -1127,9 +1131,9 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.374"></script>
-    <script src="/static/js/shared-study.js?v=4.0.374"></script>
-    <script src="/static/js/app.js?v=4.0.374"></script>
+    <script src="/static/js/api.js?v=4.0.375"></script>
+    <script src="/static/js/shared-study.js?v=4.0.375"></script>
+    <script src="/static/js/app.js?v=4.0.375"></script>
   </body>
 </html>
 
