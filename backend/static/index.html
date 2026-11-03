@@ -9,8 +9,8 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <meta name="crediclass-build" content="4.0.375">
-    <link href="/static/css/style.css?v=4.0.375" rel="stylesheet">
+    <meta name="crediclass-build" content="4.0.376">
+    <link href="/static/css/style.css?v=4.0.376" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -38,6 +38,17 @@
         </label>
         <div id="loginError" class="login-error d-none">Usuario ou senha invalidos.</div>
         <button id="loginSubmitBtn" class="btn login-submit" type="submit">Entrar</button>
+      </form>
+      <form id="activationForm" class="login-card d-none" autocomplete="off">
+        <div>
+          <span class="login-card-eyebrow">Crediclass</span>
+          <h2>Ativar acesso</h2>
+          <p>Crie sua senha para concluir o convite de acesso.</p>
+        </div>
+        <label><span>Nova senha</span><input id="activationSenha" class="form-control" type="password" minlength="10" autocomplete="new-password" required></label>
+        <label><span>Confirmar senha</span><input id="activationSenhaConfirmacao" class="form-control" type="password" minlength="10" autocomplete="new-password" required></label>
+        <div id="activationError" class="login-error d-none"></div>
+        <button id="activationSubmitBtn" class="btn login-submit" type="submit">Ativar acesso</button>
       </form>
     </section>
     <div class="app-shell">
@@ -572,7 +583,7 @@
                   </div>
                   <div class="table-responsive">
                     <table class="table table-hover align-middle viability-table">
-                      <thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Ultimo acesso</th><th>Acoes</th></tr></thead>
+                      <thead><tr><th>Nome</th><th>E-mail</th><th>WhatsApp</th><th>Perfil</th><th>Status</th><th>Ultimo acesso</th><th>Acoes</th></tr></thead>
                       <tbody id="configUsersBody"></tbody>
                     </table>
                   </div>
@@ -1116,8 +1127,8 @@
               <div class="viability-form">
                 <label><span>Nome</span><input id="configUserNome" class="form-control" required></label>
                 <label><span>E-mail</span><input id="configUserEmail" class="form-control" type="email" required></label>
-                <label><span>Perfil informativo</span><input id="configUserPerfil" class="form-control" required></label>
-                <label><span>Status</span><select id="configUserStatus" class="form-select"><option value="Ativo">Ativo</option><option value="Inativo">Inativo</option></select></label>
+                <label><span>WhatsApp</span><input id="configUserWhatsapp" class="form-control" type="tel" placeholder="(11) 99999-9999" required></label>
+                <label><span>Perfil de acesso</span><select id="configUserPerfil" class="form-select"><option value="Operador">Operador</option><option value="Administrador">Administrador</option></select></label>
               </div>
             </div>
             <div class="modal-footer">
@@ -1131,9 +1142,9 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.375"></script>
-    <script src="/static/js/shared-study.js?v=4.0.375"></script>
-    <script src="/static/js/app.js?v=4.0.375"></script>
+    <script src="/static/js/api.js?v=4.0.376"></script>
+    <script src="/static/js/shared-study.js?v=4.0.376"></script>
+    <script src="/static/js/app.js?v=4.0.376"></script>
   </body>
 </html>
 

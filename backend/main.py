@@ -31,6 +31,7 @@ from .motor360_auditoria import audit_to_markdown, audit_to_pdf, get_motor360_au
 from .administrator_rules import normalize_admin_name, rules_by_administradora
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
+from .auth_store import activate_invitation, authenticate, audit_events, create_invitation, create_session, get_session, get_user, init_auth_store, list_users, public_user, revoke_session, set_user_status
 from .consortium_viability_engine import MOTOR_VERSION, RULES_VERSION, analyze_client_consortium_viability
 from .credit_options import available_credit_options
 from .defasagem import build_defasagem_report, update_defasagem_task
@@ -94,7 +95,7 @@ def approve_financial_study(payload: FinancialStudyApprovalRequest, request: Req
     try:
         created = financial_studies.create_study(
             client_name=payload.client_name,
-            approved_by=AUTH_USERS[username]["name"],
+            approved_by=request.state.auth_session["name"],
             app_version=get_settings().version,
             snapshot=payload.snapshot,
             document_html=payload.document_html,
@@ -278,7 +279,7 @@ async def send_financial_study_to_piperun(study_id: str, payload: FinancialStudy
         if association is None:
             return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
         study_url = str(request.base_url).rstrip("/") + f"/estudo-compartilhado/{token}"
-        operator = AUTH_USERS[request.state.auth_user]["name"]
+        operator = request.state.auth_session["name"]
         approved_at = str(study.get("approved_at") or "-")
         note_text = (
             "<p><strong>ESTUDO FINANCEIRO — CSR Tecnologia</strong></p>"
@@ -470,11 +471,12 @@ AUTH_USERS = {
     "operador2": {"password": "teste123", "name": "Operador 2", "role": "Operador"},
 }
 AUTH_SECRET = os.getenv("AUTH_SECRET", "crediclass-dashboard-v3-local-login")
+init_auth_store(AUTH_USERS)
 
 
 def _is_administrator_request(request: Request) -> bool:
     username = getattr(request.state, "auth_user", None)
-    return bool(username and AUTH_USERS.get(username, {}).get("role") == "Administrador")
+    return bool(username and getattr(request.state, "auth_session", {}).get("role") == "Administrador")
 
 
 def _sign_session(username: str, issued_at: int) -> str:
@@ -503,20 +505,20 @@ def _verify_session(token: str | None) -> str | None:
 
 
 def _public_auth_path(path: str) -> bool:
-    return path in {"/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/health"}
+    return path in {"/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/auth/activate", "/api/health"}
 
 
 @app.middleware("http")
 async def require_authenticated_session(request: Request, call_next):
     path = request.url.path
     if path.startswith("/api/") and not _public_auth_path(path):
-        username = _verify_session(request.cookies.get(AUTH_COOKIE))
-        if not username:
+        session = get_session(request.cookies.get(AUTH_COOKIE))
+        if not session:
             return JSONResponse(status_code=401, content={"success": False, "error": "Acesso restrito. Faca login para continuar."})
-        request.state.auth_user = username
+        request.state.auth_user = session["username"]
+        request.state.auth_session = dict(session)
     if path.startswith("/files/"):
-        username = _verify_session(request.cookies.get(AUTH_COOKIE))
-        if not username:
+        if not get_session(request.cookies.get(AUTH_COOKIE)):
             return JSONResponse(status_code=401, content={"success": False, "error": "Acesso restrito. Faca login para continuar."})
     return await call_next(request)
 
@@ -996,40 +998,104 @@ async def auth_login(request: Request, response: Response):
     payload = await request.json()
     username = str(payload.get("usuario") or "").strip()
     password = str(payload.get("senha") or "")
-    user = AUTH_USERS.get(username)
-    if not user or not hmac.compare_digest(password, user["password"]):
+    user = authenticate(username, password)
+    if not user:
         return JSONResponse(status_code=401, content={"success": False, "error": "Usuario ou senha invalidos."})
-    token = _sign_session(username, int(time.time()))
+    token = create_session(user["id"], request.client.host if request.client else "", request.headers.get("user-agent", ""))
     response.set_cookie(
         AUTH_COOKIE,
         token,
         httponly=True,
         samesite="lax",
+        secure=request.url.scheme == "https",
         max_age=60 * 60 * 12,
         path="/",
     )
     return {
         "success": True,
-        "user": {"usuario": username, "nome": user["name"], "perfil": user["role"]},
+        "user": public_user(user),
     }
 
 
 @app.post("/api/auth/logout")
-def auth_logout(response: Response):
+def auth_logout(request: Request, response: Response):
+    revoke_session(request.cookies.get(AUTH_COOKIE))
     response.delete_cookie(AUTH_COOKIE, path="/")
     return {"success": True}
 
 
 @app.get("/api/auth/me")
 def auth_me(request: Request):
-    username = _verify_session(request.cookies.get(AUTH_COOKIE))
-    if not username:
+    session = get_session(request.cookies.get(AUTH_COOKIE))
+    if not session:
         return JSONResponse(status_code=401, content={"success": False, "error": "Sessao nao autenticada."})
-    user = AUTH_USERS[username]
     return {
         "success": True,
-        "user": {"usuario": username, "nome": user["name"], "perfil": user["role"]},
+        "user": public_user(session),
     }
+
+
+@app.post("/api/auth/activate")
+async def auth_activate(request: Request):
+    payload = await request.json()
+    token = str(payload.get("token") or "").strip()
+    password = str(payload.get("senha") or "")
+    if len(password) < 10:
+        return JSONResponse(status_code=422, content={"success": False, "error": "A senha deve ter pelo menos 10 caracteres."})
+    user = activate_invitation(token, password)
+    if not user:
+        return JSONResponse(status_code=400, content={"success": False, "error": "Convite inválido, expirado ou já utilizado."})
+    return {"success": True, "user": public_user(user)}
+
+
+@app.get("/api/admin/users")
+def admin_users(request: Request):
+    if not _is_administrator_request(request):
+        return JSONResponse(status_code=403, content={"success": False, "error": "Apenas administradores podem gerenciar acessos."})
+    return {"success": True, "usuarios": list_users()}
+
+
+@app.post("/api/admin/users")
+async def admin_create_user(request: Request):
+    if not _is_administrator_request(request):
+        return JSONResponse(status_code=403, content={"success": False, "error": "Apenas administradores podem gerenciar acessos."})
+    payload = await request.json()
+    name = str(payload.get("nome") or "").strip()
+    email = str(payload.get("email") or "").strip().lower()
+    whatsapp = str(payload.get("whatsapp") or "").strip()
+    role = str(payload.get("perfil") or "Operador").strip()
+    if not name or not email or not whatsapp:
+        return JSONResponse(status_code=422, content={"success": False, "error": "Nome, e-mail e WhatsApp são obrigatórios."})
+    if not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        return JSONResponse(status_code=422, content={"success": False, "error": "Informe um e-mail válido."})
+    if role not in {"Operador", "Administrador"}:
+        return JSONResponse(status_code=422, content={"success": False, "error": "Perfil inválido."})
+    try:
+        user, token = create_invitation(name, email, whatsapp, role, request.state.auth_session["user_id"])
+        return {"success": True, "usuario": user, "invite_url": f"/?ativar={token}"}
+    except ValueError as error:
+        return JSONResponse(status_code=409, content={"success": False, "error": str(error)})
+
+
+@app.post("/api/admin/users/{user_id}/status")
+async def admin_change_user_status(user_id: int, request: Request):
+    if not _is_administrator_request(request):
+        return JSONResponse(status_code=403, content={"success": False, "error": "Apenas administradores podem gerenciar acessos."})
+    payload = await request.json()
+    try:
+        user = set_user_status(user_id, str(payload.get("status") or ""), request.state.auth_session["user_id"])
+    except ValueError as error:
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
+    if not user:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Usuário não encontrado."})
+    return {"success": True, "usuario": user}
+
+
+@app.get("/api/admin/auth-audit")
+def admin_auth_audit(request: Request):
+    if not _is_administrator_request(request):
+        return JSONResponse(status_code=403, content={"success": False, "error": "Apenas administradores podem consultar a auditoria."})
+    return {"success": True, "eventos": audit_events()}
 
 
 @app.get("/api/configuracoes")

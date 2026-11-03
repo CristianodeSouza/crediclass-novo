@@ -338,6 +338,44 @@ function showLogin(message = "") {
   window.setTimeout(() => document.getElementById("loginUsuario")?.focus(), 60);
 }
 
+function showActivation() {
+  authState.user = null;
+  syncAdministratorOnlyControls();
+  document.body.classList.remove("auth-pending", "authenticated");
+  document.body.classList.add("auth-login");
+  document.getElementById("loginForm")?.classList.add("d-none");
+  document.getElementById("activationForm")?.classList.remove("d-none");
+  window.setTimeout(() => document.getElementById("activationSenha")?.focus(), 60);
+}
+
+async function submitActivation(event) {
+  event.preventDefault();
+  const errorBox = document.getElementById("activationError");
+  const password = document.getElementById("activationSenha").value;
+  const confirmation = document.getElementById("activationSenhaConfirmacao").value;
+  if (password.length < 10 || password !== confirmation) {
+    errorBox.textContent = password.length < 10 ? "A senha deve ter pelo menos 10 caracteres." : "As senhas não conferem.";
+    errorBox.classList.remove("d-none");
+    return;
+  }
+  const button = document.getElementById("activationSubmitBtn");
+  button.disabled = true;
+  try {
+    const response = await fetch("/api/auth/activate", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: new URLSearchParams(window.location.search).get("ativar") || "", senha: password }) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "Não foi possível ativar o acesso.");
+    window.history.replaceState({}, document.title, window.location.pathname);
+    document.getElementById("activationForm")?.classList.add("d-none");
+    document.getElementById("loginForm")?.classList.remove("d-none");
+    showLogin("Acesso ativado. Entre com seu e-mail e a nova senha.");
+  } catch (error) {
+    errorBox.textContent = error.message;
+    errorBox.classList.remove("d-none");
+  } finally {
+    button.disabled = false;
+  }
+}
+
 function showApp(user) {
   authState.user = user;
   syncAdministratorOnlyControls();
@@ -421,6 +459,10 @@ async function initializeDashboardData() {
 }
 
 async function bootApp() {
+  if (new URLSearchParams(window.location.search).has("ativar")) {
+    showActivation();
+    return;
+  }
   const user = await checkSession();
   if (!user) {
     showLogin();
@@ -7622,20 +7664,20 @@ function renderConfiguracoes(data) {
   setInputValue("configIndiceCorrecao", params.indice_correcao_anual);
 
   document.getElementById("configUsersBody").innerHTML = (data.usuarios || []).map((user, index) => {
+    const pending = user.status === "Convite pendente";
     const inactive = user.status !== "Ativo";
     const nextStatus = inactive ? "Ativo" : "Inativo";
     return `
     <tr>
       <td>${escapeHtml(user.nome)}</td>
-      <td>${escapeHtml(user.email)}</td>
+          <td>${escapeHtml(user.email)}</td>
+          <td>${escapeHtml(user.whatsapp || "-")}</td>
       <td>${escapeHtml(user.perfil)}</td>
       <td><span class="status-badge ${inactive ? "inactive" : ""}">${escapeHtml(user.status)}</span></td>
       <td>${escapeHtml(user.ultimo_acesso || "-")}</td>
       <td>
         <div class="row-actions">
-          <button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="editar" data-config-user-index="${index}">Editar</button>
-          <button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="status" data-config-user-index="${index}" data-next-status="${nextStatus}">${inactive ? "Ativar" : "Inativar"}</button>
-          <button class="btn btn-sm btn-outline-danger" type="button" data-config-user-action="remover" data-config-user-index="${index}">Remover</button>
+          ${pending ? '<span class="text-muted small">Aguardando ativação</span>' : `<button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="status" data-config-user-index="${index}" data-next-status="${nextStatus}">${inactive ? "Ativar" : "Inativar"}</button>`}
         </div>
       </td>
     </tr>
@@ -7811,6 +7853,10 @@ async function loadConfiguracoes() {
   setConfigState("loading");
   try {
     const data = await apiGet("/configuracoes");
+    if (isMotor360Administrator()) {
+      const accessData = await apiGet("/admin/users");
+      data.usuarios = accessData.usuarios || [];
+    }
     renderConfiguracoes(data);
     setConfigState("ready");
     addOperationalLog("Configuracoes carregadas");
@@ -7828,7 +7874,6 @@ async function saveConfiguracoes() {
 }
 
 async function saveConfigUsers(usuarios, message = "Usuarios atualizados.") {
-  await apiPut("/configuracoes", { usuarios });
   configState.data.usuarios = usuarios;
   renderConfiguracoes(configState.data);
   showToast(message, "success");
@@ -7850,32 +7895,35 @@ function openConfigUserForm(mode, index = null) {
   document.getElementById("configUserModalTitle").textContent = mode === "edit" ? "Editar Usuario" : "Novo Usuario";
   document.getElementById("configUserNome").value = user?.nome || "";
   document.getElementById("configUserEmail").value = user?.email || "";
+  document.getElementById("configUserWhatsapp").value = user?.whatsapp || "";
   document.getElementById("configUserPerfil").value = user?.perfil || "";
-  document.getElementById("configUserStatus").value = user?.status || "Ativo";
   configUserModal.show();
 }
 
 async function submitConfigUserForm() {
   const usuarios = [...(configState.data?.usuarios || [])];
+  if (configUserMode === "edit") {
+    showToast("A edição cadastral será feita por convite; use o status para revogar ou reativar o acesso.", "info");
+    return;
+  }
   const payload = {
     nome: document.getElementById("configUserNome").value.trim(),
     email: document.getElementById("configUserEmail").value.trim(),
+    whatsapp: document.getElementById("configUserWhatsapp").value.trim(),
     perfil: document.getElementById("configUserPerfil").value.trim(),
-    status: document.getElementById("configUserStatus").value,
-    ultimo_acesso: configUserMode === "edit" ? (usuarios[configUserIndex]?.ultimo_acesso || "") : "",
   };
 
-  if (!payload.nome || !payload.email || !payload.perfil) {
-    showToast("Preencha nome, e-mail e perfil.", "warning");
+  if (!payload.nome || !payload.email || !payload.whatsapp || !payload.perfil) {
+    showToast("Preencha nome, e-mail, WhatsApp e perfil.", "warning");
     return;
   }
 
-  if (configUserMode === "edit" && usuarios[configUserIndex]) {
-    usuarios[configUserIndex] = { ...usuarios[configUserIndex], ...payload };
-  } else {
-    usuarios.push(payload);
-  }
-  await saveConfigUsers(usuarios, configUserMode === "edit" ? "Referencia de usuario atualizada." : "Referencia de usuario cadastrada.");
+  const result = await apiPost("/admin/users", payload);
+  const updated = await apiGet("/admin/users");
+  configState.data.usuarios = updated.usuarios || [];
+  renderConfiguracoes(configState.data);
+  showToast("Convite criado. Copie o link para enviar ao operador.", "success");
+  window.prompt("Link de ativação do operador (válido por 48 horas):", `${window.location.origin}${result.invite_url}`);
   configUserModal.hide();
 }
 
@@ -8561,15 +8609,15 @@ document.getElementById("configUsersBody").addEventListener("click", (event) => 
   }
 
   if (button.dataset.configUserAction === "status") {
-    usuarios[index] = { ...user, status: button.dataset.nextStatus };
-    saveConfigUsers(usuarios, `Usuario ${button.dataset.nextStatus.toLowerCase()}.`).catch(() => setConfigState("error"));
+    apiPost(`/admin/users/${encodeURIComponent(user.id)}/status`, { status: button.dataset.nextStatus })
+      .then(async () => {
+        const updated = await apiGet("/admin/users");
+        configState.data.usuarios = updated.usuarios || [];
+        renderConfiguracoes(configState.data);
+        showToast(`Usuário ${button.dataset.nextStatus.toLowerCase()}.`, "success");
+      })
+      .catch(() => setConfigState("error"));
     return;
-  }
-
-  if (button.dataset.configUserAction === "remover") {
-    if (!window.confirm("Remover esta referencia operacional?")) return;
-    usuarios.splice(index, 1);
-    saveConfigUsers(usuarios, "Referencia de usuario removida.").catch(() => setConfigState("error"));
   }
 });
 
@@ -8692,6 +8740,7 @@ document.getElementById("restartSyncBtn").addEventListener("click", () => {
 });
 
 document.getElementById("loginForm").addEventListener("submit", submitLogin);
+document.getElementById("activationForm")?.addEventListener("submit", submitActivation);
 document.getElementById("logoutBtn").addEventListener("click", logout);
 bootApp().catch(() => showLogin("Nao foi possivel validar a sessao."));
 
