@@ -9,8 +9,8 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <meta name="crediclass-build" content="4.0.377">
-    <link href="/static/css/style.css?v=4.0.377" rel="stylesheet">
+    <meta name="crediclass-build" content="4.0.379">
+    <link href="/static/css/style.css?v=4.0.379" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -483,8 +483,7 @@
               <li class="nav-item" role="presentation"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#configFinanceiro" type="button" role="tab">Parametros Financeiros</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configAdministradoras" type="button" role="tab">Regras Administradoras</button></li>
               <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configUsuarios" type="button" role="tab">Usuarios</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configRegrasNegocio" type="button" role="tab">Regras de Negocio</button></li>
-              <li class="nav-item" role="presentation"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configSistema" type="button" role="tab">Backup & Logs</button></li>
+              <li class="nav-item" role="presentation" data-admin-only><button class="nav-link" data-bs-toggle="tab" data-bs-target="#configSistema" type="button" role="tab">Backup & Logs</button></li>
             </ul>
 
             <div class="tab-content details-tab-content">
@@ -591,35 +590,7 @@
                 </div>
               </section>
 
-              <section id="configRegrasNegocio" class="tab-pane fade" role="tabpanel">
-                <div class="content-card">
-                  <div class="table-toolbar">
-                    <div>
-                      <h2>Regras de Negocio</h2>
-                      <p>Auditoria das regras aplicadas em cada etapa do fluxo</p>
-                    </div>
-                    <button id="saveBusinessRulesFeedbackBtn" class="btn btn-primary" type="button">Salvar Feedbacks</button>
-                  </div>
-                  <div class="business-rules-note">
-                    As regras abaixo sao somente leitura. Use observacoes e status para registrar pontos de revisao sem alterar o motor do sistema.
-                  </div>
-                  <div class="table-responsive">
-                    <table class="table table-hover align-middle viability-table business-rules-table">
-                      <thead>
-                        <tr>
-                          <th>Etapa do Fluxo</th>
-                          <th>Regras Aplicadas</th>
-                          <th>Observacoes da Equipe</th>
-                          <th>Status</th>
-                        </tr>
-                      </thead>
-                      <tbody id="businessRulesBody"></tbody>
-                    </table>
-                  </div>
-                </div>
-              </section>
-
-              <section id="configSistema" class="tab-pane fade" role="tabpanel">
+              <section id="configSistema" class="tab-pane fade" role="tabpanel" data-admin-only>
                 <div class="content-card">
                   <div class="table-toolbar">
                     <div>
@@ -1143,9 +1114,9 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.377"></script>
-    <script src="/static/js/shared-study.js?v=4.0.377"></script>
-    <script src="/static/js/app.js?v=4.0.377"></script>
+    <script src="/static/js/api.js?v=4.0.379"></script>
+    <script src="/static/js/shared-study.js?v=4.0.379"></script>
+    <script src="/static/js/app.js?v=4.0.379"></script>
   </body>
 </html>
 

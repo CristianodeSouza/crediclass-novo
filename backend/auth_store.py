@@ -205,6 +205,19 @@ def create_invitation(name: str, email: str, whatsapp: str, role: str, actor_id:
     return _public_user(row), token
 
 
+def resend_invitation(user_id: int, actor_id: int) -> str | None:
+    token = secrets.token_urlsafe(36)
+    now = datetime.now(timezone.utc)
+    expires = datetime.fromtimestamp(now.timestamp() + 48 * 3600, timezone.utc).isoformat()
+    with _connect() as db:
+        row = db.execute("SELECT id, status FROM auth_users WHERE id = ?", (user_id,)).fetchone()
+        if not row or row["status"] != "Convite pendente":
+            return None
+        db.execute("UPDATE auth_users SET invite_token_hash = ?, invite_expires_at = ?, updated_at = ? WHERE id = ?", (hashlib.sha256(token.encode()).hexdigest(), expires, now.isoformat(), user_id))
+        db.execute("INSERT INTO auth_audit (actor_user_id, target_user_id, action, detail, created_at) VALUES (?, ?, 'convite_reenviado', 'novo link gerado', ?)", (actor_id, user_id, now.isoformat()))
+    return token
+
+
 def update_user(user_id: int, name: str, email: str, whatsapp: str, role: str, actor_id: int) -> dict | None:
     if role not in {"Operador", "Administrador"}:
         raise ValueError("Perfil inválido.")

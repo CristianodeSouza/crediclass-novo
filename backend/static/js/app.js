@@ -7683,7 +7683,7 @@ function renderConfiguracoes(data) {
       <td>${escapeHtml(user.ultimo_acesso || "-")}</td>
       <td>
         <div class="row-actions">
-          ${pending ? '<span class="text-muted small">Aguardando ativação</span>' : `<button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="status" data-config-user-index="${index}" data-next-status="${nextStatus}">${inactive ? "Ativar" : "Inativar"}</button>`}
+          ${pending ? `<button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="convite" data-config-user-index="${index}">Copiar convite</button>` : `<button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="status" data-config-user-index="${index}" data-next-status="${nextStatus}">${inactive ? "Ativar" : "Inativar"}</button>`}
           <button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="editar" data-config-user-index="${index}">Editar</button>
           <button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="senha" data-config-user-index="${index}">Redefinir senha</button>
         </div>
@@ -8568,9 +8568,6 @@ document.getElementById("historyUpdateForm").addEventListener("submit", (event) 
 document.querySelector('[data-bs-target="#detailsHistory"]').addEventListener("shown.bs.tab", () => detailsChart?.resize());
 
 document.getElementById("downloadConfigBackupBtn").addEventListener("click", downloadConfigBackup);
-document.getElementById("saveBusinessRulesFeedbackBtn").addEventListener("click", () => {
-  saveBusinessRuleFeedbacks().catch(() => setConfigState("error"));
-});
 
 document.getElementById("newAdministratorRuleBtn").addEventListener("click", clearAdministratorRuleForm);
 document.getElementById("cancelAdministratorRuleBtn").addEventListener("click", clearAdministratorRuleForm);
@@ -8630,6 +8627,20 @@ document.getElementById("configUsersBody").addEventListener("click", (event) => 
     if (!window.confirm("Gerar um novo link de redefinição de senha para este usuário?")) return;
     apiPost(`/admin/users/${encodeURIComponent(user.id)}/password-reset`, {})
       .then((result) => window.prompt("Link de redefinição válido por 1 hora:", `${window.location.origin}${result.reset_url}`))
+      .catch(() => setConfigState("error"));
+  }
+
+  if (button.dataset.configUserAction === "convite") {
+    apiPost(`/admin/users/${encodeURIComponent(user.id)}/invitation`, {})
+      .then(async (result) => {
+        const inviteUrl = `${window.location.origin}${result.invite_url}`;
+        try {
+          await navigator.clipboard.writeText(inviteUrl);
+          showToast("Novo link de convite copiado. Ele é válido por 48 horas.", "success");
+        } catch {
+          window.prompt("Novo link de convite (válido por 48 horas):", inviteUrl);
+        }
+      })
       .catch(() => setConfigState("error"));
   }
 });

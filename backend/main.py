@@ -31,7 +31,7 @@ from .motor360_auditoria import audit_to_markdown, audit_to_pdf, get_motor360_au
 from .administrator_rules import normalize_admin_name, rules_by_administradora
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
-from .auth_store import activate_invitation, authenticate, audit_events, create_invitation, create_password_reset, create_session, get_session, get_user, init_auth_store, list_users, public_user, reset_password, revoke_session, set_user_status, update_user
+from .auth_store import activate_invitation, authenticate, audit_events, create_invitation, create_password_reset, create_session, get_session, get_user, init_auth_store, list_users, public_user, reset_password, resend_invitation, revoke_session, set_user_status, update_user
 from .consortium_viability_engine import MOTOR_VERSION, RULES_VERSION, analyze_client_consortium_viability
 from .credit_options import available_credit_options
 from .defasagem import build_defasagem_report, update_defasagem_task
@@ -1122,6 +1122,16 @@ async def admin_update_user(user_id: int, request: Request):
     if not user:
         return JSONResponse(status_code=404, content={"success": False, "error": "Usuário não encontrado."})
     return {"success": True, "usuario": user}
+
+
+@app.post("/api/admin/users/{user_id}/invitation")
+def admin_resend_invitation(user_id: int, request: Request):
+    if not _is_administrator_request(request):
+        return JSONResponse(status_code=403, content={"success": False, "error": "Apenas administradores podem reenviar convites."})
+    token = resend_invitation(user_id, request.state.auth_session["user_id"])
+    if not token:
+        return JSONResponse(status_code=409, content={"success": False, "error": "O usuário não está aguardando ativação."})
+    return {"success": True, "invite_url": f"/?ativar={token}"}
 
 
 @app.post("/api/admin/users/{user_id}/password-reset")
