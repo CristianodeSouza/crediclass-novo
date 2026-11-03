@@ -663,6 +663,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-whatsapp-open-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; padding: 9px 14px; color: #128c7e; border: 1px solid #128c7e; background: #fff; white-space: nowrap; }
 .financial-study-whatsapp-open-btn:hover, .financial-study-whatsapp-open-btn:focus { color: #fff; border-color: #128c7e; background: #128c7e; }
 .financial-study-whatsapp-icon { width: 20px; height: 20px; }
+.financial-study-whatsapp-copy-btn { display: inline-flex; align-items: center; gap: 7px; }
+.financial-study-copy-icon { width: 17px; height: 17px; }
 .financial-study-whatsapp-message .btn { justify-self: start; }
 @media (max-width: 768px) {
   .financial-study-whatsapp-message-editor { grid-template-columns: 1fr; }
