@@ -8727,6 +8727,19 @@ document.getElementById("copyFinancialStudyWhatsappMessageBtn")?.addEventListene
   }
   showToast("Mensagem copiada para o WhatsApp.", "success");
 });
+document.getElementById("openFinancialStudyWhatsappBtn")?.addEventListener("click", async () => {
+  const textarea = document.getElementById("financialStudyWhatsappMessageText");
+  if (!textarea) return;
+  window.open("https://web.whatsapp.com/", "_blank", "noopener,noreferrer");
+  try {
+    await navigator.clipboard.writeText(textarea.value);
+  } catch {
+    textarea.focus();
+    textarea.select();
+    document.execCommand("copy");
+  }
+  showToast("WhatsApp Web aberto. Mensagem copiada para colar no atendimento.", "success");
+});
 document.getElementById("revokeFinancialStudyShareBtn")?.addEventListener("click", async (event) => {
   const button = event.currentTarget;
   const studyId = button.dataset.studyId;
