@@ -429,7 +429,11 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn(".financial-study-part4-table tbody tr {", css)
         self.assertIn(".financial-study-part9-group-card", css)
         self.assertIn(".financial-study-part10-card dl", css)
-        self.assertIn("@page { size: A4 landscape; margin: 10mm; }", css)
+        self.assertIn("@page { size: A4 portrait; margin: 10mm 9mm 13mm; }", css)
+        self.assertIn("break-inside: avoid-page;", css)
+        self.assertIn("font-variant-numeric: tabular-nums;", css)
+        self.assertIn("table-layout: fixed;", css)
+        self.assertNotIn("@page { size: A4 landscape;", css)
         self.assertIn("overflow: visible !important;", css)
         self.assertIn(".financial-study-part9-mobile,\n  .financial-study-part10-mobile { display: none !important; }", css)
 
