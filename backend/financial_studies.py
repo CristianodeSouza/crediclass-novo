@@ -42,6 +42,7 @@ ARCHIVE_COLUMNS = {
     "approval_key": "financial_study_approval_key",
     "archive": "financial_study_archive_v1",
     "crm_opportunity_id": "financial_study_crm_opportunity_id",
+    "piperun_form_url": "financial_study_piperun_form_url",
 }
 SHARE_COLUMNS = {
     "token_hash": "financial_study_public_token_sha256",
@@ -568,9 +569,12 @@ def get_study(study_id: str) -> dict | None:
     crm_opportunity_id = str(row[crm_column]) if crm_column is not None and crm_column < len(row) else ""
     archive_column = _optional_index(indexes, "archive")
     archive = _decompress_archive(field("archive")) if archive_column is not None else None
+    piperun_form_column = _optional_index(indexes, "piperun_form_url")
+    piperun_form_url = str(row[piperun_form_column]) if piperun_form_column is not None and piperun_form_column < len(row) else ""
     return {"id": study_id, "client_name": field("client_name"), "approved_at": field("created_at"),
             "approved_by": field("operator"), "status": field("status"),
             "crm_opportunity_id": crm_opportunity_id,
+            "piperun_form_url": piperun_form_url,
             "app_version": archive.get("app_version", "") if archive else "",
             "snapshot": archive.get("snapshot") if archive else None,
             "document_html": archive.get("document_html") if archive else None,
@@ -637,6 +641,26 @@ def set_crm_opportunity_id(study_id: str, opportunity_id: str) -> dict | None:
     headers, indexes = _ensure_archive_columns(headers, indexes)
     _update_row_fields(row_number, indexes, {"crm_opportunity_id": opportunity_id})
     return {"study_id": study_id, "crm_opportunity_id": opportunity_id}
+
+
+def set_piperun_form_url(study_id: str, opportunity_id: str, url: str) -> dict | None:
+    """Persist the PipeRun public-form URL associated with an opportunity."""
+    opportunity_id = str(opportunity_id or "").strip()
+    url = str(url or "").strip()
+    if not opportunity_id.isdigit():
+        raise ValueError("O ID da oportunidade deve ser numérico.")
+    if not url:
+        raise ValueError("A URL pública do formulário PipeRun não pode ficar vazia.")
+    found = _find_study_row(study_id)
+    if found is None:
+        return None
+    headers, indexes, row_number = found
+    headers, indexes = _ensure_archive_columns(headers, indexes)
+    _update_row_fields(row_number, indexes, {
+        "crm_opportunity_id": opportunity_id,
+        "piperun_form_url": url,
+    })
+    return {"study_id": study_id, "crm_opportunity_id": opportunity_id, "piperun_form_url": url}
 
 
 def get_public_study(token: str) -> dict | None:

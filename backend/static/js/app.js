@@ -1009,12 +1009,22 @@ async function openFinancialStudyHistoryItem(studyId, { showCrm = false } = {}) 
     const shareStatus = document.getElementById("financialStudyShareStatus");
     const shareLinkRow = document.getElementById("financialStudyShareLinkRow");
     const shareUrl = document.getElementById("financialStudyShareUrl");
+    const pipeRunLinkRow = document.getElementById("financialStudyPipeRunLinkRow");
+    const pipeRunLinkUrl = document.getElementById("financialStudyPipeRunLinkUrl");
+    const pipeRunLinkStatus = document.getElementById("financialStudyPipeRunLinkStatus");
     const generateButton = document.getElementById("generateFinancialStudyShareBtn");
     const revokeButton = document.getElementById("revokeFinancialStudyShareBtn");
     const activeShare = study.public_link?.active === true;
     const activeShareUrl = activeShare ? String(study.public_link?.url || "") : "";
     shareUrl.value = activeShareUrl;
     shareLinkRow.classList.toggle("d-none", !activeShareUrl);
+    const piperunFormUrl = String(study.piperun_form_url || "");
+    if (pipeRunLinkUrl) pipeRunLinkUrl.value = piperunFormUrl;
+    pipeRunLinkRow?.classList.toggle("d-none", !piperunFormUrl);
+    if (pipeRunLinkStatus) {
+      pipeRunLinkStatus.textContent = "";
+      pipeRunLinkStatus.hidden = true;
+    }
     revokeButton.classList.toggle("d-none", !study.public_link?.active);
     generateButton.textContent = activeShare ? "Gerar outro link" : "Gerar link público";
     const pipeRunInput = document.getElementById("financialStudyPipeRunOpportunityId");
@@ -8611,17 +8621,34 @@ document.getElementById("generateFinancialStudyShareBtn")?.addEventListener("cli
   const button = event.currentTarget;
   button.disabled = true;
   try {
-    const result = await apiPost(`/financial-studies/${encodeURIComponent(studyId)}/share`, {});
+    const opportunityId = document.getElementById("financialStudyPipeRunOpportunityId")?.value.trim() || "";
+    const result = await apiPost(`/financial-studies/${encodeURIComponent(studyId)}/share`, { opportunity_id: opportunityId || null });
     document.getElementById("financialStudyShareUrl").value = result.url;
     document.getElementById("financialStudyShareLinkRow").classList.remove("d-none");
     const shareStatus = document.getElementById("financialStudyShareStatus");
     shareStatus.textContent = `Link ativo até ${financialStudyHistoryDate(result.expires_at)}.`;
     shareStatus.hidden = false;
+    const pipeRunLinkRow = document.getElementById("financialStudyPipeRunLinkRow");
+    const pipeRunLinkUrl = document.getElementById("financialStudyPipeRunLinkUrl");
+    const pipeRunLinkStatus = document.getElementById("financialStudyPipeRunLinkStatus");
+    if (result.piperun_form_url) {
+      pipeRunLinkUrl.value = result.piperun_form_url;
+      pipeRunLinkRow.classList.remove("d-none");
+      pipeRunLinkStatus.hidden = true;
+    } else if (result.piperun_error) {
+      pipeRunLinkStatus.textContent = `Link do PipeForm não gerado: ${result.piperun_error}`;
+      pipeRunLinkStatus.hidden = false;
+    }
     document.getElementById("revokeFinancialStudyShareBtn").classList.remove("d-none");
     const pipeRunButton = document.getElementById("sendFinancialStudyPipeRunBtn");
     if (pipeRunButton) pipeRunButton.dataset.publicUrlActive = "true";
     syncFinancialStudyPipeRunControls();
-    showToast("Link público gerado. Copie para compartilhar com o cliente.", "success");
+    showToast(
+      result.piperun_error
+        ? "Link público gerado, mas o link do PipeForm não pôde ser ativado."
+        : "Link público gerado. Copie para compartilhar com o cliente.",
+      result.piperun_error ? "warning" : "success",
+    );
   } catch (error) {
     showToast(error.message || "Não foi possível gerar o link público.", "danger");
   } finally {
@@ -8638,6 +8665,17 @@ document.getElementById("copyFinancialStudyShareBtn")?.addEventListener("click",
     document.execCommand("copy");
   }
   showToast("Link copiado.", "success");
+});
+document.getElementById("copyFinancialStudyPipeRunLinkBtn")?.addEventListener("click", async () => {
+  const input = document.getElementById("financialStudyPipeRunLinkUrl");
+  try {
+    await navigator.clipboard.writeText(input.value);
+  } catch {
+    input.focus();
+    input.select();
+    document.execCommand("copy");
+  }
+  showToast("Link do PipeForm copiado.", "success");
 });
 document.getElementById("revokeFinancialStudyShareBtn")?.addEventListener("click", async (event) => {
   const button = event.currentTarget;

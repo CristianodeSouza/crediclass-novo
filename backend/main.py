@@ -37,7 +37,7 @@ from .consortium_viability_engine import MOTOR_VERSION, RULES_VERSION, analyze_c
 from .credit_options import available_credit_options
 from .defasagem import build_defasagem_report, update_defasagem_task
 from . import financial_studies
-from .piperun import create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes
+from .piperun import activate_custom_form_public_link, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes
 from .models import GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, motor360_cache_status, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
 from .viabilidade import compatible_tipo_bem
@@ -88,6 +88,10 @@ class FinancialStudyApprovalRequest(BaseModel):
 
 class FinancialStudyPipeRunRequest(BaseModel):
     opportunity_id: str = Field(min_length=1, max_length=32)
+
+
+class FinancialStudyShareRequest(BaseModel):
+    opportunity_id: str | None = Field(default=None, max_length=32)
 
 
 @app.post("/api/financial-studies")
@@ -260,7 +264,7 @@ def download_public_financial_study_pdf(token: str, request: Request, job: str |
 
 
 @app.post("/api/financial-studies/{study_id}/share")
-def generate_financial_study_share(study_id: str, request: Request):
+async def generate_financial_study_share(study_id: str, payload: FinancialStudyShareRequest, request: Request):
     try:
         link = financial_studies.create_public_link(study_id)
     except ValueError as error:
@@ -270,8 +274,27 @@ def generate_financial_study_share(study_id: str, request: Request):
         return JSONResponse(status_code=503, content={"success": False, "error": "Não foi possível gerar o link público."})
     if link is None:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
-    return {"success": True, "url": str(request.base_url).rstrip("/") + f"/estudo-compartilhado/{link['token']}",
-            "expires_at": link["expires_at"], "validity_days": link["validity_days"]}
+    result = {"success": True, "url": str(request.base_url).rstrip("/") + f"/estudo-compartilhado/{link['token']}",
+              "expires_at": link["expires_at"], "validity_days": link["validity_days"],
+              "piperun_form_url": "", "piperun_error": ""}
+    try:
+        study = financial_studies.get_study(study_id)
+        opportunity_id = str(payload.opportunity_id or (study or {}).get("crm_opportunity_id") or "").strip()
+        if opportunity_id:
+            if not opportunity_id.isdigit():
+                raise ValueError("O ID da oportunidade deve ser numérico.")
+            existing_url = str((study or {}).get("piperun_form_url") or "").strip()
+            existing_opportunity = str((study or {}).get("crm_opportunity_id") or "").strip()
+            if existing_url and existing_opportunity == opportunity_id:
+                result["piperun_form_url"] = existing_url
+            else:
+                pipe_form = await activate_custom_form_public_link(opportunity_id)
+                financial_studies.set_piperun_form_url(study_id, opportunity_id, pipe_form["url"])
+                result["piperun_form_url"] = pipe_form["url"]
+    except Exception as error:
+        logger.exception("Falha ao gerar link público do PipeRun para o estudo %s", study_id)
+        result["piperun_error"] = str(error)
+    return result
 
 
 @app.delete("/api/financial-studies/{study_id}/share")

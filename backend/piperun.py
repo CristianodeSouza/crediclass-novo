@@ -8,6 +8,7 @@ import httpx
 
 
 PIPERUN_BASE_URL = "https://api.pipe.run/v1"
+PIPERUN_CUSTOM_FORM_ID = "44495"
 
 FIELD_MAP = {
     "Nome Completo": "nome",
@@ -182,6 +183,54 @@ async def create_opportunity_note(opportunity_id: str, text: str) -> dict:
     if isinstance(data, list):
         data = data[0] if data else {}
     return {"note_id": data.get("id") if isinstance(data, dict) else None, "response": result}
+
+
+async def activate_custom_form_public_link(opportunity_id: str, form_id: str = PIPERUN_CUSTOM_FORM_ID) -> dict:
+    """Activate a PipeRun custom-form public link and return its stable URL.
+
+    PipeRun exposes a toggle endpoint. If the first response reports an inactive
+    hash, call it once more to reach the active state requested by the caller.
+    """
+    opportunity_id = str(opportunity_id).strip()
+    if not opportunity_id.isdigit():
+        raise ValueError("O ID da oportunidade deve ser numérico.")
+    form_id = str(form_id).strip()
+    if not form_id.isdigit():
+        raise ValueError("O ID do formulário PipeRun é inválido.")
+    token = os.getenv("PIPERUN_API_KEY", "").strip()
+    if not token:
+        raise RuntimeError("Integração PipeRun não configurada no ambiente.")
+
+    endpoint = f"{PIPERUN_BASE_URL}/customForms/{form_id}/deals/{opportunity_id}/public_hash"
+    headers = {"token": token, "accept": "application/json", "content-type": "application/json"}
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.put(endpoint, json={}, headers=headers)
+        if response.status_code in (401, 403):
+            raise RuntimeError("Token PipeRun inválido ou sem permissão para ativar o formulário público.")
+        if response.status_code >= 400:
+            raise RuntimeError(f"PipeRun recusou a ativação do formulário (HTTP {response.status_code}).")
+        payload = response.json()
+        data = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(data, dict):
+            raise RuntimeError("PipeRun não retornou os dados do formulário público.")
+        if data.get("is_hash_active") is not True:
+            response = await client.put(endpoint, json={}, headers=headers)
+            if response.status_code in (401, 403):
+                raise RuntimeError("Token PipeRun inválido ou sem permissão para ativar o formulário público.")
+            if response.status_code >= 400:
+                raise RuntimeError(f"PipeRun recusou a ativação do formulário (HTTP {response.status_code}).")
+            payload = response.json()
+            data = payload.get("data") if isinstance(payload, dict) else None
+
+    public_hash = str(data.get("public_hash") or "").strip() if isinstance(data, dict) else ""
+    if not isinstance(data, dict) or data.get("is_hash_active") is not True or not public_hash:
+        raise RuntimeError("PipeRun não confirmou um link público ativo para o formulário.")
+    return {
+        "form_id": form_id,
+        "opportunity_id": opportunity_id,
+        "public_hash": public_hash,
+        "url": f"https://app.pipe.run/v2/custom-form-public/{public_hash}",
+    }
 
 
 async def fetch_opportunities_preview(limit: int = 25) -> list[dict]:
