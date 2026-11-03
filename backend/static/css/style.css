@@ -7767,8 +7767,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
     border-radius: 0 !important;
     box-shadow: none !important;
     color: #17272d !important;
-    font-size: 9pt !important;
-    line-height: 1.35 !important;
+    font-size: 9.5pt !important;
+    line-height: 1.4 !important;
+    orphans: 3;
+    widows: 3;
   }
 
   .financial-study-document .financial-study-part {
@@ -7784,10 +7786,27 @@ body[data-theme="escuro"] .btn-outline-secondary {
   }
 
   .financial-study-document .financial-study-part--introduction,
-  .financial-study-document .financial-study-part--specialists,
-  .financial-study-document .financial-study-part--important-considerations {
+  .financial-study-document .financial-study-part--specialists {
     break-inside: avoid-page;
     page-break-inside: avoid;
+  }
+
+  .financial-study-document .financial-study-part--important-considerations {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .financial-study-document .financial-study-part > :is(h1, h2, h3, h4) + * {
+    break-before: avoid-page;
+    page-break-before: avoid;
+  }
+
+  .financial-study-document p,
+  .financial-study-document li,
+  .financial-study-document dd,
+  .financial-study-document dt {
+    orphans: 3;
+    widows: 3;
   }
 
   .financial-study-document .financial-study-part--investment,

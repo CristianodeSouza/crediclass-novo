@@ -12,6 +12,7 @@ class FinancialStudyPartsTest(unittest.TestCase):
     def test_new_history_screen_uses_separate_actions_and_sandboxed_snapshot(self):
         html = (ROOT / "backend/static/index.html").read_text(encoding="utf-8")
         app_js = (ROOT / "backend/static/js/app.js").read_text(encoding="utf-8")
+        main_py = (ROOT / "backend/main.py").read_text(encoding="utf-8")
         study_start = html.index('<section id="screen-estudo"')
         history_start = html.index('<section id="screen-historico-estudos"')
         crm_start = html.index('<section id="screen-crm-piperun"')
@@ -34,6 +35,8 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn('apiPost("/financial-studies"', app_js)
         self.assertIn('apiGet(`/financial-studies/${encodeURIComponent(studyId)}`)', app_js)
         self.assertIn("A seleção atual será mantida", app_js)
+        self.assertIn("id='printSharedStudy' class='shared-study-print' type='button'>Imprimir</button>", main_py)
+        self.assertNotIn("Imprimir / Salvar PDF", main_py)
 
     def test_old_study_apis_and_public_routes_remain_unregistered(self):
         paths = {route.path for route in app.routes}

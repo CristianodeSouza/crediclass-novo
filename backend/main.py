@@ -329,7 +329,7 @@ def read_public_financial_study(token: str):
     document += f"<title>{html_escape(study['client_name'])} | Estudo Financeiro CrediClass</title><link rel='icon' href='/static/favicon.svg?v={release_version}' type='image/svg+xml'><link rel='stylesheet' href='/static/css/style.css?v={release_version}'>"
     document += "<meta name='robots' content='noindex,nofollow,noarchive'></head><body class='shared-study-page'>"
     document += "<div class='shared-study-shell'>"
-    document += "<header class='shared-study-header'><div class='shared-study-brand'>CREDICLASS <span>· Estudo Financeiro</span></div><button id='printSharedStudy' class='shared-study-print' type='button'>Imprimir / Salvar PDF</button></header>"
+    document += "<header class='shared-study-header'><div class='shared-study-brand'>CREDICLASS <span>· Estudo Financeiro</span></div><button id='printSharedStudy' class='shared-study-print' type='button'>Imprimir</button></header>"
     document += f"<main class='shared-study-content'>{study['document_html']}</main></div>"
     document += f"<script nonce='{nonce}' src='/static/js/shared-study.js?v={release_version}' defer></script></body></html>"
     policy = f"default-src 'none'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
