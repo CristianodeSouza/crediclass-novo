@@ -31,7 +31,7 @@ from .motor360_auditoria import audit_to_markdown, audit_to_pdf, get_motor360_au
 from .administrator_rules import normalize_admin_name, rules_by_administradora
 from .config import get_settings
 from .configuracoes import get_configuracoes, update_configuracoes
-from .auth_store import activate_invitation, authenticate, audit_events, create_invitation, create_session, get_session, get_user, init_auth_store, list_users, public_user, revoke_session, set_user_status
+from .auth_store import activate_invitation, authenticate, audit_events, create_invitation, create_password_reset, create_session, get_session, get_user, init_auth_store, list_users, public_user, reset_password, revoke_session, set_user_status, update_user
 from .consortium_viability_engine import MOTOR_VERSION, RULES_VERSION, analyze_client_consortium_viability
 from .credit_options import available_credit_options
 from .defasagem import build_defasagem_report, update_defasagem_task
@@ -505,7 +505,7 @@ def _verify_session(token: str | None) -> str | None:
 
 
 def _public_auth_path(path: str) -> bool:
-    return path in {"/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/auth/activate", "/api/health"}
+    return path in {"/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/auth/activate", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/health"}
 
 
 @app.middleware("http")
@@ -1048,6 +1048,25 @@ async def auth_activate(request: Request):
     return {"success": True, "user": public_user(user)}
 
 
+@app.post("/api/auth/forgot-password")
+async def auth_forgot_password(request: Request):
+    # A entrega do link depende do canal de comunicação escolhido pela equipe.
+    # O endpoint não revela se o e-mail existe, evitando enumeração de usuários.
+    return {"success": True, "message": "Se o e-mail estiver cadastrado, solicite ao administrador o link de redefinição."}
+
+
+@app.post("/api/auth/reset-password")
+async def auth_reset_password(request: Request):
+    payload = await request.json()
+    password = str(payload.get("senha") or "")
+    if len(password) < 10:
+        return JSONResponse(status_code=422, content={"success": False, "error": "A senha deve ter pelo menos 10 caracteres."})
+    user = reset_password(str(payload.get("token") or ""), password)
+    if not user:
+        return JSONResponse(status_code=400, content={"success": False, "error": "Link de redefinição inválido ou expirado."})
+    return {"success": True, "user": public_user(user)}
+
+
 @app.get("/api/admin/users")
 def admin_users(request: Request):
     if not _is_administrator_request(request):
@@ -1091,6 +1110,30 @@ async def admin_change_user_status(user_id: int, request: Request):
     return {"success": True, "usuario": user}
 
 
+@app.patch("/api/admin/users/{user_id}")
+async def admin_update_user(user_id: int, request: Request):
+    if not _is_administrator_request(request):
+        return JSONResponse(status_code=403, content={"success": False, "error": "Apenas administradores podem gerenciar acessos."})
+    payload = await request.json()
+    try:
+        user = update_user(user_id, str(payload.get("nome") or ""), str(payload.get("email") or ""), str(payload.get("whatsapp") or ""), str(payload.get("perfil") or "Operador"), request.state.auth_session["user_id"])
+    except ValueError as error:
+        return JSONResponse(status_code=409, content={"success": False, "error": str(error)})
+    if not user:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Usuário não encontrado."})
+    return {"success": True, "usuario": user}
+
+
+@app.post("/api/admin/users/{user_id}/password-reset")
+def admin_password_reset(user_id: int, request: Request):
+    if not _is_administrator_request(request):
+        return JSONResponse(status_code=403, content={"success": False, "error": "Apenas administradores podem redefinir senhas."})
+    token = create_password_reset(user_id, request.state.auth_session["user_id"])
+    if not token:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Usuário não encontrado."})
+    return {"success": True, "reset_url": f"/?redefinir={token}"}
+
+
 @app.get("/api/admin/auth-audit")
 def admin_auth_audit(request: Request):
     if not _is_administrator_request(request):
@@ -1099,7 +1142,9 @@ def admin_auth_audit(request: Request):
 
 
 @app.get("/api/configuracoes")
-def configuracoes_obter():
+def configuracoes_obter(request: Request):
+    if not _is_administrator_request(request):
+        return JSONResponse(status_code=403, content={"success": False, "error": "Apenas administradores podem consultar configurações."})
     logger.info("GET /api/configuracoes")
     settings = get_settings()
     data = get_configuracoes()
@@ -1115,7 +1160,9 @@ def configuracoes_obter():
 
 
 @app.put("/api/configuracoes")
-def configuracoes_salvar(payload: dict):
+def configuracoes_salvar(payload: dict, request: Request):
+    if not _is_administrator_request(request):
+        return JSONResponse(status_code=403, content={"success": False, "error": "Apenas administradores podem alterar configurações."})
     logger.info("PUT /api/configuracoes")
     try:
         return update_configuracoes(payload)

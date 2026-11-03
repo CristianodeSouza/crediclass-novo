@@ -85,8 +85,19 @@ def init_auth_store(legacy_users: dict[str, dict] | None = None) -> None:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL,
                 invite_token_hash TEXT,
-                invite_expires_at TEXT
+                invite_expires_at TEXT,
+                reset_token_hash TEXT,
+                reset_expires_at TEXT
             );
+            """
+        )
+        for column in ("reset_token_hash TEXT", "reset_expires_at TEXT"):
+            try:
+                db.execute(f"ALTER TABLE auth_users ADD COLUMN {column}")
+            except sqlite3.OperationalError:
+                pass
+        db.executescript(
+            """
             CREATE TABLE IF NOT EXISTS auth_sessions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL REFERENCES auth_users(id),
@@ -128,7 +139,9 @@ def authenticate(username: str, password: str) -> sqlite3.Row | None:
         row = db.execute("SELECT * FROM auth_users WHERE username = ? OR lower(email) = lower(?)", (username, username)).fetchone()
         if not row or row["status"] != "Ativo" or not row["password_hash"] or not _verify_password(password, row["password_hash"]):
             if row:
-                db.execute("UPDATE auth_users SET failed_attempts = failed_attempts + 1, updated_at = ? WHERE id = ?", (_now(), row["id"]))
+                next_attempts = int(row["failed_attempts"] or 0) + 1
+                status = "Bloqueado" if next_attempts >= 5 else row["status"]
+                db.execute("UPDATE auth_users SET failed_attempts = ?, status = ?, updated_at = ? WHERE id = ?", (next_attempts, status, _now(), row["id"]))
             return None
         db.execute("UPDATE auth_users SET failed_attempts = 0, last_login = ?, updated_at = ? WHERE id = ?", (_now(), _now(), row["id"]))
         return db.execute("SELECT * FROM auth_users WHERE id = ?", (row["id"],)).fetchone()
@@ -190,6 +203,47 @@ def create_invitation(name: str, email: str, whatsapp: str, role: str, actor_id:
         db.execute("INSERT INTO auth_audit (actor_user_id, target_user_id, action, detail, created_at) VALUES (?, ?, 'convite_criado', ?, ?)", (actor_id, user_id, email.strip().lower(), now.isoformat()))
         row = db.execute("SELECT * FROM auth_users WHERE id = ?", (user_id,)).fetchone()
     return _public_user(row), token
+
+
+def update_user(user_id: int, name: str, email: str, whatsapp: str, role: str, actor_id: int) -> dict | None:
+    if role not in {"Operador", "Administrador"}:
+        raise ValueError("Perfil inválido.")
+    with _connect() as db:
+        row = db.execute("SELECT * FROM auth_users WHERE id = ?", (user_id,)).fetchone()
+        if not row:
+            return None
+        try:
+            db.execute("UPDATE auth_users SET name = ?, email = ?, username = ?, whatsapp = ?, role = ?, updated_at = ? WHERE id = ?", (name.strip(), email.strip().lower(), email.strip().lower(), whatsapp.strip(), role, _now(), user_id))
+        except sqlite3.IntegrityError as error:
+            raise ValueError("Já existe um usuário com este e-mail.") from error
+        db.execute("INSERT INTO auth_audit (actor_user_id, target_user_id, action, detail, created_at) VALUES (?, ?, 'dados_alterados', ?, ?)", (actor_id, user_id, email.strip().lower(), _now()))
+        return _public_user(db.execute("SELECT * FROM auth_users WHERE id = ?", (user_id,)).fetchone())
+
+
+def create_password_reset(user_id: int, actor_id: int) -> str | None:
+    token = secrets.token_urlsafe(36)
+    now = datetime.now(timezone.utc)
+    expires = datetime.fromtimestamp(now.timestamp() + 60 * 60, timezone.utc).isoformat()
+    with _connect() as db:
+        row = db.execute("SELECT id FROM auth_users WHERE id = ?", (user_id,)).fetchone()
+        if not row:
+            return None
+        db.execute("UPDATE auth_users SET reset_token_hash = ?, reset_expires_at = ?, updated_at = ? WHERE id = ?", (hashlib.sha256(token.encode()).hexdigest(), expires, now.isoformat(), user_id))
+        db.execute("INSERT INTO auth_audit (actor_user_id, target_user_id, action, detail, created_at) VALUES (?, ?, 'redefinicao_solicitada', 'link administrativo', ?)", (actor_id, user_id, now.isoformat()))
+    return token
+
+
+def reset_password(token: str, password: str) -> sqlite3.Row | None:
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    now = datetime.now(timezone.utc)
+    with _connect() as db:
+        row = db.execute("SELECT * FROM auth_users WHERE reset_token_hash = ? AND reset_expires_at > ?", (token_hash, now.isoformat())).fetchone()
+        if not row:
+            return None
+        db.execute("UPDATE auth_users SET password_hash = ?, status = 'Ativo', failed_attempts = 0, reset_token_hash = NULL, reset_expires_at = NULL, session_version = session_version + 1, updated_at = ? WHERE id = ?", (_hash_password(password), now.isoformat(), row["id"]))
+        db.execute("UPDATE auth_sessions SET revoked_at = ? WHERE user_id = ? AND revoked_at IS NULL", (now.isoformat(), row["id"]))
+        db.execute("INSERT INTO auth_audit (target_user_id, action, detail, created_at) VALUES (?, 'senha_redefinida', 'link utilizado', ?)", (row["id"], now.isoformat()))
+        return db.execute("SELECT * FROM auth_users WHERE id = ?", (row["id"],)).fetchone()
 
 
 def activate_invitation(token: str, password: str) -> sqlite3.Row | None:

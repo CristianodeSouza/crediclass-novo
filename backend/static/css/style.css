@@ -1706,6 +1706,19 @@ body[data-theme="escuro"] .btn-outline-secondary {
   font-size: 0.9rem;
 }
 
+#configUserModal .modal-dialog {
+  --bs-modal-width: min(760px, calc(100vw - 32px));
+}
+
+#configUserModal .viability-form {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+#configUserModal .viability-form label:last-child {
+  grid-column: 1 / 2;
+}
+
 .details-tabs {
   margin-bottom: 16px;
 }

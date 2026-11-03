@@ -343,6 +343,9 @@ function showActivation() {
   syncAdministratorOnlyControls();
   document.body.classList.remove("auth-pending", "authenticated");
   document.body.classList.add("auth-login");
+  const resetting = new URLSearchParams(window.location.search).has("redefinir");
+  document.getElementById("activationTitle").textContent = resetting ? "Redefinir senha" : "Ativar acesso";
+  document.getElementById("activationDescription").textContent = resetting ? "Defina uma nova senha para recuperar o acesso." : "Crie sua senha para concluir o convite de acesso.";
   document.getElementById("loginForm")?.classList.add("d-none");
   document.getElementById("activationForm")?.classList.remove("d-none");
   window.setTimeout(() => document.getElementById("activationSenha")?.focus(), 60);
@@ -361,13 +364,16 @@ async function submitActivation(event) {
   const button = document.getElementById("activationSubmitBtn");
   button.disabled = true;
   try {
-    const response = await fetch("/api/auth/activate", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: new URLSearchParams(window.location.search).get("ativar") || "", senha: password }) });
+    const params = new URLSearchParams(window.location.search);
+    const endpoint = params.has("redefinir") ? "/api/auth/reset-password" : "/api/auth/activate";
+    const token = params.get("redefinir") || params.get("ativar") || "";
+    const response = await fetch(endpoint, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token, senha: password }) });
     const data = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(data.error || "Não foi possível ativar o acesso.");
     window.history.replaceState({}, document.title, window.location.pathname);
     document.getElementById("activationForm")?.classList.add("d-none");
     document.getElementById("loginForm")?.classList.remove("d-none");
-    showLogin("Acesso ativado. Entre com seu e-mail e a nova senha.");
+    showLogin("Senha atualizada. Entre com seu e-mail e a nova senha.");
   } catch (error) {
     errorBox.textContent = error.message;
     errorBox.classList.remove("d-none");
@@ -459,7 +465,7 @@ async function initializeDashboardData() {
 }
 
 async function bootApp() {
-  if (new URLSearchParams(window.location.search).has("ativar")) {
+  if (new URLSearchParams(window.location.search).has("ativar") || new URLSearchParams(window.location.search).has("redefinir")) {
     showActivation();
     return;
   }
@@ -7678,6 +7684,8 @@ function renderConfiguracoes(data) {
       <td>
         <div class="row-actions">
           ${pending ? '<span class="text-muted small">Aguardando ativação</span>' : `<button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="status" data-config-user-index="${index}" data-next-status="${nextStatus}">${inactive ? "Ativar" : "Inativar"}</button>`}
+          <button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="editar" data-config-user-index="${index}">Editar</button>
+          <button class="btn btn-sm btn-outline-secondary" type="button" data-config-user-action="senha" data-config-user-index="${index}">Redefinir senha</button>
         </div>
       </td>
     </tr>
@@ -7902,10 +7910,6 @@ function openConfigUserForm(mode, index = null) {
 
 async function submitConfigUserForm() {
   const usuarios = [...(configState.data?.usuarios || [])];
-  if (configUserMode === "edit") {
-    showToast("A edição cadastral será feita por convite; use o status para revogar ou reativar o acesso.", "info");
-    return;
-  }
   const payload = {
     nome: document.getElementById("configUserNome").value.trim(),
     email: document.getElementById("configUserEmail").value.trim(),
@@ -7918,12 +7922,14 @@ async function submitConfigUserForm() {
     return;
   }
 
-  const result = await apiPost("/admin/users", payload);
+  const result = configUserMode === "edit"
+    ? await apiRequest(`/admin/users/${encodeURIComponent(usuarios[configUserIndex].id)}`, { method: "PATCH", body: JSON.stringify(payload) })
+    : await apiPost("/admin/users", payload);
   const updated = await apiGet("/admin/users");
   configState.data.usuarios = updated.usuarios || [];
   renderConfiguracoes(configState.data);
-  showToast("Convite criado. Copie o link para enviar ao operador.", "success");
-  window.prompt("Link de ativação do operador (válido por 48 horas):", `${window.location.origin}${result.invite_url}`);
+  showToast(configUserMode === "edit" ? "Dados do usuário atualizados." : "Convite criado. Copie o link para enviar ao operador.", "success");
+  if (result.invite_url) window.prompt("Link de ativação do operador (válido por 48 horas):", `${window.location.origin}${result.invite_url}`);
   configUserModal.hide();
 }
 
@@ -8619,6 +8625,13 @@ document.getElementById("configUsersBody").addEventListener("click", (event) => 
       .catch(() => setConfigState("error"));
     return;
   }
+
+  if (button.dataset.configUserAction === "senha") {
+    if (!window.confirm("Gerar um novo link de redefinição de senha para este usuário?")) return;
+    apiPost(`/admin/users/${encodeURIComponent(user.id)}/password-reset`, {})
+      .then((result) => window.prompt("Link de redefinição válido por 1 hora:", `${window.location.origin}${result.reset_url}`))
+      .catch(() => setConfigState("error"));
+  }
 });
 
 document.getElementById("clearSystemCacheBtn").addEventListener("click", clearSystemCache);
@@ -8741,6 +8754,16 @@ document.getElementById("restartSyncBtn").addEventListener("click", () => {
 
 document.getElementById("loginForm").addEventListener("submit", submitLogin);
 document.getElementById("activationForm")?.addEventListener("submit", submitActivation);
+document.getElementById("forgotPasswordBtn")?.addEventListener("click", async () => {
+  const email = window.prompt("Informe o e-mail cadastrado:");
+  if (!email) return;
+  try {
+    const result = await apiPost("/auth/forgot-password", { email }, { suppressErrorToast: true });
+    showToast(result.message || "Solicitação registrada.", "info");
+  } catch (error) {
+    showToast(error.message || "Não foi possível solicitar a redefinição.", "danger");
+  }
+});
 document.getElementById("logoutBtn").addEventListener("click", logout);
 bootApp().catch(() => showLogin("Nao foi possivel validar a sessao."));
 

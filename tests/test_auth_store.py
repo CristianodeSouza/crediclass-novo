@@ -41,7 +41,11 @@ def test_wrong_password_and_explicit_session_revocation(tmp_path):
     admin = auth_store.get_user("adm")
     user, token = auth_store.create_invitation("Carla Operadora", "carla@example.com", "5511777777777", "Operador", admin["id"])
     activated = auth_store.activate_invitation(token, "senha-segura-123")
-    assert auth_store.authenticate("carla@example.com", "senha-errada") is None
+    for _ in range(5):
+        assert auth_store.authenticate("carla@example.com", "senha-errada") is None
+    assert auth_store.get_user("carla@example.com") is None
+    assert auth_store.authenticate("carla@example.com", "senha-segura-123") is None
+    auth_store.set_user_status(activated["id"], "Ativo", admin["id"])
     session = auth_store.create_session(activated["id"])
     auth_store.revoke_session(session)
     assert auth_store.get_session(session) is None
