@@ -281,15 +281,14 @@ async def send_financial_study_to_piperun(study_id: str, payload: FinancialStudy
         operator = AUTH_USERS[request.state.auth_user]["name"]
         approved_at = str(study.get("approved_at") or "-")
         note_text = (
-            "ESTUDO FINANCEIRO — CSR Tecnologia\n\n"
-            f"Cliente: {study.get('client_name') or '-'}\n"
-            f"Estudo: {study_id}\n"
-            f"Data de geração: {approved_at}\n"
-            f"Usuário responsável: {operator}\n"
-            f"ID da oportunidade PipeRun: {opportunity_id}\n\n"
-            "ABRIR ESTUDO FINANCEIRO\n"
-            f"{study_url}\n\n"
-            "Fase 1 da integração: URL pública enviada. O PDF será tratado em uma fase posterior."
+            "<p><strong>ESTUDO FINANCEIRO — CSR Tecnologia</strong></p>"
+            f"<p>Cliente: {html_escape(str(study.get('client_name') or '-'))}</p>"
+            f"<p>Estudo: {html_escape(study_id)}</p>"
+            f"<p>Data de geração: {html_escape(approved_at)}</p>"
+            f"<p>Usuário responsável: {html_escape(operator)}</p>"
+            f"<p>ID da oportunidade PipeRun: {html_escape(opportunity_id)}</p>"
+            f"<p><strong>ABRIR ESTUDO FINANCEIRO</strong></p>"
+            f"<p><a href=\"{html_escape(study_url, quote=True)}\" target=\"_blank\" rel=\"noopener noreferrer\">{html_escape(study_url)}</a></p>"
         )
         note = await create_opportunity_note(opportunity_id, note_text)
         return {"success": True, "study_id": study_id, "opportunity_id": opportunity_id, "study_url": study_url, "note_id": note.get("note_id")}
