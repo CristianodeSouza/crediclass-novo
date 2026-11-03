@@ -281,14 +281,15 @@ async def send_financial_study_to_piperun(study_id: str, payload: FinancialStudy
         operator = AUTH_USERS[request.state.auth_user]["name"]
         approved_at = str(study.get("approved_at") or "-")
         note_text = (
-            "Estudo financeiro gerado pela plataforma CSR Tecnologia.\n\n"
+            "ESTUDO FINANCEIRO — CSR Tecnologia\n\n"
             f"Cliente: {study.get('client_name') or '-'}\n"
             f"Estudo: {study_id}\n"
             f"Data de geração: {approved_at}\n"
             f"Usuário responsável: {operator}\n"
             f"ID da oportunidade PipeRun: {opportunity_id}\n\n"
-            f"Link do estudo financeiro: {study_url}\n\n"
-            "Nesta primeira fase, somente a URL pública do estudo foi enviada."
+            "ABRIR ESTUDO FINANCEIRO\n"
+            f"{study_url}\n\n"
+            "Fase 1 da integração: URL pública enviada. O PDF será tratado em uma fase posterior."
         )
         note = await create_opportunity_note(opportunity_id, note_text)
         return {"success": True, "study_id": study_id, "opportunity_id": opportunity_id, "study_url": study_url, "note_id": note.get("note_id")}
