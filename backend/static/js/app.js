@@ -966,6 +966,43 @@ function syncFinancialStudyPipeRunControls() {
   }
 }
 
+function buildFinancialStudyWhatsappMessage(studyUrl, pipeRunFormUrl) {
+  return [
+    "Melhores Consórcios: Itaú",
+    "",
+    "Critérios de seleção:",
+    "",
+    "1 - Parcela reduzida: 30% reduzido até a data de contemplação. Menor parcela;",
+    "",
+    "2 - Menor taxa: grupos com a menor taxa ao ano do mercado 1,07%;",
+    "",
+    "3 - Múltiplas modalidades contemplação: sorteio, lance fixo 40% e lances livres;",
+    "",
+    "4 - Lance embutido: permite utilizar até 30% da carta de crédito para pagamento do lance ofertado;",
+    "",
+    "5 - Mais chances contemplação: lance fixo com múltiplas contemplações mensais;",
+    "",
+    "6 - Previsibilidade: reajuste das cartas fixo em 3%, anualmente.",
+    "",
+    `Segue o link do Estudo Financeiro: ${studyUrl}`,
+    "",
+    "*Pontos Importantes*",
+    "",
+    "- Próxima assembleia: 16/10",
+    "- Vencimento vagas reservadas: 28/09",
+    `- Para seguirmos vamos precisar da Ficha Cadastral no seguinte link: ${pipeRunFormUrl}`,
+  ].join("\n");
+}
+
+function syncFinancialStudyWhatsappMessage(studyUrl, pipeRunFormUrl) {
+  const panel = document.getElementById("financialStudyWhatsappMessage");
+  const textarea = document.getElementById("financialStudyWhatsappMessageText");
+  if (!panel || !textarea) return;
+  const hasLinks = Boolean(studyUrl && pipeRunFormUrl);
+  panel.classList.toggle("d-none", !hasLinks);
+  if (hasLinks) textarea.value = buildFinancialStudyWhatsappMessage(studyUrl, pipeRunFormUrl);
+}
+
 async function loadFinancialStudyHistory() {
   const state = document.getElementById("financialStudyHistoryState");
   const search = document.getElementById("financialStudyHistorySearch");
@@ -1025,6 +1062,7 @@ async function openFinancialStudyHistoryItem(studyId, { showCrm = false } = {}) 
       pipeRunLinkStatus.textContent = "";
       pipeRunLinkStatus.hidden = true;
     }
+    syncFinancialStudyWhatsappMessage(activeShareUrl, piperunFormUrl);
     revokeButton.classList.toggle("d-none", !study.public_link?.active);
     generateButton.textContent = activeShare ? "Gerar outro link" : "Gerar link público";
     const pipeRunInput = document.getElementById("financialStudyPipeRunOpportunityId");
@@ -8635,6 +8673,7 @@ document.getElementById("generateFinancialStudyShareBtn")?.addEventListener("cli
       pipeRunLinkUrl.value = result.piperun_form_url;
       pipeRunLinkRow.classList.remove("d-none");
       pipeRunLinkStatus.hidden = true;
+      syncFinancialStudyWhatsappMessage(result.url, result.piperun_form_url);
     } else if (result.piperun_error) {
       pipeRunLinkStatus.textContent = `Link do PipeForm não gerado: ${result.piperun_error}`;
       pipeRunLinkStatus.hidden = false;
@@ -8676,6 +8715,17 @@ document.getElementById("copyFinancialStudyPipeRunLinkBtn")?.addEventListener("c
     document.execCommand("copy");
   }
   showToast("Link do PipeForm copiado.", "success");
+});
+document.getElementById("copyFinancialStudyWhatsappMessageBtn")?.addEventListener("click", async () => {
+  const textarea = document.getElementById("financialStudyWhatsappMessageText");
+  try {
+    await navigator.clipboard.writeText(textarea.value);
+  } catch {
+    textarea.focus();
+    textarea.select();
+    document.execCommand("copy");
+  }
+  showToast("Mensagem copiada para o WhatsApp.", "success");
 });
 document.getElementById("revokeFinancialStudyShareBtn")?.addEventListener("click", async (event) => {
   const button = event.currentTarget;

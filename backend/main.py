@@ -329,6 +329,12 @@ async def send_financial_study_to_piperun(study_id: str, payload: FinancialStudy
         study_url = str(request.base_url).rstrip("/") + f"/estudo-compartilhado/{token}"
         operator = request.state.auth_session["name"]
         approved_at = str(study.get("approved_at") or "-")
+        piperun_form_url = str(study.get("piperun_form_url") or "").strip()
+        piperun_next_steps = (
+            f"<p>Próximos passos: <a href=\"{html_escape(piperun_form_url, quote=True)}\" target=\"_blank\" rel=\"noopener noreferrer\">{html_escape(piperun_form_url)}</a></p>"
+            if piperun_form_url
+            else ""
+        )
         note_text = (
             "<p><strong>ESTUDO FINANCEIRO — CSR Tecnologia</strong></p>"
             f"<p>Cliente: {html_escape(str(study.get('client_name') or '-'))}</p>"
@@ -336,8 +342,9 @@ async def send_financial_study_to_piperun(study_id: str, payload: FinancialStudy
             f"<p>Data de geração: {html_escape(approved_at)}</p>"
             f"<p>Usuário responsável: {html_escape(operator)}</p>"
             f"<p>ID da oportunidade PipeRun: {html_escape(opportunity_id)}</p>"
-            f"<p><strong>ABRIR ESTUDO FINANCEIRO</strong></p>"
-            f"<p><a href=\"{html_escape(study_url, quote=True)}\" target=\"_blank\" rel=\"noopener noreferrer\">{html_escape(study_url)}</a></p>"
+            + piperun_next_steps
+            + f"<p><strong>ABRIR ESTUDO FINANCEIRO</strong></p>"
+            + f"<p><a href=\"{html_escape(study_url, quote=True)}\" target=\"_blank\" rel=\"noopener noreferrer\">{html_escape(study_url)}</a></p>"
         )
         note = await create_opportunity_note(opportunity_id, note_text)
         return {"success": True, "study_id": study_id, "opportunity_id": opportunity_id, "study_url": study_url, "note_id": note.get("note_id")}
