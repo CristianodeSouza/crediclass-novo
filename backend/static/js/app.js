@@ -495,9 +495,14 @@ function withTimeout(promise, timeoutMs, message) {
   return Promise.race([promise, timeout]).finally(() => window.clearTimeout(timeoutId));
 }
 
+function closeUserMenu() {
+  document.querySelector(".sidebar")?.classList.remove("user-menu-open");
+}
+
 function activateScreen(screenName) {
   const meta = screens[screenName];
   if (!meta) return;
+  closeUserMenu();
   if (screenName === "estudo") {
     const selectedGroups = [...investorState.selectedGroupIds];
     const groupsPendingQuotaReview = selectedGroups.filter((groupId) => motor360QuotaReview.has(groupId));
@@ -8449,6 +8454,17 @@ document.querySelector(".user-card")?.addEventListener("click", (event) => {
   if (event.target.closest("#logoutBtn")) return;
   const sidebar = document.querySelector(".sidebar");
   sidebar?.classList.toggle("user-menu-open");
+});
+
+document.addEventListener("click", (event) => {
+  const sidebar = document.querySelector(".sidebar");
+  if (!sidebar?.classList.contains("user-menu-open")) return;
+  if (event.target.closest(".user-card") || event.target.closest(".nav-section-admin")) return;
+  closeUserMenu();
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") closeUserMenu();
 });
 
 document.querySelector(".preliminary-toggle")?.addEventListener("click", (event) => {
