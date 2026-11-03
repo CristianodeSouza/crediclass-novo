@@ -625,6 +625,20 @@ def revoke_public_link(study_id: str) -> dict | None:
     return _share_state(row, indexes) | {"active": False, "revoked": True}
 
 
+def set_crm_opportunity_id(study_id: str, opportunity_id: str) -> dict | None:
+    """Associate a manually-created study with a CRM opportunity."""
+    opportunity_id = str(opportunity_id or "").strip()
+    if not opportunity_id.isdigit():
+        raise ValueError("O ID da oportunidade deve ser numérico.")
+    found = _find_study_row(study_id)
+    if found is None:
+        return None
+    headers, indexes, row_number = found
+    headers, indexes = _ensure_archive_columns(headers, indexes)
+    _update_row_fields(row_number, indexes, {"crm_opportunity_id": opportunity_id})
+    return {"study_id": study_id, "crm_opportunity_id": opportunity_id}
+
+
 def get_public_study(token: str) -> dict | None:
     if not token or len(token) > 256:
         return None

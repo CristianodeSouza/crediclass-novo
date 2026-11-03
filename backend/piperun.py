@@ -152,6 +152,38 @@ async def fetch_opportunity_notes(opportunity_id: str) -> dict:
     }
 
 
+async def create_opportunity_note(opportunity_id: str, text: str) -> dict:
+    """Create a plain-text note linked to a PipeRun opportunity."""
+    opportunity_id = str(opportunity_id).strip()
+    if not opportunity_id.isdigit():
+        raise ValueError("O ID da oportunidade deve ser numérico.")
+    text = str(text or "").strip()
+    if not text:
+        raise ValueError("O texto da nota não pode ficar vazio.")
+    token = os.getenv("PIPERUN_API_KEY", "").strip()
+    if not token:
+        raise RuntimeError("Integração PipeRun não configurada no ambiente.")
+    payload = {"text": text, "deal_id": int(opportunity_id)}
+    user_id = os.getenv("PIPERUN_USER_ID", "").strip()
+    if user_id.isdigit():
+        payload["user_id"] = int(user_id)
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.post(
+            f"{PIPERUN_BASE_URL}/notes",
+            json=payload,
+            headers={"token": token, "accept": "application/json", "content-type": "application/json"},
+        )
+    if response.status_code in (401, 403):
+        raise RuntimeError("Token PipeRun inválido ou sem permissão para criar notas.")
+    if response.status_code >= 400:
+        raise RuntimeError(f"PipeRun recusou a nota (HTTP {response.status_code}).")
+    result = response.json()
+    data = result.get("data") if isinstance(result, dict) else None
+    if isinstance(data, list):
+        data = data[0] if data else {}
+    return {"note_id": data.get("id") if isinstance(data, dict) else None, "response": result}
+
+
 async def fetch_opportunities_preview(limit: int = 25) -> list[dict]:
     """Carrega uma amostra temporária de oportunidades e suas notas de formulário."""
     token = os.getenv("PIPERUN_API_KEY", "").strip()

@@ -900,6 +900,21 @@ function renderFinancialStudyHistory(items) {
   rows.querySelectorAll("[data-financial-study-crm]").forEach((button) => button.addEventListener("click", () => openFinancialStudyHistoryItem(button.dataset.financialStudyCrm, { showCrm: true })));
 }
 
+function syncFinancialStudyPipeRunControls() {
+  const input = document.getElementById("financialStudyPipeRunOpportunityId");
+  const button = document.getElementById("sendFinancialStudyPipeRunBtn");
+  const status = document.getElementById("financialStudyPipeRunStatus");
+  if (!input || !button) return;
+  const activeUrl = button.dataset.publicUrlActive === "true";
+  const validOpportunity = /^\d+$/.test(input.value.trim());
+  button.disabled = !(activeUrl && validOpportunity) || button.dataset.sending === "true";
+  if (status && button.dataset.sending !== "true") {
+    status.textContent = activeUrl
+      ? validOpportunity ? "URL ativa. O envio criará uma nota vinculada à oportunidade." : "Informe um ID numérico de oportunidade para liberar o envio."
+      : "Gere um link público ativo para liberar o envio.";
+  }
+}
+
 async function loadFinancialStudyHistory() {
   const state = document.getElementById("financialStudyHistoryState");
   const search = document.getElementById("financialStudyHistorySearch");
@@ -951,6 +966,15 @@ async function openFinancialStudyHistoryItem(studyId, { showCrm = false } = {}) 
     shareLinkRow.classList.toggle("d-none", !activeShareUrl);
     revokeButton.classList.toggle("d-none", !study.public_link?.active);
     generateButton.textContent = activeShare ? "Gerar outro link" : "Gerar link público";
+    const pipeRunInput = document.getElementById("financialStudyPipeRunOpportunityId");
+    const pipeRunButton = document.getElementById("sendFinancialStudyPipeRunBtn");
+    if (pipeRunInput) pipeRunInput.value = study.crm_opportunity_id || study.snapshot?.client?.crm_opportunity_id || "";
+    if (pipeRunButton) {
+      pipeRunButton.dataset.studyId = studyId;
+      pipeRunButton.dataset.publicUrlActive = String(Boolean(activeShareUrl));
+      pipeRunButton.dataset.sending = "false";
+    }
+    syncFinancialStudyPipeRunControls();
     shareStatus.textContent = activeShareUrl
       ? `Link ativo até ${financialStudyHistoryDate(study.public_link.expires_at)}. Copie e compartilhe o link abaixo; não é necessário gerar outro.`
       : activeShare
@@ -8571,6 +8595,9 @@ document.getElementById("generateFinancialStudyShareBtn")?.addEventListener("cli
     document.getElementById("financialStudyShareLinkRow").classList.remove("d-none");
     document.getElementById("financialStudyShareStatus").textContent = `Link ativo até ${financialStudyHistoryDate(result.expires_at)}. Copie e compartilhe o link abaixo; não é necessário gerar outro.`;
     document.getElementById("revokeFinancialStudyShareBtn").classList.remove("d-none");
+    const pipeRunButton = document.getElementById("sendFinancialStudyPipeRunBtn");
+    if (pipeRunButton) pipeRunButton.dataset.publicUrlActive = "true";
+    syncFinancialStudyPipeRunControls();
     showToast("Link público gerado. Copie para compartilhar com o cliente.", "success");
   } catch (error) {
     showToast(error.message || "Não foi possível gerar o link público.", "danger");
@@ -8600,11 +8627,41 @@ document.getElementById("revokeFinancialStudyShareBtn")?.addEventListener("click
     document.getElementById("financialStudyShareUrl").value = "";
     document.getElementById("financialStudyShareStatus").textContent = "Link revogado. Gere um novo link se quiser compartilhar novamente.";
     button.classList.add("d-none");
+    const pipeRunButton = document.getElementById("sendFinancialStudyPipeRunBtn");
+    if (pipeRunButton) pipeRunButton.dataset.publicUrlActive = "false";
+    syncFinancialStudyPipeRunControls();
     showToast("Link público revogado.", "success");
   } catch (error) {
     showToast(error.message || "Não foi possível revogar o link.", "danger");
   } finally {
     button.disabled = false;
+  }
+});
+document.getElementById("financialStudyPipeRunOpportunityId")?.addEventListener("input", syncFinancialStudyPipeRunControls);
+document.getElementById("sendFinancialStudyPipeRunBtn")?.addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  const studyId = button.dataset.studyId;
+  const input = document.getElementById("financialStudyPipeRunOpportunityId");
+  const opportunityId = input?.value.trim() || "";
+  if (!studyId || !/^\d+$/.test(opportunityId) || button.dataset.publicUrlActive !== "true") {
+    syncFinancialStudyPipeRunControls();
+    return;
+  }
+  if (!window.confirm("Enviar a URL pública deste estudo como uma nota vinculada à oportunidade no PipeRun?")) return;
+  button.dataset.sending = "true";
+  button.disabled = true;
+  const status = document.getElementById("financialStudyPipeRunStatus");
+  if (status) status.textContent = "Enviando URL ao PipeRun…";
+  try {
+    const result = await apiPost(`/financial-studies/${encodeURIComponent(studyId)}/piperun`, { opportunity_id: opportunityId });
+    if (status) status.textContent = `URL enviada ao PipeRun${result.note_id ? ` (nota ${result.note_id})` : ""}.`;
+    showToast("URL do estudo enviada ao PipeRun.", "success");
+  } catch (error) {
+    if (status) status.textContent = error.message || "Não foi possível enviar a URL ao PipeRun.";
+    showToast(error.message || "Não foi possível enviar a URL ao PipeRun.", "danger");
+  } finally {
+    button.dataset.sending = "false";
+    syncFinancialStudyPipeRunControls();
   }
 });
 

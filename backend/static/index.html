@@ -870,6 +870,14 @@
                     <button id="copyFinancialStudyShareBtn" class="btn btn-outline-secondary" type="button">Copiar link</button>
                   </div>
                 </div>
+                <div class="financial-study-piperun-send" aria-label="Enviar estudo ao PipeRun">
+                  <label for="financialStudyPipeRunOpportunityId">ID da oportunidade PipeRun</label>
+                  <div class="financial-study-share-link-row">
+                    <input id="financialStudyPipeRunOpportunityId" class="form-control" type="text" inputmode="numeric" pattern="[0-9]+" placeholder="Ex.: 63416847" aria-describedby="financialStudyPipeRunStatus">
+                    <button id="sendFinancialStudyPipeRunBtn" class="btn btn-primary" type="button" disabled>Enviar URL ao PipeRun</button>
+                  </div>
+                  <small id="financialStudyPipeRunStatus">Gere um link público ativo para liberar o envio.</small>
+                </div>
               </section>
               <iframe id="financialStudyHistoryFrame" title="Snapshot imutável do estudo aprovado" sandbox="allow-same-origin allow-modals" loading="eager"></iframe>
             </section>

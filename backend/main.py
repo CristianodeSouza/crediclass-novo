@@ -35,7 +35,7 @@ from .consortium_viability_engine import MOTOR_VERSION, RULES_VERSION, analyze_c
 from .credit_options import available_credit_options
 from .defasagem import build_defasagem_report, update_defasagem_task
 from . import financial_studies
-from .piperun import fetch_opportunities_preview, fetch_opportunity_notes
+from .piperun import create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes
 from .models import GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, motor360_cache_status, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
 from .viabilidade import compatible_tipo_bem
@@ -82,6 +82,10 @@ class FinancialStudyApprovalRequest(BaseModel):
     approval_key: str = Field(min_length=36, max_length=36)
     snapshot: dict
     document_html: str = Field(min_length=1, max_length=2_000_000)
+
+
+class FinancialStudyPipeRunRequest(BaseModel):
+    opportunity_id: str = Field(min_length=1, max_length=32)
 
 
 @app.post("/api/financial-studies")
@@ -254,6 +258,47 @@ def revoke_financial_study_share(study_id: str, request: Request):
     if result is None:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
     return {"success": True, "public_link": result}
+
+
+@app.post("/api/financial-studies/{study_id}/piperun")
+async def send_financial_study_to_piperun(study_id: str, payload: FinancialStudyPipeRunRequest, request: Request):
+    """Send only the active public study URL as a note linked to a PipeRun deal."""
+    opportunity_id = payload.opportunity_id.strip()
+    if not opportunity_id.isdigit():
+        return JSONResponse(status_code=422, content={"success": False, "error": "O ID da oportunidade deve ser numérico."})
+    try:
+        study = financial_studies.get_study(study_id)
+        if study is None:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
+        public_link = study.get("public_link") or {}
+        token = str(public_link.get("token") or "").strip()
+        if public_link.get("active") is not True or not token:
+            return JSONResponse(status_code=409, content={"success": False, "error": "Gere um link público ativo antes de enviar o estudo ao PipeRun."})
+        association = financial_studies.set_crm_opportunity_id(study_id, opportunity_id)
+        if association is None:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
+        study_url = str(request.base_url).rstrip("/") + f"/estudo-compartilhado/{token}"
+        operator = AUTH_USERS[request.state.auth_user]["name"]
+        approved_at = str(study.get("approved_at") or "-")
+        note_text = (
+            "Estudo financeiro gerado pela plataforma CSR Tecnologia.\n\n"
+            f"Cliente: {study.get('client_name') or '-'}\n"
+            f"Estudo: {study_id}\n"
+            f"Data de geração: {approved_at}\n"
+            f"Usuário responsável: {operator}\n"
+            f"ID da oportunidade PipeRun: {opportunity_id}\n\n"
+            f"Link do estudo financeiro: {study_url}\n\n"
+            "Nesta primeira fase, somente a URL pública do estudo foi enviada."
+        )
+        note = await create_opportunity_note(opportunity_id, note_text)
+        return {"success": True, "study_id": study_id, "opportunity_id": opportunity_id, "study_url": study_url, "note_id": note.get("note_id")}
+    except ValueError as error:
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
+    except RuntimeError as error:
+        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
+    except Exception:
+        logger.exception("Falha ao enviar estudo %s ao PipeRun", study_id)
+        return JSONResponse(status_code=502, content={"success": False, "error": "Não foi possível enviar o estudo ao PipeRun."})
 
 
 @app.get("/estudo-compartilhado/{token}")
