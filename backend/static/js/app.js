@@ -94,8 +94,6 @@ window.addEventListener("unhandledrejection", (event) => clientDiagnosticErrors.
 document.addEventListener("click", (event) => {
   if (event.target.closest("#closeFinancialStudyHistoryBtn")) {
     closeFinancialStudyHistoryItem();
-  } else if (event.target.closest("#printFinancialStudyHistoryBtn")) {
-    downloadFinancialStudyHistoryPdf();
   }
 });
 const investorPreferenceFlags = [];
@@ -1112,70 +1110,6 @@ function printFinancialStudyHistoryItem() {
   } catch (error) {
     printWindow.close();
     showToast(error.message || "Não foi possível abrir a impressão deste estudo.", "danger");
-  }
-}
-
-async function downloadFinancialStudyHistoryPdf() {
-  const studyId = financialStudyHistoryState.selectedId;
-  if (!studyId) {
-    showToast("Abra um estudo antes de baixar o PDF.", "warning");
-    return;
-  }
-  const button = document.getElementById("printFinancialStudyHistoryBtn");
-  const originalLabel = button?.textContent || "Baixar PDF";
-  if (button) {
-    button.disabled = true;
-    button.textContent = "Gerando PDF…";
-  }
-  try {
-    let response = await fetch(`/api/financial-studies/${encodeURIComponent(studyId)}/pdf`, {
-      credentials: "same-origin",
-      headers: { Accept: "application/pdf, application/json" },
-    });
-    if (response.status === 202) {
-      const queued = await response.json();
-      if (!queued.job_id) throw new Error("O servidor não retornou a tarefa de geração do PDF.");
-      const deadline = Date.now() + 120000;
-      let pdfResponse = null;
-      while (Date.now() < deadline) {
-        await new Promise((resolve) => window.setTimeout(resolve, 1500));
-        const poll = await fetch(`/api/financial-studies/${encodeURIComponent(studyId)}/pdf?job=${encodeURIComponent(queued.job_id)}`, {
-          credentials: "same-origin",
-          headers: { Accept: "application/pdf, application/json" },
-        });
-        if (poll.status === 202) continue;
-        pdfResponse = poll;
-        break;
-      }
-      if (!pdfResponse) throw new Error("A geração do PDF excedeu o tempo limite. Tente novamente.");
-      response = pdfResponse;
-    }
-    const contentType = response.headers.get("content-type") || "";
-    if (!response.ok || !contentType.toLowerCase().includes("application/pdf")) {
-      let message = `Não foi possível gerar o PDF (HTTP ${response.status}).`;
-      try {
-        const payload = await response.json();
-        message = payload.error || message;
-      } catch (_) {}
-      throw new Error(message);
-    }
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `${studyId}.pdf`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 30000);
-    showToast("PDF gerado e baixado com sucesso.", "success");
-  } catch (error) {
-    showToast(error.message || "Não foi possível gerar o PDF.", "danger");
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = originalLabel;
-    }
   }
 }
 
