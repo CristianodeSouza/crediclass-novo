@@ -838,10 +838,6 @@
                 <div id="financialStudyCrmContent"></div>
               </section>
               <section class="financial-study-share" aria-label="Link público do estudo">
-                <div class="financial-study-share-copy">
-                  <strong>Compartilhar com o cliente</strong>
-                  <p id="financialStudyShareStatus">O link não é criado automaticamente e ficará válido por 30 dias.</p>
-                </div>
                 <div class="financial-study-share-side">
                   <div class="financial-study-share-controls">
                     <button id="generateFinancialStudyShareBtn" class="btn btn-primary" type="button">Gerar link público</button>
@@ -850,6 +846,7 @@
                       <input id="financialStudyShareUrl" class="form-control" type="url" readonly aria-label="Link público gerado">
                       <button id="copyFinancialStudyShareBtn" class="btn btn-outline-secondary" type="button">Copiar link</button>
                     </div>
+                    <small id="financialStudyShareStatus" class="financial-study-share-status" hidden></small>
                   </div>
                   <div class="financial-study-piperun-send" aria-label="Enviar estudo ao PipeRun">
                     <div class="financial-study-piperun-heading">

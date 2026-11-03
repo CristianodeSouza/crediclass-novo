@@ -1027,12 +1027,11 @@ async function openFinancialStudyHistoryItem(studyId, { showCrm = false } = {}) 
     }
     syncFinancialStudyPipeRunControls();
     shareStatus.textContent = activeShareUrl
-      ? `Link ativo até ${financialStudyHistoryDate(study.public_link.expires_at)}. Copie e compartilhe o link abaixo; não é necessário gerar outro.`
+      ? `Link ativo até ${financialStudyHistoryDate(study.public_link.expires_at)}.`
       : activeShare
-        ? `Existe um link ativo até ${financialStudyHistoryDate(study.public_link.expires_at)}, mas ele foi criado antes da recuperação segura da URL. O endereço original não pode ser recuperado; se precisar de um link visível aqui, gere outro para substituí-lo.`
-      : study.public_link?.expires_at
-        ? "O link anterior está expirado ou revogado. Gere um novo link para compartilhar este estudo."
-        : "O link não é criado automaticamente e ficará válido por 30 dias.";
+        ? `Link ativo até ${financialStudyHistoryDate(study.public_link.expires_at)}. Gere outro link para exibir a URL.`
+        : "";
+    shareStatus.hidden = !shareStatus.textContent;
     generateButton.dataset.studyId = studyId;
     revokeButton.dataset.studyId = studyId;
     detail.classList.remove("d-none");
@@ -8615,7 +8614,9 @@ document.getElementById("generateFinancialStudyShareBtn")?.addEventListener("cli
     const result = await apiPost(`/financial-studies/${encodeURIComponent(studyId)}/share`, {});
     document.getElementById("financialStudyShareUrl").value = result.url;
     document.getElementById("financialStudyShareLinkRow").classList.remove("d-none");
-    document.getElementById("financialStudyShareStatus").textContent = `Link ativo até ${financialStudyHistoryDate(result.expires_at)}. Copie e compartilhe o link abaixo; não é necessário gerar outro.`;
+    const shareStatus = document.getElementById("financialStudyShareStatus");
+    shareStatus.textContent = `Link ativo até ${financialStudyHistoryDate(result.expires_at)}.`;
+    shareStatus.hidden = false;
     document.getElementById("revokeFinancialStudyShareBtn").classList.remove("d-none");
     const pipeRunButton = document.getElementById("sendFinancialStudyPipeRunBtn");
     if (pipeRunButton) pipeRunButton.dataset.publicUrlActive = "true";
@@ -8647,7 +8648,9 @@ document.getElementById("revokeFinancialStudyShareBtn")?.addEventListener("click
     await apiDelete(`/financial-studies/${encodeURIComponent(studyId)}/share`);
     document.getElementById("financialStudyShareLinkRow").classList.add("d-none");
     document.getElementById("financialStudyShareUrl").value = "";
-    document.getElementById("financialStudyShareStatus").textContent = "Link revogado. Gere um novo link se quiser compartilhar novamente.";
+    const shareStatus = document.getElementById("financialStudyShareStatus");
+    shareStatus.textContent = "Link revogado. Gere um novo link se quiser compartilhar novamente.";
+    shareStatus.hidden = false;
     button.classList.add("d-none");
     const pipeRunButton = document.getElementById("sendFinancialStudyPipeRunBtn");
     if (pipeRunButton) pipeRunButton.dataset.publicUrlActive = "false";
