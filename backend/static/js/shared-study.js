@@ -82,10 +82,57 @@
     annotateMissingValues(root);
   };
 
+  async function downloadSharedStudyPdf(button) {
+    const token = window.location.pathname.split("/").filter(Boolean).pop();
+    if (!token) throw new Error("Link público inválido.");
+    const endpoint = `/estudo-compartilhado/${encodeURIComponent(token)}/pdf`;
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = "Gerando PDF...";
+    try {
+      const startResponse = await fetch(endpoint, { headers: { Accept: "application/json" } });
+      const startPayload = await startResponse.json();
+      if (!startResponse.ok || !startPayload.job_id) {
+        throw new Error(startPayload.error || "Não foi possível iniciar a geração do PDF.");
+      }
+      let pdfResponse;
+      for (let attempt = 0; attempt < 90; attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 1000));
+        pdfResponse = await fetch(`${endpoint}?job=${encodeURIComponent(startPayload.job_id)}`, { headers: { Accept: "application/pdf" } });
+        if (pdfResponse.status === 202) continue;
+        if (!pdfResponse.ok) throw new Error("Não foi possível gerar o PDF.");
+        const blob = await pdfResponse.blob();
+        const disposition = pdfResponse.headers.get("content-disposition") || "";
+        const encodedFilename = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+        const fallbackFilename = disposition.match(/filename="([^"]+)"/i)?.[1] || "estudo-financeiro.pdf";
+        const filename = encodedFilename ? decodeURIComponent(encodedFilename) : fallbackFilename;
+        const objectUrl = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = objectUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+        return;
+      }
+      throw new Error("A geração do PDF demorou mais que o esperado.");
+    } finally {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     repositionScenarioSummaries();
     prepareInvestmentCards();
     annotateMissingValues();
-    document.getElementById("printSharedStudy")?.addEventListener("click", () => window.print());
+    document.getElementById("printSharedStudy")?.addEventListener("click", async (event) => {
+      try {
+        await downloadSharedStudyPdf(event.currentTarget);
+      } catch (error) {
+        window.alert(error?.message || "Não foi possível baixar o PDF.");
+      }
+    });
   });
 })();

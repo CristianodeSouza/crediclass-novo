@@ -38,6 +38,9 @@ class FinancialStudyPartsTest(unittest.TestCase):
         self.assertIn("id='printSharedStudy' class='shared-study-print' type='button'>Imprimir</button>", main_py)
         self.assertNotIn("Imprimir / Salvar PDF", main_py)
         self.assertIn("<title>{html_escape(study['client_name'])}</title>", main_py)
+        self.assertIn('@app.get("/estudo-compartilhado/{token}/pdf")', main_py)
+        self.assertIn('filename*=UTF-8', main_py)
+        self.assertIn("downloadSharedStudyPdf", (ROOT / "backend/static/js/shared-study.js").read_text(encoding="utf-8"))
 
     def test_old_study_apis_and_public_routes_remain_unregistered(self):
         paths = {route.path for route in app.routes}

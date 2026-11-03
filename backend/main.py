@@ -19,6 +19,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import date
 from html import escape as html_escape
 from typing import Annotated
+from urllib.parse import quote
 from uuid import uuid4
 
 from fastapi import FastAPI, Query, Request, Response
@@ -172,6 +173,19 @@ def download_financial_study_pdf(study_id: str, request: Request):
     if study is None:
         return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
 
+    return render_financial_study_pdf(study, request)
+
+
+def safe_pdf_filename(client_name: str, fallback: str = "estudo-financeiro") -> str:
+    filename = re.sub(r'[<>:"/\\|?*\x00-\x1f]+', " ", str(client_name or ""))
+    filename = re.sub(r"\s+", " ", filename).strip(" .")
+    return filename or fallback
+
+
+def render_financial_study_pdf(study: dict, request: Request):
+    """Render a study snapshot and return it with a client-based download name."""
+    study_id = str(study.get("id") or "estudo-financeiro")
+
     document_html = study.get("document_html")
     if not document_html:
         return JSONResponse(status_code=422, content={"success": False, "error": "Este registro não possui snapshot visual para gerar PDF."})
@@ -182,7 +196,7 @@ def download_financial_study_pdf(study_id: str, request: Request):
     document_html = re.sub(r"<script\b[^>]*>.*?</script>", "", document_html, flags=re.IGNORECASE | re.DOTALL)
     stylesheet = (STATIC_DIR / "css" / "style.css").read_text(encoding="utf-8")
     base_url = str(request.base_url).rstrip("/") + "/"
-    title = f"Estudo Financeiro {study_id}"
+    title = str(study.get("client_name") or f"Estudo Financeiro {study_id}")
     html = (
         "<!doctype html><html lang='pt-BR'><head><meta charset='utf-8'>"
         f"<base href='{html_escape(base_url)}'><title>{html_escape(title)}</title>"
@@ -226,12 +240,23 @@ def download_financial_study_pdf(study_id: str, request: Request):
             except Exception:
                 logger.exception("Falha ao encerrar Chromium do estudo %s", study_id)
 
-    filename = re.sub(r"[^A-Za-z0-9_-]+", "-", study_id).strip("-") or "estudo-financeiro"
+    filename = safe_pdf_filename(study.get("client_name"), fallback=study_id)
+    ascii_filename = filename.encode("ascii", "ignore").decode("ascii").strip(" .") or "estudo-financeiro"
+    encoded_filename = quote(f"{filename}.pdf")
     return Response(content=pdf, media_type="application/pdf", headers={
-        "Content-Disposition": f'attachment; filename="{filename}.pdf"',
+        "Content-Disposition": f'attachment; filename="{ascii_filename}.pdf"; filename*=UTF-8\'\'{encoded_filename}',
         "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff",
     })
+
+
+@app.get("/estudo-compartilhado/{token}/pdf")
+def download_public_financial_study_pdf(token: str, request: Request, job: str | None = None):
+    """Generate the public study PDF without requiring an authenticated session."""
+    study = financial_studies.get_public_study(token)
+    if study is None:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado ou link expirado."})
+    return download_financial_study_pdf_route(study["id"], request, job=job)
 
 
 @app.post("/api/financial-studies/{study_id}/share")
@@ -332,7 +357,7 @@ def read_public_financial_study(token: str):
     document += "<header class='shared-study-header'><div class='shared-study-brand'>CREDICLASS <span>· Estudo Financeiro</span></div><button id='printSharedStudy' class='shared-study-print' type='button'>Imprimir</button></header>"
     document += f"<main class='shared-study-content'>{study['document_html']}</main></div>"
     document += f"<script nonce='{nonce}' src='/static/js/shared-study.js?v={release_version}' defer></script></body></html>"
-    policy = f"default-src 'none'; script-src 'nonce-{nonce}'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+    policy = f"default-src 'none'; script-src 'nonce-{nonce}'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     return HTMLResponse(document, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": policy})
 
 
