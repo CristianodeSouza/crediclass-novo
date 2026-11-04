@@ -393,10 +393,12 @@ def read_public_financial_study(token: str):
         "<section id='publicStudyAgreement' class='public-study-agreement' aria-labelledby='publicStudyAgreementTitle' "
         f"data-study-token='{html_escape(token, quote=True)}' data-agreement-status='{html_escape(str((study.get('agreement') or {}).get('status') or 'pending'), quote=True)}'>"
         "<h2 id='publicStudyAgreementTitle'>13. DE ACORDO</h2>"
+        "<div class='public-study-agreement-content'>"
         "<p>Declaro que li e estou de acordo com as informações, valores, projeções e condições apresentadas neste Estudo Financeiro.</p>"
         "<label class='public-study-agreement-check'><input id='publicStudyAgreementCheckbox' type='checkbox'> <span>Li e estou de acordo com o estudo apresentado.</span></label>"
         "<button id='publicStudyAgreementSubmit' type='button' disabled>Confirmar acordo</button>"
         "<p id='publicStudyAgreementStatus' class='public-study-agreement-status' role='status' aria-live='polite'></p>"
+        "</div>"
         "</section>"
     )
     document += f"<main class='shared-study-content'>{study['document_html']}{agreement_markup}</main></div>"

@@ -672,14 +672,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-whatsapp-copy-btn { display: inline-flex; align-items: center; gap: 7px; }
 .financial-study-copy-icon { width: 17px; height: 17px; }
 .financial-study-whatsapp-message .btn { justify-self: start; }
-.public-study-agreement { margin-top: 24px; padding: 20px; border: 2px solid #2e3f47; border-radius: 8px; background: #f7faf9; }
-.public-study-agreement h2 { margin: 0 0 10px; color: #2e3f47; font-size: 1rem; text-align: center; }
-.public-study-agreement p { margin: 0 0 14px; color: #52636a; line-height: 1.5; }
-.public-study-agreement-check { display: flex; align-items: flex-start; gap: 8px; margin: 12px 0; color: #2e3f47; font-weight: 700; cursor: pointer; }
+.public-study-agreement { margin-top: 26px; }
+.public-study-agreement h2 { margin: 0; padding: 8px 14px; border: 1px solid #aeb6ba; border-bottom: 0; color: #17272d; font-size: .78rem; font-weight: 800; line-height: 1.4; text-align: left; }
+.public-study-agreement-content { padding: 8px 12px; border: 1px solid #aeb6ba; color: #1f5da8; font-size: .74rem; line-height: 1.55; }
+.public-study-agreement-content p { margin: 0 0 10px; color: #1f5da8; }
+.public-study-agreement-check { display: flex; align-items: flex-start; gap: 8px; margin: 10px 0; color: #17272d; font-size: .74rem; font-weight: 700; cursor: pointer; }
 .public-study-agreement-check input { margin-top: 3px; accent-color: #147a48; }
-.public-study-agreement button { border: 0; border-radius: 6px; padding: 10px 16px; background: #147a48; color: #fff; font-weight: 700; cursor: pointer; }
+.public-study-agreement button { border: 0; border-radius: 3px; padding: 7px 12px; background: #e97822; color: #fff; font-size: .74rem; font-weight: 800; cursor: pointer; }
 .public-study-agreement button:disabled { opacity: .55; cursor: not-allowed; }
-.public-study-agreement-status { min-height: 1.3em; margin-top: 12px !important; font-size: .85rem; font-weight: 700; }
+.public-study-agreement-status { min-height: 1.3em; margin: 10px 0 0 !important; font-size: .7rem; font-weight: 700; }
 .public-study-agreement-status.is-success { color: #147a48; }
 .public-study-agreement-status.is-error { color: #a33a3a; }
 @media (max-width: 768px) {
