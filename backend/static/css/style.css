@@ -1720,6 +1720,21 @@ body[data-theme="escuro"] .btn-outline-secondary {
   color: var(--muted);
   font-size: 0.9rem;
 }
+.variable-data-legend {
+  align-items: center;
+  color: #147a48;
+  display: inline-flex;
+  font-weight: 700;
+  gap: 6px;
+  margin-right: auto;
+}
+.variable-data-legend i {
+  background: #147a48;
+  border-radius: 50%;
+  display: inline-block;
+  height: 8px;
+  width: 8px;
+}
 
 .modal-subtitle {
   margin: 4px 0 0;
@@ -5628,7 +5643,45 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-data-legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 12px; color: #1f5da8; font-size: 0.68rem; }
 .financial-study-fixed-copy { color: #1f5da8 !important; }
 .financial-study-motor-value { color: #147a48 !important; font-weight: 700; }
-.financial-study-external-value { color: #52636a !important; }
+.financial-study-external-value { color: #147a48 !important; font-weight: 700; }
+
+/* Valores importados ou calculados: verde identifica dados variáveis para o operador. */
+#screen-perfil .client-profile-section .form-control,
+#screen-perfil .client-profile-section .form-select,
+#screen-perfil .client-preliminary-row strong,
+#screen-perfil .client-preliminary-row em,
+#screen-perfil .client-preliminary-row small,
+#screen-perfil .client-preliminary-audit li {
+  color: #147a48 !important;
+}
+#screen-motor360 .motor360-group-summary b,
+#screen-motor360 .motor360-scenario-grid b,
+#screen-motor360 .motor360-scenario-grid em,
+#screen-motor360 .motor360-profile-card-value strong,
+#screen-motor360 .motor360-profile-card-value b,
+#screen-motor360 .motor360-source-metrics b,
+#screen-motor360 .motor360-bid-heading output,
+#screen-motor360 .motor360-group-classification strong {
+  color: #147a48 !important;
+}
+#screen-mapa-assembleia .assembly-overview-stats strong,
+#screen-mapa-assembleia .assembly-table tbody td,
+#screen-mapa-assembleia .assembly-rule-card header > span,
+#screen-mapa-assembleia .assembly-rule-card dd,
+#screen-mapa-assembleia .assembly-rule-card strong,
+#screen-mapa-assembleia .assembly-date {
+  color: #147a48 !important;
+}
+#screen-estudo .financial-study-part tbody td,
+#screen-estudo .financial-study-part .financial-study-part4-overview-table td,
+#screen-estudo .financial-study-part .financial-study-part4-profile-row td,
+#screen-estudo .financial-study-part .financial-study-part4-scenario-summary td,
+#screen-estudo .financial-study-part .financial-study-part4-standard-metric strong,
+#screen-estudo .financial-study-part .financial-study-part4-standard-charge-grid b,
+#screen-estudo .financial-study-part .financial-study-part4-standard-simulation > h4 span,
+#screen-estudo .financial-study-part .financial-study-part4-standard-simulation-table td {
+  color: #147a48 !important;
+}
 .financial-study-part1-context,
 .financial-study-part1-copy,
 .financial-study-part2-description,
