@@ -971,41 +971,44 @@ function syncFinancialStudyPipeRunControls() {
   }
 }
 
-function buildFinancialStudyWhatsappMessage(studyUrl, pipeRunFormUrl) {
-  return [
-    "Melhores Consórcios: Itaú",
+function buildFinancialStudyWhatsappMessageHtml(studyUrl, pipeRunFormUrl) {
+  const fixed = (value) => escapeHtml(value);
+  const variable = (value) => `<span class="financial-study-variable-value">${escapeHtml(value)}</span>`;
+  const lines = [
+    fixed("Melhores Consórcios: Itaú"),
     "",
-    "Critérios de seleção:",
+    fixed("Critérios de seleção:"),
     "",
-    "1 - Parcela reduzida: 30% reduzido até a data de contemplação. Menor parcela;",
+    fixed("1 - Parcela reduzida: 30% reduzido até a data de contemplação. Menor parcela;"),
     "",
-    "2 - Menor taxa: grupos com a menor taxa ao ano do mercado 1,07%;",
+    fixed("2 - Menor taxa: grupos com a menor taxa ao ano do mercado 1,07%;"),
     "",
-    "3 - Múltiplas modalidades contemplação: sorteio, lance fixo 40% e lances livres;",
+    fixed("3 - Múltiplas modalidades contemplação: sorteio, lance fixo 40% e lances livres;"),
     "",
-    "4 - Lance embutido: permite utilizar até 30% da carta de crédito para pagamento do lance ofertado;",
+    fixed("4 - Lance embutido: permite utilizar até 30% da carta de crédito para pagamento do lance ofertado;"),
     "",
-    "5 - Mais chances contemplação: lance fixo com múltiplas contemplações mensais;",
+    fixed("5 - Mais chances contemplação: lance fixo com múltiplas contemplações mensais;"),
     "",
-    "6 - Previsibilidade: reajuste das cartas fixo em 3%, anualmente.",
+    fixed("6 - Previsibilidade: reajuste das cartas fixo em 3%, anualmente."),
     "",
-    `Segue o link do Estudo Financeiro: ${studyUrl}`,
+    `${fixed("Segue o link do Estudo Financeiro: ")}${variable(studyUrl)}`,
     "",
-    "*Pontos Importantes*",
+    fixed("*Pontos Importantes*"),
     "",
-    "- Próxima assembleia: 16/10",
-    "- Vencimento vagas reservadas: 28/09",
-    ...(pipeRunFormUrl ? [`- Para seguirmos vamos precisar da Ficha Cadastral no seguinte link: ${pipeRunFormUrl}`] : []),
-  ].join("\n");
+    fixed("- Próxima assembleia: 16/10"),
+    fixed("- Vencimento vagas reservadas: 28/09"),
+    ...(pipeRunFormUrl ? [`${fixed("- Para seguirmos vamos precisar da Ficha Cadastral no seguinte link: ")}${variable(pipeRunFormUrl)}`] : []),
+  ];
+  return lines.map((line) => line || "<br>").join("<br>");
 }
 
 function syncFinancialStudyWhatsappMessage(studyUrl, pipeRunFormUrl) {
   const panel = document.getElementById("financialStudyWhatsappMessage");
-  const textarea = document.getElementById("financialStudyWhatsappMessageText");
-  if (!panel || !textarea) return;
+  const editor = document.getElementById("financialStudyWhatsappMessageText");
+  if (!panel || !editor) return;
   const hasStudyLink = Boolean(studyUrl);
   panel.classList.toggle("d-none", !hasStudyLink);
-  if (hasStudyLink) textarea.value = buildFinancialStudyWhatsappMessage(studyUrl, pipeRunFormUrl);
+  if (hasStudyLink) editor.innerHTML = buildFinancialStudyWhatsappMessageHtml(studyUrl, pipeRunFormUrl);
 }
 
 async function loadFinancialStudyHistory() {
@@ -8752,25 +8755,36 @@ document.getElementById("copyFinancialStudyPipeRunLinkBtn")?.addEventListener("c
   showToast("Link do PipeForm copiado.", "success");
 });
 document.getElementById("copyFinancialStudyWhatsappMessageBtn")?.addEventListener("click", async () => {
-  const textarea = document.getElementById("financialStudyWhatsappMessageText");
+  const editor = document.getElementById("financialStudyWhatsappMessageText");
+  if (!editor) return;
+  const message = editor.innerText.trimEnd();
   try {
-    await navigator.clipboard.writeText(textarea.value);
+    await navigator.clipboard.writeText(message);
   } catch {
-    textarea.focus();
-    textarea.select();
+    editor.focus();
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
     document.execCommand("copy");
   }
   showToast("Mensagem copiada para o WhatsApp.", "success");
 });
 document.getElementById("openFinancialStudyWhatsappBtn")?.addEventListener("click", async () => {
-  const textarea = document.getElementById("financialStudyWhatsappMessageText");
-  if (!textarea) return;
+  const editor = document.getElementById("financialStudyWhatsappMessageText");
+  if (!editor) return;
+  const message = editor.innerText.trimEnd();
   window.open("https://web.whatsapp.com/", "_blank", "noopener,noreferrer");
   try {
-    await navigator.clipboard.writeText(textarea.value);
+    await navigator.clipboard.writeText(message);
   } catch {
-    textarea.focus();
-    textarea.select();
+    editor.focus();
+    const selection = window.getSelection();
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    selection?.removeAllRanges();
+    selection?.addRange(range);
     document.execCommand("copy");
   }
   showToast("WhatsApp Web aberto. Mensagem copiada para colar no atendimento.", "success");
