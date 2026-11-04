@@ -606,14 +606,12 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-history-state[hidden] { display: none !important; }
 .financial-study-history-list-wrap { margin-top: 8px; overflow-x: auto; }
 .financial-study-history-table { width: 100%; min-width: 1040px; table-layout: fixed; border-collapse: collapse; }
-.financial-study-history-table .study-col-id { width: 16%; }
-.financial-study-history-table .study-col-client { width: 13%; }
-.financial-study-history-table .study-col-crm { width: 11%; }
-.financial-study-history-table .study-col-date { width: 12%; }
-.financial-study-history-table .study-col-operator { width: 11%; }
-.financial-study-history-table .study-col-groups { width: 5%; }
-.financial-study-history-table .study-col-agreement { width: 17%; }
-.financial-study-history-table .study-col-file { width: 8%; }
+.financial-study-history-table .study-col-id { width: 18%; }
+.financial-study-history-table .study-col-client { width: 15%; }
+.financial-study-history-table .study-col-crm { width: 13%; }
+.financial-study-history-table .study-col-date { width: 14%; }
+.financial-study-history-table .study-col-operator { width: 13%; }
+.financial-study-history-table .study-col-agreement { width: 20%; }
 .financial-study-history-table .study-col-action { width: 7%; }
 .financial-study-history-table { font-size: .76rem; }
 .financial-study-history-table th,
