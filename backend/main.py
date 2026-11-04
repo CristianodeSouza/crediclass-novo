@@ -616,6 +616,8 @@ def _verify_session(token: str | None) -> str | None:
 
 
 def _public_auth_path(path: str) -> bool:
+    if path.startswith("/api/estudo-compartilhado/") and path.endswith("/acordo"):
+        return True
     return path in {"/api/auth/login", "/api/auth/logout", "/api/auth/me", "/api/auth/activate", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/health"}
 
 

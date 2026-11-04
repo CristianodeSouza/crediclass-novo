@@ -551,8 +551,9 @@ def create_study(*, client_name: str, approved_by: str, app_version: str, snapsh
 
 def list_studies(*, query: str = "", limit: int = 100) -> list[dict]:
     _, indexes = _headers()
-    fields = ["study_id", "created_at", "status", "operator", "client_name", "administrator", "group_count", "crm_opportunity_id", "archive"]
-    field_indexes = {field: (_optional_index(indexes, field) if field in ARCHIVE_COLUMNS else _index(indexes, field)) for field in fields}
+    fields = ["study_id", "created_at", "status", "operator", "client_name", "administrator", "group_count", "crm_opportunity_id", "archive", "agreement_status", "agreement_at"]
+    optional_fields = set(ARCHIVE_COLUMNS) | {"agreement_status", "agreement_at"}
+    field_indexes = {field: (_optional_index(indexes, field) if field in optional_fields else _index(indexes, field)) for field in fields}
     readable_fields = [field for field in fields if field_indexes[field] is not None]
     ranges = [f"{_quoted_sheet()}!{column_letter(field_indexes[field])}2:{column_letter(field_indexes[field])}" for field in readable_fields]
     settings = get_settings()
@@ -571,7 +572,8 @@ def list_studies(*, query: str = "", limit: int = 100) -> list[dict]:
                       "approved_by": record["operator"], "administrator": record["administrator"],
                       "group_count": int(record["group_count"]) if str(record["group_count"]).isdigit() else 0,
                       "crm_opportunity_id": record["crm_opportunity_id"],
-                      "has_snapshot": bool(record["archive"]), "status": record["status"]})
+                      "has_snapshot": bool(record["archive"]), "status": record["status"],
+                      "agreement": {"status": record["agreement_status"] or "pending", "agreed_at": record["agreement_at"]}})
     return list(reversed(items))[:max(1, min(int(limit), 200))]
 
 

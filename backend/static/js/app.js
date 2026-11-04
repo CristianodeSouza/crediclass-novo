@@ -948,7 +948,12 @@ function renderFinancialStudyHistory(items) {
   const rows = document.getElementById("financialStudyHistoryRows");
   const state = document.getElementById("financialStudyHistoryState");
   if (!rows || !state) return;
-  rows.innerHTML = items.map((item) => `<tr><td data-label="Estudo"><strong>${escapeHtml(item.id)}</strong></td><td data-label="Cliente">${escapeHtml(item.client_name)}</td><td data-label="Oportunidade CRM">${item.crm_opportunity_id ? `<button class="financial-study-crm-link" type="button" data-financial-study-crm="${escapeHtml(item.id)}" title="Abrir dados importados desta oportunidade">${escapeHtml(item.crm_opportunity_id)}</button>` : "—"}</td><td data-label="Aprovado em">${escapeHtml(financialStudyHistoryDate(item.approved_at))}</td><td data-label="Responsável">${escapeHtml(item.approved_by)}</td><td data-label="Grupos">${Number(item.group_count) || 0}</td><td data-label="Arquivo"><span class="financial-study-history-file ${item.has_snapshot ? "is-complete" : ""}">${item.has_snapshot ? "Estudo Completo" : "Registro legado"}</span></td><td data-label="Ação"><button class="btn btn-outline-secondary btn-sm" type="button" data-financial-study-open="${escapeHtml(item.id)}">Visualizar</button></td></tr>`).join("");
+  rows.innerHTML = items.map((item) => {
+    const agreement = item.agreement || {};
+    const agreed = agreement.status === "agreed";
+    const agreementText = agreed ? `Aceite registrado${agreement.agreed_at ? ` · ${financialStudyHistoryDate(agreement.agreed_at)}` : ""}` : "Aguardando aceite";
+    return `<tr><td data-label="Estudo"><strong>${escapeHtml(item.id)}</strong></td><td data-label="Cliente">${escapeHtml(item.client_name)}</td><td data-label="Oportunidade CRM">${item.crm_opportunity_id ? `<button class="financial-study-crm-link" type="button" data-financial-study-crm="${escapeHtml(item.id)}" title="Abrir dados importados desta oportunidade">${escapeHtml(item.crm_opportunity_id)}</button>` : "—"}</td><td data-label="Aprovado em">${escapeHtml(financialStudyHistoryDate(item.approved_at))}</td><td data-label="Responsável">${escapeHtml(item.approved_by)}</td><td data-label="Grupos">${Number(item.group_count) || 0}</td><td data-label="Aceite"><span class="financial-study-agreement-badge ${agreed ? "is-agreed" : "is-pending"}">${escapeHtml(agreementText)}</span></td><td data-label="Arquivo"><span class="financial-study-history-file ${item.has_snapshot ? "is-complete" : ""}">${item.has_snapshot ? "Estudo Completo" : "Registro legado"}</span></td><td data-label="Ação"><button class="btn btn-outline-secondary btn-sm" type="button" data-financial-study-open="${escapeHtml(item.id)}">Visualizar</button></td></tr>`;
+  }).join("");
   state.hidden = items.length > 0;
   state.textContent = "Nenhum estudo aprovado encontrado.";
   document.querySelector(".financial-study-history-list-wrap")?.classList.toggle("d-none", items.length === 0);
@@ -1052,7 +1057,8 @@ async function openFinancialStudyHistoryItem(studyId, { showCrm = false } = {}) 
     const agreementLabel = agreement.status === "agreed" && agreement.agreed_at
       ? `Acordo do cliente registrado em ${financialStudyHistoryDate(agreement.agreed_at)}`
       : "Acordo do cliente pendente";
-    document.getElementById("financialStudyHistoryDetailMeta").textContent = `Aprovado em ${financialStudyHistoryDate(study.approved_at)} por ${study.approved_by} · versão ${study.app_version} · ${agreementLabel}`;
+    const agreementClass = agreement.status === "agreed" ? "is-agreed" : "is-pending";
+    document.getElementById("financialStudyHistoryDetailMeta").innerHTML = `${escapeHtml(`Aprovado em ${financialStudyHistoryDate(study.approved_at)} por ${study.approved_by} · versão ${study.app_version}`)} · <span class="financial-study-agreement-badge ${agreementClass}">${escapeHtml(agreementLabel)}</span>`;
     const crmDetail = document.getElementById("financialStudyCrmDetail");
     const crmContent = document.getElementById("financialStudyCrmContent");
     const crmResponse = study.snapshot?.client?.crm_response || null;
