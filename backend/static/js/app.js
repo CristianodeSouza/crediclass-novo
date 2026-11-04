@@ -464,6 +464,10 @@ async function initializeDashboardData() {
 }
 
 async function bootApp() {
+  loadHealth().catch(() => {
+    document.getElementById("loginEnvironmentLabel")?.replaceChildren(document.createTextNode("indisponivel"));
+    document.getElementById("loginSystemVersionLabel")?.replaceChildren(document.createTextNode("indisponivel"));
+  });
   if (new URLSearchParams(window.location.search).has("ativar") || new URLSearchParams(window.location.search).has("redefinir")) {
     showActivation();
     return;
@@ -7992,8 +7996,10 @@ async function restartSystemSync() {
 async function loadHealth() {
   const health = await apiGet("/health");
   investorState.buildIdentity = { version: health.version || null, commit: health.commit || null };
-  document.getElementById("environmentLabel").textContent = health.environment;
-  document.getElementById("systemVersionLabel").textContent = health.version;
+  document.getElementById("environmentLabel")?.replaceChildren(document.createTextNode(health.environment || "-"));
+  document.getElementById("systemVersionLabel")?.replaceChildren(document.createTextNode(health.version || "-"));
+  document.getElementById("loginEnvironmentLabel")?.replaceChildren(document.createTextNode(health.environment || "-"));
+  document.getElementById("loginSystemVersionLabel")?.replaceChildren(document.createTextNode(health.version || "-"));
   const clientVersion = document.querySelector('meta[name="crediclass-build"]')?.content;
   if (clientVersion && health.version && clientVersion !== health.version) {
     showToast(`Nova versão disponível (${health.version}). Recarregue a página.`, "warning");
