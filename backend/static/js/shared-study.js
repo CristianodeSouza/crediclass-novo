@@ -173,12 +173,5 @@
     prepareInvestmentCards();
     annotateMissingValues();
     setupPublicStudyAgreement();
-    document.getElementById("printSharedStudy")?.addEventListener("click", async (event) => {
-      try {
-        await downloadSharedStudyPdf(event.currentTarget);
-      } catch (error) {
-        window.alert(error?.message || "Não foi possível baixar o PDF.");
-      }
-    });
   });
 })();

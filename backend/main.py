@@ -388,7 +388,7 @@ def read_public_financial_study(token: str):
     document += f"<title>{html_escape(study['client_name'])}</title><link rel='icon' href='/static/favicon.svg?v={release_version}' type='image/svg+xml'><link rel='stylesheet' href='/static/css/style.css?v={release_version}'>"
     document += "<meta name='robots' content='noindex,nofollow,noarchive'></head><body class='shared-study-page'>"
     document += "<div class='shared-study-shell'>"
-    document += "<header class='shared-study-header'><div class='shared-study-brand'>CREDICLASS <span>· Estudo Financeiro</span></div><button id='printSharedStudy' class='shared-study-print' type='button'>Imprimir</button></header>"
+    document += "<header class='shared-study-header'><div class='shared-study-brand'>CREDICLASS <span>· Estudo Financeiro</span></div></header>"
     agreement_markup = (
         "<section id='publicStudyAgreement' class='public-study-agreement' aria-labelledby='publicStudyAgreementTitle' "
         f"data-study-token='{html_escape(token, quote=True)}' data-agreement-status='{html_escape(str((study.get('agreement') or {}).get('status') or 'pending'), quote=True)}'>"
