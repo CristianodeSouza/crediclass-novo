@@ -7689,19 +7689,9 @@ async function saveBusinessRuleFeedbacks() {
 function renderConfiguracoes(data) {
   configState.data = data;
   const pref = data.preferencias || {};
-  const params = data.parametros_financeiros || {};
   const sistema = data.sistema || {};
 
   applyTheme(pref.tema);
-
-  setInputValue("configTaxaAdm", percentToInput(params.taxa_administracao_padrao));
-  setInputValue("configFundoReserva", percentToInput(params.fundo_reserva_padrao));
-  setInputValue("configLanceFixo", percentToInput(params.percentual_lance_fixo_padrao));
-  setInputValue("configLanceModerado", percentToInput(params.percentual_lance_moderado_padrao));
-  setInputValue("configLanceAgressivo", percentToInput(params.percentual_lance_agressivo_padrao));
-  setInputValue("configPrazoMaximo", params.prazo_maximo);
-  setInputValue("configPrazoMinimo", params.prazo_minimo);
-  setInputValue("configIndiceCorrecao", params.indice_correcao_anual);
 
   document.getElementById("configUsersBody").innerHTML = (data.usuarios || []).map((user, index) => {
     const pending = user.status === "Convite pendente";
@@ -7876,16 +7866,6 @@ async function removeAdministratorRule(index) {
 
 function collectConfiguracoesPayload() {
   return {
-    parametros_financeiros: {
-      taxa_administracao_padrao: inputToPercent("configTaxaAdm"),
-      fundo_reserva_padrao: inputToPercent("configFundoReserva"),
-      percentual_lance_fixo_padrao: inputToPercent("configLanceFixo"),
-      percentual_lance_moderado_padrao: inputToPercent("configLanceModerado"),
-      percentual_lance_agressivo_padrao: inputToPercent("configLanceAgressivo"),
-      prazo_maximo: Number(document.getElementById("configPrazoMaximo").value || 0),
-      prazo_minimo: Number(document.getElementById("configPrazoMinimo").value || 0),
-      indice_correcao_anual: document.getElementById("configIndiceCorrecao").value.trim(),
-    },
     administradoras_regras: configState.data?.administradoras_regras || [],
     regras_negocio_feedbacks: collectBusinessRuleFeedbacks({ preserveExistingWhenBlank: true }),
   };
