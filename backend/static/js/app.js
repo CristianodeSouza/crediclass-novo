@@ -972,22 +972,23 @@ function syncFinancialStudyPipeRunControls() {
 }
 
 function financialStudyWhatsappDates(groups = [], referenceDate = new Date()) {
+  const administrators = [...new Set((groups || []).map((item) => String(item.administradora || item.administrator || "").trim()).filter(Boolean))].join(" / ");
   if (!assemblyState.loaded || !assemblyState.data || !Array.isArray(groups)) {
-    return { nextAssembly: "Não informado", reservationDeadline: "Não informado" };
+    return { administrator: administrators || "Não informado", nextAssembly: "Não informado", reservationDeadline: "Não informado" };
   }
   const dates = groups.map((item) => {
     const schedule = financialStudyAssemblyScheduleForGroup(item, assemblyState.data);
     return schedule ? financialStudyNextAdhesionCycle(schedule, referenceDate) : null;
   }).filter(Boolean);
   const uniqueDateText = (key) => [...new Set(dates.map((cycle) => cycle[key]).filter(Boolean).map(assemblyFormatDate))].join(" / ") || "Não informado";
-  return { nextAssembly: uniqueDateText("nextAssembly"), reservationDeadline: uniqueDateText("adhesion") };
+  return { administrator: administrators || "Não informado", nextAssembly: uniqueDateText("nextAssembly"), reservationDeadline: uniqueDateText("adhesion") };
 }
 
 function buildFinancialStudyWhatsappMessageHtml(studyUrl, pipeRunFormUrl, dates = {}) {
   const fixed = (value) => escapeHtml(value);
   const variable = (value) => `<span class="financial-study-variable-value">${escapeHtml(value)}</span>`;
   const lines = [
-    fixed("Melhores Consórcios: Itaú"),
+    `${fixed("Melhores Consórcios: ")}${variable(dates.administrator || "Não informado")}`,
     "",
     fixed("Critérios de seleção:"),
     "",
