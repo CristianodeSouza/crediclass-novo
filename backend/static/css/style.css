@@ -8057,6 +8057,31 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .shared-study-content .financial-study-missing-value { color: #65747a; font-style: italic; }
 .financial-study-part2-mobile { display: none; }
 
+/* A tabela de contratação é conteúdo público: nunca esconda cabeçalhos ou valores. */
+.shared-study-content .financial-study-part7-table-wrap { max-width: 100%; overflow-x: auto; }
+.shared-study-content .financial-study-part7-table { table-layout: auto; min-width: 100%; }
+.shared-study-content .financial-study-part7-table th,
+.shared-study-content .financial-study-part7-table td {
+  width: auto !important;
+  max-width: none;
+  white-space: normal !important;
+  overflow: visible !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+  text-overflow: clip;
+}
+.shared-study-content .financial-study-part7-table thead th { line-height: 1.25; vertical-align: top; }
+
+/* O Quadro Resumo também precisa quebrar rótulos em tablets e desktops estreitos. */
+.shared-study-content .financial-study-part4-overview-table th,
+.shared-study-content .financial-study-part4-overview-table td {
+  white-space: normal !important;
+  overflow: visible !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+  text-overflow: clip;
+}
+
 @media screen and (max-width: 760px) {
   .shared-study-shell { width: min(100% - 24px, 680px); padding: 12px 0 28px; }
   .shared-study-header { align-items: center; gap: 10px; padding-bottom: 12px; }
