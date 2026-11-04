@@ -971,7 +971,19 @@ function syncFinancialStudyPipeRunControls() {
   }
 }
 
-function buildFinancialStudyWhatsappMessageHtml(studyUrl, pipeRunFormUrl) {
+function financialStudyWhatsappDates(groups = [], referenceDate = new Date()) {
+  if (!assemblyState.loaded || !assemblyState.data || !Array.isArray(groups)) {
+    return { nextAssembly: "Não informado", reservationDeadline: "Não informado" };
+  }
+  const dates = groups.map((item) => {
+    const schedule = financialStudyAssemblyScheduleForGroup(item, assemblyState.data);
+    return schedule ? financialStudyNextAdhesionCycle(schedule, referenceDate) : null;
+  }).filter(Boolean);
+  const uniqueDateText = (key) => [...new Set(dates.map((cycle) => cycle[key]).filter(Boolean).map(assemblyFormatDate))].join(" / ") || "Não informado";
+  return { nextAssembly: uniqueDateText("nextAssembly"), reservationDeadline: uniqueDateText("adhesion") };
+}
+
+function buildFinancialStudyWhatsappMessageHtml(studyUrl, pipeRunFormUrl, dates = {}) {
   const fixed = (value) => escapeHtml(value);
   const variable = (value) => `<span class="financial-study-variable-value">${escapeHtml(value)}</span>`;
   const lines = [
@@ -995,20 +1007,20 @@ function buildFinancialStudyWhatsappMessageHtml(studyUrl, pipeRunFormUrl) {
     "",
     fixed("*Pontos Importantes*"),
     "",
-    fixed("- Próxima assembleia: 16/10"),
-    fixed("- Vencimento vagas reservadas: 28/09"),
+    `${fixed("- Próxima assembleia: ")}${variable(dates.nextAssembly || "Não informado")}`,
+    `${fixed("- Vencimento vagas reservadas: ")}${variable(dates.reservationDeadline || "Não informado")}`,
     ...(pipeRunFormUrl ? [`${fixed("- Para seguirmos vamos precisar da Ficha Cadastral no seguinte link: ")}${variable(pipeRunFormUrl)}`] : []),
   ];
   return lines.map((line) => line || "<br>").join("<br>");
 }
 
-function syncFinancialStudyWhatsappMessage(studyUrl, pipeRunFormUrl) {
+function syncFinancialStudyWhatsappMessage(studyUrl, pipeRunFormUrl, dates = {}) {
   const panel = document.getElementById("financialStudyWhatsappMessage");
   const editor = document.getElementById("financialStudyWhatsappMessageText");
   if (!panel || !editor) return;
   const hasStudyLink = Boolean(studyUrl);
   panel.classList.toggle("d-none", !hasStudyLink);
-  if (hasStudyLink) editor.innerHTML = buildFinancialStudyWhatsappMessageHtml(studyUrl, pipeRunFormUrl);
+  if (hasStudyLink) editor.innerHTML = buildFinancialStudyWhatsappMessageHtml(studyUrl, pipeRunFormUrl, dates);
 }
 
 async function loadFinancialStudyHistory() {
@@ -1070,7 +1082,17 @@ async function openFinancialStudyHistoryItem(studyId, { showCrm = false } = {}) 
       pipeRunLinkStatus.textContent = "";
       pipeRunLinkStatus.hidden = true;
     }
-    syncFinancialStudyWhatsappMessage(activeShareUrl, piperunFormUrl);
+    const studyReferenceDate = new Date(study.approved_at || Date.now());
+    const studyGroups = Array.isArray(study.snapshot?.groups) ? study.snapshot.groups : [];
+    syncFinancialStudyWhatsappMessage(activeShareUrl, piperunFormUrl, financialStudyWhatsappDates(studyGroups, studyReferenceDate));
+    if (studyGroups.length && !assemblyState.loaded) {
+      try {
+        await loadAssemblyMap();
+        syncFinancialStudyWhatsappMessage(activeShareUrl, piperunFormUrl, financialStudyWhatsappDates(studyGroups, studyReferenceDate));
+      } catch {
+        // Mantém "Não informado" quando o calendário não estiver disponível.
+      }
+    }
     revokeButton.classList.toggle("d-none", !study.public_link?.active);
     generateButton.textContent = activeShare ? "Gerar outro link" : "Gerar link público";
     const pipeRunInput = document.getElementById("financialStudyPipeRunOpportunityId");
@@ -1487,26 +1509,26 @@ function financialStudyAssemblyEvent(schedule, month, eventId) {
 }
 
 function financialStudyAssemblyScheduleForGroup(item, data) {
-  const administrator = normalizeFinancialStudyAdministrator(item.administradora);
+  const administrator = normalizeFinancialStudyAdministrator(item.administradora || item.administrator);
   if (!administrator) return null;
   const schedules = (data.schedules || []).filter((schedule) => {
     const candidate = normalizeFinancialStudyAdministrator(schedule.administrator);
     return candidate === administrator || candidate.startsWith(administrator) || administrator.startsWith(candidate);
   });
-  const groupId = String(item.grupo || item.grupo_id || "").trim();
+  const groupId = String(item.grupo || item.grupo_id || item.group || "").trim();
   const dueDatesByAdministrator = Object.entries(data.group_due_dates || {}).find(([name]) => {
     const candidate = normalizeFinancialStudyAdministrator(name);
     return candidate === administrator || candidate.startsWith(administrator) || administrator.startsWith(candidate);
   })?.[1] || {};
   const dueDayEntry = Object.entries(dueDatesByAdministrator).find(([id]) => String(id).trim() === groupId);
-  const dueDay = Number(dueDayEntry?.[1] ?? item.vencimento_parcela);
+  const dueDay = Number(dueDayEntry?.[1] ?? item.vencimento_parcela ?? item.due_day);
   if (!Number.isFinite(dueDay) || dueDay <= 0) return null;
   return schedules.find((schedule) => (schedule.months || []).some((month) => {
     const dueDate = financialStudyAssemblyEvent(schedule, month, "vencimento_parcela");
     return dueDate && dueDate.getDate() === dueDay;
   })) || schedules.find((schedule) => (schedule.months || []).some((month) => {
     const dueDate = financialStudyAssemblyEvent(schedule, month, "vencimento_parcela");
-    return dueDate && dueDate.getDate() === Number(item.vencimento_parcela);
+    return dueDate && dueDate.getDate() === Number(item.vencimento_parcela ?? item.due_day);
   })) || null;
 }
 
@@ -8715,7 +8737,16 @@ document.getElementById("generateFinancialStudyShareBtn")?.addEventListener("cli
       pipeRunLinkStatus.textContent = `Link do PipeForm não gerado: ${result.piperun_error}`;
       pipeRunLinkStatus.hidden = false;
     }
-    syncFinancialStudyWhatsappMessage(result.url, result.piperun_form_url || "");
+    let messageDates = financialStudyWhatsappDates(activeStudyItems(), new Date());
+    if (activeStudyItems().length && !assemblyState.loaded) {
+      try {
+        await loadAssemblyMap();
+        messageDates = financialStudyWhatsappDates(activeStudyItems(), new Date());
+      } catch {
+        // Mantém "Não informado" quando o calendário não estiver disponível.
+      }
+    }
+    syncFinancialStudyWhatsappMessage(result.url, result.piperun_form_url || "", messageDates);
     document.getElementById("revokeFinancialStudyShareBtn").classList.remove("d-none");
     const pipeRunButton = document.getElementById("sendFinancialStudyPipeRunBtn");
     if (pipeRunButton) pipeRunButton.dataset.publicUrlActive = "true";
