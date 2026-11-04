@@ -8076,24 +8076,30 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .shared-study-print { min-height: 42px; padding: 8px 11px; font-size: .82rem; white-space: nowrap; }
   .shared-study-content { padding: 7px; border-radius: 10px; }
 
-  .shared-study-content .financial-study-document { padding: 16px 12px 24px; font-size: 16px; line-height: 1.55; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  .shared-study-content .financial-study-document { padding: 14px 10px 22px; font-size: 13.5px; line-height: 1.45; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   .shared-study-content .financial-study-document p,
-  .shared-study-content .financial-study-document li { font-size: 16px; line-height: 1.55; }
+  .shared-study-content .financial-study-document li { font-size: 13.5px; line-height: 1.45; }
   .shared-study-content .financial-study-document :is(h1, h2, h3, h4) { line-height: 1.35; }
-  .shared-study-content .financial-study-document :is(.financial-study-part1-title, .financial-study-part2-title, .financial-study-part3-title, .financial-study-part4-title, .financial-study-part5-title, .financial-study-part6-administrator, .financial-study-part6-title, .financial-study-part7-title, .financial-study-part8-title, .financial-study-part9-title, .financial-study-part10-title, .financial-study-part11-title, .financial-study-part12-title) { padding: 12px; font-size: 17px; }
-  .shared-study-content .financial-study-document :is(small, .financial-study-part2-disclaimer, .financial-study-part4-disclaimer, .financial-study-part4-source-note, .financial-study-part9-source-note, .financial-study-part10-source-note, .financial-study-part11-source-note) { font-size: 13px; line-height: 1.45; }
-  .shared-study-content .financial-study-document .financial-study-part1-context { font-size: 13px; }
+  .shared-study-content .financial-study-document :is(.financial-study-part1-title, .financial-study-part2-title, .financial-study-part3-title, .financial-study-part4-title, .financial-study-part5-title, .financial-study-part6-administrator, .financial-study-part6-title, .financial-study-part7-title, .financial-study-part8-title, .financial-study-part9-title, .financial-study-part10-title, .financial-study-part11-title, .financial-study-part12-title) { padding: 9px 8px; font-size: 14px; }
+  .shared-study-content .financial-study-document :is(small, .financial-study-part2-disclaimer, .financial-study-part4-disclaimer, .financial-study-part4-source-note, .financial-study-part9-source-note, .financial-study-part10-source-note, .financial-study-part11-source-note) { font-size: 11px; line-height: 1.35; }
+  .shared-study-content .financial-study-document .financial-study-part1-context { font-size: 11px; }
 
   /* All rows and merged values from the original table are repeated in readable mobile cards. */
   .shared-study-content .financial-study-part2-table-wrap.has-mobile-cards { display: none; }
   .shared-study-content .financial-study-part2-mobile { display: grid; gap: 10px; padding: 10px; }
   .shared-study-content .financial-study-part2-card { overflow: hidden; border: 1px solid #d9dfe1; border-radius: 10px; background: #fff; box-shadow: 0 2px 8px rgba(28, 43, 49, .05); }
-  .shared-study-content .financial-study-part2-card h3 { margin: 0; padding: 11px 12px; background: #f1f4f5; color: #2e3f47; font-size: 16px; }
+  .shared-study-content .financial-study-part2-card h3 { margin: 0; padding: 9px 10px; background: #f1f4f5; color: #2e3f47; font-size: 14px; }
   .shared-study-content .financial-study-part2-card dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 10px; margin: 0; padding: 2px 12px 8px; }
   .shared-study-content .financial-study-part2-card dl > div { min-width: 0; padding: 9px 0; border-top: 1px solid #edf0f1; }
   .shared-study-content .financial-study-part2-card dl > div:last-child { grid-column: 1 / -1; }
-  .shared-study-content .financial-study-part2-card dt { color: #65747a; font-size: 13px; font-weight: 700; line-height: 1.3; }
-  .shared-study-content .financial-study-part2-card dd { margin: 4px 0 0; color: #17272d; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .shared-study-content .financial-study-part2-card dt { color: #65747a; font-size: 11px; font-weight: 700; line-height: 1.25; }
+  .shared-study-content .financial-study-part2-card dd { margin: 4px 0 0; color: #17272d; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+  .shared-study-content .financial-study-part4-table tbody th,
+  .shared-study-content .financial-study-part4-table tbody td { overflow: visible; }
+  .shared-study-content .financial-study-part4-table tbody th::before,
+  .shared-study-content .financial-study-part4-table tbody td::before { max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }
+  .shared-study-content .financial-study-part4-table tbody td { font-size: .76rem; line-height: 1.25; }
 
   .shared-study-content .financial-study-part9-mobile-total > div { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; width: 100%; min-width: 0; overflow: visible; }
   .shared-study-content .financial-study-part9-mobile-total > div > span { min-width: 0; width: auto; padding: 8px 4px; overflow-wrap: anywhere; }
