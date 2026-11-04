@@ -615,17 +615,18 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-history-table .study-col-agreement { width: 17%; }
 .financial-study-history-table .study-col-file { width: 8%; }
 .financial-study-history-table .study-col-action { width: 7%; }
+.financial-study-history-table { font-size: .76rem; }
 .financial-study-history-table th,
-.financial-study-history-table td { padding: 10px 6px; vertical-align: middle; text-align: left; }
-.financial-study-history-table th { text-align: center; white-space: nowrap; }
+.financial-study-history-table td { padding: 8px 5px; vertical-align: middle; text-align: left; }
+.financial-study-history-table th { font-size: .7rem; text-align: center; white-space: normal; }
 .financial-study-history-table td:nth-child(2) { white-space: nowrap; }
 .financial-study-history-table td { overflow-wrap: anywhere; }
 .financial-study-history-table td:nth-child(5) { text-align: center; }
 .financial-study-history-table td:last-child { white-space: nowrap; }
-.financial-study-history-table td:last-child .btn { white-space: nowrap; font-size: .82rem; }
+.financial-study-history-table td:last-child .btn { white-space: nowrap; font-size: .72rem; padding: 5px 7px; }
 .financial-study-history-file { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 7px; background: #f1f4f5; color: #53666e; font-size: .76rem; font-weight: 700; white-space: nowrap; }
 .financial-study-history-file.is-complete { background: #eaf6ef; color: #247448; }
-.financial-study-agreement-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 5px 8px; font-size: .72rem; font-weight: 800; line-height: 1.2; text-align: center; white-space: normal; }
+.financial-study-agreement-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 4px 6px; font-size: .63rem; font-weight: 800; line-height: 1.15; text-align: center; white-space: normal; }
 .financial-study-agreement-badge.is-agreed { background: #e3f5ea; color: #147a48; }
 .financial-study-agreement-badge.is-pending { background: #fff2e5; color: #a85a18; }
 .financial-study-history-detail-meta .financial-study-agreement-badge { vertical-align: middle; }
