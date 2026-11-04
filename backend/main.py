@@ -94,6 +94,10 @@ class FinancialStudyShareRequest(BaseModel):
     opportunity_id: str | None = Field(default=None, max_length=32)
 
 
+class FinancialStudyAgreementRequest(BaseModel):
+    agreed: bool = True
+
+
 @app.post("/api/financial-studies")
 def approve_financial_study(payload: FinancialStudyApprovalRequest, request: Request):
     username = request.state.auth_user
@@ -385,10 +389,38 @@ def read_public_financial_study(token: str):
     document += "<meta name='robots' content='noindex,nofollow,noarchive'></head><body class='shared-study-page'>"
     document += "<div class='shared-study-shell'>"
     document += "<header class='shared-study-header'><div class='shared-study-brand'>CREDICLASS <span>· Estudo Financeiro</span></div><button id='printSharedStudy' class='shared-study-print' type='button'>Imprimir</button></header>"
-    document += f"<main class='shared-study-content'>{study['document_html']}</main></div>"
+    agreement_markup = (
+        "<section id='publicStudyAgreement' class='public-study-agreement' aria-labelledby='publicStudyAgreementTitle' "
+        f"data-study-token='{html_escape(token, quote=True)}' data-agreement-status='{html_escape(str((study.get('agreement') or {}).get('status') or 'pending'), quote=True)}'>"
+        "<h2 id='publicStudyAgreementTitle'>13. DE ACORDO</h2>"
+        "<p>Declaro que li e estou de acordo com as informações, valores, projeções e condições apresentadas neste Estudo Financeiro.</p>"
+        "<label class='public-study-agreement-check'><input id='publicStudyAgreementCheckbox' type='checkbox'> <span>Li e estou de acordo com o estudo apresentado.</span></label>"
+        "<button id='publicStudyAgreementSubmit' type='button' disabled>Confirmar acordo</button>"
+        "<p id='publicStudyAgreementStatus' class='public-study-agreement-status' role='status' aria-live='polite'></p>"
+        "</section>"
+    )
+    document += f"<main class='shared-study-content'>{study['document_html']}{agreement_markup}</main></div>"
     document += f"<script nonce='{nonce}' src='/static/js/shared-study.js?v={release_version}' defer></script></body></html>"
     policy = f"default-src 'none'; script-src 'nonce-{nonce}'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     return HTMLResponse(document, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": policy})
+
+
+@app.post("/api/estudo-compartilhado/{token}/acordo")
+def record_public_financial_study_agreement(token: str, payload: FinancialStudyAgreementRequest, request: Request):
+    if payload.agreed is not True:
+        return JSONResponse(status_code=422, content={"success": False, "error": "É necessário confirmar o acordo."})
+    try:
+        result = financial_studies.record_public_agreement(
+            token,
+            ip_address=request.client.host if request.client else "",
+            user_agent=request.headers.get("user-agent", ""),
+        )
+        if result is None:
+            return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado, expirado ou revogado."})
+        return {"success": True, **result}
+    except Exception:
+        logger.exception("Falha ao registrar acordo do estudo público")
+        return JSONResponse(status_code=503, content={"success": False, "error": "Não foi possível registrar o acordo agora."})
 
 
 @app.get("/api/piperun/{opportunity_id}")

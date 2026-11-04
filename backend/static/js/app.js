@@ -1048,7 +1048,11 @@ async function openFinancialStudyHistoryItem(studyId, { showCrm = false } = {}) 
     const payload = await apiGet(`/financial-studies/${encodeURIComponent(studyId)}`);
     const study = payload.study;
     document.getElementById("financialStudyHistoryDetailTitle").textContent = `${study.id} · ${study.client_name}`;
-    document.getElementById("financialStudyHistoryDetailMeta").textContent = `Aprovado em ${financialStudyHistoryDate(study.approved_at)} por ${study.approved_by} · versão ${study.app_version}`;
+    const agreement = study.agreement || {};
+    const agreementLabel = agreement.status === "agreed" && agreement.agreed_at
+      ? `Acordo do cliente registrado em ${financialStudyHistoryDate(agreement.agreed_at)}`
+      : "Acordo do cliente pendente";
+    document.getElementById("financialStudyHistoryDetailMeta").textContent = `Aprovado em ${financialStudyHistoryDate(study.approved_at)} por ${study.approved_by} · versão ${study.app_version} · ${agreementLabel}`;
     const crmDetail = document.getElementById("financialStudyCrmDetail");
     const crmContent = document.getElementById("financialStudyCrmContent");
     const crmResponse = study.snapshot?.client?.crm_response || null;

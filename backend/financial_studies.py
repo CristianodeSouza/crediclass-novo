@@ -48,6 +48,11 @@ SHARE_COLUMNS = {
     "token_hash": "financial_study_public_token_sha256",
     "expires_at": "financial_study_public_expires_at",
     "revoked": "financial_study_public_revoked",
+  "agreement_status": "financial_study_agreement_status",
+  "agreement_at": "financial_study_agreement_at",
+  "agreement_ip_hash": "financial_study_agreement_ip_sha256",
+  "agreement_user_agent": "financial_study_agreement_user_agent",
+  "agreement_document_hash": "financial_study_agreement_document_sha256",
 }
 PUBLIC_LINK_VALIDITY_DAYS = 30
 _study_id_lock = threading.Lock()
@@ -571,6 +576,12 @@ def get_study(study_id: str) -> dict | None:
     archive = _decompress_archive(field("archive")) if archive_column is not None else None
     piperun_form_column = _optional_index(indexes, "piperun_form_url")
     piperun_form_url = str(row[piperun_form_column]) if piperun_form_column is not None and piperun_form_column < len(row) else ""
+    agreement_status_column = _optional_index(indexes, "agreement_status")
+    agreement_at_column = _optional_index(indexes, "agreement_at")
+    agreement = {
+        "status": str(row[agreement_status_column]) if agreement_status_column is not None and agreement_status_column < len(row) else "pending",
+        "agreed_at": str(row[agreement_at_column]) if agreement_at_column is not None and agreement_at_column < len(row) else "",
+    }
     return {"id": study_id, "client_name": field("client_name"), "approved_at": field("created_at"),
             "approved_by": field("operator"), "status": field("status"),
             "crm_opportunity_id": crm_opportunity_id,
@@ -578,6 +589,7 @@ def get_study(study_id: str) -> dict | None:
             "app_version": archive.get("app_version", "") if archive else "",
             "snapshot": archive.get("snapshot") if archive else None,
             "document_html": archive.get("document_html") if archive else None,
+            "agreement": agreement,
             "public_link": _share_state(row, indexes)}
 
 
@@ -670,22 +682,28 @@ def get_public_study(token: str) -> dict | None:
     found = _find_study_row_by_token_hash(token_hash)
     if found is None:
         return None
-    indexes, row = found
+    indexes, row, _row_number = found
     if not _share_state(row, indexes)["active"]:
         return None
     archive = _decompress_archive(str(row[_index(indexes, "archive")]))
     if not archive or not archive.get("document_html"):
         return None
+    agreement_status_index = _optional_index(indexes, "agreement_status")
+    agreement_at_index = _optional_index(indexes, "agreement_at")
     return {
         "id": str(row[_index(indexes, "study_id")]),
         "client_name": str(row[_index(indexes, "client_name")]),
         "approved_at": str(row[_index(indexes, "created_at")]),
         "app_version": archive.get("app_version", ""),
         "document_html": archive["document_html"],
+        "agreement": {
+            "status": str(row[agreement_status_index]) if agreement_status_index is not None and agreement_status_index < len(row) else "pending",
+            "agreed_at": str(row[agreement_at_index]) if agreement_at_index is not None and agreement_at_index < len(row) else "",
+        },
     }
 
 
-def _find_study_row_by_token_hash(token_hash: str) -> tuple[dict[str, int], list[str]] | None:
+def _find_study_row_by_token_hash(token_hash: str) -> tuple[dict[str, int], list[str], int] | None:
     headers, indexes = _headers()
     hash_index = _optional_index(indexes, "token_hash")
     archive_index = _optional_index(indexes, "archive")
@@ -719,4 +737,40 @@ def _find_study_row_by_token_hash(token_hash: str) -> tuple[dict[str, int], list
         ).execute().get("values", [[]])[0]
     if archive_index >= len(row) or not row[archive_index]:
         return None
-    return indexes, row
+    return indexes, row, row_offset + 2
+
+
+def record_public_agreement(token: str, *, ip_address: str = "", user_agent: str = "") -> dict | None:
+    """Record a single idempotent client agreement for an active public study link."""
+    token_hash = hashlib.sha256(str(token or "").encode("utf-8")).hexdigest()
+    found = _find_study_row_by_token_hash(token_hash)
+    if found is None:
+        return None
+    indexes, row, row_number = found
+    share_state = _share_state(row, indexes)
+    if not share_state["active"]:
+        return None
+    archive_index = _optional_index(indexes, "archive")
+    archive = _decompress_archive(str(row[archive_index])) if archive_index is not None and archive_index < len(row) else None
+    if not archive or not archive.get("document_html"):
+        return None
+    headers, indexes = _ensure_share_columns(_headers()[0], indexes)
+    status_index = _optional_index(indexes, "agreement_status")
+    at_index = _optional_index(indexes, "agreement_at")
+    current_status = str(row[status_index]).strip() if status_index is not None and status_index < len(row) else ""
+    current_at = str(row[at_index]).strip() if at_index is not None and at_index < len(row) else ""
+    study_id = str(row[_index(indexes, "study_id")])
+    if current_status == "agreed" and current_at:
+        return {"study_id": study_id, "status": "agreed", "agreed_at": current_at, "already_agreed": True}
+    settings = get_settings()
+    hash_secret = os.getenv("AGREEMENT_HASH_SECRET") or os.getenv("SHARE_TOKEN_SECRET") or os.getenv("AUTH_SECRET") or "crediclass-agreement-local"
+    ip_hash = hashlib.sha256(f"{hash_secret}:{ip_address}".encode("utf-8")).hexdigest() if ip_address else ""
+    agreement_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    _update_row_fields(row_number, indexes, {
+        "agreement_status": "agreed",
+        "agreement_at": agreement_at,
+        "agreement_ip_hash": ip_hash,
+        "agreement_user_agent": str(user_agent or "")[:500],
+        "agreement_document_hash": hashlib.sha256(str(archive["document_html"]).encode("utf-8")).hexdigest(),
+    })
+    return {"study_id": study_id, "status": "agreed", "agreed_at": agreement_at, "already_agreed": False}

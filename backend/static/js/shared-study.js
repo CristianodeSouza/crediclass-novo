@@ -123,10 +123,52 @@
     }
   }
 
+  function setupPublicStudyAgreement() {
+    const panel = document.getElementById("publicStudyAgreement");
+    const checkbox = document.getElementById("publicStudyAgreementCheckbox");
+    const submit = document.getElementById("publicStudyAgreementSubmit");
+    const status = document.getElementById("publicStudyAgreementStatus");
+    if (!panel || !checkbox || !submit || !status) return;
+    if (panel.dataset.agreementStatus === "agreed") {
+      checkbox.checked = true;
+      checkbox.disabled = true;
+      submit.disabled = true;
+      status.textContent = "Acordo já registrado para este estudo.";
+      status.classList.add("is-success");
+      return;
+    }
+    checkbox.addEventListener("change", () => { submit.disabled = !checkbox.checked; });
+    submit.addEventListener("click", async () => {
+      if (!checkbox.checked) return;
+      submit.disabled = true;
+      checkbox.disabled = true;
+      status.textContent = "Registrando acordo...";
+      status.classList.remove("is-success", "is-error");
+      try {
+        const response = await fetch(`/api/estudo-compartilhado/${encodeURIComponent(panel.dataset.studyToken)}/acordo`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          body: JSON.stringify({ agreed: true }),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || "Não foi possível registrar o acordo.");
+        panel.dataset.agreementStatus = "agreed";
+        status.textContent = `Acordo registrado em ${new Date(payload.agreed_at).toLocaleString("pt-BR")}.`;
+        status.classList.add("is-success");
+      } catch (error) {
+        checkbox.disabled = false;
+        submit.disabled = false;
+        status.textContent = error.message || "Não foi possível registrar o acordo.";
+        status.classList.add("is-error");
+      }
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     repositionScenarioSummaries();
     prepareInvestmentCards();
     annotateMissingValues();
+    setupPublicStudyAgreement();
     document.getElementById("printSharedStudy")?.addEventListener("click", async (event) => {
       try {
         await downloadSharedStudyPdf(event.currentTarget);
