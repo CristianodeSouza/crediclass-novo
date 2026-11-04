@@ -128,13 +128,16 @@
     const checkbox = document.getElementById("publicStudyAgreementCheckbox");
     const submit = document.getElementById("publicStudyAgreementSubmit");
     const status = document.getElementById("publicStudyAgreementStatus");
+    const followup = document.getElementById("publicStudyRegistration");
     if (!panel || !checkbox || !submit || !status) return;
+    const showFollowup = () => { if (followup) followup.hidden = false; };
     if (panel.dataset.agreementStatus === "agreed") {
       checkbox.checked = true;
       checkbox.disabled = true;
       submit.disabled = true;
       status.textContent = "Acordo já registrado para este estudo.";
       status.classList.add("is-success");
+      showFollowup();
       return;
     }
     checkbox.addEventListener("change", () => { submit.disabled = !checkbox.checked; });
@@ -153,6 +156,7 @@
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(payload.error || "Não foi possível registrar o acordo.");
         panel.dataset.agreementStatus = "agreed";
+        showFollowup();
         status.textContent = `Acordo registrado em ${new Date(payload.agreed_at).toLocaleString("pt-BR")}.`;
         status.classList.add("is-success");
       } catch (error) {

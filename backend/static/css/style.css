@@ -683,6 +683,13 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .public-study-agreement-status { min-height: 1.3em; margin: 10px 0 0 !important; font-size: .7rem; font-weight: 700; }
 .public-study-agreement-status.is-success { color: #147a48; }
 .public-study-agreement-status.is-error { color: #a33a3a; }
+.public-study-followup[hidden] { display: none; }
+.public-study-followup { margin-top: 26px; }
+.public-study-followup h2 { margin: 0; padding: 8px 14px; border: 1px solid #aeb6ba; border-bottom: 0; color: #17272d; font-size: .78rem; font-weight: 800; line-height: 1.4; text-align: left; }
+.public-study-followup-content { padding: 8px 12px; border: 1px solid #aeb6ba; color: #1f5da8; font-size: .74rem; line-height: 1.55; }
+.public-study-followup-content p { margin: 0 0 10px; color: #1f5da8; }
+.public-study-followup-content strong, .public-study-followup-content a { color: #147a48; font-weight: 700; }
+.public-study-followup-content a { overflow-wrap: anywhere; }
 @media (max-width: 768px) {
   .financial-study-whatsapp-message-actions { align-items: stretch; }
 }

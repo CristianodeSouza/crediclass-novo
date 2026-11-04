@@ -401,7 +401,30 @@ def read_public_financial_study(token: str):
         "</div>"
         "</section>"
     )
-    document += f"<main class='shared-study-content'>{study['document_html']}{agreement_markup}</main></div>"
+    agreement = study.get("agreement") or {}
+    agreement_is_done = str(agreement.get("status") or "") == "agreed"
+    piperun_form_url = str(study.get("piperun_form_url") or "").strip()
+    study_dates = study.get("study_dates") or {}
+    next_assembly = " / ".join(str(value) for value in (study_dates.get("next_assembly") or [])) or "Não informado"
+    reservation_deadline = " / ".join(str(value) for value in (study_dates.get("reservation_deadline") or [])) or "Não informado"
+    piperun_link = (
+        f"<a href='{html_escape(piperun_form_url, quote=True)}' target='_blank' rel='noopener noreferrer'>{html_escape(piperun_form_url)}</a>"
+        if piperun_form_url else "<span>Não informado</span>"
+    )
+    followup_hidden = "" if agreement_is_done else " hidden"
+    followup_markup = (
+        f"<section id='publicStudyRegistration' class='public-study-followup'{followup_hidden} aria-labelledby='publicStudyRegistrationTitle'>"
+        "<h2 id='publicStudyRegistrationTitle'>14. FICHA CADASTRAL</h2>"
+        "<div class='public-study-followup-content'>"
+        "<p>Agora, diante do aceite do estudo, será necessário complementar os dados da ficha cadastral abaixo:</p>"
+        "<p><strong>Pontos Importantes</strong></p>"
+        f"<p>- Próxima assembleia: <strong>{html_escape(next_assembly)}</strong><br>"
+        f"- Vencimento vagas reservadas: <strong>{html_escape(reservation_deadline)}</strong><br>"
+        f"- Para seguirmos vamos precisar da Ficha Cadastral no seguinte link: {piperun_link}</p>"
+        "</div>"
+        "</section>"
+    )
+    document += f"<main class='shared-study-content'>{study['document_html']}{agreement_markup}{followup_markup}</main></div>"
     document += f"<script nonce='{nonce}' src='/static/js/shared-study.js?v={release_version}' defer></script></body></html>"
     policy = f"default-src 'none'; script-src 'nonce-{nonce}'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     return HTMLResponse(document, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": policy})

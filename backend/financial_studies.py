@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import html
 import json
 import math
 import os
@@ -232,6 +233,21 @@ def _compress_archive(snapshot: dict, document_html: str, app_version: str) -> s
     if len(encoded) > ARCHIVE_LIMIT:
         raise ValueError("O snapshot compactado excede o limite de armazenamento de uma célula do Google Sheets.")
     return encoded
+
+
+def _study_data_label_values(document_html: str, label: str) -> list[str]:
+    """Read the rendered values from the immutable study dates table."""
+    pattern = re.compile(
+        rf'<td\b[^>]*data-label=["\'][^"\']*{re.escape(label)}[^"\']*["\'][^>]*>(.*?)</td>',
+        re.IGNORECASE | re.DOTALL,
+    )
+    values = []
+    for match in pattern.finditer(str(document_html or "")):
+        value = html.unescape(re.sub(r"<[^>]+>", " ", match.group(1)))
+        value = re.sub(r"\s+", " ", value).strip()
+        if value and value not in values:
+            values.append(value)
+    return values
 
 
 def _next_study_id(now: datetime, approval_key: str, existing_ids: list[list[str]]) -> str:
@@ -586,6 +602,10 @@ def get_study(study_id: str) -> dict | None:
             "approved_by": field("operator"), "status": field("status"),
             "crm_opportunity_id": crm_opportunity_id,
             "piperun_form_url": piperun_form_url,
+            "study_dates": {
+                "next_assembly": _study_data_label_values((archive or {}).get("document_html", ""), "Próxima assembleia"),
+                "reservation_deadline": _study_data_label_values((archive or {}).get("document_html", ""), "Reserva de vagas"),
+            },
             "app_version": archive.get("app_version", "") if archive else "",
             "snapshot": archive.get("snapshot") if archive else None,
             "document_html": archive.get("document_html") if archive else None,
@@ -696,6 +716,11 @@ def get_public_study(token: str) -> dict | None:
         "approved_at": str(row[_index(indexes, "created_at")]),
         "app_version": archive.get("app_version", ""),
         "document_html": archive["document_html"],
+        "piperun_form_url": str(row[_optional_index(indexes, "piperun_form_url")]) if _optional_index(indexes, "piperun_form_url") is not None and _optional_index(indexes, "piperun_form_url") < len(row) else "",
+        "study_dates": {
+            "next_assembly": _study_data_label_values(archive.get("document_html", ""), "Próxima assembleia"),
+            "reservation_deadline": _study_data_label_values(archive.get("document_html", ""), "Reserva de vagas"),
+        },
         "agreement": {
             "status": str(row[agreement_status_index]) if agreement_status_index is not None and agreement_status_index < len(row) else "pending",
             "agreed_at": str(row[agreement_at_index]) if agreement_at_index is not None and agreement_at_index < len(row) else "",
