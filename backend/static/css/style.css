@@ -606,15 +606,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-history-state[hidden] { display: none !important; }
 .financial-study-history-list-wrap { margin-top: 8px; overflow-x: auto; }
 .financial-study-history-table { width: 100%; min-width: 1040px; table-layout: fixed; border-collapse: collapse; }
-.financial-study-history-table .study-col-id { width: 19%; }
-.financial-study-history-table .study-col-client { width: 22%; }
-.financial-study-history-table .study-col-crm { width: 12%; }
-.financial-study-history-table .study-col-date { width: 13%; }
+.financial-study-history-table .study-col-id { width: 16%; }
+.financial-study-history-table .study-col-client { width: 13%; }
+.financial-study-history-table .study-col-crm { width: 11%; }
+.financial-study-history-table .study-col-date { width: 12%; }
 .financial-study-history-table .study-col-operator { width: 11%; }
 .financial-study-history-table .study-col-groups { width: 5%; }
-.financial-study-history-table .study-col-agreement { width: 15%; }
-.financial-study-history-table .study-col-file { width: 9%; }
-.financial-study-history-table .study-col-action { width: 9%; }
+.financial-study-history-table .study-col-agreement { width: 17%; }
+.financial-study-history-table .study-col-file { width: 8%; }
+.financial-study-history-table .study-col-action { width: 7%; }
 .financial-study-history-table th,
 .financial-study-history-table td { padding: 10px 6px; vertical-align: middle; text-align: left; }
 .financial-study-history-table th { text-align: center; white-space: nowrap; }
@@ -625,7 +625,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-history-table td:last-child .btn { white-space: nowrap; font-size: .82rem; }
 .financial-study-history-file { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 7px; background: #f1f4f5; color: #53666e; font-size: .76rem; font-weight: 700; white-space: nowrap; }
 .financial-study-history-file.is-complete { background: #eaf6ef; color: #247448; }
-.financial-study-agreement-badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 8px; font-size: .72rem; font-weight: 800; line-height: 1.2; white-space: nowrap; }
+.financial-study-agreement-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 5px 8px; font-size: .72rem; font-weight: 800; line-height: 1.2; text-align: center; white-space: normal; }
 .financial-study-agreement-badge.is-agreed { background: #e3f5ea; color: #147a48; }
 .financial-study-agreement-badge.is-pending { background: #fff2e5; color: #a85a18; }
 .financial-study-history-detail-meta .financial-study-agreement-badge { vertical-align: middle; }
