@@ -995,7 +995,7 @@ function buildFinancialStudyWhatsappMessage(studyUrl, pipeRunFormUrl) {
     "",
     "- Próxima assembleia: 16/10",
     "- Vencimento vagas reservadas: 28/09",
-    `- Para seguirmos vamos precisar da Ficha Cadastral no seguinte link: ${pipeRunFormUrl}`,
+    ...(pipeRunFormUrl ? [`- Para seguirmos vamos precisar da Ficha Cadastral no seguinte link: ${pipeRunFormUrl}`] : []),
   ].join("\n");
 }
 
@@ -1003,9 +1003,9 @@ function syncFinancialStudyWhatsappMessage(studyUrl, pipeRunFormUrl) {
   const panel = document.getElementById("financialStudyWhatsappMessage");
   const textarea = document.getElementById("financialStudyWhatsappMessageText");
   if (!panel || !textarea) return;
-  const hasLinks = Boolean(studyUrl && pipeRunFormUrl);
-  panel.classList.toggle("d-none", !hasLinks);
-  if (hasLinks) textarea.value = buildFinancialStudyWhatsappMessage(studyUrl, pipeRunFormUrl);
+  const hasStudyLink = Boolean(studyUrl);
+  panel.classList.toggle("d-none", !hasStudyLink);
+  if (hasStudyLink) textarea.value = buildFinancialStudyWhatsappMessage(studyUrl, pipeRunFormUrl);
 }
 
 async function loadFinancialStudyHistory() {
@@ -8708,11 +8708,11 @@ document.getElementById("generateFinancialStudyShareBtn")?.addEventListener("cli
       pipeRunLinkUrl.value = result.piperun_form_url;
       pipeRunLinkRow.classList.remove("d-none");
       pipeRunLinkStatus.hidden = true;
-      syncFinancialStudyWhatsappMessage(result.url, result.piperun_form_url);
     } else if (result.piperun_error) {
       pipeRunLinkStatus.textContent = `Link do PipeForm não gerado: ${result.piperun_error}`;
       pipeRunLinkStatus.hidden = false;
     }
+    syncFinancialStudyWhatsappMessage(result.url, result.piperun_form_url || "");
     document.getElementById("revokeFinancialStudyShareBtn").classList.remove("d-none");
     const pipeRunButton = document.getElementById("sendFinancialStudyPipeRunBtn");
     if (pipeRunButton) pipeRunButton.dataset.publicUrlActive = "true";
