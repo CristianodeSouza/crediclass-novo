@@ -421,7 +421,7 @@
             </section>
             <div class="smart-engine-header">
               <div>
-                <h2>Motor 360 de Viabilidade do Consórcio</h2>
+                <h2 class="motor360-title-with-profile">Motor 360 de Viabilidade do Consórcio - Perfil do Cliente <button id="openMotor360ClientProfileBtn" class="motor360-client-profile-info" type="button" aria-label="Abrir resumo do Perfil do Cliente" title="Ver Perfil do Cliente">i</button></h2>
               </div>
               <div class="d-flex align-items-center gap-2"><button id="recalculateInvestorAnalysisBtn" class="btn btn-outline-secondary btn-sm" type="button">Recalcular</button><span id="investorAnalysisStatus" class="state-badge">Aguardando perfil</span></div>
             </div>
@@ -911,6 +911,21 @@
           <span>Ambiente: <strong id="environmentLabel">Carregando</strong></span>
         </footer>
       </main>
+    </div>
+
+    <div class="modal fade" id="clientProfileMotorModal" tabindex="-1" aria-labelledby="clientProfileMotorModalTitle" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 id="clientProfileMotorModalTitle" class="modal-title h5">Perfil do Cliente</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div id="clientProfileMotorModalBody" class="modal-body"></div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="modal fade" id="groupDetailsModal" tabindex="-1" aria-hidden="true">

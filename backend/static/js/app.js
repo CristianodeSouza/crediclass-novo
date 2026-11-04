@@ -294,6 +294,7 @@ const businessRulesFlow = [
   },
 ];
 let detailsModal = null;
+let clientProfileMotorModal = null;
 let detailsChart = null;
 let motor360ChanceChart = null;
 let groupFormModal = null;
@@ -4049,6 +4050,53 @@ function renderMotor360ClientProfileSummary(client = {}) {
     ? `<p class="motor360-client-profile-summary-note">Parcela desejada (${formatMoney(desiredInstallment)}) é o alvo informado pelo cliente; limite de parcela (${formatMoney(maximumInstallment)}) é o teto usado na avaliação. São referências diferentes.</p>`
     : "";
   return `<section class="motor360-client-profile-summary" aria-label="Resumo do perfil do cliente"><header><span>Referência do cliente</span><strong>Resumo do perfil</strong></header><div>${items.map(([label, value]) => `<article><small>${escapeHtml(label)}</small><b>${escapeHtml(String(value || "-"))}</b></article>`).join("")}</div>${installmentNote}</section>`;
+}
+
+function clientProfileMotorModalRows(rows) {
+  return rows.map(([label, value]) => `<div class="motor360-client-profile-modal-row"><span>${escapeHtml(label)}</span><strong>${escapeHtml(String(value || "-"))}</strong></div>`).join("");
+}
+
+function renderClientProfileMotorModal() {
+  const body = document.getElementById("clientProfileMotorModalBody");
+  if (!body) return;
+  const titulares = collectClientTitularesFromForm();
+  const holderSummary = summarizeClientTitulares(titulares);
+  const analysis = calculateClientPreliminaryAnalysis(titulares, holderSummary);
+  const isPj = analysis.tipoContratacao === "pj";
+  const data = isPj ? analysis.pessoaJuridica : analysis.pessoaFisica;
+  const rows = isPj
+    ? [
+      ["Objetivo do consórcio", data.objetivo],
+      ["Crédito desejado", formatMoney(data.credito)],
+      ["Total renda PJ", formatMoney(data.totalRendaPJ)],
+      ["Total renda sócio", formatMoney(data.totalRendaSocio)],
+      ["Comprometimento máximo", `${formatPercent(data.percentualComprometimentoPJ)} / CPF ${formatPercent(data.percentualComprometimentoCPF)}`],
+      ["Parcela máxima", formatMoney(data.parcelaMaximaPJ)],
+      ["Parcela desejada", formatMoney(data.parcelaDesejada)],
+      ["Total lance RP", formatMoney(data.totalLanceRP)],
+      ["Maior idade (seguro)", data.maiorIdade],
+    ]
+    : [
+      ["Objetivo do consórcio", data.objetivo],
+      ["Crédito desejado", formatMoney(data.credito)],
+      ["Total renda", formatMoney(data.totalRenda)],
+      ["Comprometimento máximo", formatPercent(0.3)],
+      ["Parcela máxima", formatMoney(data.parcelaMaxima)],
+      ["Parcela desejada", formatMoney(data.parcelaDesejada)],
+      ["Total lance FGTS", `${formatMoney(data.totalLanceFGTS)} · ${formatPercent(data.percentualFGTS)} · sem embutido`],
+      ["Total lance RP", formatMoney(data.totalLanceRP)],
+      ["Total lance FGTS + RP", `${formatMoney(data.totalLanceFGTSRP)} · ${formatPercent(data.percentualCobertura)} · sem embutido`],
+      ["Maior idade (seguro)", data.maiorIdade],
+    ];
+  body.innerHTML = `<div class="motor360-client-profile-modal-grid"><p class="motor360-client-profile-modal-type">${isPj ? "Pessoa Jurídica" : "Pessoa Física"}</p>${clientProfileMotorModalRows(rows)}</div>`;
+}
+
+function openClientProfileMotorModal() {
+  renderClientProfileMotorModal();
+  if (!clientProfileMotorModal) {
+    clientProfileMotorModal = new bootstrap.Modal(document.getElementById("clientProfileMotorModal"));
+  }
+  clientProfileMotorModal.show();
 }
 
 function renderQuotaReviewBannerForStudy(items = selectedMotor360Items()) {
@@ -8159,6 +8207,7 @@ document.getElementById("assemblyClearFilters")?.addEventListener("click", () =>
   renderAssemblyMap();
 });
 document.getElementById("openDefasagemBtn")?.addEventListener("click", openDefasagemModal);
+document.getElementById("openMotor360ClientProfileBtn")?.addEventListener("click", openClientProfileMotorModal);
 document.getElementById("defasagemFilter").addEventListener("change", renderDefasagemRows);
 document.getElementById("defasagemTableBody").addEventListener("change", (event) => {
   const grupoId = event.target?.dataset?.defasagemCheck;
