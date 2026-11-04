@@ -658,8 +658,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-piperun-send label { margin: 2px 0 0; color: var(--muted); font-size: .7rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .financial-study-piperun-send .financial-study-share-link-row { grid-template-columns: minmax(0, 1fr) 132px; }
 .financial-study-whatsapp-message { display: grid; gap: 8px; margin-top: 6px; padding-top: 14px; border-top: 1px solid #dfe5e7; }
-.financial-study-whatsapp-message-editor { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: start; }
+.financial-study-whatsapp-message-editor { display: grid; }
 .financial-study-whatsapp-message textarea { min-height: 260px; resize: vertical; line-height: 1.45; white-space: pre-wrap; }
+.financial-study-whatsapp-message-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .financial-study-whatsapp-open-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 42px; padding: 9px 14px; color: #128c7e; border: 1px solid #128c7e; background: #fff; white-space: nowrap; }
 .financial-study-whatsapp-open-btn:hover, .financial-study-whatsapp-open-btn:focus { color: #fff; border-color: #128c7e; background: #128c7e; }
 .financial-study-whatsapp-icon { width: 20px; height: 20px; }
@@ -667,8 +668,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-copy-icon { width: 17px; height: 17px; }
 .financial-study-whatsapp-message .btn { justify-self: start; }
 @media (max-width: 768px) {
-  .financial-study-whatsapp-message-editor { grid-template-columns: 1fr; }
-  .financial-study-whatsapp-open-btn { justify-self: start; }
+  .financial-study-whatsapp-message-actions { align-items: stretch; }
 }
 .financial-study-piperun-send .btn { width: 132px; min-width: 132px; }
 .financial-study-piperun-send small { color: var(--muted); font-size: .7rem; line-height: 1.3; }
