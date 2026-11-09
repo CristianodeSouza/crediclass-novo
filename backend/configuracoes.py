@@ -347,8 +347,8 @@ DEFAULT_CONFIG = {
         "backup_automatico": False,
     },
     "piperun_owners": [
-        {"nome": "Bruna Torres", "owner_id": 2602, "credito_maximo": 999999},
-        {"nome": "Bruno Tavares", "owner_id": 2609, "credito_minimo": 1000000},
+        {"nome": "Bruna Torres", "owner_id": 2602, "credito_minimo": None, "credito_maximo": None},
+        {"nome": "Bruno Tavares", "owner_id": 2609, "credito_minimo": None, "credito_maximo": None},
     ],
     "notificacoes": {
         "alertar_sincronizacao": True,
@@ -404,7 +404,14 @@ def load_config() -> dict:
         saved = json.loads(CONFIG_FILE.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return deepcopy(DEFAULT_CONFIG)
-    return merge_config(DEFAULT_CONFIG, saved if isinstance(saved, dict) else {})
+    config = merge_config(DEFAULT_CONFIG, saved if isinstance(saved, dict) else {})
+    # One-time cleanup of the initial owner examples: ranges are intentionally disabled until configured.
+    for owner in config.get("piperun_owners", []):
+        if owner.get("owner_id") == 2602 and owner.get("credito_maximo") == 999999:
+            owner["credito_minimo"], owner["credito_maximo"] = None, None
+        if owner.get("owner_id") == 2609 and owner.get("credito_minimo") == 1000000:
+            owner["credito_minimo"], owner["credito_maximo"] = None, None
+    return config
 
 
 def save_config() -> None:

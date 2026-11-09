@@ -1808,7 +1808,7 @@ async function loadPipeRunOwners() {
 
 async function savePipeRunOwners() {
   const rows = [...document.querySelectorAll(".crm-owner-row")];
-  const owners = rows.map((row) => Object.fromEntries([...row.querySelectorAll("[data-owner-field]")].map((input) => [input.dataset.ownerField, input.value.trim()]))).map((owner) => ({ ...owner, owner_id: Number(owner.owner_id), credito_minimo: owner.credito_minimo === "" ? undefined : Number(owner.credito_minimo), credito_maximo: owner.credito_maximo === "" ? undefined : Number(owner.credito_maximo) }));
+  const owners = rows.map((row) => Object.fromEntries([...row.querySelectorAll("[data-owner-field]")].map((input) => [input.dataset.ownerField, input.value.trim()]))).map((owner) => ({ ...owner, owner_id: Number(owner.owner_id), credito_minimo: owner.credito_minimo === "" ? null : Number(owner.credito_minimo), credito_maximo: owner.credito_maximo === "" ? null : Number(owner.credito_maximo) }));
   await apiPut("/configuracoes", { piperun_owners: owners });
   showToast("Owners PipeRun salvos.", "success");
 }
