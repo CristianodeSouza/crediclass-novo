@@ -461,7 +461,7 @@ async def fetch_opportunities_preview(limit: int = 25, created_at_start: str | N
             response = await client.get(
                 f"{PIPERUN_BASE_URL}/deals",
                 headers={"token": token, "accept": "application/json"},
-                params={"created_at_start": created_at_start, "created_at_end": created_at_end or "", "deleted": "false", "show": 200, "cursor": cursor},
+                params={"created_at_start": created_at_start, "created_at_end": created_at_end or "", "deleted": "false", "show": 200, "cursor": cursor, "with": "persons,companies,users"},
             )
             if response.status_code in (401, 403):
                 raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar oportunidades.")
@@ -498,5 +498,6 @@ async def fetch_opportunities_preview(limit: int = 25, created_at_start: str | N
             item = {"oportunidade": deal, **await fetch_opportunity_notes(deal_id)}
             _save_cached_opportunity(item)
             result.append(item)
-    cached = _cached_opportunities()
-    return cached if not limit else cached[: max(1, int(limit))]
+    # A resposta atual do PipeRun é a fonte principal. O cache local permanece
+    # apenas para recuperação interna e nunca substitui uma resposta nova.
+    return result[: max(1, int(limit))] if limit else result

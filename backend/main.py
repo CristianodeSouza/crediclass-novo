@@ -528,7 +528,19 @@ async def preview_oportunidades_piperun(limit: int = Query(default=0, ge=0, le=1
 @app.get("/api/piperun-stored")
 async def oportunidades_piperun_salvas():
     try:
-        return {"success": True, "stored": True, "items": annotate_owner_eligibility(read_piperun_opportunities())}
+        historical = read_piperun_opportunities()
+        try:
+            fresh = await fetch_opportunities_preview(limit=0)
+        except Exception:
+            logger.exception("Falha ao atualizar oportunidades pelo PipeRun; usando histórico complementar")
+            fresh = []
+        by_id = {str(item.get("oportunidade", {}).get("id")): item for item in historical if str(item.get("oportunidade", {}).get("id") or "").isdigit()}
+        for item in fresh:
+            deal_id = str(item.get("oportunidade", {}).get("id") or "")
+            if deal_id:
+                previous = by_id.get(deal_id, {})
+                by_id[deal_id] = {**previous, **item, "oportunidade": {**(previous.get("oportunidade") or {}), **(item.get("oportunidade") or {})}, "dados": {**(previous.get("dados") or {}), **(item.get("dados") or {})}}
+        return {"success": True, "stored": True, "source": "piperun", "items": annotate_owner_eligibility(list(by_id.values()))}
     except Exception as error:
         logger.exception("Falha ao carregar oportunidades salvas")
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
