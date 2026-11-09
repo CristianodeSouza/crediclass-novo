@@ -346,6 +346,10 @@ DEFAULT_CONFIG = {
         "email_smtp": False,
         "backup_automatico": False,
     },
+    "piperun_owners": [
+        {"nome": "Bruna Torres", "owner_id": 2602, "credito_maximo": 999999},
+        {"nome": "Bruno Tavares", "owner_id": 2609, "credito_minimo": 1000000},
+    ],
     "notificacoes": {
         "alertar_sincronizacao": True,
         "alertar_historico_atualizado": True,
@@ -443,5 +447,7 @@ def update_configuracoes(payload: dict) -> dict:
         _settings["usuarios"] = payload["usuarios"]
     if "regras_negocio_feedbacks" in payload and isinstance(payload["regras_negocio_feedbacks"], dict):
         _settings["regras_negocio_feedbacks"] = payload["regras_negocio_feedbacks"]
+    if "piperun_owners" in payload and isinstance(payload["piperun_owners"], list):
+        _settings["piperun_owners"] = payload["piperun_owners"]
     save_config()
     return {"success": True}

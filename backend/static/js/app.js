@@ -582,7 +582,7 @@ function activateScreen(screenName) {
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
-  if (screenName === "crm-piperun") { resetPipeRunPreview(); loadPipeRunPreview("/api/piperun-stored"); }
+  if (screenName === "crm-piperun") { resetPipeRunPreview(); loadPipeRunOwners(); loadPipeRunPreview("/api/piperun-stored"); }
 }
 
 function hydrateInvestorAnalysisFromCache() {
@@ -1794,6 +1794,23 @@ function clearRetiredFinancialStudyState() {
 function resetPipeRunPreview() {
   const state = document.getElementById("pipeRunPreviewState");
   if (state && !document.getElementById("pipeRunPreviewBody")?.children.length) state.textContent = "Clique em “Carregar oportunidades” para consultar o PipeRun.";
+}
+
+function renderPipeRunOwners(owners = []) {
+  const container = document.getElementById("pipeRunOwnersList");
+  if (!container) return;
+  container.innerHTML = owners.map((owner, index) => `<div class="crm-owner-row"><label>Nome<input data-owner-field="nome" data-owner-index="${index}" value="${escapeHtml(owner.nome || "")}"></label><label>ID do owner<input data-owner-field="owner_id" data-owner-index="${index}" inputmode="numeric" value="${escapeHtml(owner.owner_id || "")}"></label><label>Mínimo do crédito<input data-owner-field="credito_minimo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_minimo ?? "")}"></label><label>Máximo do crédito<input data-owner-field="credito_maximo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_maximo ?? "")}"></label></div>`).join("");
+}
+
+async function loadPipeRunOwners() {
+  try { const config = await apiGet("/configuracoes"); renderPipeRunOwners(config.piperun_owners || []); } catch (error) { console.warn("Owners PipeRun não carregados", error); }
+}
+
+async function savePipeRunOwners() {
+  const rows = [...document.querySelectorAll(".crm-owner-row")];
+  const owners = rows.map((row) => Object.fromEntries([...row.querySelectorAll("[data-owner-field]")].map((input) => [input.dataset.ownerField, input.value.trim()]))).map((owner) => ({ ...owner, owner_id: Number(owner.owner_id), credito_minimo: owner.credito_minimo === "" ? undefined : Number(owner.credito_minimo), credito_maximo: owner.credito_maximo === "" ? undefined : Number(owner.credito_maximo) }));
+  await apiPut("/configuracoes", { piperun_owners: owners });
+  showToast("Owners PipeRun salvos.", "success");
 }
 
 async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
@@ -8492,6 +8509,7 @@ document.getElementById("clientProfileForm").addEventListener("input", (event) =
   updateClientProfileTotals();
 });
 document.getElementById("loadPipeRunPreviewBtn")?.addEventListener("click", () => loadPipeRunPreview());
+document.getElementById("savePipeRunOwnersBtn")?.addEventListener("click", savePipeRunOwners);
 document.getElementById("queryPipeRunIdBtn")?.addEventListener("click", () => {
   const id = document.getElementById("pipeRunOpportunityIdQuery")?.value.trim();
   if (!id) return;
