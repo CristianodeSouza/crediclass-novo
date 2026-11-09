@@ -1815,16 +1815,21 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
     const safe = (value) => String(value ?? "-").replace(/[&<>\"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
     const items = Array.isArray(payload.items) ? payload.items : [];
     if (!items.length) throw new Error("Nenhuma oportunidade foi criada nos últimos 3 dias.");
-    const valueText = (value) => Array.isArray(value) || (value && typeof value === "object") ? JSON.stringify(value) : String(value ?? "");
+    const valueText = (value, key = "") => {
+      if (Array.isArray(value)) return value.length ? `${value.length} ${key === "titulares" ? "titular(es)" : "item(ns)"}` : "Nenhum";
+      if (value && typeof value === "object") return Object.entries(value).map(([childKey, childValue]) => `${childKey.replaceAll("_", " ")}: ${valueText(childValue, childKey)}`).join(" · ");
+      return String(value ?? "");
+    };
     const records = items.map((item) => {
       const deal = item.oportunidade || {};
       const dados = item.dados || {};
       return { crm_oportunidade_id: deal.id, titulo_oportunidade: deal.title || deal.name, criado_em: deal.created_at, nota_id: item.nota_id, ...dados };
     });
     const columns = ["crm_oportunidade_id", ...new Set(records.flatMap((record) => Object.keys(record)).filter((key) => key !== "crm_oportunidade_id"))];
-    const labels = { crm_oportunidade_id: "ID da oportunidade", titulo_oportunidade: "Título", criado_em: "Criada em", nota_id: "ID da nota" };
-    head.innerHTML = `<tr>${columns.map((key) => `<th>${safe(labels[key] || key)}</th>`).join("")}</tr>`;
-    body.innerHTML = records.map((record) => `<tr>${columns.map((key) => `<td data-label="${safe(labels[key] || key)}">${safe(valueText(record[key]))}</td>`).join("")}</tr>`).join("");
+    const labels = { crm_oportunidade_id: "ID da oportunidade", titulo_oportunidade: "Título", criado_em: "Criada em", nota_id: "ID da nota", prazo_contemplacao: "Prazo de contemplação", credito_desejado: "Crédito desejado", lance_proprio: "Lance próprio", parcela_desejada: "Parcela desejada", tipo_contratacao: "Tipo de contratação", titulares: "Titulares" };
+    const labelFor = (key) => labels[key] || key.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+    head.innerHTML = `<tr>${columns.map((key) => `<th>${safe(labelFor(key))}</th>`).join("")}</tr>`;
+    body.innerHTML = records.map((record) => `<tr>${columns.map((key) => `<td data-label="${safe(labelFor(key))}">${safe(valueText(record[key], key))}</td>`).join("")}</tr>`).join("");
     details.innerHTML = items.map((item) => {
       const deal = item.oportunidade || {};
       const response = { ...item, crm_oportunidade_id: String(deal.id || item.crm_oportunidade_id || "") };
