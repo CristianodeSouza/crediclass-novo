@@ -1832,20 +1832,6 @@ async function loadPipeRunPreview() {
   } catch (error) { state.className = "table-state table-state-error"; state.textContent = error.message; }
 }
 
-async function preparePipeRunPlan() {
-  const plan = document.getElementById("pipeRunSyncPlan");
-  plan.classList.remove("d-none");
-  plan.innerHTML = "<p>Montando plano de sincronização em modo simulação...</p>";
-  try {
-    const response = await fetch("/api/piperun/63416847/sync-plan", { method: "POST", credentials: "same-origin" });
-    const payload = await response.json();
-    if (!response.ok || !payload.success) throw new Error(payload.error || "Não foi possível montar o plano.");
-    const validation = payload.can_execute ? "Dados mínimos validados. Execução ainda não iniciada." : `Campos ausentes: ${(payload.missing_fields || []).join(", ")}`;
-    plan.innerHTML = `<h3>Plano de sincronização — simulação</h3><p>${validation}</p><p>Nenhuma alteração foi enviada ao PipeRun.</p><ol>${(payload.steps || []).map((step) => `<li><strong>${step.name}</strong><code>${step.method} ${step.endpoint}</code><small>${JSON.stringify(step.payload || {})}</small><span>${step.status}</span></li>`).join("")}</ol>`;
-    document.getElementById("executePipeRunBtn")?.classList.toggle("d-none", !payload.can_execute);
-  } catch (error) { plan.innerHTML = `<p class="table-state-error">${error.message}</p>`; }
-}
-
 const moneyFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const percentFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 });
 const decimalInputFormatters = new Map();
@@ -8489,13 +8475,6 @@ document.getElementById("clientProfileForm").addEventListener("input", (event) =
   updateClientProfileTotals();
 });
 document.getElementById("loadPipeRunPreviewBtn")?.addEventListener("click", loadPipeRunPreview);
-document.getElementById("preparePipeRunPlanBtn")?.addEventListener("click", preparePipeRunPlan);
-document.getElementById("executePipeRunBtn")?.addEventListener("click", async () => {
-  if (!window.confirm("Confirmar execução controlada para a oportunidade 63416847?")) return;
-  const response = await fetch("/api/piperun/63416847/sync?confirm=true", { method: "POST", credentials: "same-origin" });
-  const payload = await response.json();
-  showToast(payload.message || payload.error, payload.success ? "success" : "warning");
-});
 
 document.getElementById("clientProfileForm").addEventListener("change", () => {
   invalidateInvestorAnalysisForProfileChange();

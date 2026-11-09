@@ -68,7 +68,6 @@ async def app_lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="Crediclass Dashboard V3", lifespan=app_lifespan)
-PIPERUN_EXECUTIONS: set[str] = set()
 PDF_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="financial-study-pdf")
 PDF_JOBS: dict[str, Future] = {}
 
@@ -471,38 +470,6 @@ async def preview_oportunidades_piperun(limit: int = Query(default=0, ge=0, le=1
     except Exception as error:
         logger.exception("Falha ao carregar preview PipeRun")
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
-
-
-@app.post("/api/piperun/{opportunity_id}/sync-plan")
-async def gerar_plano_sincronizacao_piperun(opportunity_id: str):
-    """Gera um plano de alterações sem executar escritas no PipeRun."""
-    try:
-        preview = await fetch_opportunity_notes(opportunity_id)
-        dados = preview.get("dados") or {}
-        credito = float(dados.get("credito_desejado") or 0)
-        required = {"nome": "Nome do titular", "credito_desejado": "Crédito desejado"}
-        missing = [label for key, label in required.items() if not dados.get(key)]
-        steps = [
-            {"order": 1, "name": "Atualizar responsável", "method": "PUT", "endpoint": f"/v1/deals/{opportunity_id}", "payload": {"owner_id": 2609 if credito >= 1000000 else 2602}, "status": "simulação"},
-            {"order": 2, "name": "Atualizar cliente principal", "method": "PUT", "endpoint": "/v1/persons/{person_id}", "payload": {"name": dados.get("nome"), "cpf": dados.get("cpf"), "contactEmails": [dados.get("email")], "contactPhones": [dados.get("celular")]}, "status": "simulação"},
-            {"order": 3, "name": "Localizar ou criar empresa parceira", "method": "GET/POST", "endpoint": "/v1/companies?cnpj={cnpj}", "payload": {"cnpj": dados.get("cnpj_parceiro")}, "status": "simulação"},
-            {"order": 4, "name": "Localizar ou criar contatos relacionados", "method": "GET/POST", "endpoint": "/v1/persons", "payload": {"tipos": ["assessor", "gestor", "apoio"]}, "status": "simulação"},
-            {"order": 5, "name": "Vincular contatos à oportunidade", "method": "PUT", "endpoint": f"/v1/deals/{opportunity_id}/persons/{{person_id}}", "payload": {}, "status": "simulação"},
-            {"order": 6, "name": "Mover oportunidade para etapa destino", "method": "PUT", "endpoint": f"/v1/deals/{opportunity_id}", "payload": {"stage_id": 262860}, "status": "simulação"},
-        ]
-        return {"success": True, "simulation": True, "can_execute": not missing, "missing_fields": missing, "opportunity_id": opportunity_id, "extraction": preview, "steps": steps}
-    except Exception as error:
-        logger.exception("Falha ao gerar plano PipeRun %s", opportunity_id)
-        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
-
-@app.post("/api/piperun/{opportunity_id}/sync")
-async def executar_sincronizacao_piperun(opportunity_id: str, confirm: bool = Query(default=False)):
-    if not confirm:
-        return JSONResponse(status_code=400, content={"success": False, "error": "Confirmação obrigatória."})
-    if opportunity_id in PIPERUN_EXECUTIONS:
-        return JSONResponse(status_code=409, content={"success": False, "error": "Esta oportunidade já foi executada nesta sessão."})
-    PIPERUN_EXECUTIONS.add(opportunity_id)
-    return {"success": True, "controlled": True, "opportunity_id": opportunity_id, "message": "Executor controlado preparado. WhatsApp e Toggl permanecem desativados."}
 
 
 class ReleaseStaticFiles(StaticFiles):
