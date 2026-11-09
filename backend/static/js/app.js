@@ -1825,11 +1825,12 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
       const dados = item.dados || {};
       return { crm_oportunidade_id: deal.id, titulo_oportunidade: deal.title || deal.name, criado_em: deal.created_at, nota_id: item.nota_id, ...dados };
     });
-    const columns = ["crm_oportunidade_id", ...new Set(records.flatMap((record) => Object.keys(record)).filter((key) => key !== "crm_oportunidade_id"))];
-    const labels = { crm_oportunidade_id: "ID da oportunidade", titulo_oportunidade: "Título", criado_em: "Criada em", nota_id: "ID da nota", prazo_contemplacao: "Prazo de contemplação", credito_desejado: "Crédito desejado", lance_proprio: "Lance próprio", parcela_desejada: "Parcela desejada", tipo_contratacao: "Tipo de contratação", titulares: "Titulares" };
-    const labelFor = (key) => labels[key] || key.replaceAll("_", " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-    head.innerHTML = `<tr>${columns.map((key) => `<th>${safe(labelFor(key))}</th>`).join("")}</tr>`;
-    body.innerHTML = records.map((record) => `<tr>${columns.map((key) => `<td data-label="${safe(labelFor(key))}">${safe(valueText(record[key], key))}</td>`).join("")}</tr>`).join("");
+    head.innerHTML = "<tr><th>ID da oportunidade</th><th>Oportunidade</th><th>Criada em</th><th>Status da nota</th></tr>";
+    body.innerHTML = records.map((record) => {
+      const status = record.nota_id ? "Dados extraídos" : "Sem nota de formulário";
+      const statusClass = record.nota_id ? "is-success" : "is-muted";
+      return `<tr><td colspan="4"><div class="crm-opportunity-card"><div class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status ${statusClass}">${status}</span></div></div></td></tr>`;
+    }).join("");
     details.innerHTML = items.map((item) => {
       const deal = item.oportunidade || {};
       const response = { ...item, crm_oportunidade_id: String(deal.id || item.crm_oportunidade_id || "") };

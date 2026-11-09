@@ -8172,8 +8172,18 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-opportunity-row[open] summary { background: #fff4eb; border-bottom: 1px solid #f2d2bd; }
 .crm-fields-table { width: 100%; margin-top: 8px; }
 .crm-fields-table td:first-child { width: 34%; font-weight: 600; color: #475569; }
-.crm-preview-table { min-width: 1100px; }
-.crm-preview-table th, .crm-preview-table td { min-width: 150px; vertical-align: top; white-space: normal; }
-.crm-preview-table th:first-child, .crm-preview-table td:first-child { position: sticky; left: 0; z-index: 1; background: #fff; min-width: 145px; }
-.crm-preview-table th:first-child { z-index: 2; background: #f8fafc; }
-.crm-preview-table td { line-height: 1.35; }
+.crm-preview-table { width: 100%; table-layout: fixed; }
+.crm-preview-table th, .crm-preview-table td { vertical-align: middle; white-space: normal; }
+.crm-preview-table th:nth-child(1), .crm-preview-table td:nth-child(1) { width: 20%; }
+.crm-preview-table th:nth-child(2), .crm-preview-table td:nth-child(2) { width: 34%; }
+.crm-preview-table th:nth-child(3), .crm-preview-table td:nth-child(3) { width: 24%; }
+.crm-preview-table th:nth-child(4), .crm-preview-table td:nth-child(4) { width: 22%; }
+.crm-opportunity-card { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; overflow: hidden; }
+.crm-opportunity-summary { display: grid; grid-template-columns: 20% 34% 24% 22%; gap: 0; align-items: center; padding: 16px 14px; }
+.crm-opportunity-summary:hover { background: #fff7ed; }
+.crm-opportunity-id { color: #c2410c; font-weight: 800; }
+.crm-opportunity-title { color: #1e293b; font-weight: 700; }
+.crm-opportunity-date { color: #64748b; font-size: .9rem; }
+.crm-opportunity-status { justify-self: start; padding: 5px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; }
+.crm-opportunity-status.is-success { color: #166534; background: #dcfce7; }
+.crm-opportunity-status.is-muted { color: #64748b; background: #f1f5f9; }
