@@ -823,6 +823,57 @@ def create_grupo(payload: dict[str, Any]) -> dict[str, Any]:
     return {"success": True, "grupo_id": build_grupo_id(dict(zip(headers, row_values)))}
 
 
+def upsert_piperun_opportunities(items: list[dict[str, Any]]) -> dict[str, Any]:
+    """Grava oportunidades na aba Oportunidades, usando o ID como chave única."""
+    settings = get_settings()
+    tab_name = "Oportunidades"
+    if not settings.google_sheets_id or not settings.google_service_account_json:
+        raise RuntimeError("Google Sheets não está configurado.")
+    values = get_service().spreadsheets().values().get(
+        spreadsheetId=settings.google_sheets_id, range=f"'{tab_name}'!A:ZZ"
+    ).execute().get("values", [])
+    headers = [str(value).strip() for value in (values[0] if values else [])]
+    if not headers:
+        headers = ["id_oportunidade", "titulo_oportunidade", "criado_em", "id_nota"]
+    records = []
+    for item in items:
+        deal = item.get("oportunidade") or {}
+        dados = item.get("dados") or {}
+        record = {
+            "id_oportunidade": deal.get("id") or item.get("crm_oportunidade_id"),
+            "titulo_oportunidade": deal.get("title") or deal.get("name") or "",
+            "criado_em": deal.get("created_at") or "",
+            "id_nota": item.get("nota_id") or "",
+            **dados,
+        }
+        records.append({key: json.dumps(value, ensure_ascii=False, default=str) if isinstance(value, (dict, list)) else value for key, value in record.items()})
+    for record in records:
+        for key in record:
+            if key not in headers:
+                headers.append(key)
+    id_index = headers.index("id_oportunidade")
+    rows_by_id = {str(row[id_index]).strip(): index for index, row in enumerate(values[1:], start=2) if len(row) > id_index and str(row[id_index]).strip()}
+    service = get_service()
+    service.spreadsheets().values().update(spreadsheetId=settings.google_sheets_id, range=f"'{tab_name}'!A1:{column_letter(len(headers) - 1)}1", valueInputOption="USER_ENTERED", body={"values": [headers]}).execute()
+    updates = []
+    appended = 0
+    updated = 0
+    for record in records:
+        row = [record.get(header, "") for header in headers]
+        deal_id = str(record.get("id_oportunidade") or "").strip()
+        if not deal_id:
+            continue
+        if deal_id in rows_by_id:
+            updates.append({"range": f"'{tab_name}'!A{rows_by_id[deal_id]}:{column_letter(len(headers) - 1)}{rows_by_id[deal_id]}", "values": [row]})
+            updated += 1
+        else:
+            service.spreadsheets().values().append(spreadsheetId=settings.google_sheets_id, range=f"'{tab_name}'!A:ZZ", valueInputOption="USER_ENTERED", insertDataOption="INSERT_ROWS", body={"values": [row]}).execute()
+            appended += 1
+    if updates:
+        service.spreadsheets().values().batchUpdate(spreadsheetId=settings.google_sheets_id, body={"valueInputOption": "USER_ENTERED", "data": updates}).execute()
+    return {"appended": appended, "updated": updated, "sheet": tab_name}
+
+
 def update_grupo(grupo_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     values = read_sheet_values()
     if not values:

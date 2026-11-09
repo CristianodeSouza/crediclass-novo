@@ -39,7 +39,7 @@ from .defasagem import build_defasagem_report, update_defasagem_task
 from . import financial_studies
 from .piperun import activate_custom_form_public_link, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes
 from .models import GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
-from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, motor360_cache_status, update_grupo, update_historico_mensal, update_historico_mensal_lote, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
+from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, motor360_cache_status, update_grupo, update_historico_mensal, update_historico_mensal_lote, upsert_piperun_opportunities, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
 from .viabilidade import compatible_tipo_bem
 
 # Uvicorn's default configuration does not attach a handler to the root
@@ -466,7 +466,9 @@ async def buscar_oportunidade_piperun(opportunity_id: str):
 async def preview_oportunidades_piperun(limit: int = Query(default=0, ge=0, le=10000)):
     """Leitura temporária de todas as oportunidades recentes e suas notas, sem escrita."""
     try:
-        return {"success": True, "temporary": True, "items": await fetch_opportunities_preview(limit)}
+        items = await fetch_opportunities_preview(limit)
+        sheets = upsert_piperun_opportunities(items)
+        return {"success": True, "temporary": False, "items": items, "sheets": sheets}
     except Exception as error:
         logger.exception("Falha ao carregar preview PipeRun")
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
