@@ -1834,7 +1834,7 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
     details.innerHTML = items.map((item) => {
       const deal = item.oportunidade || {};
       const response = { ...item, crm_oportunidade_id: String(deal.id || item.crm_oportunidade_id || "") };
-      return `<details class="crm-preview-opportunity"><summary><strong>ID ${safe(deal.id || "-")}</strong> — ${safe(deal.title || deal.name || "Sem título")}</summary><div class="crm-preview-opportunity-body">${renderCrmResponseHtml(response, `Dados extraídos — oportunidade ${deal.id || ""}`)}</div></details>`;
+      return `<details class="crm-preview-opportunity"><summary><strong>ID ${safe(deal.id || "-")}</strong> — ${safe(deal.title || deal.name || "Sem título")}</summary><div class="crm-preview-opportunity-body">${renderCrmFormFieldsHtml(response)}</div></details>`;
     }).join("");
     state.textContent = endpoint === "/api/piperun-stored" ? `${items.length} oportunidade(s) salvas no histórico carregadas.` : `${items.length} oportunidade(s) consultadas carregadas.`;
     wrap.classList.remove("d-none");
@@ -7423,6 +7423,13 @@ function renderCrmResponseHtml(response, title = "Response completo da oportunid
   const holders = Array.isArray(dados.titulares) ? `<h4>Titulares (${dados.titulares.length})</h4>${dados.titulares.map((item, index) => `<h4 class="crm-response-subheading">Titular ${index + 1}</h4><table class="crm-response-table"><tbody>${renderRows(item)}</tbody></table>`).join("")}` : "";
   const fields = dados.campos_formulario ? `<h4>Campos do formulário — cada campo separado</h4><table class="crm-response-table"><thead><tr><th scope="col">Campo</th><th scope="col">Valor</th></tr></thead><tbody>${renderIndividualRows(dados.campos_formulario)}</tbody></table>` : "";
   return `<h3>${escapeHtml(title)}</h3><div class="crm-response-meta">${summary}</div><h4>Dados extraídos</h4><table class="crm-response-table"><tbody>${renderRows(dados, ["titulares", "campos_formulario"])}</tbody></table>${holders}${fields}<h4>Metadados da importação</h4><table class="crm-response-table"><tbody>${renderRows({ nota_texto: response.nota_texto })}</tbody></table>`;
+}
+
+function renderCrmFormFieldsHtml(item) {
+  const fields = item?.dados?.campos_formulario || {};
+  const formatFieldValue = (value) => Array.isArray(value) ? value.join(" · ") : formatCrmValue(value);
+  const rows = Object.entries(fields).map(([key, value]) => `<tr><th scope="row">${escapeHtml(key)}</th><td>${escapeHtml(formatFieldValue(value))}</td></tr>`).join("");
+  return `<div class="crm-form-only"><div class="crm-form-only-header"><span>Dados do formulário</span><small>${Object.keys(fields).length} campos</small></div>${rows ? `<table class="crm-response-table"><thead><tr><th>Campo</th><th>Resposta</th></tr></thead><tbody>${rows}</tbody></table>` : `<p class="crm-empty-fields">Nenhum campo de formulário foi encontrado nesta oportunidade.</p>`}</div>`;
 }
 
 function renderCrmResponse(response) {
