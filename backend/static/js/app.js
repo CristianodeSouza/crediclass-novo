@@ -1833,7 +1833,8 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
       return `<tr><td colspan="4"><details class="crm-opportunity-card"><summary class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status ${statusClass}">${status}</span></summary><div class="crm-opportunity-inline-details">${renderCrmFormFieldsHtml(item)}</div></details></td></tr>`;
     }).join("");
     details.innerHTML = "";
-    state.textContent = endpoint === "/api/piperun-stored" ? `${items.length} oportunidade(s) salvas no histórico carregadas.` : `${items.length} oportunidade(s) consultadas carregadas.`;
+    state.textContent = endpoint === "/api/piperun-stored" ? "" : `${items.length} oportunidade(s) consultadas carregadas.`;
+    state.classList.toggle("d-none", endpoint === "/api/piperun-stored");
     wrap.classList.remove("d-none");
     details.classList.remove("d-none");
   } catch (error) { state.className = "table-state table-state-error"; state.textContent = error.message; }
