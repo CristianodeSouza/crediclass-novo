@@ -204,7 +204,7 @@ async def update_opportunity_person(opportunity_id: str, person_id: str, dados: 
         raise RuntimeError("Token PipeRun inválido ou sem permissão para atualizar a pessoa.")
     if response.status_code >= 400:
         raise RuntimeError(f"PipeRun recusou a atualização do titular (HTTP {response.status_code}).")
-    return {"opportunity_id": opportunity_id, "person_id": person_id, "updated_fields": [key for key, value in body.items() if value], "response": response.json()}
+    return {"opportunity_id": opportunity_id, "person_id": person_id, "updated_fields": [key for key, value in body.items() if value], "titular_atualizado": True, "response": response.json()}
 
 
 async def create_opportunity_note(opportunity_id: str, text: str) -> dict:

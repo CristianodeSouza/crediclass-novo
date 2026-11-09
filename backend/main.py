@@ -74,13 +74,17 @@ PDF_JOBS: dict[str, Future] = {}
 
 
 def annotate_owner_eligibility(items: list[dict]) -> list[dict]:
-    owners = get_configuracoes().get("piperun_owners", [])
+    config = get_configuracoes()
+    owners = config.get("piperun_owners", [])
+    distribution_enabled = bool(config.get("piperun_owner_distribution_enabled"))
     ranges_configured = any(owner.get("credito_minimo") is not None or owner.get("credito_maximo") is not None for owner in owners if isinstance(owner, dict))
     for item in items:
         deal = item.get("oportunidade") or {}
         owner_id = str(deal.get("owner_id") or "").strip()
         if owner_id:
             item["owner_distribution"] = {"eligible": False, "reason": "owner_already_assigned", "owner_id": owner_id}
+        elif not distribution_enabled:
+            item["owner_distribution"] = {"eligible": False, "reason": "owner_distribution_disabled", "owner_id": ""}
         elif not ranges_configured:
             item["owner_distribution"] = {"eligible": False, "reason": "owner_ranges_not_configured", "owner_id": ""}
         else:
@@ -479,7 +483,9 @@ async def buscar_oportunidade_piperun(opportunity_id: str):
 async def atualizar_titular_piperun(opportunity_id: str, person_id: str = Query(...)):
     try:
         preview = await fetch_opportunity_notes(opportunity_id)
-        return {"success": True, "result": await update_opportunity_person(opportunity_id, person_id, preview.get("dados") or {})}
+        result = await update_opportunity_person(opportunity_id, person_id, preview.get("dados") or {})
+        upsert_piperun_opportunities([{**preview, "oportunidade": {"id": opportunity_id, "person_id": person_id}, "titular_atualizado": True}])
+        return {"success": True, "result": result}
     except (ValueError, RuntimeError) as error:
         return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
     except Exception as error:

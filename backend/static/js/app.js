@@ -1796,20 +1796,22 @@ function resetPipeRunPreview() {
   if (state && !document.getElementById("pipeRunPreviewBody")?.children.length) state.textContent = "Clique em “Carregar oportunidades” para consultar o PipeRun.";
 }
 
-function renderPipeRunOwners(owners = []) {
+function renderPipeRunOwners(owners = [], distributionEnabled = false) {
   const container = document.getElementById("pipeRunOwnersList");
   if (!container) return;
+  const toggle = document.getElementById("pipeRunOwnerDistributionToggle");
+  if (toggle) toggle.checked = Boolean(distributionEnabled);
   container.innerHTML = owners.map((owner, index) => `<div class="crm-owner-row"><label>Nome<input data-owner-field="nome" data-owner-index="${index}" value="${escapeHtml(owner.nome || "")}"></label><label>ID do owner<input data-owner-field="owner_id" data-owner-index="${index}" inputmode="numeric" value="${escapeHtml(owner.owner_id || "")}"></label><label>Mínimo do crédito<input data-owner-field="credito_minimo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_minimo ?? "")}"></label><label>Máximo do crédito<input data-owner-field="credito_maximo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_maximo ?? "")}"></label></div>`).join("");
 }
 
 async function loadPipeRunOwners() {
-  try { const config = await apiGet("/configuracoes"); renderPipeRunOwners(config.piperun_owners || []); } catch (error) { console.warn("Owners PipeRun não carregados", error); }
+  try { const config = await apiGet("/configuracoes"); renderPipeRunOwners(config.piperun_owners || [], config.piperun_owner_distribution_enabled); } catch (error) { console.warn("Owners PipeRun não carregados", error); }
 }
 
 async function savePipeRunOwners() {
   const rows = [...document.querySelectorAll(".crm-owner-row")];
   const owners = rows.map((row) => Object.fromEntries([...row.querySelectorAll("[data-owner-field]")].map((input) => [input.dataset.ownerField, input.value.trim()]))).map((owner) => ({ ...owner, owner_id: Number(owner.owner_id), credito_minimo: owner.credito_minimo === "" ? null : Number(owner.credito_minimo), credito_maximo: owner.credito_maximo === "" ? null : Number(owner.credito_maximo) }));
-  await apiPut("/configuracoes", { piperun_owners: owners });
+  await apiPut("/configuracoes", { piperun_owners: owners, piperun_owner_distribution_enabled: Boolean(document.getElementById("pipeRunOwnerDistributionToggle")?.checked) });
   showToast("Owners PipeRun salvos.", "success");
 }
 
@@ -1840,16 +1842,17 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
     const records = items.map((item) => {
       const deal = item.oportunidade || {};
       const dados = item.dados || {};
-      return { crm_oportunidade_id: deal.id, titulo_oportunidade: deal.title || deal.name, criado_em: deal.created_at, nota_id: item.nota_id, owner_id: deal.owner_id || dados.owner_id || "", ...dados };
+      return { crm_oportunidade_id: deal.id, titulo_oportunidade: deal.title || deal.name, criado_em: deal.created_at, nota_id: item.nota_id, owner_id: deal.owner_id || dados.owner_id || "", titular_atualizado: item.titular_atualizado, ...dados };
     });
     head.innerHTML = "<tr><th>ID da oportunidade</th><th>Oportunidade</th><th>Criada em</th><th>Status da nota</th></tr>";
     body.innerHTML = records.map((record) => {
       const status = record.nota_id ? "Dados extraídos" : "Sem nota de formulário";
       const statusClass = record.nota_id ? "is-success" : "is-muted";
       const ownerAssigned = Boolean(record.owner_id);
+      const titularUpdated = Boolean(record.titular_atualizado);
       const item = items.find((candidate) => String(candidate?.oportunidade?.id || candidate?.crm_oportunidade_id || "") === String(record.crm_oportunidade_id)) || {};
       const personId = item?.oportunidade?.person_id || "";
-      return `<tr><td colspan="4"><details class="crm-opportunity-card"><summary class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status-group"><span class="crm-opportunity-status ${statusClass}">${status}</span><span class="crm-owner-status ${ownerAssigned ? "is-assigned" : "is-pending"}"><i aria-hidden="true">${ownerAssigned ? "✓" : "○"}</i>${ownerAssigned ? "Owner atribuído" : "Owner pendente"}</span></span></summary><div class="crm-opportunity-inline-details">${renderCrmFormFieldsHtml(item)}<button type="button" class="btn btn-outline-primary crm-update-person-btn" data-opportunity-id="${safe(record.crm_oportunidade_id)}" data-person-id="${safe(personId)}" ${personId ? "" : "disabled"}>Atualizar dados do titular</button>${personId ? "" : "<small class=\"crm-person-warning\">person_id não encontrado nesta oportunidade.</small>"}</div></details></td></tr>`;
+      return `<tr><td colspan="4"><details class="crm-opportunity-card"><summary class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status-group"><span class="crm-opportunity-status ${statusClass}">${status}</span><span class="crm-owner-status ${ownerAssigned ? "is-assigned" : "is-pending"}><i aria-hidden="true">${ownerAssigned ? "✓" : "○"}</i>${ownerAssigned ? "Owner atribuído" : "Owner pendente"}</span><span class="crm-owner-status ${titularUpdated ? "is-assigned" : "is-pending"}"><i aria-hidden="true">${titularUpdated ? "✓" : "○"}</i>${titularUpdated ? "Titular incluído" : "Titular pendente"}</span></span></summary><div class="crm-opportunity-inline-details">${renderCrmFormFieldsHtml(item)}<button type="button" class="btn btn-outline-primary crm-update-person-btn" data-opportunity-id="${safe(record.crm_oportunidade_id)}" data-person-id="${safe(personId)}" ${personId ? "" : "disabled"}>Atualizar dados do titular</button>${personId ? "" : "<small class=\"crm-person-warning\">person_id não encontrado nesta oportunidade.</small>"}</div></details></td></tr>`;
     }).join("");
     details.innerHTML = "";
     state.textContent = "";

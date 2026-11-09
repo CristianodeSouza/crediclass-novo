@@ -8209,3 +8209,6 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-owner-row { display: grid; grid-template-columns: 1.3fr .8fr 1fr 1fr; gap: 12px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
 .crm-owner-row label { display: grid; gap: 5px; color: #475569; font-size: .78rem; font-weight: 700; }
 .crm-owner-row input { min-width: 0; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; }
+.crm-owner-actions { display: flex; align-items: center; gap: 16px; }
+.crm-owner-toggle { display: inline-flex; align-items: center; gap: 8px; color: #475569; font-size: .85rem; font-weight: 700; }
+.crm-owner-toggle input { width: 18px; height: 18px; accent-color: #ea580c; }

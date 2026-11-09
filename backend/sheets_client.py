@@ -845,6 +845,7 @@ def upsert_piperun_opportunities(items: list[dict[str, Any]]) -> dict[str, Any]:
             "criado_em": deal.get("created_at") or "",
             "id_nota": item.get("nota_id") or "",
             "owner_id": deal.get("owner_id") or "",
+            "titular_atualizado": item.get("titular_atualizado") or "",
             **dados,
         }
         records.append({key: json.dumps(value, ensure_ascii=False, default=str) if isinstance(value, (dict, list)) else value for key, value in record.items()})
@@ -898,6 +899,7 @@ def read_piperun_opportunities() -> list[dict[str, Any]]:
             "oportunidade": {"id": opportunity_id, "title": record.pop("titulo_oportunidade", ""), "created_at": record.pop("criado_em", "")},
             "crm_oportunidade_id": opportunity_id,
             "nota_id": record.pop("id_nota", "") or None,
+            "titular_atualizado": str(record.pop("titular_atualizado", "")).lower() == "true",
             "encontrado": bool(record),
             "dados": record,
         })

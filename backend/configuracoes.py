@@ -350,6 +350,7 @@ DEFAULT_CONFIG = {
         {"nome": "Bruna Torres", "owner_id": 2602, "credito_minimo": None, "credito_maximo": None},
         {"nome": "Bruno Tavares", "owner_id": 2609, "credito_minimo": None, "credito_maximo": None},
     ],
+    "piperun_owner_distribution_enabled": False,
     "notificacoes": {
         "alertar_sincronizacao": True,
         "alertar_historico_atualizado": True,
@@ -456,5 +457,7 @@ def update_configuracoes(payload: dict) -> dict:
         _settings["regras_negocio_feedbacks"] = payload["regras_negocio_feedbacks"]
     if "piperun_owners" in payload and isinstance(payload["piperun_owners"], list):
         _settings["piperun_owners"] = payload["piperun_owners"]
+    if "piperun_owner_distribution_enabled" in payload:
+        _settings["piperun_owner_distribution_enabled"] = bool(payload["piperun_owner_distribution_enabled"])
     save_config()
     return {"success": True}
