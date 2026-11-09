@@ -38,7 +38,7 @@ from .consortium_viability_engine import MOTOR_VERSION, RULES_VERSION, analyze_c
 from .credit_options import available_credit_options
 from .defasagem import build_defasagem_report, update_defasagem_task
 from . import financial_studies
-from .piperun import activate_custom_form_public_link, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes, sync_spouse, update_opportunity_person
+from .piperun import activate_custom_form_public_link, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes, sync_partner_company, sync_spouse, update_opportunity_person
 from .models import GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, motor360_cache_status, read_piperun_opportunities, update_grupo, update_historico_mensal, update_historico_mensal_lote, upsert_piperun_opportunities, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
 from .viabilidade import compatible_tipo_bem
@@ -485,7 +485,8 @@ async def atualizar_titular_piperun(opportunity_id: str, person_id: str = Query(
         preview = await fetch_opportunity_notes(opportunity_id)
         result = await update_opportunity_person(opportunity_id, person_id, preview.get("dados") or {})
         spouse = await sync_spouse(opportunity_id, preview.get("dados") or {})
-        stored = {**preview, "oportunidade": {"id": opportunity_id, "person_id": person_id}, **result, **spouse}
+        partners = await sync_partner_company(opportunity_id, preview.get("dados") or {})
+        stored = {**preview, "oportunidade": {"id": opportunity_id, "person_id": person_id}, **result, **spouse, **partners}
         upsert_piperun_opportunities([stored])
         return {"success": True, "result": stored}
     except (ValueError, RuntimeError) as error:
@@ -505,7 +506,8 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
         if person_id.isdigit() and opportunity_id.isdigit() and item.get("encontrado"):
             titular = await update_opportunity_person(opportunity_id, person_id, item.get("dados") or {})
             spouse = await sync_spouse(opportunity_id, item.get("dados") or {})
-            item = {**item, **titular, **spouse}
+            partners = await sync_partner_company(opportunity_id, item.get("dados") or {})
+            item = {**item, **titular, **spouse, **partners}
         synced.append(item)
     return synced
 

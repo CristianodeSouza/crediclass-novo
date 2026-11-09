@@ -41,7 +41,6 @@ def _save_cached_opportunity(item: dict) -> None:
         db.commit()
 
 FIELD_MAP = {
-    "Nome Completo": "nome",
     "Qual é o valor do imóvel?": "credito_desejado",
     "Qual valor do imóvel desejado?": "credito_desejado",
     "Qual é o valor de carta de crédito desejada?": "credito_desejado",
@@ -102,12 +101,17 @@ def _parse_form(text: str) -> dict:
                 raw_fields.setdefault(label, []).append(value)
     people: list[dict] = []
     person: dict | None = None
+    titular_section = False
     for line in lines:
-        if line.startswith("Nome Completo:"):
+        if line.startswith("Em qual titularidade você deseja prosseguir"):
+            titular_section = True
+            person = None
+            continue
+        if titular_section and line.startswith("Nome Completo:"):
             person = {"nome": line.split(":", 1)[1].strip(), "renda": 0, "lance_fgts": 0, "lance_recursos_proprios": 0}
             people.append(person)
             continue
-        if person is not None:
+        if titular_section and person is not None:
             if line.startswith("Data de Nascimento:"):
                 person["nascimento"] = _date_input(line.split(":", 1)[1].strip())
             elif line.startswith("Renda Mensal"):
@@ -148,6 +152,16 @@ def _parse_form(text: str) -> dict:
         elif "até 6" in prazo or "rápido" in perfil:
             result["objetivo"] = "Contemplar - rapido - 6 meses"
     result["campos_formulario"] = raw_fields
+    result["empresa_parceira"] = {
+        "cnpj": re.sub(r"\D", "", str((raw_fields.get("CNPJ do parceiro cadastrado") or [""])[-1])),
+        "nome": (raw_fields.get("Nome da Empresa Parceira") or [""])[-1],
+    }
+    result["parceiros"] = {
+        "indicador": {"nome": (raw_fields.get("Nome Completo") or [""])[0], "telefone": (raw_fields.get("Telefone") or [""])[0], "email": (raw_fields.get("E-mail") or [""])[0]},
+        "assessor": {"nome": (raw_fields.get("Nome do assessor do cliente") or [""])[-1], "telefone": (raw_fields.get("Telefone") or ["", ""])[1], "email": (raw_fields.get("E-mail") or ["", ""])[1]},
+        "acompanhante_1": {"nome": (raw_fields.get("Nome completo (pessoa 1)") or [""])[-1], "telefone": (raw_fields.get("Telefone") or ["", "", ""])[2], "email": (raw_fields.get("E-mail") or ["", "", ""])[2]},
+        "acompanhante_2": {"nome": (raw_fields.get("Nome completo (pessoa 2)") or [""])[-1], "telefone": (raw_fields.get("Telefone") or ["", "", "", ""])[3], "email": (raw_fields.get("E-mail") or ["", "", "", ""])[3]},
+    }
     return result
 
 
@@ -303,6 +317,54 @@ async def sync_spouse(opportunity_id: str, dados: dict) -> dict:
         link = await client.put(f"{PIPERUN_BASE_URL}/deals/{opportunity_id}/persons/{spouse_id}", headers=headers)
         if link.status_code >= 400 and link.status_code != 409: raise RuntimeError(f"PipeRun recusou o vínculo do cônjuge (HTTP {link.status_code}).")
     return {"conjuge_atualizado": True, "conjuge_id": spouse_id, "nome_conjuge": spouse["nome"], "conjuge_status": "ok"}
+
+
+async def sync_partner_company(opportunity_id: str, dados: dict) -> dict:
+    company = dados.get("empresa_parceira") or {}
+    cnpj = re.sub(r"\D", "", str(company.get("cnpj") or ""))
+    company_name = str(company.get("nome") or "").strip()
+    if not cnpj:
+        return {"empresa_parceira_status": "nao_informada", "parceiros_atualizados": []}
+    token = os.getenv("PIPERUN_API_KEY", "").strip()
+    headers = {"token": token, "accept": "application/json"}
+    async with httpx.AsyncClient(timeout=20) as client:
+        lookup = await client.get(f"{PIPERUN_BASE_URL}/companies", params={"cnpj": cnpj, "show": 10, "cursor": ""}, headers=headers)
+        if lookup.status_code >= 400 and lookup.status_code != 404:
+            raise RuntimeError(f"PipeRun recusou a consulta da empresa (HTTP {lookup.status_code}).")
+        rows = lookup.json().get("data", []) if lookup.status_code < 400 else []
+        if isinstance(rows, dict): rows = rows.get("data", [])
+        existing = rows[0] if isinstance(rows, list) and rows else None
+        if existing and existing.get("id"):
+            company_id = str(existing["id"])
+        else:
+            created = await client.post(f"{PIPERUN_BASE_URL}/companies", json={"name": company_name or cnpj, "cnpj": cnpj}, headers={**headers, "content-type": "application/json"})
+            if created.status_code >= 400: raise RuntimeError(f"PipeRun recusou o cadastro da empresa (HTTP {created.status_code}).")
+            company_id = str((created.json().get("data") or {}).get("id") or "")
+        if not company_id.isdigit(): raise RuntimeError("PipeRun não retornou o ID da empresa parceira.")
+        linked = []
+        for role, contact in (dados.get("parceiros") or {}).items():
+            name = str(contact.get("nome") or "").strip()
+            email = str(contact.get("email") or "").strip()
+            phone = str(contact.get("telefone") or "").strip()
+            if not name or name.lower() in {"não informado", "nao informado"}: continue
+            person = None
+            if email:
+                people_response = await client.get(f"{PIPERUN_BASE_URL}/persons", params={"company_id": int(company_id), "show": 200, "cursor": "", "with": "contactEmails,contactPhones"}, headers=headers)
+                if people_response.status_code < 400:
+                    people = people_response.json().get("data", [])
+                    if isinstance(people, list):
+                        person = next((row for row in people if email.lower() in {str(v).lower() for v in (row.get("contactEmails") or [])}), None)
+            if not person:
+                created_person = await client.post(f"{PIPERUN_BASE_URL}/persons", json={"name": name, "company_id": int(company_id), "contactEmails": [email] if email else [], "contactPhones": [phone] if phone else []}, headers={**headers, "content-type": "application/json"})
+                if created_person.status_code >= 400: raise RuntimeError(f"PipeRun recusou o cadastro do parceiro {role} (HTTP {created_person.status_code}).")
+                person = created_person.json().get("data") or {}
+            person_id = str(person.get("id") or "")
+            if person_id.isdigit():
+                link_deal = await client.put(f"{PIPERUN_BASE_URL}/deals/{opportunity_id}/persons/{person_id}", headers=headers)
+                if link_deal.status_code >= 400 and link_deal.status_code != 409:
+                    raise RuntimeError(f"PipeRun recusou o vínculo do parceiro {role} à oportunidade (HTTP {link_deal.status_code}).")
+                linked.append({"papel": role, "person_id": person_id, "nome": name})
+    return {"empresa_parceira_id": company_id, "empresa_parceira_status": "ok", "parceiros_atualizados": linked}
 
 
 async def create_opportunity_note(opportunity_id: str, text: str) -> dict:
