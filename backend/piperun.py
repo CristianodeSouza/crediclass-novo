@@ -198,13 +198,33 @@ async def update_opportunity_person(opportunity_id: str, person_id: str, dados: 
         "name": str(dados.get("nome") or "").strip(),
         "cpf": cpf,
     }
+    if dados.get("data_nascimento"):
+        body["birth_day"] = str(dados["data_nascimento"]).strip()
+    if dados.get("profissao"):
+        body["job_title"] = str(dados["profissao"]).strip()
+    if dados.get("observacoes"):
+        body["observation"] = str(dados["observacoes"]).strip()
     async with httpx.AsyncClient(timeout=20) as client:
+        custom_response = await client.get(f"{PIPERUN_BASE_URL}/customFields", params={"belongs": 2, "show": 200, "cursor": ""}, headers={"token": token, "accept": "application/json"})
+        custom_fields = custom_response.json().get("data", []) if custom_response.status_code < 400 else []
+        if isinstance(custom_fields, dict):
+            custom_fields = custom_fields.get("data", [])
+        normalized_form = {re.sub(r"[^a-z0-9]", "", str(key).lower()): value for key, value in (dados.get("campos_formulario") or {}).items() if value not in (None, "", "Adicionar valor")}
+        custom_values = []
+        for field in custom_fields if isinstance(custom_fields, list) else []:
+            field_name = field.get("name") or field.get("label") or field.get("title") or ""
+            field_key = re.sub(r"[^a-z0-9]", "", str(field_name).lower())
+            value = normalized_form.get(field_key)
+            if value is not None and field.get("id"):
+                custom_values.append({"id": field["id"], "value": value if isinstance(value, (str, int, float, bool)) else json.dumps(value, ensure_ascii=False)})
+        if custom_values:
+            body["custom_fields"] = custom_values
         response = await client.put(f"{PIPERUN_BASE_URL}/persons/{person_id}", json=body, headers={"token": token, "accept": "application/json", "content-type": "application/json"})
     if response.status_code in (401, 403):
         raise RuntimeError("Token PipeRun inválido ou sem permissão para atualizar a pessoa.")
     if response.status_code >= 400:
         raise RuntimeError(f"PipeRun recusou a atualização do titular (HTTP {response.status_code}).")
-    return {"opportunity_id": opportunity_id, "person_id": person_id, "updated_fields": [key for key, value in body.items() if value], "titular_atualizado": True, "response": response.json()}
+    return {"opportunity_id": opportunity_id, "person_id": person_id, "updated_fields": [key for key, value in body.items() if value], "custom_fields_count": len(body.get("custom_fields", [])), "titular_atualizado": True, "response": response.json()}
 
 
 async def create_opportunity_note(opportunity_id: str, text: str) -> dict:
