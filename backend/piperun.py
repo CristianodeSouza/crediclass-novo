@@ -341,6 +341,13 @@ async def sync_partner_company(opportunity_id: str, dados: dict) -> dict:
             if created.status_code >= 400: raise RuntimeError(f"PipeRun recusou o cadastro da empresa (HTTP {created.status_code}).")
             company_id = str((created.json().get("data") or {}).get("id") or "")
         if not company_id.isdigit(): raise RuntimeError("PipeRun não retornou o ID da empresa parceira.")
+        deal_update = await client.put(
+            f"{PIPERUN_BASE_URL}/deals/{opportunity_id}",
+            json={"company_id": int(company_id)},
+            headers={**headers, "content-type": "application/json"},
+        )
+        if deal_update.status_code >= 400:
+            raise RuntimeError(f"PipeRun recusou o vínculo da empresa à oportunidade (HTTP {deal_update.status_code}).")
         linked = []
         for role, contact in (dados.get("parceiros") or {}).items():
             name = str(contact.get("nome") or "").strip()
@@ -348,12 +355,11 @@ async def sync_partner_company(opportunity_id: str, dados: dict) -> dict:
             phone = str(contact.get("telefone") or "").strip()
             if not name or name.lower() in {"não informado", "nao informado"}: continue
             person = None
-            if email:
-                people_response = await client.get(f"{PIPERUN_BASE_URL}/persons", params={"company_id": int(company_id), "show": 200, "cursor": "", "with": "contactEmails,contactPhones"}, headers=headers)
-                if people_response.status_code < 400:
-                    people = people_response.json().get("data", [])
-                    if isinstance(people, list):
-                        person = next((row for row in people if email.lower() in {str(v).lower() for v in (row.get("contactEmails") or [])}), None)
+            people_response = await client.get(f"{PIPERUN_BASE_URL}/persons", params={"company_id": int(company_id), "show": 200, "cursor": "", "with": "contactEmails,contactPhones"}, headers=headers)
+            if people_response.status_code < 400:
+                people = people_response.json().get("data", [])
+                if isinstance(people, list):
+                    person = next((row for row in people if (email and email.lower() in {str(v).lower() for v in (row.get("contactEmails") or [])}) or (not email and str(row.get("name") or "").strip().lower() == name.lower())), None)
             if not person:
                 created_person = await client.post(f"{PIPERUN_BASE_URL}/persons", json={"name": name, "company_id": int(company_id), "contactEmails": [email] if email else [], "contactPhones": [phone] if phone else []}, headers={**headers, "content-type": "application/json"})
                 if created_person.status_code >= 400: raise RuntimeError(f"PipeRun recusou o cadastro do parceiro {role} (HTTP {created_person.status_code}).")
