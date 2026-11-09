@@ -844,6 +844,7 @@ def upsert_piperun_opportunities(items: list[dict[str, Any]]) -> dict[str, Any]:
             "titulo_oportunidade": deal.get("title") or deal.get("name") or "",
             "criado_em": deal.get("created_at") or "",
             "id_nota": item.get("nota_id") or "",
+            "owner_id": deal.get("owner_id") or "",
             **dados,
         }
         records.append({key: json.dumps(value, ensure_ascii=False, default=str) if isinstance(value, (dict, list)) else value for key, value in record.items()})

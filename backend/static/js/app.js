@@ -1840,14 +1840,15 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
     const records = items.map((item) => {
       const deal = item.oportunidade || {};
       const dados = item.dados || {};
-      return { crm_oportunidade_id: deal.id, titulo_oportunidade: deal.title || deal.name, criado_em: deal.created_at, nota_id: item.nota_id, ...dados };
+      return { crm_oportunidade_id: deal.id, titulo_oportunidade: deal.title || deal.name, criado_em: deal.created_at, nota_id: item.nota_id, owner_id: deal.owner_id || dados.owner_id || "", ...dados };
     });
     head.innerHTML = "<tr><th>ID da oportunidade</th><th>Oportunidade</th><th>Criada em</th><th>Status da nota</th></tr>";
     body.innerHTML = records.map((record) => {
       const status = record.nota_id ? "Dados extraídos" : "Sem nota de formulário";
       const statusClass = record.nota_id ? "is-success" : "is-muted";
+      const ownerAssigned = Boolean(record.owner_id);
       const item = items.find((candidate) => String(candidate?.oportunidade?.id || candidate?.crm_oportunidade_id || "") === String(record.crm_oportunidade_id)) || {};
-      return `<tr><td colspan="4"><details class="crm-opportunity-card"><summary class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status ${statusClass}">${status}</span></summary><div class="crm-opportunity-inline-details">${renderCrmFormFieldsHtml(item)}</div></details></td></tr>`;
+      return `<tr><td colspan="4"><details class="crm-opportunity-card"><summary class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status-group"><span class="crm-opportunity-status ${statusClass}">${status}</span><span class="crm-owner-status ${ownerAssigned ? "is-assigned" : "is-pending"}"><i aria-hidden="true">${ownerAssigned ? "✓" : "○"}</i>${ownerAssigned ? "Owner atribuído" : "Owner pendente"}</span></span></summary><div class="crm-opportunity-inline-details">${renderCrmFormFieldsHtml(item)}</div></details></td></tr>`;
     }).join("");
     details.innerHTML = "";
     state.textContent = endpoint === "/api/piperun-stored" ? "" : `${items.length} oportunidade(s) consultadas carregadas.`;
