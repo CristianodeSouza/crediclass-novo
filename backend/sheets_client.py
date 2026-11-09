@@ -874,6 +874,35 @@ def upsert_piperun_opportunities(items: list[dict[str, Any]]) -> dict[str, Any]:
     return {"appended": appended, "updated": updated, "sheet": tab_name}
 
 
+def read_piperun_opportunities() -> list[dict[str, Any]]:
+    """Lê o histórico da aba Oportunidades e devolve no formato do painel CRM."""
+    settings = get_settings()
+    values = get_service().spreadsheets().values().get(spreadsheetId=settings.google_sheets_id, range="'Oportunidades'!A:ZZ").execute().get("values", [])
+    if len(values) < 2:
+        return []
+    headers = [str(value).strip() for value in values[0]]
+    items = []
+    for row in values[1:]:
+        record = {header: row[index] if index < len(row) else "" for index, header in enumerate(headers) if header}
+        for key, value in list(record.items()):
+            if isinstance(value, str) and value[:1] in {"[", "{"}:
+                try:
+                    record[key] = json.loads(value)
+                except json.JSONDecodeError:
+                    pass
+        opportunity_id = str(record.pop("id_oportunidade", "")).strip()
+        if not opportunity_id:
+            continue
+        items.append({
+            "oportunidade": {"id": opportunity_id, "title": record.pop("titulo_oportunidade", ""), "created_at": record.pop("criado_em", "")},
+            "crm_oportunidade_id": opportunity_id,
+            "nota_id": record.pop("id_nota", "") or None,
+            "encontrado": bool(record),
+            "dados": record,
+        })
+    return items
+
+
 def update_grupo(grupo_id: str, payload: dict[str, Any]) -> dict[str, Any]:
     values = read_sheet_values()
     if not values:

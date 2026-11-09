@@ -582,7 +582,7 @@ function activateScreen(screenName) {
   if (screenName === "configuracoes") {
     loadConfiguracoes();
   }
-  if (screenName === "crm-piperun") resetPipeRunPreview();
+  if (screenName === "crm-piperun") { resetPipeRunPreview(); loadPipeRunPreview("/api/piperun-stored"); }
 }
 
 function hydrateInvestorAnalysisFromCache() {
@@ -1835,7 +1835,7 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
       const response = { ...item, crm_oportunidade_id: String(deal.id || item.crm_oportunidade_id || "") };
       return `<details class="crm-preview-opportunity"><summary><strong>ID ${safe(deal.id || "-")}</strong> — ${safe(deal.title || deal.name || "Sem título")}</summary><div class="crm-preview-opportunity-body">${renderCrmResponseHtml(response, `Dados extraídos — oportunidade ${deal.id || ""}`)}</div></details>`;
     }).join("");
-    state.textContent = `${items.length} oportunidade(s) criadas nos últimos 3 dias carregadas.`;
+    state.textContent = endpoint === "/api/piperun-stored" ? `${items.length} oportunidade(s) salvas no histórico carregadas.` : `${items.length} oportunidade(s) consultadas carregadas.`;
     wrap.classList.remove("d-none");
     details.classList.remove("d-none");
   } catch (error) { state.className = "table-state table-state-error"; state.textContent = error.message; }
