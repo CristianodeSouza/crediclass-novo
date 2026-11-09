@@ -347,10 +347,16 @@ DEFAULT_CONFIG = {
         "backup_automatico": False,
     },
     "piperun_owners": [
-        {"nome": "Bruna Torres", "owner_id": 2602, "credito_minimo": None, "credito_maximo": None},
-        {"nome": "Bruno Tavares", "owner_id": 2609, "credito_minimo": None, "credito_maximo": None},
+        {"nome": "Bruna Torres", "owner_id": 2602, "credito_minimo": None, "credito_maximo": None, "origens": ["https://formulario.crediclass.com.br/formulario-inicio-atendimento/"]},
+        {"nome": "Bruno Tavares", "owner_id": 2609, "credito_minimo": None, "credito_maximo": None, "origens": ["https://formulario.crediclass.com.br/formulario-inicio-atendimento/"]},
     ],
     "piperun_owner_distribution_enabled": False,
+    "piperun_scan_schedule": {
+        "days": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"],
+        "times": ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"],
+        "timezone": "America/Sao_Paulo",
+        "enabled": True,
+    },
     "notificacoes": {
         "alertar_sincronizacao": True,
         "alertar_historico_atualizado": True,
@@ -459,5 +465,18 @@ def update_configuracoes(payload: dict) -> dict:
         _settings["piperun_owners"] = payload["piperun_owners"]
     if "piperun_owner_distribution_enabled" in payload:
         _settings["piperun_owner_distribution_enabled"] = bool(payload["piperun_owner_distribution_enabled"])
+    if "piperun_scan_schedule" in payload and isinstance(payload["piperun_scan_schedule"], dict):
+        schedule = payload["piperun_scan_schedule"]
+        allowed_days = {"monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"}
+        days = [day for day in schedule.get("days", []) if day in allowed_days]
+        import re
+        times = sorted({time for time in schedule.get("times", []) if isinstance(time, str) and re.fullmatch(r"(?:[01]\d|2[0-3]):[0-5]\d", time)})
+        if days and times:
+            _settings["piperun_scan_schedule"] = {
+                "days": days,
+                "times": times,
+                "timezone": "America/Sao_Paulo",
+                "enabled": bool(schedule.get("enabled", True)),
+            }
     save_config()
     return {"success": True}

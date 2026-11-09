@@ -8212,9 +8212,20 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-person-warning { display: block; margin-top: 8px; color: #92400e; }
 .crm-owner-config { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #e2e8f0; }
 .crm-owner-list { display: grid; gap: 10px; }
-.crm-owner-row { display: grid; grid-template-columns: 1.3fr .8fr 1fr 1fr; gap: 12px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
+.crm-owner-row { display: grid; grid-template-columns: 1.2fr .7fr .9fr .9fr 1.5fr; gap: 12px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
 .crm-owner-row label { display: grid; gap: 5px; color: #475569; font-size: .78rem; font-weight: 700; }
 .crm-owner-row input { min-width: 0; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; }
+.crm-owner-origins input { min-height: 38px; }
 .crm-owner-actions { display: flex; align-items: center; gap: 16px; }
 .crm-owner-toggle { display: inline-flex; align-items: center; gap: 8px; color: #475569; font-size: .85rem; font-weight: 700; }
 .crm-owner-toggle input { width: 18px; height: 18px; accent-color: #ea580c; }
+.crm-scan-schedule { margin-top: 18px; padding: 16px; border: 1px solid #fed7aa; border-radius: 12px; background: #fffaf5; }
+.crm-scan-schedule-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.crm-scan-schedule-heading h3 { margin: 0; color: #334155; font-size: 1rem; }
+.crm-scan-schedule-heading p { margin: 4px 0 0; color: #64748b; font-size: .82rem; }
+.crm-scan-schedule-timezone { color: #9a3412; font-size: .78rem; font-weight: 700; white-space: nowrap; }
+.crm-scan-days, .crm-scan-times { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.crm-scan-days label { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid #fdba74; border-radius: 8px; background: #fff; color: #475569; font-size: .82rem; font-weight: 700; }
+.crm-scan-days input { accent-color: #ea580c; }
+.crm-scan-times label { display: grid; gap: 5px; min-width: 105px; color: #64748b; font-size: .75rem; font-weight: 700; }
+.crm-scan-times input { padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #334155; }

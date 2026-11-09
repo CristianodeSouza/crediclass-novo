@@ -1796,23 +1796,29 @@ function resetPipeRunPreview() {
   if (state && !document.getElementById("pipeRunPreviewBody")?.children.length) state.textContent = "Clique em “Carregar oportunidades” para consultar o PipeRun.";
 }
 
-function renderPipeRunOwners(owners = [], distributionEnabled = false) {
+function renderPipeRunOwners(owners = [], distributionEnabled = false, schedule = {}) {
   const container = document.getElementById("pipeRunOwnersList");
   if (!container) return;
   const toggle = document.getElementById("pipeRunOwnerDistributionToggle");
   if (toggle) toggle.checked = Boolean(distributionEnabled);
-  container.innerHTML = owners.map((owner, index) => `<div class="crm-owner-row"><label>Nome<input data-owner-field="nome" data-owner-index="${index}" value="${escapeHtml(owner.nome || "")}"></label><label>ID do owner<input data-owner-field="owner_id" data-owner-index="${index}" inputmode="numeric" value="${escapeHtml(owner.owner_id || "")}"></label><label>Mínimo do crédito<input data-owner-field="credito_minimo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_minimo ?? "")}"></label><label>Máximo do crédito<input data-owner-field="credito_maximo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_maximo ?? "")}"></label></div>`).join("");
+  const days = new Set(schedule.days || ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]);
+  document.querySelectorAll("[data-scan-day]").forEach((input) => { input.checked = days.has(input.dataset.scanDay); });
+  const times = schedule.times || ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
+  document.querySelectorAll("[data-scan-time]").forEach((input, index) => { input.value = times[index] || ""; });
+  container.innerHTML = owners.map((owner, index) => `<div class="crm-owner-row"><label>Nome<input data-owner-field="nome" data-owner-index="${index}" value="${escapeHtml(owner.nome || "")}"></label><label>ID do owner<input data-owner-field="owner_id" data-owner-index="${index}" inputmode="numeric" value="${escapeHtml(owner.owner_id || "")}"></label><label>Mínimo do crédito<input data-owner-field="credito_minimo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_minimo ?? "")}"></label><label>Máximo do crédito<input data-owner-field="credito_maximo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_maximo ?? "")}"></label><label class="crm-owner-origins">URLs de origem<input data-owner-field="origens" placeholder="Uma URL por linha" value="${escapeHtml((owner.origens || []).join("\n"))}"></label></div>`).join("");
 }
 
 async function loadPipeRunOwners() {
-  try { const config = await apiGet("/configuracoes"); renderPipeRunOwners(config.piperun_owners || [], config.piperun_owner_distribution_enabled); } catch (error) { console.warn("Owners PipeRun não carregados", error); }
+  try { const config = await apiGet("/configuracoes"); renderPipeRunOwners(config.piperun_owners || [], config.piperun_owner_distribution_enabled, config.piperun_scan_schedule); } catch (error) { console.warn("Owners PipeRun não carregados", error); }
 }
 
 async function savePipeRunOwners() {
   const rows = [...document.querySelectorAll(".crm-owner-row")];
-  const owners = rows.map((row) => Object.fromEntries([...row.querySelectorAll("[data-owner-field]")].map((input) => [input.dataset.ownerField, input.value.trim()]))).map((owner) => ({ ...owner, owner_id: Number(owner.owner_id), credito_minimo: owner.credito_minimo === "" ? null : Number(owner.credito_minimo), credito_maximo: owner.credito_maximo === "" ? null : Number(owner.credito_maximo) }));
-  await apiPut("/configuracoes", { piperun_owners: owners, piperun_owner_distribution_enabled: Boolean(document.getElementById("pipeRunOwnerDistributionToggle")?.checked) });
-  showToast("Owners PipeRun salvos.", "success");
+  const owners = rows.map((row) => Object.fromEntries([...row.querySelectorAll("[data-owner-field]")].map((input) => [input.dataset.ownerField, input.value.trim()]))).map((owner) => ({ ...owner, owner_id: Number(owner.owner_id), credito_minimo: owner.credito_minimo === "" ? null : Number(owner.credito_minimo), credito_maximo: owner.credito_maximo === "" ? null : Number(owner.credito_maximo), origens: String(owner.origens || "").split(/\r?\n|,/).map((url) => url.trim()).filter(Boolean) }));
+  const schedule = { days: [...document.querySelectorAll("[data-scan-day]:checked")].map((input) => input.dataset.scanDay), times: [...document.querySelectorAll("[data-scan-time]")].map((input) => input.value).filter(Boolean), enabled: true };
+  if (!schedule.days.length || !schedule.times.length) { showToast("Selecione ao menos um dia e um horário.", "warning"); return; }
+  await apiPut("/configuracoes", { piperun_owners: owners, piperun_owner_distribution_enabled: Boolean(document.getElementById("pipeRunOwnerDistributionToggle")?.checked), piperun_scan_schedule: schedule });
+  showToast("Owners e agenda PipeRun salvos.", "success");
 }
 
 async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
@@ -1856,10 +1862,13 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
       const companyOk = record.empresa_parceira_status === "ok";
       const partnersOk = record.parceiros_status === "ok";
       const companyName = record.empresa_parceira?.nome || "CNPJ não informado";
+      const companyCnpj = record.empresa_parceira?.cnpj || record.cnpj_parceiro || "CNPJ não informado";
       const partnerCount = Array.isArray(record.parceiros_atualizados) ? record.parceiros_atualizados.length : 0;
+      const partnerNames = Object.values(record.parceiros || {}).map((partner) => partner?.nome).filter(Boolean);
+      const partnerLabel = partnerNames.length ? partnerNames.join(", ") : `${partnerCount} parceiro(s) processado(s)`;
       const item = items.find((candidate) => String(candidate?.oportunidade?.id || candidate?.crm_oportunidade_id || "") === String(record.crm_oportunidade_id)) || {};
       const personId = item?.oportunidade?.person_id || "";
-      return `<tr><td colspan="4"><details class="crm-opportunity-card"><summary class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status-group"><span class="crm-opportunity-status ${statusClass}">${status}</span><span class="crm-owner-status ${ownerAssigned ? "is-assigned" : "is-pending"}"><i aria-hidden="true">${ownerAssigned ? "✓" : "○"}</i>${ownerAssigned ? "Owner atribuído" : "Owner pendente"}</span><span class="crm-person-status ${titularUpdated ? "is-assigned" : "is-pending"}" title="${safe(titularName)}"><i aria-hidden="true">T</i></span><span class="crm-person-status ${spouseUpdated ? "is-assigned" : "is-pending"}" title="${safe(spouseName)}"><i aria-hidden="true">C</i></span><span class="crm-person-status ${companyOk ? "is-assigned" : "is-pending"}" title="${safe(companyName)}"><i aria-hidden="true">CNPJ</i></span><span class="crm-person-status ${partnersOk ? "is-assigned" : "is-pending"}" title="${safe(`${partnerCount} parceiro(s) processado(s)`)}"><i aria-hidden="true">P</i></span><button type="button" class="crm-opportunity-refresh-btn" data-opportunity-id="${safe(record.crm_oportunidade_id)}" title="Reprocessar esta oportunidade" aria-label="Reprocessar oportunidade">↻</button></span></summary><div class="crm-opportunity-inline-details">${renderCrmFormFieldsHtml(item)}<button type="button" class="btn btn-outline-primary crm-update-person-btn" data-opportunity-id="${safe(record.crm_oportunidade_id)}" data-person-id="${safe(personId)}" ${personId ? "" : "disabled"}>Atualizar titular e cônjuge</button>${personId ? "" : "<small class=\"crm-person-warning\">person_id não encontrado nesta oportunidade.</small>"}</div></details></td></tr>`;
+      return `<tr><td colspan="4"><details class="crm-opportunity-card"><summary class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status-group"><span class="crm-opportunity-status ${statusClass}">${status}</span><span class="crm-owner-status ${ownerAssigned ? "is-assigned" : "is-pending"}"><i aria-hidden="true">${ownerAssigned ? "✓" : "○"}</i>${ownerAssigned ? "Owner atribuído" : "Owner pendente"}</span><span class="crm-person-status ${titularUpdated ? "is-assigned" : "is-pending"}" title="${safe(titularName)}"><i aria-hidden="true">T</i></span><span class="crm-person-status ${spouseUpdated ? "is-assigned" : "is-pending"}" title="${safe(spouseName)}"><i aria-hidden="true">C</i></span><span class="crm-person-status ${companyOk ? "is-assigned" : "is-pending"}" title="${safe(`${companyName} — CNPJ: ${companyCnpj}`)}"><i aria-hidden="true">CNPJ</i></span><span class="crm-person-status ${partnersOk ? "is-assigned" : "is-pending"}" title="${safe(partnerLabel)}"><i aria-hidden="true">P</i></span><button type="button" class="crm-opportunity-refresh-btn" data-opportunity-id="${safe(record.crm_oportunidade_id)}" title="Reprocessar esta oportunidade" aria-label="Reprocessar oportunidade">↻</button></span></summary><div class="crm-opportunity-inline-details">${renderCrmFormFieldsHtml(item)}<button type="button" class="btn btn-outline-primary crm-update-person-btn" data-opportunity-id="${safe(record.crm_oportunidade_id)}" data-person-id="${safe(personId)}" ${personId ? "" : "disabled"}>Atualizar titular e cônjuge</button>${personId ? "" : "<small class=\"crm-person-warning\">person_id não encontrado nesta oportunidade.</small>"}</div></details></td></tr>`;
     }).join("");
     details.innerHTML = "";
     state.textContent = "";
