@@ -1800,6 +1800,7 @@ async function loadPipeRunPreview() {
   const state = document.getElementById("pipeRunPreviewState");
   const wrap = document.getElementById("pipeRunPreviewTableWrap");
   const body = document.getElementById("pipeRunPreviewBody");
+  const head = document.getElementById("pipeRunPreviewHead");
   const details = document.getElementById("pipeRunPreviewDetails");
   state.className = "table-state";
   state.textContent = "Consultando oportunidades e notas...";
@@ -1814,15 +1815,16 @@ async function loadPipeRunPreview() {
     const safe = (value) => String(value ?? "-").replace(/[&<>\"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
     const items = Array.isArray(payload.items) ? payload.items : [];
     if (!items.length) throw new Error("Nenhuma oportunidade foi criada nos últimos 3 dias.");
-    const labels = { crm_oportunidade_id: "ID da oportunidade", nota_id: "ID da nota", nome: "Titular", email: "E-mail", celular: "Celular", cpf: "CPF", credito_desejado: "Crédito desejado", lance_proprio: "Lance máximo", parcela_desejada: "Parcela máxima", prazo_contemplacao: "Prazo de contemplação", renda_total: "Renda total", fgts: "FGTS", objetivo: "Objetivo" };
     const valueText = (value) => Array.isArray(value) || (value && typeof value === "object") ? JSON.stringify(value) : String(value ?? "");
-    body.innerHTML = items.map((item) => {
+    const records = items.map((item) => {
       const deal = item.oportunidade || {};
       const dados = item.dados || {};
-      const fields = { crm_oportunidade_id: deal.id, titulo_oportunidade: deal.title || deal.name, criado_em: deal.created_at, nota_id: item.nota_id, ...dados };
-      const rows = Object.entries(fields).filter(([, value]) => value !== null && value !== undefined && value !== "").map(([key, value]) => `<tr><td>${safe(labels[key] || key)}</td><td>${safe(valueText(value))}</td></tr>`).join("");
-      return `<tr><td colspan="2"><details class="crm-opportunity-row"><summary><strong>ID ${safe(deal.id || "-")}</strong><span>${safe(deal.title || deal.name || "Sem título")}</span><small>${safe(deal.created_at || "")}</small></summary><table class="crm-fields-table"><tbody>${rows}</tbody></table></details></td></tr>`;
-    }).join("");
+      return { crm_oportunidade_id: deal.id, titulo_oportunidade: deal.title || deal.name, criado_em: deal.created_at, nota_id: item.nota_id, ...dados };
+    });
+    const columns = ["crm_oportunidade_id", ...new Set(records.flatMap((record) => Object.keys(record)).filter((key) => key !== "crm_oportunidade_id"))];
+    const labels = { crm_oportunidade_id: "ID da oportunidade", titulo_oportunidade: "Título", criado_em: "Criada em", nota_id: "ID da nota" };
+    head.innerHTML = `<tr>${columns.map((key) => `<th>${safe(labels[key] || key)}</th>`).join("")}</tr>`;
+    body.innerHTML = records.map((record) => `<tr>${columns.map((key) => `<td data-label="${safe(labels[key] || key)}">${safe(valueText(record[key]))}</td>`).join("")}</tr>`).join("");
     details.innerHTML = "";
     state.textContent = `${items.length} oportunidade(s) criadas nos últimos 3 dias carregadas.`;
     wrap.classList.remove("d-none");
