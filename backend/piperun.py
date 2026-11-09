@@ -263,13 +263,13 @@ async def activate_custom_form_public_link(opportunity_id: str, form_id: str = P
     }
 
 
-async def fetch_opportunities_preview(limit: int = 25) -> list[dict]:
+async def fetch_opportunities_preview(limit: int = 25, created_at_start: str | None = None, created_at_end: str | None = None) -> list[dict]:
     """Carrega oportunidades criadas nos últimos três dias e suas notas de formulário."""
     token = os.getenv("PIPERUN_API_KEY", "").strip()
     if not token:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
     async with httpx.AsyncClient(timeout=20) as client:
-        created_at_start = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+        created_at_start = created_at_start or (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
         cursor = ""
         deals = []
         seen_cursors = set()
@@ -277,7 +277,7 @@ async def fetch_opportunities_preview(limit: int = 25) -> list[dict]:
             response = await client.get(
                 f"{PIPERUN_BASE_URL}/deals",
                 headers={"token": token, "accept": "application/json"},
-                params={"created_at_start": created_at_start, "deleted": "false", "show": 200, "cursor": cursor},
+                params={"created_at_start": created_at_start, "created_at_end": created_at_end or "", "deleted": "false", "show": 200, "cursor": cursor},
             )
             if response.status_code in (401, 403):
                 raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar oportunidades.")

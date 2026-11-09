@@ -1796,7 +1796,7 @@ function resetPipeRunPreview() {
   if (state && !document.getElementById("pipeRunPreviewBody")?.children.length) state.textContent = "Clique em “Carregar oportunidades” para consultar o PipeRun.";
 }
 
-async function loadPipeRunPreview() {
+async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
   const state = document.getElementById("pipeRunPreviewState");
   const wrap = document.getElementById("pipeRunPreviewTableWrap");
   const body = document.getElementById("pipeRunPreviewBody");
@@ -1809,7 +1809,7 @@ async function loadPipeRunPreview() {
   details.innerHTML = "";
   details.classList.add("d-none");
   try {
-    const response = await fetch("/api/piperun-preview", { credentials: "same-origin", cache: "no-store" });
+    const response = await fetch(endpoint, { credentials: "same-origin", cache: "no-store" });
     const payload = await response.json();
     if (!response.ok || payload.success === false) throw new Error(payload.error || "Não foi possível consultar o PipeRun.");
     const safe = (value) => String(value ?? "-").replace(/[&<>\"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
@@ -8481,6 +8481,18 @@ document.getElementById("clientProfileForm").addEventListener("input", (event) =
   updateClientProfileTotals();
 });
 document.getElementById("loadPipeRunPreviewBtn")?.addEventListener("click", loadPipeRunPreview);
+document.getElementById("queryPipeRunIdBtn")?.addEventListener("click", () => {
+  const id = document.getElementById("pipeRunOpportunityIdQuery")?.value.trim();
+  if (!id) return;
+  loadPipeRunPreview(`/api/piperun-search/${encodeURIComponent(id)}`);
+});
+document.getElementById("queryPipeRunRangeBtn")?.addEventListener("click", () => {
+  const start = document.getElementById("pipeRunDateStartQuery")?.value;
+  const end = document.getElementById("pipeRunDateEndQuery")?.value;
+  if (!start || !end) return;
+  const params = new URLSearchParams({ created_at_start: start.replace("T", " ") + ":00", created_at_end: end.replace("T", " ") + ":00" });
+  loadPipeRunPreview(`/api/piperun-preview?${params.toString()}`);
+});
 
 document.getElementById("clientProfileForm").addEventListener("change", () => {
   invalidateInvestorAnalysisForProfileChange();

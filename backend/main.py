@@ -15,6 +15,7 @@ import copy
 import re
 import secrets
 import shutil
+import httpx
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import date
 from html import escape as html_escape
@@ -463,14 +464,34 @@ async def buscar_oportunidade_piperun(opportunity_id: str):
 
 
 @app.get("/api/piperun-preview")
-async def preview_oportunidades_piperun(limit: int = Query(default=0, ge=0, le=10000)):
+async def preview_oportunidades_piperun(limit: int = Query(default=0, ge=0, le=10000), created_at_start: str | None = None, created_at_end: str | None = None):
     """Leitura temporária de todas as oportunidades recentes e suas notas, sem escrita."""
     try:
-        items = await fetch_opportunities_preview(limit)
+        items = await fetch_opportunities_preview(limit, created_at_start, created_at_end)
         sheets = upsert_piperun_opportunities(items)
         return {"success": True, "temporary": False, "items": items, "sheets": sheets}
     except Exception as error:
         logger.exception("Falha ao carregar preview PipeRun")
+        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
+
+
+@app.get("/api/piperun-search/{opportunity_id}")
+async def buscar_oportunidade_para_crm(opportunity_id: str):
+    try:
+        token = os.getenv("PIPERUN_API_KEY", "").strip()
+        if not opportunity_id.isdigit() or not token:
+            raise ValueError("Informe um ID numérico de oportunidade.")
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.get(f"https://api.pipe.run/v1/deals/{opportunity_id}", headers={"token": token, "accept": "application/json"})
+        if response.status_code >= 400:
+            raise RuntimeError(f"PipeRun recusou a oportunidade (HTTP {response.status_code}).")
+        payload = response.json()
+        deal = payload.get("data", payload)
+        item = {"oportunidade": deal, **await fetch_opportunity_notes(opportunity_id)}
+        sheets = upsert_piperun_opportunities([item])
+        return {"success": True, "items": [item], "sheets": sheets}
+    except Exception as error:
+        logger.exception("Falha na consulta manual PipeRun %s", opportunity_id)
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
 
 
