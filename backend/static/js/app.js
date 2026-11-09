@@ -1859,7 +1859,7 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
       const partnerCount = Array.isArray(record.parceiros_atualizados) ? record.parceiros_atualizados.length : 0;
       const item = items.find((candidate) => String(candidate?.oportunidade?.id || candidate?.crm_oportunidade_id || "") === String(record.crm_oportunidade_id)) || {};
       const personId = item?.oportunidade?.person_id || "";
-      return `<tr><td colspan="4"><details class="crm-opportunity-card"><summary class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status-group"><span class="crm-opportunity-status ${statusClass}">${status}</span><span class="crm-owner-status ${ownerAssigned ? "is-assigned" : "is-pending"}"><i aria-hidden="true">${ownerAssigned ? "✓" : "○"}</i>${ownerAssigned ? "Owner atribuído" : "Owner pendente"}</span><span class="crm-person-status ${titularUpdated ? "is-assigned" : "is-pending"}" title="${safe(titularName)}"><i aria-hidden="true">T</i></span><span class="crm-person-status ${spouseUpdated ? "is-assigned" : "is-pending"}" title="${safe(spouseName)}"><i aria-hidden="true">C</i></span><span class="crm-person-status ${companyOk ? "is-assigned" : "is-pending"}" title="${safe(companyName)}"><i aria-hidden="true">CNPJ</i></span><span class="crm-person-status ${partnersOk ? "is-assigned" : "is-pending"}" title="${safe(`${partnerCount} parceiro(s) processado(s)`)}"><i aria-hidden="true">P</i></span></span></summary><div class="crm-opportunity-inline-details">${renderCrmFormFieldsHtml(item)}<button type="button" class="btn btn-outline-primary crm-update-person-btn" data-opportunity-id="${safe(record.crm_oportunidade_id)}" data-person-id="${safe(personId)}" ${personId ? "" : "disabled"}>Atualizar titular e cônjuge</button>${personId ? "" : "<small class=\"crm-person-warning\">person_id não encontrado nesta oportunidade.</small>"}</div></details></td></tr>`;
+      return `<tr><td colspan="4"><details class="crm-opportunity-card"><summary class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status-group"><span class="crm-opportunity-status ${statusClass}">${status}</span><span class="crm-owner-status ${ownerAssigned ? "is-assigned" : "is-pending"}"><i aria-hidden="true">${ownerAssigned ? "✓" : "○"}</i>${ownerAssigned ? "Owner atribuído" : "Owner pendente"}</span><span class="crm-person-status ${titularUpdated ? "is-assigned" : "is-pending"}" title="${safe(titularName)}"><i aria-hidden="true">T</i></span><span class="crm-person-status ${spouseUpdated ? "is-assigned" : "is-pending"}" title="${safe(spouseName)}"><i aria-hidden="true">C</i></span><span class="crm-person-status ${companyOk ? "is-assigned" : "is-pending"}" title="${safe(companyName)}"><i aria-hidden="true">CNPJ</i></span><span class="crm-person-status ${partnersOk ? "is-assigned" : "is-pending"}" title="${safe(`${partnerCount} parceiro(s) processado(s)`)}"><i aria-hidden="true">P</i></span><button type="button" class="crm-opportunity-refresh-btn" data-opportunity-id="${safe(record.crm_oportunidade_id)}" title="Reprocessar esta oportunidade" aria-label="Reprocessar oportunidade">↻</button></span></summary><div class="crm-opportunity-inline-details">${renderCrmFormFieldsHtml(item)}<button type="button" class="btn btn-outline-primary crm-update-person-btn" data-opportunity-id="${safe(record.crm_oportunidade_id)}" data-person-id="${safe(personId)}" ${personId ? "" : "disabled"}>Atualizar titular e cônjuge</button>${personId ? "" : "<small class=\"crm-person-warning\">person_id não encontrado nesta oportunidade.</small>"}</div></details></td></tr>`;
     }).join("");
     details.innerHTML = "";
     state.textContent = "";
@@ -8522,6 +8522,21 @@ document.getElementById("clientProfileForm").addEventListener("input", (event) =
 });
 document.getElementById("loadPipeRunPreviewBtn")?.addEventListener("click", () => loadPipeRunPreview());
 document.addEventListener("click", async (event) => {
+  const refreshButton = event.target.closest(".crm-opportunity-refresh-btn");
+  if (refreshButton) {
+    event.preventDefault();
+    event.stopPropagation();
+    refreshButton.disabled = true;
+    try {
+      const response = await fetch(`/api/piperun-search/${encodeURIComponent(refreshButton.dataset.opportunityId)}`, { credentials: "same-origin", cache: "no-store" });
+      const payload = await response.json();
+      if (!response.ok || !payload.success) throw new Error(payload.error || "Não foi possível reprocessar a oportunidade.");
+      showToast("Oportunidade reprocessada pela PipeRun.", "success");
+      await loadPipeRunPreview("/api/piperun-stored");
+    } catch (error) { showToast(error.message, "warning"); }
+    finally { refreshButton.disabled = false; }
+    return;
+  }
   const button = event.target.closest(".crm-update-person-btn");
   if (!button || button.disabled) return;
   event.preventDefault();
