@@ -1808,18 +1808,23 @@ async function loadPipeRunPreview() {
   details.innerHTML = "";
   details.classList.add("d-none");
   try {
-    const response = await fetch("/api/piperun/63416847", { credentials: "same-origin", cache: "no-store" });
+    const response = await fetch("/api/piperun-preview", { credentials: "same-origin", cache: "no-store" });
     const payload = await response.json();
     if (!response.ok || payload.success === false) throw new Error(payload.error || "Não foi possível consultar o PipeRun.");
-    const dados = payload.dados || {};
     const safe = (value) => String(value ?? "-").replace(/[&<>\"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    if (!items.length) throw new Error("Nenhuma oportunidade foi criada nos últimos 3 dias.");
+    body.innerHTML = items.map((item) => {
+      const deal = item.oportunidade || {};
+      return `<tr><td>Oportunidade ${safe(deal.id || "-")}</td><td>${safe(deal.title || deal.name || "Sem título")} · criada em ${safe(deal.created_at || "-")}</td></tr>`;
+    }).join("");
+    const dados = items[0].dados || {};
     const labels = { crm_oportunidade_id: "ID da oportunidade", nota_id: "ID da nota", nome: "Titular", email: "E-mail", celular: "Celular", cpf: "CPF", credito_desejado: "Crédito desejado", lance_proprio: "Lance máximo", parcela_desejada: "Parcela máxima", prazo_contemplacao: "Prazo de contemplação", renda_total: "Renda total", fgts: "FGTS", objetivo: "Objetivo" };
     const rawFields = dados.campos_formulario || {};
     const fields = { crm_oportunidade_id: payload.crm_oportunidade_id, nota_id: payload.nota_id, ...dados, ...Object.fromEntries(Object.entries(rawFields).map(([key, value]) => [`form_${key}`, Array.isArray(value) ? value.join(" | ") : value])) };
-    body.innerHTML = Object.entries(fields).filter(([, value]) => value !== null && value !== undefined && value !== "" && !Array.isArray(value) && typeof value !== "object").map(([key, value]) => `<tr><td>${safe(labels[key] || key)}</td><td>${safe(value)}</td></tr>`).join("");
     const people = Array.isArray(dados.titulares) ? dados.titulares : [];
     details.innerHTML = `<div class="crm-preview-section"><h3>Status da extração</h3><p><span class="crm-preview-status ${payload.encontrado ? "is-ok" : "is-warning"}">${payload.encontrado ? "Nota encontrada e extraída" : "Nota não encontrada"}</span></p></div>${people.length ? `<div class="crm-preview-section"><h3>Pessoas identificadas</h3><div class="crm-people-grid">${people.map((person, index) => `<article><strong>${safe(index === 0 ? "Titular" : `Pessoa ${index + 1}`)}</strong><span>${safe(person.nome || "Não informado")}</span><small>Renda: ${safe(person.renda || "0")} · FGTS: ${safe(person.lance_fgts || "0")}</small></article>`).join("")}</div></div>` : ""}${payload.nota_texto ? `<details class="crm-original-note"><summary>Visualizar nota original</summary><pre>${safe(payload.nota_texto)}</pre></details>` : ""}`;
-    state.textContent = "Oportunidade 63416847 carregada temporariamente para teste.";
+    state.textContent = `${items.length} oportunidade(s) criadas nos últimos 3 dias carregadas.`;
     wrap.classList.remove("d-none");
     details.classList.remove("d-none");
   } catch (error) { state.className = "table-state table-state-error"; state.textContent = error.message; }

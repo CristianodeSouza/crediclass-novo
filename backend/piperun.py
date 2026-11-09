@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from datetime import datetime, timedelta
 from html import unescape
 
 import httpx
@@ -234,24 +235,39 @@ async def activate_custom_form_public_link(opportunity_id: str, form_id: str = P
 
 
 async def fetch_opportunities_preview(limit: int = 25) -> list[dict]:
-    """Carrega uma amostra temporária de oportunidades e suas notas de formulário."""
+    """Carrega oportunidades criadas nos últimos três dias e suas notas de formulário."""
     token = os.getenv("PIPERUN_API_KEY", "").strip()
     if not token:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
     async with httpx.AsyncClient(timeout=20) as client:
-        response = await client.get(
-            f"{PIPERUN_BASE_URL}/deals",
-            headers={"token": token, "accept": "application/json"},
-        )
-        if response.status_code in (401, 403):
-            raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar oportunidades.")
-        if response.status_code >= 400:
-            raise RuntimeError(f"PipeRun recusou as oportunidades (HTTP {response.status_code}).")
-        payload = response.json()
-        deals = payload.get("data", [])
-        if isinstance(deals, dict):
-            deals = deals.get("data", [])
-        deals = deals[: max(1, min(int(limit), 50))]
+        created_at_start = (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+        cursor = ""
+        deals = []
+        seen_cursors = set()
+        while True:
+            response = await client.get(
+                f"{PIPERUN_BASE_URL}/deals",
+                headers={"token": token, "accept": "application/json"},
+                params={"created_at_start": created_at_start, "deleted": "false", "show": 200, "cursor": cursor},
+            )
+            if response.status_code in (401, 403):
+                raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar oportunidades.")
+            if response.status_code >= 400:
+                raise RuntimeError(f"PipeRun recusou as oportunidades (HTTP {response.status_code}).")
+            payload = response.json()
+            page = payload.get("data", [])
+            if isinstance(page, dict):
+                page = page.get("data", [])
+            deals.extend(page if isinstance(page, list) else [])
+            next_cursor = payload.get("next_cursor") or payload.get("cursor")
+            if isinstance(payload.get("meta"), dict):
+                next_cursor = next_cursor or payload["meta"].get("next_cursor") or payload["meta"].get("cursor")
+            if not next_cursor or next_cursor in seen_cursors or next_cursor == cursor:
+                break
+            seen_cursors.add(next_cursor)
+            cursor = next_cursor
+        if limit:
+            deals = deals[: max(1, int(limit))]
 
     result = []
     for deal in deals:

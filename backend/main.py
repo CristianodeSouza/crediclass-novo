@@ -464,8 +464,8 @@ async def buscar_oportunidade_piperun(opportunity_id: str):
 
 
 @app.get("/api/piperun-preview")
-async def preview_oportunidades_piperun(limit: int = Query(default=25, ge=1, le=50)):
-    """MVP: leitura temporária de oportunidades e notas, sem escrita no PipeRun."""
+async def preview_oportunidades_piperun(limit: int = Query(default=0, ge=0, le=10000)):
+    """Leitura temporária de todas as oportunidades recentes e suas notas, sem escrita."""
     try:
         return {"success": True, "temporary": True, "items": await fetch_opportunities_preview(limit)}
     except Exception as error:
