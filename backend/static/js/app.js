@@ -8480,7 +8480,7 @@ document.getElementById("clientProfileForm").addEventListener("input", (event) =
   if (!event.target.matches("[data-holder-field]")) return;
   updateClientProfileTotals();
 });
-document.getElementById("loadPipeRunPreviewBtn")?.addEventListener("click", loadPipeRunPreview);
+document.getElementById("loadPipeRunPreviewBtn")?.addEventListener("click", () => loadPipeRunPreview());
 document.getElementById("queryPipeRunIdBtn")?.addEventListener("click", () => {
   const id = document.getElementById("pipeRunOpportunityIdQuery")?.value.trim();
   if (!id) return;
