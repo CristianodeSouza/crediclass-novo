@@ -1812,6 +1812,20 @@ async function loadPipeRunOwners() {
   try { const config = await apiGet("/configuracoes"); renderPipeRunOwners(config.piperun_owners || [], config.piperun_owner_distribution_enabled, config.piperun_scan_schedule); } catch (error) { console.warn("Owners PipeRun não carregados", error); }
 }
 
+async function addPipeRunOwnerFromCrm() {
+  const input = document.getElementById("newPipeRunOwnerId");
+  const ownerId = input?.value.trim();
+  if (!ownerId) { showToast("Informe o ID do owner no PipeRun.", "warning"); return; }
+  const owner = await apiGet(`/piperun-owner/${encodeURIComponent(ownerId)}`);
+  const config = await apiGet("/configuracoes");
+  const owners = Array.isArray(config.piperun_owners) ? config.piperun_owners : [];
+  if (owners.some((item) => String(item.owner_id) === String(owner.owner_id))) { showToast("Esse owner já está cadastrado.", "warning"); return; }
+  owners.push({ nome: owner.nome, owner_id: owner.owner_id, credito_minimo: null, credito_maximo: null, origens: [] });
+  renderPipeRunOwners(owners, config.piperun_owner_distribution_enabled, config.piperun_scan_schedule);
+  input.value = "";
+  showToast(`${owner.nome} encontrado no PipeRun. Salve para confirmar.`, "success");
+}
+
 async function savePipeRunOwners() {
   const rows = [...document.querySelectorAll(".crm-owner-row")];
   const owners = rows.map((row) => Object.fromEntries([...row.querySelectorAll("[data-owner-field]")].map((input) => [input.dataset.ownerField, input.value.trim()]))).map((owner) => ({ ...owner, owner_id: Number(owner.owner_id), credito_minimo: owner.credito_minimo === "" ? null : Number(owner.credito_minimo), credito_maximo: owner.credito_maximo === "" ? null : Number(owner.credito_maximo), origens: String(owner.origens || "").split(/\r?\n|,/).map((url) => url.trim()).filter(Boolean) }));
@@ -8612,6 +8626,7 @@ document.querySelector(".preliminary-toggle")?.addEventListener("click", (event)
 });
 
 document.getElementById("saveClientProfileBtn").addEventListener("click", () => saveClientProfile());
+document.getElementById("addPipeRunOwnerBtn")?.addEventListener("click", () => addPipeRunOwnerFromCrm().catch((error) => showToast(error.message || "Não foi possível consultar o owner no PipeRun.", "danger")));
 document.getElementById("clearClientProfileBtn").addEventListener("click", resetClientProfile);
 document.getElementById("importClientProfileCrmBtn").addEventListener("click", () => {
   importClientProfileFromCrm().catch(() => {

@@ -16,6 +16,33 @@ PIPERUN_CUSTOM_FORM_ID = "44495"
 PIPERUN_CACHE_DB = Path(os.getenv("PIPERUN_CACHE_DB", str(Path(__file__).resolve().parent / "data" / "piperun.sqlite3")))
 
 
+async def fetch_piperun_owner(owner_id: str) -> dict:
+    owner_id = str(owner_id).strip()
+    if not owner_id.isdigit():
+        raise ValueError("O ID do owner deve ser numérico.")
+    token = os.getenv("PIPERUN_API_KEY", "").strip()
+    if not token:
+        raise RuntimeError("Integração PipeRun não configurada no ambiente.")
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.get(f"{PIPERUN_BASE_URL}/users/{owner_id}", headers={"token": token, "accept": "application/json"})
+    if response.status_code == 404:
+        raise LookupError("Owner não encontrado no PipeRun.")
+    if response.status_code in (401, 403):
+        raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar usuários.")
+    if response.status_code >= 400:
+        raise RuntimeError(f"PipeRun recusou a consulta do owner (HTTP {response.status_code}).")
+    payload = response.json()
+    data = payload.get("data") if isinstance(payload, dict) else None
+    if isinstance(data, list):
+        data = data[0] if data else None
+    if not isinstance(data, dict):
+        raise LookupError("PipeRun não retornou um usuário para esse ID.")
+    name = data.get("name") or data.get("full_name") or data.get("username") or data.get("email")
+    if not name:
+        raise LookupError("O usuário retornado pelo PipeRun não possui nome.")
+    return {"owner_id": int(owner_id), "nome": str(name).strip(), "response": data}
+
+
 def _init_opportunity_cache() -> None:
     PIPERUN_CACHE_DB.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(PIPERUN_CACHE_DB) as db:
