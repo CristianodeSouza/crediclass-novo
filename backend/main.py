@@ -38,7 +38,7 @@ from .consortium_viability_engine import MOTOR_VERSION, RULES_VERSION, analyze_c
 from .credit_options import available_credit_options
 from .defasagem import build_defasagem_report, update_defasagem_task
 from . import financial_studies
-from .piperun import activate_custom_form_public_link, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes, update_opportunity_person
+from .piperun import activate_custom_form_public_link, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes, sync_spouse, update_opportunity_person
 from .models import GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, motor360_cache_status, read_piperun_opportunities, update_grupo, update_historico_mensal, update_historico_mensal_lote, upsert_piperun_opportunities, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
 from .viabilidade import compatible_tipo_bem
@@ -484,13 +484,30 @@ async def atualizar_titular_piperun(opportunity_id: str, person_id: str = Query(
     try:
         preview = await fetch_opportunity_notes(opportunity_id)
         result = await update_opportunity_person(opportunity_id, person_id, preview.get("dados") or {})
-        upsert_piperun_opportunities([{**preview, "oportunidade": {"id": opportunity_id, "person_id": person_id}, "titular_atualizado": True}])
-        return {"success": True, "result": result}
+        spouse = await sync_spouse(opportunity_id, preview.get("dados") or {})
+        stored = {**preview, "oportunidade": {"id": opportunity_id, "person_id": person_id}, **result, **spouse}
+        upsert_piperun_opportunities([stored])
+        return {"success": True, "result": stored}
     except (ValueError, RuntimeError) as error:
         return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
     except Exception as error:
         logger.exception("Falha ao atualizar titular PipeRun %s", opportunity_id)
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
+
+
+async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
+    """Complete people only while importing fresh PipeRun results; stored history remains read-only."""
+    synced = []
+    for item in items:
+        deal = item.get("oportunidade") or {}
+        person_id = str(deal.get("person_id") or "").strip()
+        opportunity_id = str(deal.get("id") or item.get("crm_oportunidade_id") or "").strip()
+        if person_id.isdigit() and opportunity_id.isdigit() and item.get("encontrado"):
+            titular = await update_opportunity_person(opportunity_id, person_id, item.get("dados") or {})
+            spouse = await sync_spouse(opportunity_id, item.get("dados") or {})
+            item = {**item, **titular, **spouse}
+        synced.append(item)
+    return synced
     except Exception as error:
         logger.exception("Falha ao importar oportunidade PipeRun %s", opportunity_id)
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
@@ -500,7 +517,8 @@ async def atualizar_titular_piperun(opportunity_id: str, person_id: str = Query(
 async def preview_oportunidades_piperun(limit: int = Query(default=0, ge=0, le=10000), created_at_start: str | None = None, created_at_end: str | None = None):
     """Leitura temporária de todas as oportunidades recentes e suas notas, sem escrita."""
     try:
-        items = annotate_owner_eligibility(await fetch_opportunities_preview(limit, created_at_start, created_at_end))
+        items = await _sync_people_for_new_items(await fetch_opportunities_preview(limit, created_at_start, created_at_end))
+        items = annotate_owner_eligibility(items)
         sheets = upsert_piperun_opportunities(items)
         return {"success": True, "temporary": False, "items": items, "sheets": sheets}
     except Exception as error:
@@ -530,6 +548,7 @@ async def buscar_oportunidade_para_crm(opportunity_id: str):
         payload = response.json()
         deal = payload.get("data", payload)
         item = {"oportunidade": deal, **await fetch_opportunity_notes(opportunity_id)}
+        item = (await _sync_people_for_new_items([item]))[0]
         sheets = upsert_piperun_opportunities([item])
         return {"success": True, "items": annotate_owner_eligibility([item]), "sheets": sheets}
     except Exception as error:

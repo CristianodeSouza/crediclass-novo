@@ -192,19 +192,31 @@ async def update_opportunity_person(opportunity_id: str, person_id: str, dados: 
     if not token:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
     cpf = re.sub(r"\D", "", str(dados.get("cpf") or ""))
-    body = {
-        "contactEmails": [str(dados.get("email") or "").strip()] if dados.get("email") else [],
-        "contactPhones": [str(dados.get("celular") or "").strip()] if dados.get("celular") else [],
-        "name": str(dados.get("nome") or "").strip(),
-        "cpf": cpf,
-    }
-    if dados.get("data_nascimento"):
-        body["birth_day"] = str(dados["data_nascimento"]).strip()
-    if dados.get("profissao"):
-        body["job_title"] = str(dados["profissao"]).strip()
-    if dados.get("observacoes"):
-        body["observation"] = str(dados["observacoes"]).strip()
     async with httpx.AsyncClient(timeout=20) as client:
+        headers = {"token": token, "accept": "application/json"}
+        current_response = await client.get(
+            f"{PIPERUN_BASE_URL}/persons/{person_id}",
+            params={"with": "contactEmails,contactPhones"},
+            headers=headers,
+        )
+        if current_response.status_code == 404:
+            raise RuntimeError("Titular não encontrado no PipeRun.")
+        if current_response.status_code >= 400:
+            raise RuntimeError(f"PipeRun recusou a consulta do titular (HTTP {current_response.status_code}).")
+        current = current_response.json().get("data", current_response.json())
+        current_emails = {str(value).strip().lower() for value in (current.get("contactEmails") or current.get("contact_emails") or []) if value}
+        current_phones = {re.sub(r"\D", "", str(value)) for value in (current.get("contactPhones") or current.get("contact_phones") or []) if value}
+        body = {}
+        incoming = str(dados.get("nome") or "").strip()
+        if incoming and not str(current.get("name") or "").strip(): body["name"] = incoming
+        email = str(dados.get("email") or "").strip()
+        if email and email.lower() not in current_emails: body["contactEmails"] = [*(current.get("contactEmails") or []), email]
+        phone = str(dados.get("celular") or "").strip()
+        if phone and re.sub(r"\D", "", phone) not in current_phones: body["contactPhones"] = [*(current.get("contactPhones") or []), phone]
+        if cpf and not re.sub(r"\D", "", str(current.get("cpf") or "")): body["cpf"] = cpf
+        if dados.get("data_nascimento") and not current.get("birth_day"): body["birth_day"] = str(dados["data_nascimento"]).strip()
+        if dados.get("profissao") and not current.get("job_title"): body["job_title"] = str(dados["profissao"]).strip()
+        if dados.get("observacoes") and not current.get("observation"): body["observation"] = str(dados["observacoes"]).strip()
         custom_response = await client.get(f"{PIPERUN_BASE_URL}/customFields", params={"belongs": 2, "show": 200, "cursor": ""}, headers={"token": token, "accept": "application/json"})
         custom_fields = custom_response.json().get("data", []) if custom_response.status_code < 400 else []
         if isinstance(custom_fields, dict):
@@ -219,12 +231,78 @@ async def update_opportunity_person(opportunity_id: str, person_id: str, dados: 
                 custom_values.append({"id": field["id"], "value": value if isinstance(value, (str, int, float, bool)) else json.dumps(value, ensure_ascii=False)})
         if custom_values:
             body["custom_fields"] = custom_values
-        response = await client.put(f"{PIPERUN_BASE_URL}/persons/{person_id}", json=body, headers={"token": token, "accept": "application/json", "content-type": "application/json"})
+        if not body:
+            return {"opportunity_id": opportunity_id, "person_id": person_id, "updated_fields": [], "custom_fields_count": 0, "titular_atualizado": True, "already_complete": True, "response": current}
+        response = await client.put(f"{PIPERUN_BASE_URL}/persons/{person_id}", json=body, headers={**headers, "content-type": "application/json"})
     if response.status_code in (401, 403):
         raise RuntimeError("Token PipeRun inválido ou sem permissão para atualizar a pessoa.")
     if response.status_code >= 400:
         raise RuntimeError(f"PipeRun recusou a atualização do titular (HTTP {response.status_code}).")
-    return {"opportunity_id": opportunity_id, "person_id": person_id, "updated_fields": [key for key, value in body.items() if value], "custom_fields_count": len(body.get("custom_fields", [])), "titular_atualizado": True, "response": response.json()}
+    return {"opportunity_id": opportunity_id, "person_id": person_id, "updated_fields": [key for key, value in body.items() if value], "custom_fields_count": len(body.get("custom_fields", [])), "titular_atualizado": True, "already_complete": False, "response": response.json()}
+
+
+def _spouse_data(dados: dict) -> dict:
+    """Extract only the explicit spouse block; never treat a second titular as a spouse."""
+    fields = dados.get("campos_formulario") or {}
+    values = {}
+    for label, raw in fields.items():
+        normalized = re.sub(r"[^a-z0-9]", "", str(label).lower())
+        if not any(marker in normalized for marker in ("conjuge", "convivente")):
+            continue
+        value = raw[-1] if isinstance(raw, list) and raw else raw
+        if value not in (None, "", "Adicionar valor"):
+            values[normalized] = value
+    def find(*names):
+        for name in names:
+            for key, value in values.items():
+                if name in key:
+                    return value
+        return ""
+    return {
+        "nome": find("nomecompleto", "nome"),
+        "email": find("email", "emaildoconjuge"),
+        "celular": find("celular", "telefone"),
+        "cpf": re.sub(r"\D", "", str(find("cpf") or "")),
+        "data_nascimento": _date_input(str(find("datadenascimento", "nascimento") or "")),
+    }
+
+
+async def sync_spouse(opportunity_id: str, dados: dict) -> dict:
+    spouse = _spouse_data(dados)
+    if not spouse["nome"] and not spouse["cpf"] and not spouse["email"]:
+        return {"conjuge_atualizado": False, "conjuge_status": "nao_informado"}
+    token = os.getenv("PIPERUN_API_KEY", "").strip()
+    headers = {"token": token, "accept": "application/json"}
+    async with httpx.AsyncClient(timeout=20) as client:
+        person = None
+        if spouse["cpf"]:
+            lookup = await client.get(f"{PIPERUN_BASE_URL}/persons", params={"cpf": spouse["cpf"], "with": "contactEmails,contactPhones", "show": 10}, headers=headers)
+            if lookup.status_code < 400:
+                rows = lookup.json().get("data", [])
+                person = rows[0] if isinstance(rows, list) and rows else None
+        if person and person.get("id"):
+            spouse_id = str(person["id"])
+            current = await client.get(f"{PIPERUN_BASE_URL}/persons/{spouse_id}", params={"with": "contactEmails,contactPhones"}, headers=headers)
+            current_data = current.json().get("data", current.json()) if current.status_code < 400 else person
+            update = {}
+            if spouse["nome"] and not current_data.get("name"): update["name"] = spouse["nome"]
+            if spouse["email"] and not (current_data.get("contactEmails") or []): update["contactEmails"] = [spouse["email"]]
+            if spouse["celular"] and not (current_data.get("contactPhones") or []): update["contactPhones"] = [spouse["celular"]]
+            if spouse["cpf"] and not current_data.get("cpf"): update["cpf"] = spouse["cpf"]
+            if spouse["data_nascimento"] and not current_data.get("birth_day"): update["birth_day"] = spouse["data_nascimento"]
+            if update: await client.put(f"{PIPERUN_BASE_URL}/persons/{spouse_id}", json=update, headers={**headers, "content-type": "application/json"})
+        else:
+            payload = {"name": spouse["nome"], "cpf": spouse["cpf"]}
+            if spouse["email"]: payload["contactEmails"] = [spouse["email"]]
+            if spouse["celular"]: payload["contactPhones"] = [spouse["celular"]]
+            if spouse["data_nascimento"]: payload["birth_day"] = spouse["data_nascimento"]
+            created = await client.post(f"{PIPERUN_BASE_URL}/persons", json=payload, headers={**headers, "content-type": "application/json"})
+            if created.status_code >= 400: raise RuntimeError(f"PipeRun recusou o cadastro do cônjuge (HTTP {created.status_code}).")
+            spouse_id = str((created.json().get("data") or {}).get("id") or "")
+        if not spouse_id.isdigit(): raise RuntimeError("PipeRun não retornou o ID do cônjuge.")
+        link = await client.put(f"{PIPERUN_BASE_URL}/deals/{opportunity_id}/persons/{spouse_id}", headers=headers)
+        if link.status_code >= 400 and link.status_code != 409: raise RuntimeError(f"PipeRun recusou o vínculo do cônjuge (HTTP {link.status_code}).")
+    return {"conjuge_atualizado": True, "conjuge_id": spouse_id, "nome_conjuge": spouse["nome"], "conjuge_status": "ok"}
 
 
 async def create_opportunity_note(opportunity_id: str, text: str) -> dict:
