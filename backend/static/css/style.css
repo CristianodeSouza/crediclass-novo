@@ -8202,6 +8202,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-form-only .crm-response-table { margin: 0; width: 100%; }
 .crm-form-only .crm-response-table th:first-child { width: 40%; }
 .crm-empty-fields { margin: 0; padding: 18px; color: #64748b; }
+.crm-update-person-btn { margin-top: 16px; }
+.crm-person-warning { display: block; margin-top: 8px; color: #92400e; }
 .crm-owner-config { margin-bottom: 22px; padding-bottom: 18px; border-bottom: 1px solid #e2e8f0; }
 .crm-owner-list { display: grid; gap: 10px; }
 .crm-owner-row { display: grid; grid-template-columns: 1.3fr .8fr 1fr 1fr; gap: 12px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }

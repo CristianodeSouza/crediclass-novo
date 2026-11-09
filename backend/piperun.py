@@ -183,6 +183,30 @@ async def fetch_opportunity_notes(opportunity_id: str) -> dict:
     }
 
 
+async def update_opportunity_person(opportunity_id: str, person_id: str, dados: dict) -> dict:
+    opportunity_id = str(opportunity_id).strip()
+    person_id = str(person_id).strip()
+    token = os.getenv("PIPERUN_API_KEY", "").strip()
+    if not opportunity_id.isdigit() or not person_id.isdigit():
+        raise ValueError("O ID da oportunidade e o person_id devem ser numéricos.")
+    if not token:
+        raise RuntimeError("Integração PipeRun não configurada no ambiente.")
+    cpf = re.sub(r"\D", "", str(dados.get("cpf") or ""))
+    body = {
+        "contactEmails": [str(dados.get("email") or "").strip()] if dados.get("email") else [],
+        "contactPhones": [str(dados.get("celular") or "").strip()] if dados.get("celular") else [],
+        "name": str(dados.get("nome") or "").strip(),
+        "cpf": cpf,
+    }
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.put(f"{PIPERUN_BASE_URL}/persons/{person_id}", json=body, headers={"token": token, "accept": "application/json", "content-type": "application/json"})
+    if response.status_code in (401, 403):
+        raise RuntimeError("Token PipeRun inválido ou sem permissão para atualizar a pessoa.")
+    if response.status_code >= 400:
+        raise RuntimeError(f"PipeRun recusou a atualização do titular (HTTP {response.status_code}).")
+    return {"opportunity_id": opportunity_id, "person_id": person_id, "updated_fields": [key for key, value in body.items() if value], "response": response.json()}
+
+
 async def create_opportunity_note(opportunity_id: str, text: str) -> dict:
     """Create a plain-text note linked to a PipeRun opportunity."""
     opportunity_id = str(opportunity_id).strip()

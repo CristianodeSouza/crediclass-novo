@@ -38,7 +38,7 @@ from .consortium_viability_engine import MOTOR_VERSION, RULES_VERSION, analyze_c
 from .credit_options import available_credit_options
 from .defasagem import build_defasagem_report, update_defasagem_task
 from . import financial_studies
-from .piperun import activate_custom_form_public_link, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes
+from .piperun import activate_custom_form_public_link, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes, update_opportunity_person
 from .models import GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, motor360_cache_status, read_piperun_opportunities, update_grupo, update_historico_mensal, update_historico_mensal_lote, upsert_piperun_opportunities, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
 from .viabilidade import compatible_tipo_bem
@@ -472,6 +472,18 @@ async def buscar_oportunidade_piperun(opportunity_id: str):
     except LookupError as error:
         return JSONResponse(status_code=404, content={"success": False, "error": str(error)})
     except RuntimeError as error:
+        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
+
+
+@app.post("/api/piperun/{opportunity_id}/titular")
+async def atualizar_titular_piperun(opportunity_id: str, person_id: str = Query(...)):
+    try:
+        preview = await fetch_opportunity_notes(opportunity_id)
+        return {"success": True, "result": await update_opportunity_person(opportunity_id, person_id, preview.get("dados") or {})}
+    except (ValueError, RuntimeError) as error:
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
+    except Exception as error:
+        logger.exception("Falha ao atualizar titular PipeRun %s", opportunity_id)
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
     except Exception as error:
         logger.exception("Falha ao importar oportunidade PipeRun %s", opportunity_id)

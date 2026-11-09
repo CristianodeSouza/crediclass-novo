@@ -1848,7 +1848,8 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
       const statusClass = record.nota_id ? "is-success" : "is-muted";
       const ownerAssigned = Boolean(record.owner_id);
       const item = items.find((candidate) => String(candidate?.oportunidade?.id || candidate?.crm_oportunidade_id || "") === String(record.crm_oportunidade_id)) || {};
-      return `<tr><td colspan="4"><details class="crm-opportunity-card"><summary class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status-group"><span class="crm-opportunity-status ${statusClass}">${status}</span><span class="crm-owner-status ${ownerAssigned ? "is-assigned" : "is-pending"}"><i aria-hidden="true">${ownerAssigned ? "✓" : "○"}</i>${ownerAssigned ? "Owner atribuído" : "Owner pendente"}</span></span></summary><div class="crm-opportunity-inline-details">${renderCrmFormFieldsHtml(item)}</div></details></td></tr>`;
+      const personId = item?.oportunidade?.person_id || "";
+      return `<tr><td colspan="4"><details class="crm-opportunity-card"><summary class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status-group"><span class="crm-opportunity-status ${statusClass}">${status}</span><span class="crm-owner-status ${ownerAssigned ? "is-assigned" : "is-pending"}"><i aria-hidden="true">${ownerAssigned ? "✓" : "○"}</i>${ownerAssigned ? "Owner atribuído" : "Owner pendente"}</span></span></summary><div class="crm-opportunity-inline-details">${renderCrmFormFieldsHtml(item)}<button type="button" class="btn btn-outline-primary crm-update-person-btn" data-opportunity-id="${safe(record.crm_oportunidade_id)}" data-person-id="${safe(personId)}" ${personId ? "" : "disabled"}>Atualizar dados do titular</button>${personId ? "" : "<small class=\"crm-person-warning\">person_id não encontrado nesta oportunidade.</small>"}</div></details></td></tr>`;
     }).join("");
     details.innerHTML = "";
     state.textContent = "";
@@ -8510,6 +8511,20 @@ document.getElementById("clientProfileForm").addEventListener("input", (event) =
   updateClientProfileTotals();
 });
 document.getElementById("loadPipeRunPreviewBtn")?.addEventListener("click", () => loadPipeRunPreview());
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest(".crm-update-person-btn");
+  if (!button || button.disabled) return;
+  event.preventDefault();
+  event.stopPropagation();
+  button.disabled = true;
+  try {
+    const response = await fetch(`/api/piperun/${encodeURIComponent(button.dataset.opportunityId)}/titular?person_id=${encodeURIComponent(button.dataset.personId)}`, { method: "POST", credentials: "same-origin" });
+    const payload = await response.json();
+    if (!response.ok || !payload.success) throw new Error(payload.error || "Não foi possível atualizar o titular.");
+    showToast("Dados do titular atualizados no PipeRun.", "success");
+  } catch (error) { showToast(error.message, "warning"); }
+  finally { button.disabled = false; }
+});
 document.getElementById("savePipeRunOwnersBtn")?.addEventListener("click", savePipeRunOwners);
 document.getElementById("queryPipeRunIdBtn")?.addEventListener("click", () => {
   const id = document.getElementById("pipeRunOpportunityIdQuery")?.value.trim();
