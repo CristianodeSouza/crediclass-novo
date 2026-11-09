@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import os
 import re
+import json
+import sqlite3
+from pathlib import Path
 from datetime import datetime, timedelta
 from html import unescape
 
@@ -10,6 +13,32 @@ import httpx
 
 PIPERUN_BASE_URL = "https://api.pipe.run/v1"
 PIPERUN_CUSTOM_FORM_ID = "44495"
+PIPERUN_CACHE_DB = Path(os.getenv("PIPERUN_CACHE_DB", str(Path(__file__).resolve().parent / "data" / "piperun.sqlite3")))
+
+
+def _init_opportunity_cache() -> None:
+    PIPERUN_CACHE_DB.parent.mkdir(parents=True, exist_ok=True)
+    with sqlite3.connect(PIPERUN_CACHE_DB) as db:
+        db.execute("CREATE TABLE IF NOT EXISTS piperun_opportunities (deal_id TEXT PRIMARY KEY, payload TEXT NOT NULL, updated_at TEXT NOT NULL)")
+        db.commit()
+
+
+def _cached_opportunities() -> list[dict]:
+    _init_opportunity_cache()
+    with sqlite3.connect(PIPERUN_CACHE_DB) as db:
+        rows = db.execute("SELECT payload FROM piperun_opportunities ORDER BY updated_at DESC").fetchall()
+    return [json.loads(row[0]) for row in rows]
+
+
+def _save_cached_opportunity(item: dict) -> None:
+    deal = item.get("oportunidade") or {}
+    deal_id = str(deal.get("id") or "").strip()
+    if not deal_id:
+        return
+    _init_opportunity_cache()
+    with sqlite3.connect(PIPERUN_CACHE_DB) as db:
+        db.execute("INSERT INTO piperun_opportunities (deal_id, payload, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(deal_id) DO UPDATE SET payload=excluded.payload, updated_at=excluded.updated_at", (deal_id, json.dumps(item, ensure_ascii=False, default=str)))
+        db.commit()
 
 FIELD_MAP = {
     "Nome Completo": "nome",
@@ -282,5 +311,8 @@ async def fetch_opportunities_preview(limit: int = 25) -> list[dict]:
     for deal in deals:
         deal_id = str(deal.get("id") or "").strip()
         if deal_id.isdigit():
-            result.append({"oportunidade": deal, **await fetch_opportunity_notes(deal_id)})
-    return result
+            item = {"oportunidade": deal, **await fetch_opportunity_notes(deal_id)}
+            _save_cached_opportunity(item)
+            result.append(item)
+    cached = _cached_opportunities()
+    return cached if not limit else cached[: max(1, int(limit))]
