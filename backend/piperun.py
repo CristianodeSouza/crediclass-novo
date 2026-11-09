@@ -43,6 +43,33 @@ async def fetch_piperun_owner(owner_id: str) -> dict:
     return {"owner_id": int(owner_id), "nome": str(name).strip(), "response": data}
 
 
+async def fetch_piperun_users() -> list[dict]:
+    token = os.getenv("PIPERUN_API_KEY", "").strip()
+    if not token:
+        raise RuntimeError("Integração PipeRun não configurada no ambiente.")
+    users: list[dict] = []
+    cursor = ""
+    async with httpx.AsyncClient(timeout=20) as client:
+        while True:
+            response = await client.get(f"{PIPERUN_BASE_URL}/users", headers={"token": token, "accept": "application/json"}, params={"show": 200, "cursor": cursor, "active": "active"})
+            if response.status_code in (401, 403):
+                raise RuntimeError("Token PipeRun inválido ou sem permissão para listar usuários.")
+            if response.status_code >= 400:
+                raise RuntimeError(f"PipeRun recusou a lista de usuários (HTTP {response.status_code}).")
+            payload = response.json()
+            data = payload.get("data") if isinstance(payload, dict) else []
+            if isinstance(data, list):
+                for user in data:
+                    if isinstance(user, dict) and user.get("id") and (user.get("name") or user.get("full_name")):
+                        users.append({"owner_id": int(user["id"]), "nome": str(user.get("name") or user.get("full_name")).strip()})
+            meta = payload.get("meta") if isinstance(payload, dict) else {}
+            next_cursor = str((meta or {}).get("cursor", {}).get("next") or "")
+            if not next_cursor or next_cursor == cursor:
+                break
+            cursor = next_cursor
+    return users
+
+
 def _init_opportunity_cache() -> None:
     PIPERUN_CACHE_DB.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(PIPERUN_CACHE_DB) as db:

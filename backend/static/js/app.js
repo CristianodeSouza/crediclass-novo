@@ -1796,27 +1796,31 @@ function resetPipeRunPreview() {
   if (state && !document.getElementById("pipeRunPreviewBody")?.children.length) state.textContent = "Clique em “Carregar oportunidades” para consultar o PipeRun.";
 }
 
+let pipeRunUsers = [];
 function renderPipeRunOwners(owners = [], distributionEnabled = false, schedule = {}) {
   const container = document.getElementById("pipeRunOwnersList");
   if (!container) return;
   const toggle = document.getElementById("pipeRunOwnerDistributionToggle");
   if (toggle) toggle.checked = Boolean(distributionEnabled);
+  const userOptions = pipeRunUsers.map((user) => `<option value="${escapeHtml(user.owner_id)}">${escapeHtml(user.nome)} (ID ${escapeHtml(user.owner_id)})</option>`).join("");
   const days = new Set(schedule.days || ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]);
   document.querySelectorAll("[data-scan-day]").forEach((input) => { input.checked = days.has(input.dataset.scanDay); });
   const times = schedule.times || ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
   document.querySelectorAll("[data-scan-time]").forEach((input, index) => { input.value = times[index] || ""; });
-  container.innerHTML = owners.map((owner, index) => `<div class="crm-owner-row"><label>Nome<input data-owner-field="nome" data-owner-index="${index}" value="${escapeHtml(owner.nome || "")}"></label><label>ID do owner<input data-owner-field="owner_id" data-owner-index="${index}" inputmode="numeric" value="${escapeHtml(owner.owner_id || "")}"></label><label>Mínimo do crédito<input data-owner-field="credito_minimo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_minimo ?? "")}"></label><label>Máximo do crédito<input data-owner-field="credito_maximo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_maximo ?? "")}"></label><label class="crm-owner-origins">URLs de origem<input data-owner-field="origens" placeholder="Uma URL por linha" value="${escapeHtml((owner.origens || []).join("\n"))}"></label></div>`).join("");
+  container.innerHTML = owners.map((owner, index) => `<div class="crm-owner-row"><label>Nome<input data-owner-field="nome" data-owner-index="${index}" value="${escapeHtml(owner.nome || "")}" readonly></label><label>ID do owner<select data-owner-field="owner_id" data-owner-index="${index}"><option value="${escapeHtml(owner.owner_id || "")}">${escapeHtml(owner.nome || "Usuário atual")} (ID ${escapeHtml(owner.owner_id || "")})</option>${userOptions}</select></label><label>Mínimo do crédito<input data-owner-field="credito_minimo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_minimo ?? "")}"></label><label>Máximo do crédito<input data-owner-field="credito_maximo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_maximo ?? "")}"></label><label class="crm-owner-origins">URLs de origem<input data-owner-field="origens" placeholder="Uma URL por linha" value="${escapeHtml((owner.origens || []).join("\n"))}"></label></div>`).join("");
+  const addSelect = document.getElementById("newPipeRunOwnerSelect");
+  if (addSelect) addSelect.innerHTML = `<option value="">Selecione um usuário do CRM</option>${userOptions}`;
 }
 
 async function loadPipeRunOwners() {
-  try { const config = await apiGet("/configuracoes"); renderPipeRunOwners(config.piperun_owners || [], config.piperun_owner_distribution_enabled, config.piperun_scan_schedule); } catch (error) { console.warn("Owners PipeRun não carregados", error); }
+  try { const [config, users] = await Promise.all([apiGet("/configuracoes"), apiGet("/piperun-owners")]); pipeRunUsers = users.items || []; renderPipeRunOwners(config.piperun_owners || [], config.piperun_owner_distribution_enabled, config.piperun_scan_schedule); } catch (error) { console.warn("Owners PipeRun não carregados", error); }
 }
 
 async function addPipeRunOwnerFromCrm() {
-  const input = document.getElementById("newPipeRunOwnerId");
+  const input = document.getElementById("newPipeRunOwnerSelect");
   const ownerId = input?.value.trim();
   if (!ownerId) { showToast("Informe o ID do owner no PipeRun.", "warning"); return; }
-  const owner = await apiGet(`/piperun-owner/${encodeURIComponent(ownerId)}`);
+  const owner = pipeRunUsers.find((item) => String(item.owner_id) === String(ownerId)) || await apiGet(`/piperun-owner/${encodeURIComponent(ownerId)}`);
   const config = await apiGet("/configuracoes");
   const owners = Array.isArray(config.piperun_owners) ? config.piperun_owners : [];
   if (owners.some((item) => String(item.owner_id) === String(owner.owner_id))) { showToast("Esse owner já está cadastrado.", "warning"); return; }
@@ -8627,6 +8631,7 @@ document.querySelector(".preliminary-toggle")?.addEventListener("click", (event)
 
 document.getElementById("saveClientProfileBtn").addEventListener("click", () => saveClientProfile());
 document.getElementById("addPipeRunOwnerBtn")?.addEventListener("click", () => addPipeRunOwnerFromCrm().catch((error) => showToast(error.message || "Não foi possível consultar o owner no PipeRun.", "danger")));
+document.getElementById("reloadPipeRunOwnersBtn")?.addEventListener("click", () => loadPipeRunOwners().then(() => showToast("Lista de usuários PipeRun atualizada.", "success")).catch((error) => showToast(error.message, "danger")));
 document.getElementById("clearClientProfileBtn").addEventListener("click", resetClientProfile);
 document.getElementById("importClientProfileCrmBtn").addEventListener("click", () => {
   importClientProfileFromCrm().catch(() => {

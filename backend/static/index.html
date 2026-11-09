@@ -9,8 +9,8 @@
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400..700&display=swap" rel="stylesheet">
     <link href="/static/vendor/bootstrap.min.css?v=5.3.3" rel="stylesheet">
-    <meta name="crediclass-build" content="4.0.415">
-    <link href="/static/css/style.css?v=4.0.415" rel="stylesheet">
+    <meta name="crediclass-build" content="4.0.416">
+    <link href="/static/css/style.css?v=4.0.416" rel="stylesheet">
   </head>
   <body class="auth-pending">
     <section id="loginScreen" class="login-screen" aria-label="Login Crediclass">
@@ -52,7 +52,7 @@
         <button id="activationSubmitBtn" class="btn login-submit" type="submit">Ativar acesso</button>
       </form>
       <div class="login-footer" aria-label="Informações do sistema">
-        <span>Versão do Sistema: <strong id="loginSystemVersionLabel">4.0.415</strong></span>
+        <span>Versão do Sistema: <strong id="loginSystemVersionLabel">4.0.416</strong></span>
         <span>Ambiente: <strong id="loginEnvironmentLabel">production</strong></span>
       </div>
     </section>
@@ -883,7 +883,7 @@
             <div class="crm-owner-config">
               <div class="table-toolbar"><div><h2>Owners PipeRun</h2><p>Defina quem recebe cada oportunidade conforme o crédito desejado.</p></div><div class="crm-owner-actions"><label class="crm-owner-toggle"><input id="pipeRunOwnerDistributionToggle" type="checkbox"><span>Ativar distribuição automática</span></label><button id="savePipeRunOwnersBtn" class="btn btn-outline-primary" type="button">Salvar owners</button></div></div>
               <div id="pipeRunOwnersList" class="crm-owner-list"></div>
-              <div class="crm-owner-add"><label>ID do novo owner PipeRun<input id="newPipeRunOwnerId" inputmode="numeric" placeholder="Ex.: 2602"></label><button id="addPipeRunOwnerBtn" class="btn btn-outline-primary" type="button">Consultar e adicionar owner</button></div>
+              <div class="crm-owner-add"><label>Novo owner PipeRun<select id="newPipeRunOwnerSelect"><option value="">Selecione um usuário do CRM</option></select></label><button id="addPipeRunOwnerBtn" class="btn btn-outline-primary" type="button">Adicionar owner selecionado</button><button id="reloadPipeRunOwnersBtn" class="btn btn-outline-secondary" type="button">Atualizar lista</button></div>
               <div class="crm-scan-schedule">
                 <div class="crm-scan-schedule-heading"><div><h3>Agenda de varredura automática</h3><p>A consulta será executada nos dias e horários selecionados.</p></div><span class="crm-scan-schedule-timezone">Fuso: Brasília</span></div>
                 <div class="crm-scan-days" role="group" aria-label="Dias da varredura">
@@ -1153,9 +1153,9 @@
 
     <script src="/static/vendor/bootstrap.bundle.min.js?v=5.3.3"></script>
     <script src="/static/vendor/chart.umd.min.js?v=4.4.3"></script>
-    <script src="/static/js/api.js?v=4.0.415"></script>
-    <script src="/static/js/shared-study.js?v=4.0.415"></script>
-    <script src="/static/js/app.js?v=4.0.415"></script>
+    <script src="/static/js/api.js?v=4.0.416"></script>
+    <script src="/static/js/shared-study.js?v=4.0.416"></script>
+    <script src="/static/js/app.js?v=4.0.416"></script>
   </body>
 </html>
 
