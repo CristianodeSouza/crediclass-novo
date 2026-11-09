@@ -1829,13 +1829,10 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
     body.innerHTML = records.map((record) => {
       const status = record.nota_id ? "Dados extraídos" : "Sem nota de formulário";
       const statusClass = record.nota_id ? "is-success" : "is-muted";
-      return `<tr><td colspan="4"><div class="crm-opportunity-card"><div class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status ${statusClass}">${status}</span></div></div></td></tr>`;
+      const item = items.find((candidate) => String(candidate?.oportunidade?.id || candidate?.crm_oportunidade_id || "") === String(record.crm_oportunidade_id)) || {};
+      return `<tr><td colspan="4"><details class="crm-opportunity-card"><summary class="crm-opportunity-summary"><span class="crm-opportunity-id">${safe(record.crm_oportunidade_id)}</span><span class="crm-opportunity-title">${safe(record.titulo_oportunidade || "Sem título")}</span><span class="crm-opportunity-date">${safe(record.criado_em || "—")}</span><span class="crm-opportunity-status ${statusClass}">${status}</span></summary><div class="crm-opportunity-inline-details">${renderCrmFormFieldsHtml(item)}</div></details></td></tr>`;
     }).join("");
-    details.innerHTML = items.map((item) => {
-      const deal = item.oportunidade || {};
-      const response = { ...item, crm_oportunidade_id: String(deal.id || item.crm_oportunidade_id || "") };
-      return `<details class="crm-preview-opportunity"><summary><strong>ID ${safe(deal.id || "-")}</strong> — ${safe(deal.title || deal.name || "Sem título")}</summary><div class="crm-preview-opportunity-body">${renderCrmFormFieldsHtml(response)}</div></details>`;
-    }).join("");
+    details.innerHTML = "";
     state.textContent = endpoint === "/api/piperun-stored" ? `${items.length} oportunidade(s) salvas no histórico carregadas.` : `${items.length} oportunidade(s) consultadas carregadas.`;
     wrap.classList.remove("d-none");
     details.classList.remove("d-none");

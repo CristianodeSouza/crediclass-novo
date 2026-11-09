@@ -8180,6 +8180,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-preview-table th:nth-child(4), .crm-preview-table td:nth-child(4) { width: 22%; }
 .crm-opportunity-card { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; overflow: hidden; }
 .crm-opportunity-summary { display: grid; grid-template-columns: 20% 34% 24% 22%; gap: 0; align-items: center; padding: 16px 14px; }
+.crm-opportunity-summary::marker { color: #c2410c; }
+.crm-opportunity-summary { list-style-position: inside; }
 .crm-opportunity-summary:hover { background: #fff7ed; }
 .crm-opportunity-id { color: #c2410c; font-weight: 800; }
 .crm-opportunity-title { color: #1e293b; font-weight: 700; }
@@ -8187,6 +8189,8 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-opportunity-status { justify-self: start; padding: 5px 10px; border-radius: 999px; font-size: .78rem; font-weight: 700; }
 .crm-opportunity-status.is-success { color: #166534; background: #dcfce7; }
 .crm-opportunity-status.is-muted { color: #64748b; background: #f1f5f9; }
+.crm-opportunity-card[open] .crm-opportunity-summary { background: #fff7ed; border-bottom: 1px solid #fed7aa; }
+.crm-opportunity-inline-details { padding: 0 14px 14px; }
 .crm-form-only { margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff; }
 .crm-form-only-header { display: flex; justify-content: space-between; align-items: center; padding: 13px 16px; background: #f8fafc; color: #334155; font-weight: 800; }
 .crm-form-only-header small { color: #64748b; font-weight: 600; }
