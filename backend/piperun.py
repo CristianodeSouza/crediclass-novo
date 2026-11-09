@@ -262,6 +262,10 @@ async def fetch_opportunities_preview(limit: int = 25) -> list[dict]:
             next_cursor = payload.get("next_cursor") or payload.get("cursor")
             if isinstance(payload.get("meta"), dict):
                 next_cursor = next_cursor or payload["meta"].get("next_cursor") or payload["meta"].get("cursor")
+            if isinstance(next_cursor, dict):
+                next_cursor = next_cursor.get("next_cursor") or next_cursor.get("cursor") or next_cursor.get("value")
+            if next_cursor is not None:
+                next_cursor = str(next_cursor)
             if not next_cursor or next_cursor in seen_cursors or next_cursor == cursor:
                 break
             seen_cursors.add(next_cursor)

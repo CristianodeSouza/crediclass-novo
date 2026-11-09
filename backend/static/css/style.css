@@ -8158,3 +8158,17 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-part2-table-wrap { display: block !important; }
   .financial-study-part2-mobile { display: none !important; }
 }
+.crm-opportunity-row summary {
+  display: grid;
+  grid-template-columns: minmax(130px, 0.35fr) minmax(180px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  cursor: pointer;
+  list-style-position: inside;
+  padding: 12px 10px;
+}
+
+.crm-opportunity-row summary small { color: #6b7280; }
+.crm-opportunity-row[open] summary { background: #fff4eb; border-bottom: 1px solid #f2d2bd; }
+.crm-fields-table { width: 100%; margin-top: 8px; }
+.crm-fields-table td:first-child { width: 34%; font-weight: 600; color: #475569; }

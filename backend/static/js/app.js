@@ -1814,16 +1814,16 @@ async function loadPipeRunPreview() {
     const safe = (value) => String(value ?? "-").replace(/[&<>\"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
     const items = Array.isArray(payload.items) ? payload.items : [];
     if (!items.length) throw new Error("Nenhuma oportunidade foi criada nos últimos 3 dias.");
+    const labels = { crm_oportunidade_id: "ID da oportunidade", nota_id: "ID da nota", nome: "Titular", email: "E-mail", celular: "Celular", cpf: "CPF", credito_desejado: "Crédito desejado", lance_proprio: "Lance máximo", parcela_desejada: "Parcela máxima", prazo_contemplacao: "Prazo de contemplação", renda_total: "Renda total", fgts: "FGTS", objetivo: "Objetivo" };
+    const valueText = (value) => Array.isArray(value) || (value && typeof value === "object") ? JSON.stringify(value) : String(value ?? "");
     body.innerHTML = items.map((item) => {
       const deal = item.oportunidade || {};
-      return `<tr><td>Oportunidade ${safe(deal.id || "-")}</td><td>${safe(deal.title || deal.name || "Sem título")} · criada em ${safe(deal.created_at || "-")}</td></tr>`;
+      const dados = item.dados || {};
+      const fields = { crm_oportunidade_id: deal.id, titulo_oportunidade: deal.title || deal.name, criado_em: deal.created_at, nota_id: item.nota_id, ...dados };
+      const rows = Object.entries(fields).filter(([, value]) => value !== null && value !== undefined && value !== "").map(([key, value]) => `<tr><td>${safe(labels[key] || key)}</td><td>${safe(valueText(value))}</td></tr>`).join("");
+      return `<tr><td colspan="2"><details class="crm-opportunity-row"><summary><strong>ID ${safe(deal.id || "-")}</strong><span>${safe(deal.title || deal.name || "Sem título")}</span><small>${safe(deal.created_at || "")}</small></summary><table class="crm-fields-table"><tbody>${rows}</tbody></table></details></td></tr>`;
     }).join("");
-    const dados = items[0].dados || {};
-    const labels = { crm_oportunidade_id: "ID da oportunidade", nota_id: "ID da nota", nome: "Titular", email: "E-mail", celular: "Celular", cpf: "CPF", credito_desejado: "Crédito desejado", lance_proprio: "Lance máximo", parcela_desejada: "Parcela máxima", prazo_contemplacao: "Prazo de contemplação", renda_total: "Renda total", fgts: "FGTS", objetivo: "Objetivo" };
-    const rawFields = dados.campos_formulario || {};
-    const fields = { crm_oportunidade_id: payload.crm_oportunidade_id, nota_id: payload.nota_id, ...dados, ...Object.fromEntries(Object.entries(rawFields).map(([key, value]) => [`form_${key}`, Array.isArray(value) ? value.join(" | ") : value])) };
-    const people = Array.isArray(dados.titulares) ? dados.titulares : [];
-    details.innerHTML = `<div class="crm-preview-section"><h3>Status da extração</h3><p><span class="crm-preview-status ${payload.encontrado ? "is-ok" : "is-warning"}">${payload.encontrado ? "Nota encontrada e extraída" : "Nota não encontrada"}</span></p></div>${people.length ? `<div class="crm-preview-section"><h3>Pessoas identificadas</h3><div class="crm-people-grid">${people.map((person, index) => `<article><strong>${safe(index === 0 ? "Titular" : `Pessoa ${index + 1}`)}</strong><span>${safe(person.nome || "Não informado")}</span><small>Renda: ${safe(person.renda || "0")} · FGTS: ${safe(person.lance_fgts || "0")}</small></article>`).join("")}</div></div>` : ""}${payload.nota_texto ? `<details class="crm-original-note"><summary>Visualizar nota original</summary><pre>${safe(payload.nota_texto)}</pre></details>` : ""}`;
+    details.innerHTML = "";
     state.textContent = `${items.length} oportunidade(s) criadas nos últimos 3 dias carregadas.`;
     wrap.classList.remove("d-none");
     details.classList.remove("d-none");
