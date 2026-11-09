@@ -73,6 +73,21 @@ PDF_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="financial-s
 PDF_JOBS: dict[str, Future] = {}
 
 
+def annotate_owner_eligibility(items: list[dict]) -> list[dict]:
+    owners = get_configuracoes().get("piperun_owners", [])
+    ranges_configured = any(owner.get("credito_minimo") is not None or owner.get("credito_maximo") is not None for owner in owners if isinstance(owner, dict))
+    for item in items:
+        deal = item.get("oportunidade") or {}
+        owner_id = str(deal.get("owner_id") or "").strip()
+        if owner_id:
+            item["owner_distribution"] = {"eligible": False, "reason": "owner_already_assigned", "owner_id": owner_id}
+        elif not ranges_configured:
+            item["owner_distribution"] = {"eligible": False, "reason": "owner_ranges_not_configured", "owner_id": ""}
+        else:
+            item["owner_distribution"] = {"eligible": True, "reason": "eligible_without_owner", "owner_id": ""}
+    return items
+
+
 @app.get("/favicon.ico", include_in_schema=False)
 def favicon():
     """Serve the legacy browser favicon path using the maintained SVG asset."""
@@ -467,7 +482,7 @@ async def buscar_oportunidade_piperun(opportunity_id: str):
 async def preview_oportunidades_piperun(limit: int = Query(default=0, ge=0, le=10000), created_at_start: str | None = None, created_at_end: str | None = None):
     """Leitura temporária de todas as oportunidades recentes e suas notas, sem escrita."""
     try:
-        items = await fetch_opportunities_preview(limit, created_at_start, created_at_end)
+        items = annotate_owner_eligibility(await fetch_opportunities_preview(limit, created_at_start, created_at_end))
         sheets = upsert_piperun_opportunities(items)
         return {"success": True, "temporary": False, "items": items, "sheets": sheets}
     except Exception as error:
@@ -478,7 +493,7 @@ async def preview_oportunidades_piperun(limit: int = Query(default=0, ge=0, le=1
 @app.get("/api/piperun-stored")
 async def oportunidades_piperun_salvas():
     try:
-        return {"success": True, "stored": True, "items": read_piperun_opportunities()}
+        return {"success": True, "stored": True, "items": annotate_owner_eligibility(read_piperun_opportunities())}
     except Exception as error:
         logger.exception("Falha ao carregar oportunidades salvas")
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
@@ -498,7 +513,7 @@ async def buscar_oportunidade_para_crm(opportunity_id: str):
         deal = payload.get("data", payload)
         item = {"oportunidade": deal, **await fetch_opportunity_notes(opportunity_id)}
         sheets = upsert_piperun_opportunities([item])
-        return {"success": True, "items": [item], "sheets": sheets}
+        return {"success": True, "items": annotate_owner_eligibility([item]), "sheets": sheets}
     except Exception as error:
         logger.exception("Falha na consulta manual PipeRun %s", opportunity_id)
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
