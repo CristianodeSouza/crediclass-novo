@@ -508,9 +508,6 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
             item = {**item, **titular, **spouse}
         synced.append(item)
     return synced
-    except Exception as error:
-        logger.exception("Falha ao importar oportunidade PipeRun %s", opportunity_id)
-        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
 
 
 @app.get("/api/piperun-preview")
