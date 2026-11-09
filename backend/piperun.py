@@ -324,7 +324,7 @@ async def sync_partner_company(opportunity_id: str, dados: dict) -> dict:
     cnpj = re.sub(r"\D", "", str(company.get("cnpj") or ""))
     company_name = str(company.get("nome") or "").strip()
     if not cnpj:
-        return {"empresa_parceira_status": "nao_informada", "parceiros_atualizados": []}
+        return {"empresa_parceira_status": "nao_informada", "parceiros_status": "nao_informados", "parceiros_atualizados": []}
     token = os.getenv("PIPERUN_API_KEY", "").strip()
     headers = {"token": token, "accept": "application/json"}
     async with httpx.AsyncClient(timeout=20) as client:
@@ -364,7 +364,7 @@ async def sync_partner_company(opportunity_id: str, dados: dict) -> dict:
                 if link_deal.status_code >= 400 and link_deal.status_code != 409:
                     raise RuntimeError(f"PipeRun recusou o vínculo do parceiro {role} à oportunidade (HTTP {link_deal.status_code}).")
                 linked.append({"papel": role, "person_id": person_id, "nome": name})
-    return {"empresa_parceira_id": company_id, "empresa_parceira_status": "ok", "parceiros_atualizados": linked}
+    return {"empresa_parceira_id": company_id, "empresa_parceira_status": "ok", "parceiros_status": "ok" if linked else "nao_informados", "parceiros_atualizados": linked}
 
 
 async def create_opportunity_note(opportunity_id: str, text: str) -> dict:

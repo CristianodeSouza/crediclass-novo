@@ -8194,7 +8194,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-owner-status i { margin-right: 4px; font-style: normal; }
 .crm-owner-status.is-assigned { color: #166534; background: #dcfce7; }
 .crm-owner-status.is-pending { color: #92400e; background: #fef3c7; }
-.crm-person-status { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font-size: .75rem; font-weight: 800; cursor: help; }
+.crm-person-status { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 6px; border-radius: 50%; font-size: .75rem; font-weight: 800; cursor: help; }
 .crm-person-status.is-assigned { color: #166534; background: #dcfce7; }
 .crm-person-status.is-pending { color: #92400e; background: #fef3c7; }
 .crm-opportunity-card[open] .crm-opportunity-summary { background: #fff7ed; border-bottom: 1px solid #fed7aa; }
