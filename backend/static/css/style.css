@@ -8204,6 +8204,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-manual-query label { display: grid; gap: 5px; color: #475569; font-size: .82rem; font-weight: 700; }
 .crm-manual-query input { min-width: 150px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; }
 .crm-manual-query label:first-child input { min-width: 180px; }
+.crm-manual-query-load { margin-left: auto; }
 .crm-opportunity-card[open] .crm-opportunity-summary { background: #fff7ed; border-bottom: 1px solid #fed7aa; }
 .crm-opportunity-inline-details { padding: 0 14px 14px; }
 .crm-form-only { margin-top: 10px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background: #fff; }

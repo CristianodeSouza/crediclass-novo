@@ -892,16 +892,13 @@
                 <div class="crm-scan-times" role="group" aria-label="Horários da varredura"><label>Horário 1<input type="time" data-scan-time></label><label>Horário 2<input type="time" data-scan-time></label><label>Horário 3<input type="time" data-scan-time></label><label>Horário 4<input type="time" data-scan-time></label><label>Horário 5<input type="time" data-scan-time></label><label>Horário 6<input type="time" data-scan-time></label></div>
               </div>
             </div>
-            <div class="table-toolbar">
-              <div></div>
-              <button id="loadPipeRunPreviewBtn" class="btn btn-primary" type="button">Carregar oportunidades</button>
-            </div>
             <div class="crm-manual-query">
               <label>ID específico <input id="pipeRunOpportunityIdQuery" inputmode="numeric" placeholder="Ex.: 63416847"></label>
               <button id="queryPipeRunIdBtn" class="btn btn-outline-primary" type="button">Consultar ID</button>
               <label>De <input id="pipeRunDateStartQuery" type="datetime-local"></label>
               <label>Até <input id="pipeRunDateEndQuery" type="datetime-local"></label>
               <button id="queryPipeRunRangeBtn" class="btn btn-outline-primary" type="button">Consultar período</button>
+              <button id="loadPipeRunPreviewBtn" class="btn btn-primary crm-manual-query-load" type="button">Carregar oportunidades</button>
             </div>
             <div id="pipeRunPreviewState" class="table-state">Clique em “Carregar oportunidades” para consultar o PipeRun.</div>
             <div id="pipeRunPreviewTableWrap" class="table-wrap d-none">
