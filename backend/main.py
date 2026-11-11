@@ -77,7 +77,13 @@ def annotate_owner_eligibility(items: list[dict]) -> list[dict]:
     config = get_configuracoes()
     owners = config.get("piperun_owners", [])
     distribution_enabled = bool(config.get("piperun_owner_distribution_enabled"))
-    ranges_configured = any(owner.get("credito_minimo") is not None or owner.get("credito_maximo") is not None for owner in owners if isinstance(owner, dict))
+    def owner_range(owner):
+        minimum = owner.get("credito_minimo")
+        maximum = owner.get("credito_maximo")
+        if owner.get("owner_id") == 2602 and minimum is None and maximum is None: maximum = 999999
+        if owner.get("owner_id") == 2609 and minimum is None and maximum is None: minimum = 1000000
+        return minimum, maximum
+    ranges_configured = any(any(value is not None for value in owner_range(owner)) for owner in owners if isinstance(owner, dict))
     for item in items:
         deal = item.get("oportunidade") or {}
         dados = item.get("dados") or {}
@@ -563,7 +569,12 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
             if not deal.get("owner_id") and config.get("piperun_owner_distribution_enabled"):
                 pipeline_id = int(deal.get("pipeline_id") or 0)
                 credit = float(item.get("dados", {}).get("credito_desejado") or 0)
-                candidates = [owner for owner in config.get("piperun_owners", []) if pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()} and (owner.get("credito_minimo") is None or credit >= float(owner["credito_minimo"])) and (owner.get("credito_maximo") is None or credit <= float(owner["credito_maximo"]))]
+                def owner_range(owner):
+                    minimum, maximum = owner.get("credito_minimo"), owner.get("credito_maximo")
+                    if owner.get("owner_id") == 2602 and minimum is None and maximum is None: maximum = 999999
+                    if owner.get("owner_id") == 2609 and minimum is None and maximum is None: minimum = 1000000
+                    return minimum, maximum
+                candidates = [owner for owner in config.get("piperun_owners", []) if pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()} and (owner_range(owner)[0] is None or credit >= float(owner_range(owner)[0])) and (owner_range(owner)[1] is None or credit <= float(owner_range(owner)[1]))]
                 if len(candidates) == 1:
                     try:
                         owner_result = await assign_piperun_deal_owner(opportunity_id, int(candidates[0]["owner_id"]))
