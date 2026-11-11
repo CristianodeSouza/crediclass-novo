@@ -73,17 +73,56 @@ PDF_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="financial-s
 PDF_JOBS: dict[str, Future] = {}
 
 
+def _credit_value_from_note(item: dict) -> float:
+    """Return the credit requested in the form note, accepting BR currency formats."""
+    dados = item.get("dados") or {}
+    raw = dados.get("credito_desejado")
+    if raw in (None, ""):
+        raw_fields = dados.get("campos_formulario") or {}
+        values = raw_fields.get("Qual é o valor de carta de crédito?") or raw_fields.get("Qual é o valor de carta de crédito desejada?") or []
+        raw = values[-1] if isinstance(values, list) and values else raw
+    if isinstance(raw, (int, float)):
+        return float(raw)
+    text = str(raw or "").strip().lower().replace("r$", "").replace(" ", "")
+    multiplier = 1
+    if "milhão" in text or "milhoes" in text or "milhão" in text.replace("õ", "o"):
+        multiplier = 1_000_000
+        text = text.replace("milhões", "").replace("milhoes", "").replace("milhão", "").replace("milhao", "")
+    elif text.endswith("mil"):
+        multiplier = 1_000
+        text = text[:-3]
+    if "." in text and "," in text:
+        text = text.replace(".", "").replace(",", ".")
+    elif "," in text:
+        text = text.replace(",", ".")
+    elif text.count(".") > 1:
+        text = text.replace(".", "")
+    try:
+        return float(text) * multiplier
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _owner_credit_range(owner: dict) -> tuple[float | None, float | None]:
+    minimum = owner.get("credito_minimo")
+    maximum = owner.get("credito_maximo")
+    if owner.get("owner_id") == 2602 and minimum is None and maximum is None:
+        maximum = 999999
+    if owner.get("owner_id") == 2609 and minimum is None and maximum is None:
+        minimum = 1000000
+    return minimum, maximum
+
+
+def _owner_matches_credit(owner: dict, credit: float) -> bool:
+    minimum, maximum = _owner_credit_range(owner)
+    return (minimum is None or credit >= float(minimum)) and (maximum is None or credit <= float(maximum))
+
+
 def annotate_owner_eligibility(items: list[dict]) -> list[dict]:
     config = get_configuracoes()
     owners = config.get("piperun_owners", [])
     distribution_enabled = bool(config.get("piperun_owner_distribution_enabled"))
-    def owner_range(owner):
-        minimum = owner.get("credito_minimo")
-        maximum = owner.get("credito_maximo")
-        if owner.get("owner_id") == 2602 and minimum is None and maximum is None: maximum = 999999
-        if owner.get("owner_id") == 2609 and minimum is None and maximum is None: minimum = 1000000
-        return minimum, maximum
-    ranges_configured = any(any(value is not None for value in owner_range(owner)) for owner in owners if isinstance(owner, dict))
+    ranges_configured = any(any(value is not None for value in _owner_credit_range(owner)) for owner in owners if isinstance(owner, dict))
     for item in items:
         deal = item.get("oportunidade") or {}
         dados = item.get("dados") or {}
@@ -96,8 +135,10 @@ def annotate_owner_eligibility(items: list[dict]) -> list[dict]:
         elif not ranges_configured:
             item["owner_distribution"] = {"eligible": False, "reason": "owner_ranges_not_configured", "owner_id": ""}
         else:
+            credit = _credit_value_from_note(item)
             pipeline_matches = [owner for owner in owners if pipeline_id and pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()}]
-            item["owner_distribution"] = {"eligible": True, "reason": "eligible_without_owner", "owner_id": "", "pipeline_id": pipeline_id, "matching_owner_ids": [owner.get("owner_id") for owner in pipeline_matches]}
+            credit_matches = [owner for owner in pipeline_matches if _owner_matches_credit(owner, credit)]
+            item["owner_distribution"] = {"eligible": bool(credit_matches), "reason": "eligible_without_owner" if credit_matches else "credit_outside_owner_ranges", "owner_id": "", "pipeline_id": pipeline_id, "credit_requested": credit, "matching_owner_ids": [owner.get("owner_id") for owner in credit_matches]}
     return items
 
 
@@ -568,13 +609,10 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
         deal = item.get("oportunidade") or {}
         if not deal.get("owner_id") and config.get("piperun_owner_distribution_enabled") and opportunity_id.isdigit():
             pipeline_id = int(deal.get("pipeline_id") or 0)
-            credit = float(item.get("dados", {}).get("credito_desejado") or 0)
+            credit = _credit_value_from_note(item)
             def owner_range(owner):
-                minimum, maximum = owner.get("credito_minimo"), owner.get("credito_maximo")
-                if owner.get("owner_id") == 2602 and minimum is None and maximum is None: maximum = 999999
-                if owner.get("owner_id") == 2609 and minimum is None and maximum is None: minimum = 1000000
-                return minimum, maximum
-            candidates = [owner for owner in config.get("piperun_owners", []) if pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()} and (owner_range(owner)[0] is None or credit >= float(owner_range(owner)[0])) and (owner_range(owner)[1] is None or credit <= float(owner_range(owner)[1]))]
+                return _owner_credit_range(owner)
+            candidates = [owner for owner in config.get("piperun_owners", []) if pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()} and _owner_matches_credit(owner, credit)]
             if len(candidates) == 1:
                 try:
                     owner_result = await assign_piperun_deal_owner(opportunity_id, int(candidates[0]["owner_id"]))
