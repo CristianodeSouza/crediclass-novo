@@ -114,6 +114,21 @@ async def move_piperun_deal_to_stage(deal_id: str | int, stage_id: int) -> dict:
     return {"changed": True, "deal_id": int(deal_text), "from": current_stage, "to": stage_id, "pipeline_id": pipeline_id}
 
 
+async def assign_piperun_deal_owner(deal_id: str | int, owner_id: int) -> dict:
+    deal_text = str(deal_id).strip()
+    if not deal_text.isdigit() or int(deal_text) <= 0 or int(owner_id) <= 0:
+        raise ValueError("IDs da oportunidade e do owner devem ser positivos.")
+    token = os.getenv("PIPERUN_API_KEY", "").strip()
+    if not token:
+        raise RuntimeError("Integração PipeRun não configurada no ambiente.")
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.put(f"{PIPERUN_BASE_URL}/deals/{int(deal_text)}", headers={"token": token, "accept": "application/json", "content-type": "application/json"}, json={"owner_id": int(owner_id)})
+    if response.status_code >= 400:
+        raise RuntimeError(f"PipeRun recusou a atribuição do owner (HTTP {response.status_code}).")
+    logger.info("PipeRun owner atribuído deal_id=%s owner_id=%s", deal_text, owner_id)
+    return {"changed": True, "deal_id": int(deal_text), "owner_id": int(owner_id)}
+
+
 def _init_opportunity_cache() -> None:
     PIPERUN_CACHE_DB.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(PIPERUN_CACHE_DB) as db:
@@ -142,6 +157,7 @@ FIELD_MAP = {
     "Qual é o valor do imóvel?": "credito_desejado",
     "Qual valor do imóvel desejado?": "credito_desejado",
     "Qual é o valor de carta de crédito desejada?": "credito_desejado",
+    "Qual é o valor de carta de crédito?": "credito_desejado",
     "Informe o valor máximo para Entrada / Lance?": "lance_proprio",
     "Recurso próprio máximo disponível": "lance_proprio",
     "Qual é o valor de lance máximo disponível?": "lance_proprio",
