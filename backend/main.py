@@ -564,23 +564,26 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
                 except (ValueError, RuntimeError) as error:
                     logger.warning("Mudança automática de etapa ignorada deal_id=%s: %s", opportunity_id, error)
                     item["etapa_atualizada"] = False
-            config = get_configuracoes()
-            deal = item.get("oportunidade") or {}
-            if not deal.get("owner_id") and config.get("piperun_owner_distribution_enabled"):
-                pipeline_id = int(deal.get("pipeline_id") or 0)
-                credit = float(item.get("dados", {}).get("credito_desejado") or 0)
-                def owner_range(owner):
-                    minimum, maximum = owner.get("credito_minimo"), owner.get("credito_maximo")
-                    if owner.get("owner_id") == 2602 and minimum is None and maximum is None: maximum = 999999
-                    if owner.get("owner_id") == 2609 and minimum is None and maximum is None: minimum = 1000000
-                    return minimum, maximum
-                candidates = [owner for owner in config.get("piperun_owners", []) if pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()} and (owner_range(owner)[0] is None or credit >= float(owner_range(owner)[0])) and (owner_range(owner)[1] is None or credit <= float(owner_range(owner)[1]))]
-                if len(candidates) == 1:
-                    try:
-                        owner_result = await assign_piperun_deal_owner(opportunity_id, int(candidates[0]["owner_id"]))
-                        item["oportunidade"] = {**deal, "owner_id": owner_result["owner_id"]}
-                    except (ValueError, RuntimeError) as error:
-                        logger.warning("Atribuição automática de owner ignorada deal_id=%s: %s", opportunity_id, error)
+        config = get_configuracoes()
+        deal = item.get("oportunidade") or {}
+        if not deal.get("owner_id") and config.get("piperun_owner_distribution_enabled") and opportunity_id.isdigit():
+            pipeline_id = int(deal.get("pipeline_id") or 0)
+            credit = float(item.get("dados", {}).get("credito_desejado") or 0)
+            def owner_range(owner):
+                minimum, maximum = owner.get("credito_minimo"), owner.get("credito_maximo")
+                if owner.get("owner_id") == 2602 and minimum is None and maximum is None: maximum = 999999
+                if owner.get("owner_id") == 2609 and minimum is None and maximum is None: minimum = 1000000
+                return minimum, maximum
+            candidates = [owner for owner in config.get("piperun_owners", []) if pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()} and (owner_range(owner)[0] is None or credit >= float(owner_range(owner)[0])) and (owner_range(owner)[1] is None or credit <= float(owner_range(owner)[1]))]
+            if len(candidates) == 1:
+                try:
+                    owner_result = await assign_piperun_deal_owner(opportunity_id, int(candidates[0]["owner_id"]))
+                    item["oportunidade"] = {**deal, "owner_id": owner_result["owner_id"]}
+                    item["owner_atribuido"] = True
+                except (ValueError, RuntimeError) as error:
+                    item["owner_atribuido"] = False
+                    item["owner_atribuicao_erro"] = str(error)
+                    logger.warning("Atribuição automática de owner falhou deal_id=%s: %s", opportunity_id, error)
         synced.append(item)
     return synced
 

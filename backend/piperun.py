@@ -121,12 +121,27 @@ async def assign_piperun_deal_owner(deal_id: str | int, owner_id: int) -> dict:
     token = os.getenv("PIPERUN_API_KEY", "").strip()
     if not token:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
+    headers = {"token": token, "accept": "application/json", "content-type": "application/json"}
+    url = f"{PIPERUN_BASE_URL}/deals/{int(deal_text)}"
     async with httpx.AsyncClient(timeout=20) as client:
-        response = await client.put(f"{PIPERUN_BASE_URL}/deals/{int(deal_text)}", headers={"token": token, "accept": "application/json", "content-type": "application/json"}, json={"owner_id": int(owner_id)})
+        response = await client.put(url, headers=headers, json={"owner_id": int(owner_id)})
     if response.status_code >= 400:
         raise RuntimeError(f"PipeRun recusou a atribuição do owner (HTTP {response.status_code}).")
-    logger.info("PipeRun owner atribuído deal_id=%s owner_id=%s", deal_text, owner_id)
-    return {"changed": True, "deal_id": int(deal_text), "owner_id": int(owner_id)}
+    async with httpx.AsyncClient(timeout=20) as client:
+        verify_response = await client.get(url, headers=headers)
+    if verify_response.status_code >= 400:
+        raise RuntimeError(f"PipeRun não permitiu confirmar o owner (HTTP {verify_response.status_code}).")
+    payload = verify_response.json()
+    deal = payload.get("data", payload) if isinstance(payload, dict) else {}
+    if isinstance(deal, list):
+        deal = deal[0] if deal else {}
+    verified_owner_id = int(deal.get("owner_id") or 0)
+    if verified_owner_id != int(owner_id):
+        raise RuntimeError(
+            f"PipeRun respondeu sucesso, mas o owner da oportunidade permaneceu {verified_owner_id or 'sem dono'} (esperado {int(owner_id)})."
+        )
+    logger.info("PipeRun owner atribuído e confirmado deal_id=%s owner_id=%s", deal_text, owner_id)
+    return {"changed": True, "verified": True, "deal_id": int(deal_text), "owner_id": int(owner_id)}
 
 
 def _init_opportunity_cache() -> None:
