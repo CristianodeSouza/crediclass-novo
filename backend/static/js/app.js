@@ -1802,6 +1802,8 @@ function renderPipeRunOwners(owners = [], distributionEnabled = false, schedule 
   if (!container) return;
   const toggle = document.getElementById("pipeRunOwnerDistributionToggle");
   if (toggle) toggle.checked = Boolean(distributionEnabled);
+  const scheduleToggle = document.getElementById("pipeRunScanScheduleToggle");
+  if (scheduleToggle) scheduleToggle.checked = schedule.enabled !== false;
   const userOptions = pipeRunUsers.map((user) => `<option value="${escapeHtml(user.owner_id)}">${escapeHtml(user.nome)} (ID ${escapeHtml(user.owner_id)})</option>`).join("");
   const days = new Set(schedule.days || ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]);
   document.querySelectorAll("[data-scan-day]").forEach((input) => { input.checked = days.has(input.dataset.scanDay); });
@@ -1840,7 +1842,7 @@ async function addPipeRunOwnerFromCrm() {
 async function savePipeRunOwners() {
   const rows = [...document.querySelectorAll(".crm-owner-row")];
   const owners = rows.map((row) => Object.fromEntries([...row.querySelectorAll("[data-owner-field]")].map((input) => [input.dataset.ownerField, input.value.trim()]))).map((owner) => ({ ...owner, owner_id: Number(owner.owner_id), credito_minimo: owner.credito_minimo === "" ? null : Number(owner.credito_minimo), credito_maximo: owner.credito_maximo === "" ? null : Number(owner.credito_maximo), origens: String(owner.origens || "").split(/\r?\n|,/).map((url) => url.trim()).filter(Boolean) }));
-  const schedule = { days: [...document.querySelectorAll("[data-scan-day]:checked")].map((input) => input.dataset.scanDay), times: [...document.querySelectorAll("[data-scan-time]")].map((input) => input.value).filter(Boolean), enabled: true };
+  const schedule = { days: [...document.querySelectorAll("[data-scan-day]:checked")].map((input) => input.dataset.scanDay), times: [...document.querySelectorAll("[data-scan-time]")].map((input) => input.value).filter(Boolean), enabled: Boolean(document.getElementById("pipeRunScanScheduleToggle")?.checked) };
   if (!schedule.days.length || !schedule.times.length) { showToast("Selecione ao menos um dia e um horário.", "warning"); return; }
   await apiPut("/configuracoes", { piperun_owners: owners, piperun_owner_distribution_enabled: Boolean(document.getElementById("pipeRunOwnerDistributionToggle")?.checked), piperun_scan_schedule: schedule });
   showToast("Owners e agenda PipeRun salvos.", "success");

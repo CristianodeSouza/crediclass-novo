@@ -8231,6 +8231,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-owner-toggle input { width: 18px; height: 18px; accent-color: #ea580c; }
 .crm-scan-schedule { margin-top: 18px; padding: 16px; border: 1px solid #fed7aa; border-radius: 12px; background: #fffaf5; }
 .crm-scan-schedule-heading { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.crm-scan-schedule-actions { display: flex; align-items: center; gap: 16px; }
 .crm-scan-schedule-heading h3 { margin: 0; color: #334155; font-size: 1rem; }
 .crm-scan-schedule-heading p { margin: 4px 0 0; color: #64748b; font-size: .82rem; }
 .crm-scan-schedule-timezone { color: #9a3412; font-size: .78rem; font-weight: 700; white-space: nowrap; }
