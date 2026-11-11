@@ -81,7 +81,7 @@ def annotate_owner_eligibility(items: list[dict]) -> list[dict]:
     for item in items:
         deal = item.get("oportunidade") or {}
         dados = item.get("dados") or {}
-        source = str(dados.get("url_origem") or dados.get("url_de_origem") or "").strip().rstrip("/")
+        pipeline_id = int(deal.get("pipeline_id") or 0)
         owner_id = str(deal.get("owner_id") or "").strip()
         if owner_id:
             item["owner_distribution"] = {"eligible": False, "reason": "owner_already_assigned", "owner_id": owner_id}
@@ -90,8 +90,8 @@ def annotate_owner_eligibility(items: list[dict]) -> list[dict]:
         elif not ranges_configured:
             item["owner_distribution"] = {"eligible": False, "reason": "owner_ranges_not_configured", "owner_id": ""}
         else:
-            origin_matches = [owner for owner in owners if source and source in {str(url).strip().rstrip("/") for url in owner.get("origens", [])}]
-            item["owner_distribution"] = {"eligible": True, "reason": "eligible_without_owner", "owner_id": "", "source": source, "matching_owner_ids": [owner.get("owner_id") for owner in origin_matches]}
+            pipeline_matches = [owner for owner in owners if pipeline_id and pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()}]
+            item["owner_distribution"] = {"eligible": True, "reason": "eligible_without_owner", "owner_id": "", "pipeline_id": pipeline_id, "matching_owner_ids": [owner.get("owner_id") for owner in pipeline_matches]}
     return items
 
 

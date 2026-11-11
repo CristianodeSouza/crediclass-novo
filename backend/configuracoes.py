@@ -346,9 +346,10 @@ DEFAULT_CONFIG = {
         "email_smtp": False,
         "backup_automatico": False,
     },
+    "piperun_pipelines": PIPERUN_FUNNELS,
     "piperun_owners": [
-        {"nome": "Bruna Torres", "owner_id": 2602, "credito_minimo": None, "credito_maximo": None, "origens": ["https://formulario.crediclass.com.br/formulario-inicio-atendimento/"]},
-        {"nome": "Bruno Tavares", "owner_id": 2609, "credito_minimo": None, "credito_maximo": None, "origens": ["https://formulario.crediclass.com.br/formulario-inicio-atendimento/"]},
+        {"nome": "Bruna Torres", "owner_id": 2602, "credito_minimo": None, "credito_maximo": None, "origens": [], "pipeline_ids": [4501]},
+        {"nome": "Bruno Tavares", "owner_id": 2609, "credito_minimo": None, "credito_maximo": None, "origens": [], "pipeline_ids": [4501]},
     ],
     "piperun_owner_distribution_enabled": False,
     "piperun_scan_schedule": {
@@ -412,6 +413,9 @@ def load_config() -> dict:
     except (OSError, json.JSONDecodeError):
         return deepcopy(DEFAULT_CONFIG)
     config = merge_config(DEFAULT_CONFIG, saved if isinstance(saved, dict) else {})
+    for owner in config.get("piperun_owners", []):
+        if isinstance(owner, dict) and "pipeline_ids" not in owner:
+            owner["pipeline_ids"] = [4501]
     # One-time cleanup of the initial owner examples: ranges are intentionally disabled until configured.
     for owner in config.get("piperun_owners", []):
         if owner.get("owner_id") == 2602 and owner.get("credito_maximo") == 999999:
@@ -462,6 +466,10 @@ def update_configuracoes(payload: dict) -> dict:
     if "regras_negocio_feedbacks" in payload and isinstance(payload["regras_negocio_feedbacks"], dict):
         _settings["regras_negocio_feedbacks"] = payload["regras_negocio_feedbacks"]
     if "piperun_owners" in payload and isinstance(payload["piperun_owners"], list):
+        for owner in payload["piperun_owners"]:
+            if isinstance(owner, dict):
+                owner["pipeline_ids"] = [int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()]
+                owner.pop("origens", None)
         _settings["piperun_owners"] = payload["piperun_owners"]
     if "piperun_owner_distribution_enabled" in payload:
         _settings["piperun_owner_distribution_enabled"] = bool(payload["piperun_owner_distribution_enabled"])
@@ -480,3 +488,22 @@ def update_configuracoes(payload: dict) -> dict:
             }
     save_config()
     return {"success": True}
+PIPERUN_FUNNELS = [
+    {"id": 97656, "nome": "0. Mkt - Nutrição de Leads"}, {"id": 107663, "nome": "0. Mkt - Nutrição Parceiros Ativos"},
+    {"id": 23643, "nome": "0. Cadastro Parceiros de Negócios"}, {"id": 96785, "nome": "0. Cadastro Bancos"},
+    {"id": 108107, "nome": "0.1 Reativação"}, {"id": 4501, "nome": "1. Consultoria de Crédito (V)"},
+    {"id": 4502, "nome": "2. Formalização Consórcio (V)"}, {"id": 4504, "nome": "2. Aprovação Financiamento (V)"},
+    {"id": 11418, "nome": "2.1 Fechar Instituição Aprovada"}, {"id": 45077, "nome": "2. Aprovação Home Equity (V)"},
+    {"id": 4505, "nome": "3. Serviços IO (V)"}, {"id": 4503, "nome": "4. Gestão da Contemplação (CS)"},
+    {"id": 4506, "nome": "5. Operação IO | Consórcio (CS)"}, {"id": 4511, "nome": "5. Operação IO | Financiamento (CS)"},
+    {"id": 4512, "nome": "5. Operação IO | Home Equity (CS)"}, {"id": 5080, "nome": "5. Operação IO | Portabilidade (CS)"},
+    {"id": 59561, "nome": "5. Operações IO | Avulso (CS)"}, {"id": 42867, "nome": "6. Fechamento Processo I Financeiro e IO"},
+    {"id": 81290, "nome": "CS) Lembrete Pagto - Caixa/ Itaú"}, {"id": 100462, "nome": "CS) Lembrete pagto - ñ contemplados"},
+    {"id": 97206, "nome": "[FIN] Contas a Receber (IFI)"}, {"id": 95066, "nome": "[FIN] Contas a Pagar (PN/CN/SÓCIOS)"},
+    {"id": 96872, "nome": "[RH] Recrutamento e Seleção"}, {"id": 97009, "nome": "Excluir"},
+    {"id": 97787, "nome": "[RH] Registro e Controle de Ponto"}, {"id": 99211, "nome": "[ADM/FIN] Contratos Fornecedores"},
+    {"id": 99207, "nome": "[ADM] Politicas e Anexos RV"}, {"id": 100166, "nome": "[ADM] Gestão de Acessos"},
+    {"id": 99554, "nome": "[FIN] Planejamento Estratégico"}, {"id": 62773, "nome": "0 - Tráfego Pago (ocultar)"},
+    {"id": 80973, "nome": "1.b) Vendas Canal IFR (ocultar)"}, {"id": 45075, "nome": "CS) Pós Venda Créditos (ocultar)"},
+]
+
