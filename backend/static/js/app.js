@@ -1803,6 +1803,30 @@ function formatPipeRunCreatedAt(value) {
 
 let pipeRunUsers = [];
 let pipeRunPipelines = [];
+let pipeRunOwnerPipelineSelections = new Map();
+let activePipeRunPipelineOwnerIndex = null;
+
+function pipeRunPipelineLabel(ids) {
+  const count = ids.length;
+  return count === 0 ? "Nenhum funil" : `${count} ${count === 1 ? "funil selecionado" : "funis selecionados"}`;
+}
+
+function closePipeRunPipelineModal() {
+  document.getElementById("pipeRunPipelineModal")?.remove();
+  activePipeRunPipelineOwnerIndex = null;
+}
+
+function openPipeRunPipelineModal(ownerIndex) {
+  closePipeRunPipelineModal();
+  activePipeRunPipelineOwnerIndex = ownerIndex;
+  const selected = new Set(pipeRunOwnerPipelineSelections.get(ownerIndex) || []);
+  const modal = document.createElement("div");
+  modal.id = "pipeRunPipelineModal";
+  modal.className = "crm-pipeline-modal-backdrop";
+  modal.innerHTML = `<div class="crm-pipeline-modal" role="dialog" aria-modal="true" aria-labelledby="crmPipelineModalTitle"><div class="crm-pipeline-modal-header"><div><h3 id="crmPipelineModalTitle">Funis permitidos</h3><p>Selecione os funis que podem receber este owner.</p></div><button type="button" class="crm-pipeline-modal-close" data-pipeline-modal-close aria-label="Fechar">×</button></div><input class="crm-pipeline-modal-search" type="search" placeholder="Buscar por nome ou ID" aria-label="Buscar funil"><div class="crm-pipeline-modal-list">${pipeRunPipelines.map((pipeline) => `<label data-pipeline-option><input type="checkbox" data-modal-pipeline="${pipeline.id}" ${selected.has(Number(pipeline.id)) ? "checked" : ""}><span>${escapeHtml(pipeline.nome)}</span><small>${pipeline.id}</small></label>`).join("")}</div><div class="crm-pipeline-modal-footer"><span data-pipeline-modal-count>${pipeRunPipelineLabel([...selected])}</span><button type="button" class="btn btn-outline-secondary" data-pipeline-modal-close>Cancelar</button><button type="button" class="btn btn-primary" data-pipeline-modal-apply>Aplicar seleção</button></div></div>`;
+  document.body.appendChild(modal);
+  modal.querySelector(".crm-pipeline-modal-search")?.focus();
+}
 function renderPipeRunOwners(owners = [], distributionEnabled = false, schedule = {}) {
   const container = document.getElementById("pipeRunOwnersList");
   if (!container) return;
@@ -1815,7 +1839,8 @@ function renderPipeRunOwners(owners = [], distributionEnabled = false, schedule 
   document.querySelectorAll("[data-scan-day]").forEach((input) => { input.checked = days.has(input.dataset.scanDay); });
   const times = schedule.times || ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
   document.querySelectorAll("[data-scan-time]").forEach((input, index) => { input.value = times[index] || ""; });
-  container.innerHTML = owners.map((owner, index) => `<div class="crm-owner-row"><label>Nome<input data-owner-field="nome" data-owner-index="${index}" value="${escapeHtml(owner.nome || "")}" readonly></label><label>ID do owner<select data-owner-field="owner_id" data-owner-index="${index}"><option value="${escapeHtml(owner.owner_id || "")}">${escapeHtml(owner.nome || "Usuário atual")} (ID ${escapeHtml(owner.owner_id || "")})</option>${userOptions}</select></label><label>Mínimo do crédito<input data-owner-field="credito_minimo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_minimo ?? "")}"></label><label>Máximo do crédito<input data-owner-field="credito_maximo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_maximo ?? "")}"></label><fieldset class="crm-owner-pipelines"><legend>Funis permitidos</legend><div>${pipeRunPipelines.map((pipeline) => `<label><input type="checkbox" data-owner-pipeline="${pipeline.id}" ${owner.pipeline_ids?.map(Number).includes(Number(pipeline.id)) ? "checked" : ""}>${escapeHtml(pipeline.nome)} <small>(${pipeline.id})</small></label>`).join("")}</div></fieldset><button type="button" class="crm-owner-remove-btn" data-owner-remove="${index}">Excluir owner</button></div>`).join("");
+  pipeRunOwnerPipelineSelections = new Map(owners.map((owner, index) => [index, (owner.pipeline_ids || []).map(Number)]));
+  container.innerHTML = owners.map((owner, index) => `<div class="crm-owner-row"><label>Nome<input data-owner-field="nome" data-owner-index="${index}" value="${escapeHtml(owner.nome || "")}" readonly></label><label>ID do owner<select data-owner-field="owner_id" data-owner-index="${index}"><option value="${escapeHtml(owner.owner_id || "")}">${escapeHtml(owner.nome || "Usuário atual")} (ID ${escapeHtml(owner.owner_id || "")})</option>${userOptions}</select></label><label>Mínimo do crédito<input data-owner-field="credito_minimo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_minimo ?? "")}"></label><label>Máximo do crédito<input data-owner-field="credito_maximo" data-owner-index="${index}" inputmode="decimal" value="${escapeHtml(owner.credito_maximo ?? "")}"></label><button type="button" class="crm-pipeline-picker-btn" data-pipeline-picker="${index}"><span>Funis permitidos</span><strong data-pipeline-summary="${index}">${pipeRunPipelineLabel(owner.pipeline_ids || [])}</strong></button><button type="button" class="crm-owner-remove-btn" data-owner-remove="${index}">Excluir owner</button></div>`).join("");
   container.querySelectorAll("[data-owner-remove]").forEach((button) => button.addEventListener("click", async () => {
     const row = button.closest(".crm-owner-row");
     const name = row?.querySelector('[data-owner-field="nome"]')?.value || "este owner";
@@ -1847,7 +1872,7 @@ async function addPipeRunOwnerFromCrm() {
 
 async function savePipeRunOwners() {
   const rows = [...document.querySelectorAll(".crm-owner-row")];
-  const owners = rows.map((row) => ({ ...Object.fromEntries([...row.querySelectorAll("[data-owner-field]")].map((input) => [input.dataset.ownerField, input.value.trim()])), pipeline_ids: [...row.querySelectorAll("[data-owner-pipeline]:checked")].map((input) => Number(input.dataset.ownerPipeline)) })).map((owner) => ({ ...owner, owner_id: Number(owner.owner_id), credito_minimo: owner.credito_minimo === "" ? null : Number(owner.credito_minimo), credito_maximo: owner.credito_maximo === "" ? null : Number(owner.credito_maximo) }));
+  const owners = rows.map((row, index) => ({ ...Object.fromEntries([...row.querySelectorAll("[data-owner-field]")].map((input) => [input.dataset.ownerField, input.value.trim()])), pipeline_ids: pipeRunOwnerPipelineSelections.get(index) || [] })).map((owner) => ({ ...owner, owner_id: Number(owner.owner_id), credito_minimo: owner.credito_minimo === "" ? null : Number(owner.credito_minimo), credito_maximo: owner.credito_maximo === "" ? null : Number(owner.credito_maximo) }));
   const schedule = { days: [...document.querySelectorAll("[data-scan-day]:checked")].map((input) => input.dataset.scanDay), times: [...document.querySelectorAll("[data-scan-time]")].map((input) => input.value).filter(Boolean), enabled: Boolean(document.getElementById("pipeRunScanScheduleToggle")?.checked) };
   if (!schedule.days.length || !schedule.times.length) { showToast("Selecione ao menos um dia e um horário.", "warning"); return; }
   await apiPut("/configuracoes", { piperun_owners: owners, piperun_owner_distribution_enabled: Boolean(document.getElementById("pipeRunOwnerDistributionToggle")?.checked), piperun_scan_schedule: schedule });
@@ -8609,6 +8634,23 @@ document.addEventListener("click", async (event) => {
   finally { button.disabled = false; }
 });
 document.getElementById("savePipeRunOwnersBtn")?.addEventListener("click", savePipeRunOwners);
+document.addEventListener("click", (event) => {
+  const picker = event.target.closest("[data-pipeline-picker]");
+  if (picker) { openPipeRunPipelineModal(Number(picker.dataset.pipelinePicker)); return; }
+  if (event.target.closest("[data-pipeline-modal-close]") || event.target.id === "pipeRunPipelineModal") { closePipeRunPipelineModal(); return; }
+  const apply = event.target.closest("[data-pipeline-modal-apply]");
+  if (apply) {
+    const selected = [...document.querySelectorAll("[data-modal-pipeline]:checked")].map((input) => Number(input.dataset.modalPipeline));
+    pipeRunOwnerPipelineSelections.set(activePipeRunPipelineOwnerIndex, selected);
+    document.querySelector(`[data-pipeline-summary="${activePipeRunPipelineOwnerIndex}"]`)?.replaceChildren(document.createTextNode(pipeRunPipelineLabel(selected)));
+    closePipeRunPipelineModal();
+  }
+});
+document.addEventListener("input", (event) => {
+  if (!event.target.matches(".crm-pipeline-modal-search")) return;
+  const query = event.target.value.trim().toLowerCase();
+  document.querySelectorAll("[data-pipeline-option]").forEach((option) => { option.hidden = query && !option.textContent.toLowerCase().includes(query); });
+});
 document.getElementById("queryPipeRunIdBtn")?.addEventListener("click", () => {
   const id = document.getElementById("pipeRunOpportunityIdQuery")?.value.trim();
   if (!id) return;
