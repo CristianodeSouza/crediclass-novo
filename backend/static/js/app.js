@@ -1879,7 +1879,7 @@ async function savePipeRunOwners() {
   showToast("Owners e agenda PipeRun salvos.", "success");
 }
 
-async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
+async function loadPipeRunPreview(endpoint = "/api/piperun-preview", requestOptions = {}) {
   const state = document.getElementById("pipeRunPreviewState");
   const wrap = document.getElementById("pipeRunPreviewTableWrap");
   const body = document.getElementById("pipeRunPreviewBody");
@@ -1892,7 +1892,7 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
   details.innerHTML = "";
   details.classList.add("d-none");
   try {
-    const response = await fetch(endpoint, { credentials: "same-origin", cache: "no-store" });
+    const response = await fetch(endpoint, { credentials: "same-origin", cache: "no-store", ...requestOptions });
     const payload = await response.json();
     if (!response.ok || payload.success === false) throw new Error(payload.error || "Não foi possível consultar o PipeRun.");
     const safe = (value) => String(value ?? "-").replace(/[&<>\"]/g, (char) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[char]));
@@ -8591,13 +8591,24 @@ document.getElementById("clientProfileForm").addEventListener("input", (event) =
   updateClientProfileTotals();
 });
 document.getElementById("loadPipeRunPreviewBtn")?.addEventListener("click", () => loadPipeRunPreview());
+document.getElementById("pipeRunOwnerDistributionToggle")?.addEventListener("change", async (event) => {
+  const toggle = event.currentTarget;
+  const previous = !toggle.checked;
+  try {
+    await apiPut("/configuracoes", { piperun_owner_distribution_enabled: Boolean(toggle.checked) });
+    showToast(toggle.checked ? "Distribuição automática ativada." : "Distribuição automática desativada.", "success");
+  } catch (error) {
+    toggle.checked = previous;
+    showToast(error.message || "Não foi possível salvar a distribuição automática.", "danger");
+  }
+});
 document.getElementById("manualPipeRunScanBtn")?.addEventListener("click", async (event) => {
   const button = event.currentTarget;
   button.disabled = true;
   const originalText = button.textContent;
   button.textContent = "Reprocessando...";
   try {
-    const completed = await loadPipeRunPreview();
+    const completed = await loadPipeRunPreview("/api/piperun-reprocess", { method: "POST" });
     if (completed) showToast("Reprocessamento manual concluído.", "success");
   } finally {
     button.disabled = false;

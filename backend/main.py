@@ -639,6 +639,19 @@ async def preview_oportunidades_piperun(limit: int = Query(default=0, ge=0, le=1
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
 
 
+@app.post("/api/piperun-reprocess")
+async def reprocessar_oportunidades_piperun():
+    """Reprocessa oportunidades e executa as gravações no PipeRun."""
+    try:
+        items = await _sync_people_for_new_items(await fetch_opportunities_preview(limit=0))
+        items = annotate_owner_eligibility(items)
+        sheets = upsert_piperun_opportunities(items)
+        return {"success": True, "items": items, "sheets": sheets}
+    except Exception as error:
+        logger.exception("Falha no reprocessamento manual PipeRun")
+        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
+
+
 @app.get("/api/piperun-stored")
 async def oportunidades_piperun_salvas():
     try:
