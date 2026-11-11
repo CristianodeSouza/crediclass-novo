@@ -543,9 +543,10 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
             spouse = await sync_spouse(opportunity_id, item.get("dados") or {})
             partners = await sync_partner_company(opportunity_id, item.get("dados") or {})
             item = {**item, **titular, **spouse, **partners}
+            spouse_required = any(str(item.get("dados", {}).get(field) or "").strip() for field in ("nome_conjuge", "email_conjuge", "cpf_conjuge"))
             requirements_complete = all((
                 item.get("titular_atualizado"),
-                item.get("conjuge_atualizado"),
+                item.get("conjuge_atualizado") or not spouse_required,
                 item.get("empresa_parceira_status") == "ok",
                 item.get("parceiros_status") == "ok",
             ))
