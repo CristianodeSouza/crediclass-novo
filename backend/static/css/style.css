@@ -8202,6 +8202,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-opportunity-refresh-btn:hover { color: #fff; background: #e86f1d; }
 .crm-opportunity-refresh-btn:disabled { opacity: .55; cursor: wait; }
 .crm-manual-query { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 14px; margin: 16px 0 18px; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
+.crm-opportunity-section-title { margin-top: 24px; padding-top: 18px; border-top: 1px solid #e2e8f0; }
+.crm-opportunity-section-title h3 { margin: 0; color: #243746; font-size: 1rem; }
+.crm-opportunity-section-title p { margin: 4px 0 0; color: #64748b; font-size: .78rem; }
 .crm-manual-query label { display: grid; gap: 5px; color: #475569; font-size: .82rem; font-weight: 700; }
 .crm-manual-query input { min-width: 150px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; }
 .crm-manual-query label:first-child input { min-width: 180px; }
