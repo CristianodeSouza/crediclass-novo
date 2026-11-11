@@ -38,7 +38,7 @@ from .consortium_viability_engine import MOTOR_VERSION, RULES_VERSION, analyze_c
 from .credit_options import available_credit_options
 from .defasagem import build_defasagem_report, update_defasagem_task
 from . import financial_studies
-from .piperun import activate_custom_form_public_link, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes, fetch_piperun_owner, fetch_piperun_users, sync_partner_company, sync_spouse, update_opportunity_person
+from .piperun import PIPERUN_STAGES, activate_custom_form_public_link, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes, fetch_piperun_owner, fetch_piperun_users, move_piperun_deal_to_stage, sync_partner_company, sync_spouse, update_opportunity_person
 from .models import GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, motor360_cache_status, read_piperun_opportunities, update_grupo, update_historico_mensal, update_historico_mensal_lote, upsert_piperun_opportunities, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
 from .viabilidade import compatible_tipo_bem
@@ -502,6 +502,18 @@ async def listar_owners_piperun():
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
 
 
+@app.post("/api/piperun/{opportunity_id}/stage")
+async def mudar_etapa_piperun(opportunity_id: str, payload: dict, request: Request):
+    try:
+        result = await move_piperun_deal_to_stage(opportunity_id, int(payload.get("stage_id", PIPERUN_STAGES["VALIDACAO_PRE_ESTUDO"])))
+        logger.info("Mudança de etapa PipeRun por usuário=%s deal_id=%s resultado=%s", getattr(request.state, "auth_user", ""), opportunity_id, result)
+        return {"success": True, **result}
+    except ValueError as error:
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
+    except RuntimeError as error:
+        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
+
+
 @app.post("/api/piperun/{opportunity_id}/titular")
 async def atualizar_titular_piperun(opportunity_id: str, person_id: str = Query(...)):
     try:
@@ -531,6 +543,20 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
             spouse = await sync_spouse(opportunity_id, item.get("dados") or {})
             partners = await sync_partner_company(opportunity_id, item.get("dados") or {})
             item = {**item, **titular, **spouse, **partners}
+            requirements_complete = all((
+                item.get("titular_atualizado"),
+                item.get("conjuge_atualizado"),
+                item.get("empresa_parceira_status") == "ok",
+                item.get("parceiros_status") == "ok",
+            ))
+            if requirements_complete:
+                try:
+                    stage_result = await move_piperun_deal_to_stage(opportunity_id, 262860)
+                    item["etapa_atualizada"] = stage_result.get("changed", False) or stage_result.get("to") == 262860
+                    item["etapa_stage_id"] = stage_result.get("to")
+                except (ValueError, RuntimeError) as error:
+                    logger.warning("Mudança automática de etapa ignorada deal_id=%s: %s", opportunity_id, error)
+                    item["etapa_atualizada"] = False
         synced.append(item)
     return synced
 

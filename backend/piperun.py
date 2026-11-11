@@ -9,11 +9,23 @@ from datetime import datetime, timedelta
 from html import unescape
 
 import httpx
+import logging
+
+logger = logging.getLogger("crediclass.piperun")
 
 
 PIPERUN_BASE_URL = "https://api.pipe.run/v1"
 PIPERUN_CUSTOM_FORM_ID = "44495"
 PIPERUN_CACHE_DB = Path(os.getenv("PIPERUN_CACHE_DB", str(Path(__file__).resolve().parent / "data" / "piperun.sqlite3")))
+PIPERUN_PIPELINE_CONSULTORIA_CREDITO = 4501
+PIPERUN_STAGES = {
+    "TRIAGEM": 146868, "PREENCHER_ENTREVISTA": 23001, "VALIDACAO_PRE_ESTUDO": 262860,
+    "ELABORACAO_ESTUDO": 23000, "VALIDACAO_ESTUDO": 40079, "AGENDAR_REUNIAO_ESTUDO": 596064,
+    "REUNIAO_VENDAS": 23002, "CLOSER_CONSORCIO": 661871, "CLOSER_HOME_EQUITY": 99340,
+    "CLOSER_FINANCIAMENTO": 661872, "CLOSER_MULTIPLAS_OFERTAS": 665553, "REATIVACAO": 628083,
+    "DEVOLUCAO_VENDAS": 648315, "GANHAS_CONSORCIO": 53812, "GANHAS_FINANCIAMENTO_IMOBILIARIO": 53813,
+    "GANHAS_MULTIPLAS_OFERTAS": 54942, "GANHAS_HOME_EQUITY": 54941,
+}
 
 
 async def fetch_piperun_owner(owner_id: str) -> dict:
@@ -68,6 +80,38 @@ async def fetch_piperun_users() -> list[dict]:
                 break
             cursor = next_cursor
     return users
+
+
+async def move_piperun_deal_to_stage(deal_id: str | int, stage_id: int) -> dict:
+    deal_text = str(deal_id).strip()
+    if not deal_text.isdigit() or int(deal_text) <= 0:
+        raise ValueError("O ID da oportunidade deve ser um inteiro positivo.")
+    if stage_id not in PIPERUN_STAGES.values():
+        raise ValueError("A etapa informada não pertence ao funil configurado.")
+    token = os.getenv("PIPERUN_API_KEY", "").strip()
+    if not token:
+        raise RuntimeError("Integração PipeRun não configurada no ambiente.")
+    headers = {"token": token, "accept": "application/json", "content-type": "application/json"}
+    url = f"{PIPERUN_BASE_URL}/deals/{int(deal_text)}"
+    async with httpx.AsyncClient(timeout=20) as client:
+        get_response = await client.get(url, headers=headers)
+        if get_response.status_code >= 400:
+            raise RuntimeError(f"PipeRun recusou a consulta da oportunidade (HTTP {get_response.status_code}).")
+        payload = get_response.json()
+        deal = payload.get("data", payload) if isinstance(payload, dict) else {}
+        if isinstance(deal, list):
+            deal = deal[0] if deal else {}
+        pipeline_id = int(deal.get("pipeline_id") or 0)
+        current_stage = int(deal.get("stage_id") or 0)
+        if pipeline_id != PIPERUN_PIPELINE_CONSULTORIA_CREDITO:
+            raise ValueError(f"A oportunidade {deal_text} está no funil {pipeline_id}, não no funil 4501.")
+        if current_stage == stage_id:
+            return {"changed": False, "deal_id": int(deal_text), "from": current_stage, "to": stage_id, "pipeline_id": pipeline_id}
+        put_response = await client.put(url, headers=headers, json={"stage_id": stage_id})
+        if put_response.status_code >= 400:
+            raise RuntimeError(f"PipeRun recusou a mudança de etapa (HTTP {put_response.status_code}).")
+    logger.info("PipeRun etapa alterada deal_id=%s pipeline_id=%s from_stage=%s to_stage=%s", deal_text, pipeline_id, current_stage, stage_id)
+    return {"changed": True, "deal_id": int(deal_text), "from": current_stage, "to": stage_id, "pipeline_id": pipeline_id}
 
 
 def _init_opportunity_cache() -> None:
