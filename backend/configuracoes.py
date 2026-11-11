@@ -3,6 +3,25 @@ from datetime import datetime
 import json
 from pathlib import Path
 
+PIPERUN_FUNNELS = [
+    {"id": 97656, "nome": "0. Mkt - Nutrição de Leads"}, {"id": 107663, "nome": "0. Mkt - Nutrição Parceiros Ativos"},
+    {"id": 23643, "nome": "0. Cadastro Parceiros de Negócios"}, {"id": 96785, "nome": "0. Cadastro Bancos"},
+    {"id": 108107, "nome": "0.1 Reativação"}, {"id": 4501, "nome": "1. Consultoria de Crédito (V)"},
+    {"id": 4502, "nome": "2. Formalização Consórcio (V)"}, {"id": 4504, "nome": "2. Aprovação Financiamento (V)"},
+    {"id": 11418, "nome": "2.1 Fechar Instituição Aprovada"}, {"id": 45077, "nome": "2. Aprovação Home Equity (V)"},
+    {"id": 4505, "nome": "3. Serviços IO (V)"}, {"id": 4503, "nome": "4. Gestão da Contemplação (CS)"},
+    {"id": 4506, "nome": "5. Operação IO | Consórcio (CS)"}, {"id": 4511, "nome": "5. Operação IO | Financiamento (CS)"},
+    {"id": 4512, "nome": "5. Operação IO | Home Equity (CS)"}, {"id": 5080, "nome": "5. Operação IO | Portabilidade (CS)"},
+    {"id": 59561, "nome": "5. Operações IO | Avulso (CS)"}, {"id": 42867, "nome": "6. Fechamento Processo I Financeiro e IO"},
+    {"id": 81290, "nome": "CS) Lembrete Pagto - Caixa/ Itaú"}, {"id": 100462, "nome": "CS) Lembrete pagto - ñ contemplados"},
+    {"id": 97206, "nome": "[FIN] Contas a Receber (IFI)"}, {"id": 95066, "nome": "[FIN] Contas a Pagar (PN/CN/SÓCIOS)"},
+    {"id": 96872, "nome": "[RH] Recrutamento e Seleção"}, {"id": 97009, "nome": "Excluir"},
+    {"id": 97787, "nome": "[RH] Registro e Controle de Ponto"}, {"id": 99211, "nome": "[ADM/FIN] Contratos Fornecedores"},
+    {"id": 99207, "nome": "[ADM] Politicas e Anexos RV"}, {"id": 100166, "nome": "[ADM] Gestão de Acessos"},
+    {"id": 99554, "nome": "[FIN] Planejamento Estratégico"}, {"id": 62773, "nome": "0 - Tráfego Pago (ocultar)"},
+    {"id": 80973, "nome": "1.b) Vendas Canal IFR (ocultar)"}, {"id": 45075, "nome": "CS) Pós Venda Créditos (ocultar)"},
+]
+
 
 DEFAULT_ADMINISTRATOR_RULES = [
     {
@@ -488,22 +507,4 @@ def update_configuracoes(payload: dict) -> dict:
             }
     save_config()
     return {"success": True}
-PIPERUN_FUNNELS = [
-    {"id": 97656, "nome": "0. Mkt - Nutrição de Leads"}, {"id": 107663, "nome": "0. Mkt - Nutrição Parceiros Ativos"},
-    {"id": 23643, "nome": "0. Cadastro Parceiros de Negócios"}, {"id": 96785, "nome": "0. Cadastro Bancos"},
-    {"id": 108107, "nome": "0.1 Reativação"}, {"id": 4501, "nome": "1. Consultoria de Crédito (V)"},
-    {"id": 4502, "nome": "2. Formalização Consórcio (V)"}, {"id": 4504, "nome": "2. Aprovação Financiamento (V)"},
-    {"id": 11418, "nome": "2.1 Fechar Instituição Aprovada"}, {"id": 45077, "nome": "2. Aprovação Home Equity (V)"},
-    {"id": 4505, "nome": "3. Serviços IO (V)"}, {"id": 4503, "nome": "4. Gestão da Contemplação (CS)"},
-    {"id": 4506, "nome": "5. Operação IO | Consórcio (CS)"}, {"id": 4511, "nome": "5. Operação IO | Financiamento (CS)"},
-    {"id": 4512, "nome": "5. Operação IO | Home Equity (CS)"}, {"id": 5080, "nome": "5. Operação IO | Portabilidade (CS)"},
-    {"id": 59561, "nome": "5. Operações IO | Avulso (CS)"}, {"id": 42867, "nome": "6. Fechamento Processo I Financeiro e IO"},
-    {"id": 81290, "nome": "CS) Lembrete Pagto - Caixa/ Itaú"}, {"id": 100462, "nome": "CS) Lembrete pagto - ñ contemplados"},
-    {"id": 97206, "nome": "[FIN] Contas a Receber (IFI)"}, {"id": 95066, "nome": "[FIN] Contas a Pagar (PN/CN/SÓCIOS)"},
-    {"id": 96872, "nome": "[RH] Recrutamento e Seleção"}, {"id": 97009, "nome": "Excluir"},
-    {"id": 97787, "nome": "[RH] Registro e Controle de Ponto"}, {"id": 99211, "nome": "[ADM/FIN] Contratos Fornecedores"},
-    {"id": 99207, "nome": "[ADM] Politicas e Anexos RV"}, {"id": 100166, "nome": "[ADM] Gestão de Acessos"},
-    {"id": 99554, "nome": "[FIN] Planejamento Estratégico"}, {"id": 62773, "nome": "0 - Tráfego Pago (ocultar)"},
-    {"id": 80973, "nome": "1.b) Vendas Canal IFR (ocultar)"}, {"id": 45075, "nome": "CS) Pós Venda Créditos (ocultar)"},
-]
 
