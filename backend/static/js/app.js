@@ -1902,7 +1902,8 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview") {
     state.classList.add("d-none");
     wrap.classList.remove("d-none");
     details.classList.remove("d-none");
-  } catch (error) { state.className = "table-state table-state-error"; state.textContent = error.message; }
+    return true;
+  } catch (error) { state.className = "table-state table-state-error"; state.textContent = error.message; return false; }
 }
 
 const moneyFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -8557,6 +8558,19 @@ document.getElementById("clientProfileForm").addEventListener("input", (event) =
   updateClientProfileTotals();
 });
 document.getElementById("loadPipeRunPreviewBtn")?.addEventListener("click", () => loadPipeRunPreview());
+document.getElementById("manualPipeRunScanBtn")?.addEventListener("click", async (event) => {
+  const button = event.currentTarget;
+  button.disabled = true;
+  const originalText = button.textContent;
+  button.textContent = "Reprocessando...";
+  try {
+    const completed = await loadPipeRunPreview();
+    if (completed) showToast("Reprocessamento manual concluído.", "success");
+  } finally {
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+});
 document.addEventListener("click", async (event) => {
   const refreshButton = event.target.closest(".crm-opportunity-refresh-btn");
   if (refreshButton) {
