@@ -367,8 +367,8 @@ DEFAULT_CONFIG = {
     },
     "piperun_pipelines": PIPERUN_FUNNELS,
     "piperun_owners": [
-        {"nome": "Bruna Torres", "owner_id": 2602, "credito_minimo": None, "credito_maximo": None, "origens": [], "pipeline_ids": [4501]},
-        {"nome": "Bruno Tavares", "owner_id": 2609, "credito_minimo": None, "credito_maximo": None, "origens": [], "pipeline_ids": [4501]},
+        {"nome": "Bruna Torres", "owner_id": 2602, "credito_minimo": None, "credito_maximo": 999999, "origens": [], "pipeline_ids": [4501]},
+        {"nome": "Bruno Tavares", "owner_id": 2609, "credito_minimo": 1000000, "credito_maximo": None, "origens": [], "pipeline_ids": [4501]},
     ],
     "piperun_owner_distribution_enabled": False,
     "piperun_scan_schedule": {
@@ -435,12 +435,12 @@ def load_config() -> dict:
     for owner in config.get("piperun_owners", []):
         if isinstance(owner, dict) and "pipeline_ids" not in owner:
             owner["pipeline_ids"] = [4501]
-    # One-time cleanup of the initial owner examples: ranges are intentionally disabled until configured.
+    # Preserve the original Make routing rules for the two initial owners.
     for owner in config.get("piperun_owners", []):
-        if owner.get("owner_id") == 2602 and owner.get("credito_maximo") == 999999:
-            owner["credito_minimo"], owner["credito_maximo"] = None, None
-        if owner.get("owner_id") == 2609 and owner.get("credito_minimo") == 1000000:
-            owner["credito_minimo"], owner["credito_maximo"] = None, None
+        if owner.get("owner_id") == 2602 and owner.get("credito_minimo") is None and owner.get("credito_maximo") is None:
+            owner["credito_maximo"] = 999999
+        if owner.get("owner_id") == 2609 and owner.get("credito_minimo") is None and owner.get("credito_maximo") is None:
+            owner["credito_minimo"] = 1000000
     return config
 
 
