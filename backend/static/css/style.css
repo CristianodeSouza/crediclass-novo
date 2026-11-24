@@ -8285,4 +8285,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-owner-companies__table th:first-child, .crm-owner-companies__table td:first-child { width: 190px; white-space: nowrap; }
 .crm-owner-companies__table tr:last-child td { border-bottom: 0; }
 .crm-owner-companies__empty { padding: 12px; color: #64748b; font-size: .82rem; }
+.crm-owner-partner { display: grid; gap: 2px; margin: 0 0 5px; }
+.crm-owner-partner:last-child { margin-bottom: 0; }
+.crm-owner-partner small { color: #64748b; font-size: .72rem; }
 @media (max-width: 760px) { .crm-owner-companies__table th:first-child, .crm-owner-companies__table td:first-child { width: 135px; } .crm-owner-companies { padding: 12px; } }

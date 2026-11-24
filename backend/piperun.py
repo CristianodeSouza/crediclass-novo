@@ -121,12 +121,22 @@ async def fetch_piperun_companies_by_manager(manager_id: str | int) -> list[dict
     result, cursor = [], ""
     async with httpx.AsyncClient(timeout=20) as client:
         while True:
-            response = await client.get(f"{PIPERUN_BASE_URL}/companies", params={"manager_id": int(manager), "show": 200, "cursor": cursor}, headers=_pipe_headers())
+            response = await client.get(f"{PIPERUN_BASE_URL}/companies", params={"manager_id": int(manager), "show": 200, "cursor": cursor, "with": "personsRelated.person"}, headers=_pipe_headers())
             if response.status_code in (401, 403): raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar empresas.")
             if response.status_code >= 400: raise RuntimeError(f"PipeRun recusou a consulta das empresas (HTTP {response.status_code}).")
             payload = response.json(); rows = payload.get("data", []) if isinstance(payload, dict) else []
             if isinstance(rows, dict): rows = rows.get("data", [])
-            result.extend({"id": str(row["id"]), "cnpj": _digits(row.get("cnpj")), "nome": str(row.get("name") or row.get("company_name") or row.get("legal_name") or "").strip()} for row in rows if isinstance(row, dict) and row.get("id") and _digits(row.get("cnpj")) and str(row.get("name") or row.get("company_name") or row.get("legal_name") or "").strip())
+            for row in rows if isinstance(rows, list) else []:
+                cnpj = _digits(row.get("cnpj")) if isinstance(row, dict) else ""
+                nome = str((row or {}).get("name") or (row or {}).get("company_name") or (row or {}).get("legal_name") or "").strip() if isinstance(row, dict) else ""
+                if not isinstance(row, dict) or not row.get("id") or not cnpj or not nome: continue
+                partners = []
+                for relation in row.get("personsRelated") or row.get("persons_related") or []:
+                    person = relation.get("person") if isinstance(relation, dict) and isinstance(relation.get("person"), dict) else relation
+                    if not isinstance(person, dict): continue
+                    cpf = _digits(person.get("cpf")); person_name = str(person.get("name") or person.get("full_name") or "").strip()
+                    if cpf and person_name: partners.append({"cpf": cpf, "nome": person_name})
+                result.append({"id": str(row["id"]), "cnpj": cnpj, "nome": nome, "parceiros": partners})
             meta = payload.get("meta", {}) if isinstance(payload, dict) else {}; next_cursor = str((meta.get("cursor", {}) if isinstance(meta, dict) else {}).get("next") or "")
             if not next_cursor or next_cursor == cursor: break
             cursor = next_cursor
