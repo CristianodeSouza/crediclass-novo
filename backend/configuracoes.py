@@ -367,8 +367,8 @@ DEFAULT_CONFIG = {
     },
     "piperun_pipelines": PIPERUN_FUNNELS,
     "piperun_owners": [
-        {"nome": "Bruna Torres", "owner_id": 2602, "credito_minimo": None, "credito_maximo": 999999, "origens": [], "pipeline_ids": [4501]},
-        {"nome": "Bruno Tavares", "owner_id": 2609, "credito_minimo": 1000000, "credito_maximo": None, "origens": [], "pipeline_ids": [4501]},
+        {"nome": "Bruna Torres", "owner_id": 2602, "credito_minimo": None, "credito_maximo": 999999, "origens": [], "pipeline_ids": [4501], "parceiros_fidelidade": []},
+        {"nome": "Bruno Tavares", "owner_id": 2609, "credito_minimo": 1000000, "credito_maximo": None, "origens": [], "pipeline_ids": [4501], "parceiros_fidelidade": []},
     ],
     "piperun_owner_distribution_enabled": False,
     "piperun_scan_schedule": {

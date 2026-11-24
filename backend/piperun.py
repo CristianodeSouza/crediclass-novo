@@ -28,6 +28,40 @@ PIPERUN_STAGES = {
 }
 
 
+def _pipe_headers() -> dict:
+    token = os.getenv("PIPERUN_API_KEY", "").strip()
+    if not token:
+        raise RuntimeError("Integração PipeRun não configurada no ambiente.")
+    return {"token": token, "accept": "application/json"}
+
+
+def _digits(value: str) -> str:
+    return re.sub(r"\D", "", str(value or ""))
+
+
+async def search_piperun_partners(document: str) -> list[dict]:
+    """Search registered partner companies or people by normalized CPF/CNPJ."""
+    document = _digits(document)
+    if len(document) not in (11, 14):
+        raise ValueError("Informe um CPF com 11 dígitos ou CNPJ com 14 dígitos.")
+    headers = _pipe_headers()
+    resource, field, kind = ("companies", "cnpj", "pj") if len(document) == 14 else ("persons", "cpf", "pf")
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.get(f"{PIPERUN_BASE_URL}/{resource}", params={field: document, "show": 50, "cursor": ""}, headers=headers)
+    if response.status_code in (401, 403):
+        raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar parceiros.")
+    if response.status_code >= 400 and response.status_code != 404:
+        raise RuntimeError(f"PipeRun recusou a consulta de parceiros (HTTP {response.status_code}).")
+    payload = response.json() if response.status_code < 400 else {}
+    rows = payload.get("data", []) if isinstance(payload, dict) else []
+    if isinstance(rows, dict): rows = rows.get("data", [])
+    return [{
+        "id": str(row.get("id")), "tipo": kind, "documento": _digits(row.get(field) or document),
+        "nome": row.get("name") or row.get("company_name") or row.get("legal_name") or document,
+        "owner_id": row.get("owner_id") or row.get("user_id") or row.get("responsible_user_id"),
+    } for row in rows if isinstance(row, dict) and row.get("id")]
+
+
 async def fetch_piperun_owner(owner_id: str) -> dict:
     owner_id = str(owner_id).strip()
     if not owner_id.isdigit():
@@ -285,6 +319,12 @@ def _parse_form(text: str) -> dict:
         "cnpj": re.sub(r"\D", "", str((raw_fields.get("CNPJ do parceiro cadastrado") or [""])[-1])),
         "nome": (raw_fields.get("Nome da Empresa Parceira") or [""])[-1],
     }
+    partner_cpf_values = []
+    for label, values in raw_fields.items():
+        normalized_label = re.sub(r"[^a-z0-9]", "", label.lower())
+        if "cpf" in normalized_label and "parceir" in normalized_label:
+            partner_cpf_values.extend(values)
+    result["cpf_parceiro"] = re.sub(r"\D", "", str(partner_cpf_values[-1] if partner_cpf_values else ""))
     result["parceiros"] = {
         "indicador": {"nome": (raw_fields.get("Nome Completo") or [""])[0], "telefone": (raw_fields.get("Telefone") or [""])[0], "email": (raw_fields.get("E-mail") or [""])[0]},
         "assessor": {"nome": (raw_fields.get("Nome do assessor do cliente") or [""])[-1], "telefone": (raw_fields.get("Telefone") or ["", ""])[1], "email": (raw_fields.get("E-mail") or ["", ""])[1]},

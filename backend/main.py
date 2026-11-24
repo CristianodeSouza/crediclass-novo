@@ -38,7 +38,7 @@ from .consortium_viability_engine import MOTOR_VERSION, RULES_VERSION, analyze_c
 from .credit_options import available_credit_options
 from .defasagem import build_defasagem_report, update_defasagem_task
 from . import financial_studies
-from .piperun import PIPERUN_STAGES, activate_custom_form_public_link, assign_piperun_deal_owner, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes, fetch_piperun_owner, fetch_piperun_users, move_piperun_deal_to_stage, sync_partner_company, sync_spouse, update_opportunity_person
+from .piperun import PIPERUN_STAGES, activate_custom_form_public_link, assign_piperun_deal_owner, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes, fetch_piperun_owner, fetch_piperun_users, move_piperun_deal_to_stage, search_piperun_partners, sync_partner_company, sync_spouse, update_opportunity_person
 from .models import GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, motor360_cache_status, read_piperun_opportunities, update_grupo, update_historico_mensal, update_historico_mensal_lote, upsert_piperun_opportunities, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
 from .viabilidade import compatible_tipo_bem
@@ -118,6 +118,28 @@ def _owner_matches_credit(owner: dict, credit: float) -> bool:
     return (minimum is None or credit >= float(minimum)) and (maximum is None or credit <= float(maximum))
 
 
+def _partner_fidelity_key(value: str, kind: str = "") -> str:
+    normalized = re.sub(r"\D", "", str(value or ""))
+    return f"{str(kind or '').lower()}:{normalized}"
+
+
+def _partner_fidelity_owner(config: dict, dados: dict) -> tuple[dict | None, str]:
+    fields = dados.get("campos_formulario") or {}
+    raw = " ".join(str(v) for values in fields.values() for v in (values if isinstance(values, list) else [values]))
+    registered = any(token in raw.lower() for token in ("já tenho cadastro", "ja tenho cadastro", "cadastro na pessoa", "cadastro no"))
+    if not registered:
+        return None, ""
+    cnpj = re.sub(r"\D", "", str((dados.get("empresa_parceira") or {}).get("cnpj") or ""))
+    cpf = re.sub(r"\D", "", str(dados.get("cpf_parceiro") or ""))
+    candidates = [(_partner_fidelity_key(cnpj, "pj"), "pj"), (_partner_fidelity_key(cpf, "pf"), "pf")]
+    keys = {key for key, _ in candidates if key.split(":", 1)[1]}
+    for owner in config.get("piperun_owners", []):
+        for partner in owner.get("parceiros_fidelidade", []) or []:
+            if partner.get("chave") in keys:
+                return owner, partner.get("chave")
+    return None, next(iter(keys), "")
+
+
 def annotate_owner_eligibility(items: list[dict]) -> list[dict]:
     config = get_configuracoes()
     owners = config.get("piperun_owners", [])
@@ -136,10 +158,55 @@ def annotate_owner_eligibility(items: list[dict]) -> list[dict]:
             item["owner_distribution"] = {"eligible": False, "reason": "owner_ranges_not_configured", "owner_id": ""}
         else:
             credit = _credit_value_from_note(item)
+            fidelity_owner, fidelity_key = _partner_fidelity_owner(config, dados)
+            if fidelity_owner:
+                item["owner_distribution"] = {"eligible": True, "reason": "partner_fidelity", "owner_id": fidelity_owner.get("owner_id"), "fidelity_key": fidelity_key, "pipeline_id": pipeline_id, "credit_requested": credit, "matching_owner_ids": [fidelity_owner.get("owner_id")]}
+                continue
             pipeline_matches = [owner for owner in owners if pipeline_id and pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()}]
             credit_matches = [owner for owner in pipeline_matches if _owner_matches_credit(owner, credit)]
             item["owner_distribution"] = {"eligible": bool(credit_matches), "reason": "eligible_without_owner" if credit_matches else "credit_outside_owner_ranges", "owner_id": "", "pipeline_id": pipeline_id, "credit_requested": credit, "matching_owner_ids": [owner.get("owner_id") for owner in credit_matches]}
     return items
+
+
+@app.get("/api/piperun-partners/search")
+async def pesquisar_parceiros_piperun(documento: str = Query(..., min_length=1)):
+    try:
+        return {"success": True, "items": await search_piperun_partners(documento)}
+    except (ValueError, RuntimeError) as error:
+        return JSONResponse(status_code=400, content={"success": False, "error": str(error)})
+
+
+@app.get("/api/piperun-owner/{owner_id}/fidelity")
+async def listar_fidelidade_owner(owner_id: int):
+    config = get_configuracoes()
+    owner = next((row for row in config.get("piperun_owners", []) if int(row.get("owner_id") or 0) == owner_id), None)
+    if not owner:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Owner não encontrado na configuração."})
+    return {"success": True, "items": owner.get("parceiros_fidelidade", []) or []}
+
+
+@app.put("/api/piperun-owner/{owner_id}/fidelity")
+def salvar_fidelidade_owner(owner_id: int, payload: dict, request: Request):
+    config = get_configuracoes()
+    owners = config.get("piperun_owners", [])
+    owner = next((row for row in owners if int(row.get("owner_id") or 0) == owner_id), None)
+    if not owner:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Owner não encontrado na configuração."})
+    requested = payload.get("items") if isinstance(payload, dict) else None
+    if not isinstance(requested, list):
+        return JSONResponse(status_code=400, content={"success": False, "error": "A lista de parceiros é obrigatória."})
+    clean = []
+    for partner in requested:
+        if not isinstance(partner, dict) or not str(partner.get("chave") or "").strip():
+            continue
+        clean.append({"chave": str(partner["chave"]).strip(), "id": str(partner.get("id") or ""), "tipo": str(partner.get("tipo") or "").lower(), "documento": re.sub(r"\D", "", str(partner.get("documento") or "")), "nome": str(partner.get("nome") or "").strip()})
+    claimed = {partner.get("chave"): int(other.get("owner_id") or 0) for other in owners if int(other.get("owner_id") or 0) != owner_id for partner in (other.get("parceiros_fidelidade", []) or [])}
+    conflicts = sorted({key for key in (partner.get("chave") for partner in clean) if key in claimed})
+    if conflicts:
+        return JSONResponse(status_code=409, content={"success": False, "error": "Um ou mais parceiros já estão vinculados a outro owner.", "conflicts": conflicts})
+    owner["parceiros_fidelidade"] = clean
+    update_configuracoes({"piperun_owners": owners})
+    return {"success": True, "items": clean}
 
 
 @app.get("/favicon.ico", include_in_schema=False)
@@ -612,7 +679,8 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
             credit = _credit_value_from_note(item)
             def owner_range(owner):
                 return _owner_credit_range(owner)
-            candidates = [owner for owner in config.get("piperun_owners", []) if pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()} and _owner_matches_credit(owner, credit)]
+            fidelity_owner, _ = _partner_fidelity_owner(config, item.get("dados") or {})
+            candidates = [fidelity_owner] if fidelity_owner else [owner for owner in config.get("piperun_owners", []) if pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()} and _owner_matches_credit(owner, credit)]
             if len(candidates) == 1:
                 try:
                     owner_result = await assign_piperun_deal_owner(opportunity_id, int(candidates[0]["owner_id"]))
