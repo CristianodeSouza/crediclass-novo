@@ -115,6 +115,23 @@ async def fetch_piperun_users() -> list[dict]:
             cursor = next_cursor
     return users
 
+async def fetch_piperun_companies_by_manager(manager_id: str | int) -> list[dict]:
+    manager = str(manager_id).strip()
+    if not manager.isdigit(): raise ValueError("O ID do responsável deve ser numérico.")
+    result, cursor = [], ""
+    async with httpx.AsyncClient(timeout=20) as client:
+        while True:
+            response = await client.get(f"{PIPERUN_BASE_URL}/companies", params={"manager_id": int(manager), "show": 200, "cursor": cursor}, headers=_pipe_headers())
+            if response.status_code in (401, 403): raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar empresas.")
+            if response.status_code >= 400: raise RuntimeError(f"PipeRun recusou a consulta das empresas (HTTP {response.status_code}).")
+            payload = response.json(); rows = payload.get("data", []) if isinstance(payload, dict) else []
+            if isinstance(rows, dict): rows = rows.get("data", [])
+            result.extend({"id": str(row["id"]), "cnpj": _digits(row.get("cnpj")), "nome": row.get("name") or row.get("company_name") or row.get("legal_name") or "Empresa sem nome"} for row in rows if isinstance(row, dict) and row.get("id"))
+            meta = payload.get("meta", {}) if isinstance(payload, dict) else {}; next_cursor = str((meta.get("cursor", {}) if isinstance(meta, dict) else {}).get("next") or "")
+            if not next_cursor or next_cursor == cursor: break
+            cursor = next_cursor
+    return result
+
 
 async def move_piperun_deal_to_stage(deal_id: str | int, stage_id: int) -> dict:
     deal_text = str(deal_id).strip()
