@@ -8273,3 +8273,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-scan-days input { accent-color: #ea580c; }
 .crm-scan-times label { display: grid; gap: 5px; min-width: 105px; color: #64748b; font-size: .75rem; font-weight: 700; }
 .crm-scan-times input { padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; color: #334155; }
+.crm-owner-companies { grid-column: 1 / -1; margin: 4px 0 2px; padding: 14px 16px; border: 1px solid #dbe4ec; border-radius: 10px; background: #fff; }
+.crm-owner-companies__header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 10px; color: #163247; }
+.crm-owner-companies__header > div { display: grid; gap: 3px; }
+.crm-owner-companies__header small { color: #64748b; font-size: .78rem; font-weight: 500; }
+.crm-owner-companies__count { display: inline-grid; min-width: 30px; height: 30px; place-items: center; padding: 0 8px; border-radius: 999px; color: #c2410c; background: #fff1e8; font-size: .78rem; font-weight: 800; }
+.crm-owner-companies__table-wrap { max-height: 220px; overflow: auto; border: 1px solid #e6edf3; border-radius: 8px; }
+.crm-owner-companies__table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: .82rem; }
+.crm-owner-companies__table th, .crm-owner-companies__table td { padding: 9px 11px; border-bottom: 1px solid #edf2f6; text-align: left; vertical-align: middle; }
+.crm-owner-companies__table th { position: sticky; top: 0; z-index: 1; color: #475569; background: #f8fafc; font-size: .72rem; letter-spacing: .03em; text-transform: uppercase; }
+.crm-owner-companies__table th:first-child, .crm-owner-companies__table td:first-child { width: 190px; white-space: nowrap; }
+.crm-owner-companies__table tr:last-child td { border-bottom: 0; }
+.crm-owner-companies__empty { padding: 12px; color: #64748b; font-size: .82rem; }
+@media (max-width: 760px) { .crm-owner-companies__table th:first-child, .crm-owner-companies__table td:first-child { width: 135px; } .crm-owner-companies { padding: 12px; } }
