@@ -56,10 +56,10 @@ async def search_piperun_partners(document: str) -> list[dict]:
     rows = payload.get("data", []) if isinstance(payload, dict) else []
     if isinstance(rows, dict): rows = rows.get("data", [])
     return [{
-        "id": str(row.get("id")), "tipo": kind, "documento": _digits(row.get(field) or document),
-        "nome": row.get("name") or row.get("company_name") or row.get("legal_name") or document,
+        "id": str(row.get("id")), "tipo": kind, "documento": _digits(row.get(field)),
+        "nome": str(row.get("name") or row.get("company_name") or row.get("legal_name") or "").strip(),
         "owner_id": row.get("owner_id") or row.get("user_id") or row.get("responsible_user_id"),
-    } for row in rows if isinstance(row, dict) and row.get("id")]
+    } for row in rows if isinstance(row, dict) and row.get("id") and _digits(row.get(field)) and str(row.get("name") or row.get("company_name") or row.get("legal_name") or "").strip()]
 
 
 async def fetch_piperun_owner(owner_id: str) -> dict:
@@ -126,7 +126,7 @@ async def fetch_piperun_companies_by_manager(manager_id: str | int) -> list[dict
             if response.status_code >= 400: raise RuntimeError(f"PipeRun recusou a consulta das empresas (HTTP {response.status_code}).")
             payload = response.json(); rows = payload.get("data", []) if isinstance(payload, dict) else []
             if isinstance(rows, dict): rows = rows.get("data", [])
-            result.extend({"id": str(row["id"]), "cnpj": _digits(row.get("cnpj")), "nome": row.get("name") or row.get("company_name") or row.get("legal_name") or "Empresa sem nome"} for row in rows if isinstance(row, dict) and row.get("id"))
+            result.extend({"id": str(row["id"]), "cnpj": _digits(row.get("cnpj")), "nome": str(row.get("name") or row.get("company_name") or row.get("legal_name") or "").strip()} for row in rows if isinstance(row, dict) and row.get("id") and _digits(row.get("cnpj")) and str(row.get("name") or row.get("company_name") or row.get("legal_name") or "").strip())
             meta = payload.get("meta", {}) if isinstance(payload, dict) else {}; next_cursor = str((meta.get("cursor", {}) if isinstance(meta, dict) else {}).get("next") or "")
             if not next_cursor or next_cursor == cursor: break
             cursor = next_cursor
