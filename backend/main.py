@@ -671,8 +671,14 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
         opportunity_id = str(deal.get("id") or item.get("crm_oportunidade_id") or "").strip()
         requirements_complete = False
         if person_id.isdigit() and opportunity_id.isdigit() and item.get("encontrado"):
+            titular_dados = dict(item.get("dados") or {})
+            if not titular_dados.get("email"):
+                reference = str(deal.get("reference") or "")
+                match = re.search(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", reference, re.I)
+                if match:
+                    titular_dados["email"] = match.group(0)
             try:
-                titular = await update_opportunity_person(opportunity_id, person_id, item.get("dados") or {})
+                titular = await update_opportunity_person(opportunity_id, person_id, titular_dados)
             except (ValueError, RuntimeError, httpx.HTTPError) as error:
                 item["titular_atualizado"] = False
                 item["titular_erro"] = str(error)

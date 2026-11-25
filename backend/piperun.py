@@ -454,7 +454,15 @@ async def update_opportunity_person(opportunity_id: str, person_id: str, dados: 
             return (rows[0] if rows else None), payload
 
         current, current_payload = (None, {})
-        if cpf:
+        titular_criado = False
+        if person_id.isdigit():
+            current_response = await client.get(f"{PIPERUN_BASE_URL}/persons/{person_id}", params={"with": "contactEmails,contactPhones"}, headers=headers)
+            if current_response.status_code == 200:
+                current_payload = current_response.json() if current_response.content else {}
+                current = current_payload.get("data", current_payload) if isinstance(current_payload, dict) else None
+            elif current_response.status_code != 404:
+                raise RuntimeError(f"PipeRun recusou a consulta do titular atual (HTTP {current_response.status_code}, person_id={person_id}).")
+        if current is None and cpf:
             current, current_payload = await find_person({"cursor": "", "cpf": cpf, "with": "contactEmails,contactPhones"})
         if current is None:
             current, current_payload = await find_person({"cursor": "", "name": lookup_name, "with": "contactEmails,contactPhones"})
@@ -473,13 +481,17 @@ async def update_opportunity_person(opportunity_id: str, person_id: str, dados: 
             link_response = await client.put(f"{PIPERUN_BASE_URL}/deals/{opportunity_id}", json={"person_id": int(new_person_id)}, headers={**headers, "content-type": "application/json"})
             if link_response.status_code >= 400:
                 raise RuntimeError(f"Titular criado (person_id={new_person_id}), mas não foi vinculado à oportunidade (HTTP {link_response.status_code}).")
-            return {"opportunity_id": opportunity_id, "person_id": new_person_id, "person_id_anterior": person_id, "titular_atualizado": True, "titular_criado": True, "updated_fields": list(create_body), "custom_fields_count": 0, "response": created_payload}
+            person_id = new_person_id
+            titular_criado = True
+            current = {}
+            current_payload = created_payload
         person_id = str(current.get("id") or current.get("person_id") or person_id).strip()
         if not person_id.isdigit():
             raise RuntimeError(f"PipeRun retornou o titular '{lookup_name}' sem person_id.")
-        link_response = await client.put(f"{PIPERUN_BASE_URL}/deals/{opportunity_id}", json={"person_id": int(person_id)}, headers={**headers, "content-type": "application/json"})
-        if link_response.status_code >= 400:
-            raise RuntimeError(f"Titular encontrado (person_id={person_id}), mas não foi vinculado como contato principal (HTTP {link_response.status_code}).")
+        if not titular_criado:
+            link_response = await client.put(f"{PIPERUN_BASE_URL}/deals/{opportunity_id}", json={"person_id": int(person_id)}, headers={**headers, "content-type": "application/json"})
+            if link_response.status_code >= 400:
+                raise RuntimeError(f"Titular encontrado (person_id={person_id}), mas não foi vinculado como contato principal (HTTP {link_response.status_code}).")
         current_emails = {str(value).strip().lower() for value in (current.get("contactEmails") or current.get("contact_emails") or []) if value}
         current_phones = {re.sub(r"\D", "", str(value)) for value in (current.get("contactPhones") or current.get("contact_phones") or []) if value}
         body = {}
@@ -514,7 +526,7 @@ async def update_opportunity_person(opportunity_id: str, person_id: str, dados: 
         raise RuntimeError("Token PipeRun inválido ou sem permissão para atualizar a pessoa.")
     if response.status_code >= 400:
         raise RuntimeError(f"PipeRun recusou a atualização do titular (HTTP {response.status_code}).")
-    return {"opportunity_id": opportunity_id, "person_id": person_id, "updated_fields": [key for key, value in body.items() if value], "custom_fields_count": len(body.get("custom_fields", [])), "titular_atualizado": True, "already_complete": False, "response": response.json()}
+    return {"opportunity_id": opportunity_id, "person_id": person_id, "titular_criado": titular_criado, "updated_fields": [key for key, value in body.items() if value], "custom_fields_count": len(body.get("custom_fields", [])), "titular_atualizado": True, "already_complete": False, "response": response.json()}
 
 
 def _spouse_data(dados: dict) -> dict:
