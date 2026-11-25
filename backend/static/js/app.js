@@ -814,9 +814,13 @@ function renderFinancialStudyInvestment() {
   const redemption = document.getElementById("financialStudyPart2Redemption");
   if (!input || !redemption) return;
 
-  const desiredCredit = Number(parseNumberInput(motor360ClientProfile().credito_liquido_desejado || 0));
-  const principal = desiredCredit > 0 ? -Math.abs(desiredCredit) : null;
   const groups = activeStudyItems();
+  const selectedScenarioIds = ["without_embedded", "with_embedded"];
+  const availableCredit = selectedScenarioIds.reduce((sum, scenarioId) => {
+    const metrics = selectedCompositionScenarioMetrics(groups, scenarioId);
+    return sum + Number(metrics?.credit || 0);
+  }, 0);
+  const principal = availableCredit > 0 ? -Math.abs(availableCredit) : null;
   const confirmedGroups = groups.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
   const terms = confirmedGroups.map((item) => Number(item.prazo_restante)).filter((term) => Number.isFinite(term) && term > 0);
   const averageTerm = terms.length ? terms.reduce((sum, term) => sum + term, 0) / terms.length : null;
@@ -846,7 +850,8 @@ function renderFinancialStudyInvestment() {
   const studyPart = document.querySelector('[data-study-part="2"]');
   if (studyPart) window.prepareFinancialStudyMobileViews?.(studyPart);
   return {
-    desired_credit: desiredCredit > 0 ? desiredCredit : null,
+    desired_credit: availableCredit > 0 ? availableCredit : null,
+    available_credit: availableCredit > 0 ? availableCredit : null,
     redemption_amount: principal,
     annual_rate: rate,
     average_remaining_term_months: averageTerm,
@@ -1751,7 +1756,7 @@ function renderFinancialStudySummary() {
     if (!entries.length) return "";
     const totalQuotas = entries.reduce((sum, entry) => sum + Number(entry.quotas || 0), 0);
     const totalContractedCredit = sumField(entries, "contractedCredit");
-    const totalCredit = totalContractedCredit;
+    const totalCredit = sumField(entries, "credit");
     const totalInstallment = sumField(entries, "installment");
     const totalInstallmentAfter = sumField(entries, "installmentAfter");
     const totalManual = sumField(entries, "ownBid");
@@ -1762,15 +1767,46 @@ function renderFinancialStudySummary() {
     const profileRows = ["conservative", "moderate", "aggressive", "super_aggressive"].map((profileId) => {
       const profileEntries = entries.filter((entry) => entry.profiles?.[profileId]);
       if (!profileEntries.length) return "";
-      const manual = sumField(profileEntries, "ownBid");
-      const embedded = sumField(profileEntries, "embedded");
-      const bidTotal = sumField(profileEntries, "totalBid");
-      const credit = sumField(profileEntries, "credit");
-      const installmentAfter = sumField(profileEntries, "installmentAfter");
-      return `<tr class="financial-study-part4-profile-row"><th scope="row"><strong>${profileLabels[profileId]}</strong></th><td>${formatMoney(manual)}</td><td>${formatMoney(embedded)}</td><td>${formatMoney(bidTotal)}</td><td>${formatMoney(credit)}</td><td>${formatMoney(installmentAfter)}</td><td>${escapeHtml(consolidatedTerm)}</td></tr>`;
+      const profile = profileEntries.reduce((result, entry) => {
+        const quotas = Math.max(1, Number(entry.quotas || 1));
+        const profileData = entry.profiles[profileId] || {};
+        const ownBid = Number(profileData.ideal || 0);
+        const totalBid = Number(profileData.idealTotal || 0);
+        const embedded = Number(entry.embedded || 0);
+        const credit = Number(entry.credit || 0);
+        const initial = Number(entry.installment || 0);
+        const term = Number(entry.item.prazo_restante ?? entry.item.prazo_remanescente);
+        const remainingTerm = Number.isFinite(term) && term > 1 ? term - 1 : null;
+        const ownPerQuota = ownBid / quotas;
+        const totalPerQuota = totalBid / quotas;
+        const embeddedPerQuota = embedded / quotas;
+        const creditPerQuota = credit / quotas;
+        const initialPerQuota = initial / quotas;
+        const balancePerQuota = Number(entry.balance || 0) / quotas;
+        const reduced = remainingTerm == null ? null : calculatePostContemplationInstallment(
+          balancePerQuota,
+          initialPerQuota,
+          totalPerQuota,
+          remainingTerm,
+        );
+        result.own += ownBid;
+        result.total += totalBid;
+        result.embedded += embedded;
+        result.credit += credit;
+        result.reduced += reduced == null ? 0 : reduced * quotas;
+        result.reducedKnown = result.reducedKnown && reduced != null;
+        result.terms.push(...Array.from({ length: quotas }, () => remainingTerm));
+        const strategy = profileId === "super_aggressive" ? "urgent" : profileId;
+        result.contemplations += Number(entry.item.capacidade_contemplacoes?.[strategy]?.media_contemplacoes || 0);
+        return result;
+      }, { own: 0, total: 0, embedded: 0, credit: 0, reduced: 0, reducedKnown: true, terms: [], contemplations: 0 });
+      const termLabel = profile.terms.every((term) => Number.isFinite(term) && term > 0) ? rangeLabel(profile.terms) : "Prazo incompleto";
+      const ownPercent = profile.credit > 0 ? profile.own / profile.credit : null;
+      const reducedValue = profile.reducedKnown ? profile.reduced : null;
+      return `<tr class="financial-study-part4-profile-row"><th scope="row"><strong>${profileLabels[profileId]}</strong><small>Contemplado ${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(profile.contemplations)} vezes</small></th><td>${formatMoney(profile.own)}</td><td>${ownPercent == null ? "Não informado" : formatPercent(ownPercent)}</td><td>${formatMoney(profile.credit)}</td><td>${formatMoney(reducedValue)}</td><td>${escapeHtml(termLabel)}</td></tr>`;
     }).join("");
-    const lottery = `<tr class="financial-study-part4-standard-lottery"><th scope="row"><strong>1 · Sorteio Geral</strong><small>Não necessita lance</small></th><td>Não necessita</td><td>${formatMoney(0)}</td><td>${formatMoney(0)}</td><td>${formatMoney(totalCredit)}</td><td>${formatMoney(totalInstallment)}</td><td>${escapeHtml(consolidatedTerm)}</td></tr>`;
-    return `<section class="financial-study-part4-standard-simulation"><h4>Simulação consolidada <span>· ${totalQuotas} ${totalQuotas === 1 ? "cota" : "cotas"} contratadas</span></h4><div class="financial-study-part4-table-wrap"><table class="financial-study-part4-table financial-study-part4-standard-simulation-table"><thead><tr><th>Simulação / Modalidade de contemplação</th><th>Lance / Recurso próprio</th><th>Lance embutido</th><th>Lance total</th><th>Carta de crédito disponível</th><th>Parcelas reduzidas / sem correção</th><th>Prazo / meses</th></tr></thead><tbody>${lottery}<tr class="financial-study-part4-standard-category"><th colspan="7">2 · Lance Livre <small>Perfis consolidados somando os cenários sem embutido e com embutido. Lance total = lance manual + lance embutido.</small></th></tr>${profileRows || '<tr><td colspan="7">Perfis de contemplação não disponíveis nos cenários selecionados.</td></tr>'}</tbody></table></div><p class="financial-study-part4-standard-simulation-note">Totais consolidados: carta contratada ${formatMoney(totalContractedCredit)}, parcela inicial ${formatMoney(totalInstallment)}, parcela pós-contemplação ${formatMoney(totalInstallmentAfter)}, lance manual ${formatMoney(totalManual)}, lance embutido ${formatMoney(totalEmbedded)} e lance total ${formatMoney(totalBid)}.</p></section>`;
+    const lottery = `<tr class="financial-study-part4-standard-lottery"><th scope="row"><strong>1 · Sorteio Geral</strong><small>Não necessita lance</small></th><td>Não necessita</td><td>—</td><td>${formatMoney(totalCredit)}</td><td>${formatMoney(totalInstallment)}</td><td>${escapeHtml(consolidatedTerm)}</td></tr>`;
+    return `<section class="financial-study-part4-standard-simulation"><h4>Simulação consolidada <span>· ${totalQuotas} ${totalQuotas === 1 ? "cota" : "cotas"} contratadas</span></h4><div class="financial-study-part4-table-wrap"><table class="financial-study-part4-table financial-study-part4-standard-simulation-table"><thead><tr><th>Simulação / Modalidade de contemplação</th><th>Recurso próprio</th><th>% recurso próprio</th><th>Carta de crédito disponível</th><th>Parcelas reduzidas / sem correção</th><th>Prazo restante</th></tr></thead><tbody>${lottery}<tr class="financial-study-part4-standard-category"><th colspan="6">2 · Lance Livre <small>Perfis consolidados com valores específicos da projeção de cada perfil.</small></th></tr>${profileRows || '<tr><td colspan="6">Perfis de contemplação não disponíveis nos cenários selecionados.</td></tr>'}</tbody></table></div><p class="financial-study-part4-standard-simulation-note">Totais consolidados: carta contratada ${formatMoney(totalContractedCredit)}, carta disponível ${formatMoney(totalCredit)}, parcela inicial ${formatMoney(totalInstallment)}, parcela pós-contemplação ${formatMoney(totalInstallmentAfter)}, lance manual ${formatMoney(totalManual)}, lance embutido ${formatMoney(totalEmbedded)} e lance total ${formatMoney(totalBid)}.</p></section>`;
   };
   const consolidatedSummary = `<section class="financial-study-part4-consolidated-summary"><h3>QUADRO RESUMO</h3><p class="financial-study-part4-standard-subtitle">Simulação consolidada de cartas de crédito em grupos estratégicos.</p><p class="financial-study-part4-standard-administrator">Administradora(s): <strong>${escapeHtml(adminLabel)}</strong></p><div class="financial-study-part4-standard-financial-grid"><div class="financial-study-part4-standard-primary"><div class="financial-study-part4-standard-section-title">Resumo consolidado de todas as cotas</div><div class="financial-study-part4-standard-metrics">${summaryMetric("Carta de crédito", formatMoney(consolidatedSum("contractedCredit")))}${summaryMetric("Parcelas sem seguro", formatMoney(consolidatedSum("installment")))}${summaryMetric("Prazo médio", consolidatedTermLabel)}${summaryMetric("Lance embutido", formatMoney(consolidatedSum("embedded")))}</div><div class="financial-study-part4-standard-charge-grid"><div><strong>Taxa administrativa</strong><span>${percentLabel(consolidatedAdminAnnual)} ao ano · ${percentLabel(consolidatedAdminTotal)} total</span><b>${formatMoney(chargeTotal(consolidatedEntries, "taxa_adm"))}</b></div><div><strong>Fundo de reserva</strong><span>${percentLabel(consolidatedReserveAnnual)} ao ano · ${percentLabel(consolidatedReserveTotal)} total</span><b>${formatMoney(chargeTotal(consolidatedEntries, "fundo_reserva"))}</b></div></div></div><div class="financial-study-part4-standard-secondary"><div class="financial-study-part4-standard-section-title">Totais dos lances e compromissos</div>${summaryMetric("Total de cotas", consolidatedQuotaCount)}${summaryMetric("Lance manual", formatMoney(consolidatedSum("ownBid")))}${summaryMetric("Lance total (manual + embutido)", formatMoney(consolidatedSum("totalBid")))}${summaryMetric("Crédito líquido", formatMoney(consolidatedSum("credit")))}${summaryMetric("Parcela pós-contemplação", formatMoney(consolidatedSum("installmentAfter")))}${summaryMetric("Saldo devedor antes do lance", formatMoney(consolidatedSum("balance")))}</div></div><p class="financial-study-part4-consolidated-note">${consolidatedQuotaCount} cotas contratadas somadas entre os cenários selecionados. Os subtotais de cada cenário permanecem independentes; o lance total é a soma do lance manual por cota com o lance embutido do respectivo cenário. O saldo devedor exibido é o saldo antes do lance.</p><div class="financial-study-part4-standard-simulations"><h4>Cenários e modalidades de contemplação</h4>${standardSimulation()}</div></section>`;
   const incompleteGroupCount = items.length - Math.min(baseEntries.length, embeddedEntries.length);
