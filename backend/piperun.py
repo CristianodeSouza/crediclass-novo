@@ -427,7 +427,7 @@ async def update_opportunity_person(opportunity_id: str, person_id: str, dados: 
             headers=headers,
         )
         if current_response.status_code == 404:
-            raise RuntimeError("Titular não encontrado no PipeRun.")
+            raise RuntimeError(f"Titular não encontrado no PipeRun (person_id={person_id}, oportunidade={opportunity_id}).")
         if current_response.status_code >= 400:
             raise RuntimeError(f"PipeRun recusou a consulta do titular (HTTP {current_response.status_code}).")
         current = current_response.json().get("data", current_response.json())

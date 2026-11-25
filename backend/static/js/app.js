@@ -1925,10 +1925,10 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview", requestOpti
       const ownerAssigned = Boolean(record.owner_id);
       const stageUpdated = Number(record.stage_id) === 262860;
       const ownerName = pipeRunUsers.find((user) => String(user.owner_id) === String(record.owner_id))?.nome || (ownerAssigned ? `Owner ID ${record.owner_id}` : "Nenhum owner atribuído");
-      const titularUpdated = Boolean(record.titular_atualizado) || Boolean(record.nome && record.cpf && record.email && record.celular);
+      const titularUpdated = record.titular_atualizado === true;
       const spouseExists = Boolean(record.nome_conjuge || record.email_conjuge || record.cpf_conjuge);
       const spouseUpdated = Boolean(record.conjuge_atualizado) || (spouseExists && Boolean(record.nome_conjuge && record.email_conjuge && record.cpf_conjuge));
-      const titularName = record.nome || "Titular não identificado";
+      const titularName = record.titular_erro ? `${record.nome || "Titular não identificado"} — ${record.titular_erro}` : (record.nome || "Titular não identificado");
       const spouseName = record.nome_conjuge || "Cônjuge não informado";
       const companyCnpjValue = record.empresa_parceira?.cnpj || record.cnpj_parceiro || "";
       const companyNameValue = record.empresa_parceira?.nome || "";
