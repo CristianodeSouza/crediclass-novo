@@ -118,6 +118,11 @@ def _owner_matches_credit(owner: dict, credit: float) -> bool:
     return (minimum is None or credit >= float(minimum)) and (maximum is None or credit <= float(maximum))
 
 
+def _can_advance_stage(requirements_complete: bool, owner_id: object) -> bool:
+    """A etapa só pode avançar depois das validações e de um owner efetivo."""
+    return bool(requirements_complete and str(owner_id or "").strip())
+
+
 def _partner_fidelity_key(value: str, kind: str = "") -> str:
     normalized = re.sub(r"\D", "", str(value or ""))
     return f"{str(kind or '').lower()}:{normalized}"
@@ -710,7 +715,7 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
                     item["owner_atribuicao_erro"] = str(error)
                     logger.warning("Atribuição automática de owner falhou deal_id=%s: %s", opportunity_id, error)
         owner_ready = bool((item.get("oportunidade") or {}).get("owner_id"))
-        if requirements_complete and owner_ready and opportunity_id.isdigit():
+        if _can_advance_stage(requirements_complete, owner_ready) and opportunity_id.isdigit():
             try:
                 stage_result = await move_piperun_deal_to_stage(opportunity_id, 262860)
                 item["etapa_atualizada"] = stage_result.get("changed", False) or stage_result.get("to") == 262860
@@ -718,6 +723,7 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
             except (ValueError, RuntimeError, httpx.HTTPError) as error:
                 logger.warning("Mudança automática de etapa ignorada deal_id=%s: %s", opportunity_id, error)
                 item["etapa_atualizada"] = False
+                item["etapa_erro"] = str(error)
         synced.append(item)
     return synced
 
@@ -729,7 +735,8 @@ async def preview_oportunidades_piperun(limit: int = Query(default=0, ge=0, le=1
         items = await _sync_people_for_new_items(await fetch_opportunities_preview(limit, created_at_start, created_at_end))
         items = annotate_owner_eligibility(items)
         sheets = upsert_piperun_opportunities(items)
-        return {"success": True, "temporary": False, "items": items, "sheets": sheets}
+        errors = [item.get("titular_erro") or item.get("integracao_erro") or item.get("owner_atribuicao_erro") or item.get("etapa_erro") for item in items]
+        return {"success": not any(errors), "temporary": False, "items": items, "sheets": sheets, "errors": [error for error in errors if error]}
     except Exception as error:
         logger.exception("Falha ao carregar preview PipeRun")
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
@@ -742,7 +749,8 @@ async def reprocessar_oportunidades_piperun():
         items = await _sync_people_for_new_items(await fetch_opportunities_preview(limit=0))
         items = annotate_owner_eligibility(items)
         sheets = upsert_piperun_opportunities(items)
-        return {"success": True, "items": items, "sheets": sheets}
+        errors = [item.get("titular_erro") or item.get("integracao_erro") or item.get("owner_atribuicao_erro") or item.get("etapa_erro") for item in items]
+        return {"success": not any(errors), "items": items, "sheets": sheets, "errors": [error for error in errors if error]}
     except Exception as error:
         logger.exception("Falha no reprocessamento manual PipeRun")
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
@@ -784,7 +792,7 @@ async def buscar_oportunidade_para_crm(opportunity_id: str):
         item = {"oportunidade": deal, **await fetch_opportunity_notes(opportunity_id)}
         item = (await _sync_people_for_new_items([item]))[0]
         sheets = upsert_piperun_opportunities([item])
-        failure = item.get("titular_erro") or item.get("integracao_erro") or item.get("owner_atribuicao_erro")
+        failure = item.get("titular_erro") or item.get("integracao_erro") or item.get("owner_atribuicao_erro") or item.get("etapa_erro")
         return {"success": not bool(failure), "items": annotate_owner_eligibility([item]), "sheets": sheets, "error": failure or None}
     except Exception as error:
         logger.exception("Falha na consulta manual PipeRun %s", opportunity_id)

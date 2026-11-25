@@ -848,6 +848,7 @@ def upsert_piperun_opportunities(items: list[dict[str, Any]]) -> dict[str, Any]:
             "titular_atualizado": item.get("titular_atualizado") or "",
             "titular_erro": item.get("titular_erro") or "",
             "integracao_erro": item.get("integracao_erro") or "",
+            "etapa_erro": item.get("etapa_erro") or "",
             "etapa_stage_id": item.get("etapa_stage_id") or deal.get("stage_id") or "",
             **dados,
         }
@@ -905,6 +906,7 @@ def read_piperun_opportunities() -> list[dict[str, Any]]:
             "titular_atualizado": str(record.pop("titular_atualizado", "")).lower() == "true",
             "titular_erro": record.pop("titular_erro", "") or "",
             "integracao_erro": record.pop("integracao_erro", "") or "",
+            "etapa_erro": record.pop("etapa_erro", "") or "",
             "encontrado": bool(record),
             "dados": record,
         })

@@ -1923,7 +1923,7 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview", requestOpti
       const status = record.nota_id ? "Dados extraídos" : "Sem nota de formulário";
       const statusClass = record.nota_id ? "is-success" : "is-muted";
       const ownerAssigned = Boolean(record.owner_id);
-      const stageUpdated = Number(record.stage_id) === 262860;
+      const stageUpdated = Number(record.stage_id) >= 262860;
       const ownerName = pipeRunUsers.find((user) => String(user.owner_id) === String(record.owner_id))?.nome || (ownerAssigned ? `Owner ID ${record.owner_id}` : "Nenhum owner atribuído");
       const titularUpdated = record.titular_atualizado === true;
       const spouseExists = Boolean(record.nome_conjuge || record.email_conjuge || record.cpf_conjuge);
@@ -8640,7 +8640,7 @@ document.addEventListener("click", async (event) => {
       if (!response.ok || !payload.success) throw new Error(payload.error || "Não foi possível reprocessar a oportunidade.");
       showToast("Oportunidade reprocessada pela PipeRun.", "success");
       await loadPipeRunPreview("/api/piperun-stored");
-    } catch (error) { showToast(error.message, "warning"); }
+    } catch (error) { showToast(error.message, "warning"); await loadPipeRunPreview("/api/piperun-stored"); }
     finally { refreshButton.disabled = false; }
     return;
   }
