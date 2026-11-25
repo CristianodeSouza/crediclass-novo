@@ -441,15 +441,25 @@ async def update_opportunity_person(opportunity_id: str, person_id: str, dados: 
     cpf = re.sub(r"\D", "", str(dados.get("cpf") or ""))
     async with httpx.AsyncClient(timeout=20) as client:
         headers = {"token": token, "accept": "application/json"}
+        lookup_name = str(dados.get("nome") or "").strip()
+        if not lookup_name:
+            raise ValueError(f"Nome do titular não encontrado no formulário (oportunidade={opportunity_id}).")
         current_response = await client.get(
-            f"{PIPERUN_BASE_URL}/persons/{person_id}",
-            params={"with": "contactEmails,contactPhones"},
+            f"{PIPERUN_BASE_URL}/persons",
+            params={"cursor": "", "name": lookup_name, "with": "contactEmails,contactPhones"},
             headers=headers,
         )
-        if current_response.status_code == 404:
+        if current_response.status_code >= 400:
+            raise RuntimeError(f"PipeRun recusou a busca do titular por nome (HTTP {current_response.status_code}, nome={lookup_name}).")
+        current_payload = current_response.json() if current_response.content else {}
+        current_rows = current_payload.get("data", []) if isinstance(current_payload, dict) else []
+        if isinstance(current_rows, dict):
+            current_rows = current_rows.get("data", [])
+        current = current_rows[0] if current_rows else None
+        if current is None:
             create_body = _new_person_payload(dados)
             if not create_body.get("name"):
-                raise RuntimeError(f"Titular não encontrado e não há nome para cadastro (person_id={person_id}, oportunidade={opportunity_id}).")
+                raise RuntimeError(f"Titular não encontrado e não há nome para cadastro (nome={lookup_name}, oportunidade={opportunity_id}).")
             create_response = await client.post(f"{PIPERUN_BASE_URL}/persons", json=create_body, headers={**headers, "content-type": "application/json"})
             if create_response.status_code >= 400:
                 raise RuntimeError(f"PipeRun recusou o cadastro do titular (HTTP {create_response.status_code}, person_id antigo={person_id}).")
@@ -462,9 +472,9 @@ async def update_opportunity_person(opportunity_id: str, person_id: str, dados: 
             if link_response.status_code >= 400:
                 raise RuntimeError(f"Titular criado (person_id={new_person_id}), mas não foi vinculado à oportunidade (HTTP {link_response.status_code}).")
             return {"opportunity_id": opportunity_id, "person_id": new_person_id, "person_id_anterior": person_id, "titular_atualizado": True, "titular_criado": True, "updated_fields": list(create_body), "custom_fields_count": 0, "response": created_payload}
-        if current_response.status_code >= 400:
-            raise RuntimeError(f"PipeRun recusou a consulta do titular (HTTP {current_response.status_code}).")
-        current = current_response.json().get("data", current_response.json())
+        person_id = str(current.get("id") or current.get("person_id") or person_id).strip()
+        if not person_id.isdigit():
+            raise RuntimeError(f"PipeRun retornou o titular '{lookup_name}' sem person_id.")
         current_emails = {str(value).strip().lower() for value in (current.get("contactEmails") or current.get("contact_emails") or []) if value}
         current_phones = {re.sub(r"\D", "", str(value)) for value in (current.get("contactPhones") or current.get("contact_phones") or []) if value}
         body = {}
