@@ -668,7 +668,7 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
         if person_id.isdigit() and opportunity_id.isdigit() and item.get("encontrado"):
             try:
                 titular = await update_opportunity_person(opportunity_id, person_id, item.get("dados") or {})
-            except (ValueError, RuntimeError) as error:
+            except (ValueError, RuntimeError, httpx.HTTPError) as error:
                 item["titular_atualizado"] = False
                 item["titular_erro"] = str(error)
                 logger.warning("Titular não processado; oportunidade ignorada nas etapas seguintes deal_id=%s person_id=%s: %s", opportunity_id, person_id, error)
@@ -677,7 +677,7 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
             try:
                 spouse = await sync_spouse(opportunity_id, item.get("dados") or {})
                 partners = await sync_partner_company(opportunity_id, item.get("dados") or {})
-            except (ValueError, RuntimeError) as error:
+            except (ValueError, RuntimeError, httpx.HTTPError) as error:
                 item["titular_atualizado"] = titular.get("titular_atualizado", False)
                 item["integracao_erro"] = str(error)
                 logger.warning("Integração complementar falhou; oportunidade ignorada nas etapas seguintes deal_id=%s: %s", opportunity_id, error)
@@ -705,16 +705,17 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
                     owner_result = await assign_piperun_deal_owner(opportunity_id, int(candidates[0]["owner_id"]))
                     item["oportunidade"] = {**deal, "owner_id": owner_result["owner_id"]}
                     item["owner_atribuido"] = True
-                except (ValueError, RuntimeError) as error:
+                except (ValueError, RuntimeError, httpx.HTTPError) as error:
                     item["owner_atribuido"] = False
                     item["owner_atribuicao_erro"] = str(error)
                     logger.warning("Atribuição automática de owner falhou deal_id=%s: %s", opportunity_id, error)
-        if requirements_complete and opportunity_id.isdigit():
+        owner_ready = bool((item.get("oportunidade") or {}).get("owner_id"))
+        if requirements_complete and owner_ready and opportunity_id.isdigit():
             try:
                 stage_result = await move_piperun_deal_to_stage(opportunity_id, 262860)
                 item["etapa_atualizada"] = stage_result.get("changed", False) or stage_result.get("to") == 262860
                 item["etapa_stage_id"] = stage_result.get("to")
-            except (ValueError, RuntimeError) as error:
+            except (ValueError, RuntimeError, httpx.HTTPError) as error:
                 logger.warning("Mudança automática de etapa ignorada deal_id=%s: %s", opportunity_id, error)
                 item["etapa_atualizada"] = False
         synced.append(item)
@@ -783,7 +784,8 @@ async def buscar_oportunidade_para_crm(opportunity_id: str):
         item = {"oportunidade": deal, **await fetch_opportunity_notes(opportunity_id)}
         item = (await _sync_people_for_new_items([item]))[0]
         sheets = upsert_piperun_opportunities([item])
-        return {"success": True, "items": annotate_owner_eligibility([item]), "sheets": sheets}
+        failure = item.get("titular_erro") or item.get("integracao_erro") or item.get("owner_atribuicao_erro")
+        return {"success": not bool(failure), "items": annotate_owner_eligibility([item]), "sheets": sheets, "error": failure or None}
     except Exception as error:
         logger.exception("Falha na consulta manual PipeRun %s", opportunity_id)
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
