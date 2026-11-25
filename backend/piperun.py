@@ -3,9 +3,10 @@ from __future__ import annotations
 import os
 import re
 import json
+from datetime import datetime, timezone
 import sqlite3
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import timedelta
 from html import unescape
 
 import httpx
@@ -15,6 +16,30 @@ logger = logging.getLogger("crediclass.piperun")
 
 
 PIPERUN_BASE_URL = "https://api.pipe.run/v1"
+
+PIPERUN_AUDIT_FILE = Path(__file__).resolve().parent / "data" / "piperun_api_audit.jsonl"
+
+async def _audit_request(request):
+    request.extensions["audit_started"] = datetime.now(timezone.utc).isoformat()
+
+async def _audit_response(response):
+    try:
+        PIPERUN_AUDIT_FILE.parent.mkdir(parents=True, exist_ok=True)
+        safe_url = str(response.request.url).split("?", 1)[0]
+        entry = {
+            "at": datetime.now(timezone.utc).isoformat(),
+            "started_at": response.request.extensions.get("audit_started"),
+            "method": response.request.method,
+            "url": safe_url,
+            "status": response.status_code,
+        }
+        with PIPERUN_AUDIT_FILE.open("a", encoding="utf-8") as audit:
+            audit.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    except OSError:
+        logger.exception("Não foi possível persistir auditoria da API PipeRun")
+
+def _piperun_client():
+    return httpx.AsyncClient(timeout=20, event_hooks={"request": [_audit_request], "response": [_audit_response]})
 PIPERUN_CUSTOM_FORM_ID = "44495"
 PIPERUN_CACHE_DB = Path(os.getenv("PIPERUN_CACHE_DB", str(Path(__file__).resolve().parent / "data" / "piperun.sqlite3")))
 PIPERUN_PIPELINE_CONSULTORIA_CREDITO = 4501
@@ -46,7 +71,7 @@ async def search_piperun_partners(document: str) -> list[dict]:
         raise ValueError("Informe um CPF com 11 dígitos ou CNPJ com 14 dígitos.")
     headers = _pipe_headers()
     resource, field, kind = ("companies", "cnpj", "pj") if len(document) == 14 else ("persons", "cpf", "pf")
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         response = await client.get(f"{PIPERUN_BASE_URL}/{resource}", params={field: document, "show": 50, "cursor": ""}, headers=headers)
     if response.status_code in (401, 403):
         raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar parceiros.")
@@ -69,7 +94,7 @@ async def fetch_piperun_owner(owner_id: str) -> dict:
     token = os.getenv("PIPERUN_API_KEY", "").strip()
     if not token:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         response = await client.get(f"{PIPERUN_BASE_URL}/users/{owner_id}", headers={"token": token, "accept": "application/json"})
     if response.status_code == 404:
         raise LookupError("Owner não encontrado no PipeRun.")
@@ -95,7 +120,7 @@ async def fetch_piperun_users() -> list[dict]:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
     users: list[dict] = []
     cursor = ""
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         while True:
             response = await client.get(f"{PIPERUN_BASE_URL}/users", headers={"token": token, "accept": "application/json"}, params={"show": 200, "cursor": cursor, "active": "active"})
             if response.status_code in (401, 403):
@@ -119,7 +144,7 @@ async def fetch_piperun_companies_by_manager(manager_id: str | int) -> list[dict
     manager = str(manager_id).strip()
     if not manager.isdigit(): raise ValueError("O ID do responsável deve ser numérico.")
     result, cursor = [], ""
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         while True:
             response = await client.get(f"{PIPERUN_BASE_URL}/companies", params={"manager_id": int(manager), "show": 200, "cursor": cursor, "with": "personsRelated.person"}, headers=_pipe_headers())
             if response.status_code in (401, 403): raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar empresas.")
@@ -146,7 +171,7 @@ async def fetch_piperun_persons_by_manager(manager_id: str | int) -> list[dict]:
     manager = str(manager_id).strip()
     if not manager.isdigit(): raise ValueError("O ID do responsável deve ser numérico.")
     result, cursor = [], ""
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         while True:
             response = await client.get(f"{PIPERUN_BASE_URL}/persons", params={"manager_id": int(manager), "show": 200, "cursor": cursor}, headers=_pipe_headers())
             if response.status_code in (401, 403): raise RuntimeError("Token PipeRun inválido ou sem permissão para consultar pessoas.")
@@ -171,7 +196,7 @@ async def move_piperun_deal_to_stage(deal_id: str | int, stage_id: int) -> dict:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
     headers = {"token": token, "accept": "application/json", "content-type": "application/json"}
     url = f"{PIPERUN_BASE_URL}/deals/{int(deal_text)}"
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         get_response = await client.get(url, headers=headers)
         if get_response.status_code >= 400:
             raise RuntimeError(f"PipeRun recusou a consulta da oportunidade (HTTP {get_response.status_code}).")
@@ -201,11 +226,11 @@ async def assign_piperun_deal_owner(deal_id: str | int, owner_id: int) -> dict:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
     headers = {"token": token, "accept": "application/json", "content-type": "application/json"}
     url = f"{PIPERUN_BASE_URL}/deals/{int(deal_text)}"
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         response = await client.put(url, headers=headers, json={"owner_id": int(owner_id)})
     if response.status_code >= 400:
         raise RuntimeError(f"PipeRun recusou a atribuição do owner (HTTP {response.status_code}).")
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         verify_response = await client.get(url, headers=headers)
     if verify_response.status_code >= 400:
         raise RuntimeError(f"PipeRun não permitiu confirmar o owner (HTTP {verify_response.status_code}).")
@@ -392,7 +417,7 @@ async def fetch_opportunity_notes(opportunity_id: str) -> dict:
     token = os.getenv("PIPERUN_API_KEY", "").strip()
     if not token:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         notes_response = await client.get(
             f"{PIPERUN_BASE_URL}/notes",
             params={"cursor": "", "deal_id": int(opportunity_id)},
@@ -439,7 +464,7 @@ async def update_opportunity_person(opportunity_id: str, person_id: str, dados: 
     if not token:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
     cpf = re.sub(r"\D", "", str(dados.get("cpf") or ""))
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         headers = {"token": token, "accept": "application/json"}
         lookup_name = str(dados.get("nome") or "").strip()
         if not lookup_name:
@@ -561,7 +586,7 @@ async def sync_spouse(opportunity_id: str, dados: dict) -> dict:
         return {"conjuge_atualizado": False, "conjuge_status": "nao_informado"}
     token = os.getenv("PIPERUN_API_KEY", "").strip()
     headers = {"token": token, "accept": "application/json"}
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         person = None
         if spouse["cpf"]:
             lookup = await client.get(f"{PIPERUN_BASE_URL}/persons", params={"cpf": spouse["cpf"], "with": "contactEmails,contactPhones", "show": 10}, headers=headers)
@@ -601,7 +626,7 @@ async def sync_partner_company(opportunity_id: str, dados: dict) -> dict:
         return {"empresa_parceira_status": "nao_informada", "parceiros_status": "nao_informados", "parceiros_atualizados": []}
     token = os.getenv("PIPERUN_API_KEY", "").strip()
     headers = {"token": token, "accept": "application/json"}
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         lookup = await client.get(f"{PIPERUN_BASE_URL}/companies", params={"cnpj": cnpj, "show": 10, "cursor": ""}, headers=headers)
         if lookup.status_code >= 400 and lookup.status_code != 404:
             raise RuntimeError(f"PipeRun recusou a consulta da empresa (HTTP {lookup.status_code}).")
@@ -667,7 +692,7 @@ async def create_opportunity_note(opportunity_id: str, text: str) -> dict:
     user_id = os.getenv("PIPERUN_USER_ID", "").strip()
     if user_id.isdigit():
         payload["user_id"] = int(user_id)
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         response = await client.post(
             f"{PIPERUN_BASE_URL}/notes",
             json=payload,
@@ -702,7 +727,7 @@ async def activate_custom_form_public_link(opportunity_id: str, form_id: str = P
 
     endpoint = f"{PIPERUN_BASE_URL}/customForms/{form_id}/deals/{opportunity_id}/public_hash"
     headers = {"token": token, "accept": "application/json", "content-type": "application/json"}
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         response = await client.put(endpoint, json={}, headers=headers)
         if response.status_code in (401, 403):
             raise RuntimeError("Token PipeRun inválido ou sem permissão para ativar o formulário público.")
@@ -737,7 +762,7 @@ async def fetch_opportunities_preview(limit: int = 25, created_at_start: str | N
     token = os.getenv("PIPERUN_API_KEY", "").strip()
     if not token:
         raise RuntimeError("Integração PipeRun não configurada no ambiente.")
-    async with httpx.AsyncClient(timeout=20) as client:
+    async with _piperun_client() as client:
         created_at_start = created_at_start or (datetime.now() - timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
         cursor = ""
         deals = []
