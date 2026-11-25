@@ -627,13 +627,18 @@ async def sync_partner_company(opportunity_id: str, dados: dict) -> dict:
             name = str(contact.get("nome") or "").strip()
             email = str(contact.get("email") or "").strip()
             phone = str(contact.get("telefone") or "").strip()
+            document = re.sub(r"\D", "", str(contact.get("cpf") or contact.get("cnpj") or contact.get("documento") or ""))
             if not name or name.lower() in {"não informado", "nao informado"}: continue
             person = None
             people_response = await client.get(f"{PIPERUN_BASE_URL}/persons", params={"company_id": int(company_id), "show": 200, "cursor": "", "with": "contactEmails,contactPhones"}, headers=headers)
             if people_response.status_code < 400:
                 people = people_response.json().get("data", [])
                 if isinstance(people, list):
-                    person = next((row for row in people if (email and email.lower() in {str(v).lower() for v in (row.get("contactEmails") or [])}) or (not email and str(row.get("name") or "").strip().lower() == name.lower())), None)
+                    def same_person(row):
+                        row_document = re.sub(r"\D", "", str(row.get("cpf") or row.get("cnpj") or ""))
+                        row_emails = {str(v).strip().lower() for v in (row.get("contactEmails") or [])}
+                        return bool((document and row_document == document) or (email and email.lower() in row_emails) or (not document and not email and str(row.get("name") or "").strip().lower() == name.lower()))
+                    person = next((row for row in people if same_person(row)), None)
             if not person:
                 created_person = await client.post(f"{PIPERUN_BASE_URL}/persons", json={"name": name, "company_id": int(company_id), "contactEmails": [email] if email else [], "contactPhones": [phone] if phone else []}, headers={**headers, "content-type": "application/json"})
                 if created_person.status_code >= 400: raise RuntimeError(f"PipeRun recusou o cadastro do parceiro {role} (HTTP {created_person.status_code}).")

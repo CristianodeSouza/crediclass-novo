@@ -15,9 +15,11 @@ import copy
 import re
 import secrets
 import shutil
+import asyncio
 import httpx
 from concurrent.futures import Future, ThreadPoolExecutor
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from html import escape as html_escape
 from typing import Annotated
 from urllib.parse import quote
@@ -65,7 +67,32 @@ async def app_lifespan(_app: FastAPI):
     # Warm asynchronously so the web process becomes available immediately;
     # the cache worker refreshes before its five-minute TTL expires.
     warm_motor360_cache_async()
-    yield
+    scheduler = asyncio.create_task(_piperun_schedule_loop())
+    try:
+        yield
+    finally:
+        scheduler.cancel()
+        await asyncio.gather(scheduler, return_exceptions=True)
+
+
+async def _piperun_schedule_loop():
+    """Run the configured PipeRun sweep once per configured Brasília minute."""
+    last_run = None
+    while True:
+        try:
+            schedule = get_configuracoes().get("piperun_scan_schedule") or {}
+            now = datetime.now(ZoneInfo(schedule.get("timezone") or "America/Sao_Paulo"))
+            key = (now.date().isoformat(), now.strftime("%H:%M"))
+            weekday = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][now.weekday()]
+            if schedule.get("enabled") and weekday in {str(day).lower() for day in schedule.get("days", [])} and now.strftime("%H:%M") in set(schedule.get("times", [])) and key != last_run:
+                last_run = key
+                logger.info("Iniciando varredura PipeRun agendada em %s", now.isoformat())
+                await _run_piperun_reprocess(source="schedule")
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("Falha na varredura PipeRun agendada")
+        await asyncio.sleep(20)
 
 
 app = FastAPI(title="Crediclass Dashboard V3", lifespan=app_lifespan)
@@ -738,25 +765,28 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
 async def preview_oportunidades_piperun(limit: int = Query(default=0, ge=0, le=10000), created_at_start: str | None = None, created_at_end: str | None = None):
     """Leitura temporária de todas as oportunidades recentes e suas notas, sem escrita."""
     try:
-        items = await _sync_people_for_new_items(await fetch_opportunities_preview(limit, created_at_start, created_at_end))
+        items = await fetch_opportunities_preview(limit, created_at_start, created_at_end)
         items = annotate_owner_eligibility(items)
-        sheets = upsert_piperun_opportunities(items)
-        errors = [item.get("titular_erro") or item.get("integracao_erro") or item.get("owner_atribuicao_erro") or item.get("etapa_erro") for item in items]
-        return {"success": not any(errors), "temporary": False, "items": items, "sheets": sheets, "errors": [error for error in errors if error]}
+        return {"success": True, "temporary": True, "items": items, "errors": []}
     except Exception as error:
         logger.exception("Falha ao carregar preview PipeRun")
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
 
 
+async def _run_piperun_reprocess(source: str = "manual"):
+    """Reprocessa oportunidades e executa as gravações no PipeRun."""
+    items = await _sync_people_for_new_items(await fetch_opportunities_preview(limit=0))
+    items = annotate_owner_eligibility(items)
+    sheets = upsert_piperun_opportunities(items)
+    errors = [item.get("titular_erro") or item.get("integracao_erro") or item.get("owner_atribuicao_erro") or item.get("etapa_erro") for item in items]
+    logger.info("Reprocessamento PipeRun concluído source=%s items=%s errors=%s", source, len(items), len([e for e in errors if e]))
+    return {"success": not any(errors), "items": items, "sheets": sheets, "errors": [error for error in errors if error]}
+
+
 @app.post("/api/piperun-reprocess")
 async def reprocessar_oportunidades_piperun():
-    """Reprocessa oportunidades e executa as gravações no PipeRun."""
     try:
-        items = await _sync_people_for_new_items(await fetch_opportunities_preview(limit=0))
-        items = annotate_owner_eligibility(items)
-        sheets = upsert_piperun_opportunities(items)
-        errors = [item.get("titular_erro") or item.get("integracao_erro") or item.get("owner_atribuicao_erro") or item.get("etapa_erro") for item in items]
-        return {"success": not any(errors), "items": items, "sheets": sheets, "errors": [error for error in errors if error]}
+        return await _run_piperun_reprocess()
     except Exception as error:
         logger.exception("Falha no reprocessamento manual PipeRun")
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
@@ -796,12 +826,29 @@ async def buscar_oportunidade_para_crm(opportunity_id: str):
         payload = response.json()
         deal = payload.get("data", payload)
         item = {"oportunidade": deal, **await fetch_opportunity_notes(opportunity_id)}
-        item = (await _sync_people_for_new_items([item]))[0]
+        return {"success": True, "temporary": True, "items": annotate_owner_eligibility([item]), "error": None}
+    except Exception as error:
+        logger.exception("Falha na consulta manual PipeRun %s", opportunity_id)
+        return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
+
+
+@app.post("/api/piperun-search/{opportunity_id}/reprocess")
+async def reprocessar_oportunidade_para_crm(opportunity_id: str):
+    try:
+        token = os.getenv("PIPERUN_API_KEY", "").strip()
+        if not opportunity_id.isdigit() or not token:
+            raise ValueError("Informe um ID numérico de oportunidade.")
+        async with httpx.AsyncClient(timeout=20) as client:
+            response = await client.get(f"https://api.pipe.run/v1/deals/{opportunity_id}", headers={"token": token, "accept": "application/json"})
+        if response.status_code >= 400:
+            raise RuntimeError(f"PipeRun recusou a oportunidade (HTTP {response.status_code}).")
+        deal = response.json().get("data", response.json())
+        item = (await _sync_people_for_new_items([{"oportunidade": deal, **await fetch_opportunity_notes(opportunity_id)}]))[0]
         sheets = upsert_piperun_opportunities([item])
         failure = item.get("titular_erro") or item.get("integracao_erro") or item.get("owner_atribuicao_erro") or item.get("etapa_erro")
         return {"success": not bool(failure), "items": annotate_owner_eligibility([item]), "sheets": sheets, "error": failure or None}
     except Exception as error:
-        logger.exception("Falha na consulta manual PipeRun %s", opportunity_id)
+        logger.exception("Falha no reprocessamento manual PipeRun %s", opportunity_id)
         return JSONResponse(status_code=502, content={"success": False, "error": str(error)})
 
 
