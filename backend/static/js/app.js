@@ -1889,6 +1889,10 @@ async function savePipeRunOwners() {
   showToast("Owners e agenda PipeRun salvos.", "success");
 }
 
+// IDs do PipeRun não seguem a ordem do funil (ex.: Elaboração do Estudo = 23000).
+// Etapas do funil 4501 a partir de "2. Validação Pré-Estudo" (262860), conforme PIPERUN_STAGES em backend/piperun.py.
+const PIPERUN_STAGES_FROM_PRE_STUDY = new Set([262860, 23000, 40079, 596064, 23002, 661871, 99340, 661872, 665553, 628083, 648315, 53812, 53813, 54942, 54941]);
+
 async function loadPipeRunPreview(endpoint = "/api/piperun-preview", requestOptions = {}) {
   const state = document.getElementById("pipeRunPreviewState");
   const wrap = document.getElementById("pipeRunPreviewTableWrap");
@@ -1923,7 +1927,7 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview", requestOpti
       const status = record.nota_id ? "Dados extraídos" : "Sem nota de formulário";
       const statusClass = record.nota_id ? "is-success" : "is-muted";
       const ownerAssigned = Boolean(record.owner_id);
-      const stageUpdated = Number(record.stage_id) >= 262860;
+      const stageUpdated = PIPERUN_STAGES_FROM_PRE_STUDY.has(Number(record.stage_id));
       const ownerName = pipeRunUsers.find((user) => String(user.owner_id) === String(record.owner_id))?.nome || (ownerAssigned ? `Owner ID ${record.owner_id}` : "Nenhum owner atribuído");
       const titularUpdated = record.titular_atualizado === true;
       const spouseExists = Boolean(record.nome_conjuge || record.email_conjuge || record.cpf_conjuge);
