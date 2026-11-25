@@ -8197,6 +8197,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-owner-status.is-pending { color: #64748b; background: #f1f5f9; }
 .crm-opportunity-status-group .crm-owner-status { order: 5; }
 .crm-opportunity-status-group > .crm-person-status[title^="Etapa"] { order: 6; }
+.crm-opportunity-status-group .crm-opportunity-refresh-btn { order: 7; }
 .crm-person-status { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 50%; font-size: .68rem; font-weight: 800; cursor: help; }
 .crm-person-status.is-assigned { color: #166534; background: #dcfce7; }
 .crm-person-status.is-pending { color: #64748b; background: #f1f5f9; }
