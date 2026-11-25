@@ -417,6 +417,19 @@ async def fetch_opportunity_notes(opportunity_id: str) -> dict:
     }
 
 
+def _new_person_payload(dados: dict) -> dict:
+    payload = {"name": str(dados.get("nome") or "").strip()}
+    cpf = re.sub(r"\D", "", str(dados.get("cpf") or ""))
+    email = str(dados.get("email") or "").strip()
+    phone = str(dados.get("celular") or "").strip()
+    if cpf: payload["cpf"] = cpf
+    if email: payload["contactEmails"] = [email]
+    if phone: payload["contactPhones"] = [phone]
+    if dados.get("data_nascimento"): payload["birth_day"] = str(dados["data_nascimento"]).strip()
+    if dados.get("profissao"): payload["job_title"] = str(dados["profissao"]).strip()
+    return payload
+
+
 async def update_opportunity_person(opportunity_id: str, person_id: str, dados: dict) -> dict:
     opportunity_id = str(opportunity_id).strip()
     person_id = str(person_id).strip()
@@ -434,7 +447,21 @@ async def update_opportunity_person(opportunity_id: str, person_id: str, dados: 
             headers=headers,
         )
         if current_response.status_code == 404:
-            raise RuntimeError(f"Titular não encontrado no PipeRun (person_id={person_id}, oportunidade={opportunity_id}).")
+            create_body = _new_person_payload(dados)
+            if not create_body.get("name"):
+                raise RuntimeError(f"Titular não encontrado e não há nome para cadastro (person_id={person_id}, oportunidade={opportunity_id}).")
+            create_response = await client.post(f"{PIPERUN_BASE_URL}/persons", json=create_body, headers={**headers, "content-type": "application/json"})
+            if create_response.status_code >= 400:
+                raise RuntimeError(f"PipeRun recusou o cadastro do titular (HTTP {create_response.status_code}, person_id antigo={person_id}).")
+            created_payload = create_response.json()
+            created = created_payload.get("data", created_payload)
+            new_person_id = str(created.get("id") or created.get("person_id") or "").strip() if isinstance(created, dict) else ""
+            if not new_person_id.isdigit():
+                raise RuntimeError("PipeRun cadastrou o titular, mas não retornou o novo person_id.")
+            link_response = await client.put(f"{PIPERUN_BASE_URL}/deals/{opportunity_id}/persons/{new_person_id}", headers=headers)
+            if link_response.status_code >= 400:
+                raise RuntimeError(f"Titular criado (person_id={new_person_id}), mas não foi vinculado à oportunidade (HTTP {link_response.status_code}).")
+            return {"opportunity_id": opportunity_id, "person_id": new_person_id, "person_id_anterior": person_id, "titular_atualizado": True, "titular_criado": True, "updated_fields": list(create_body), "custom_fields_count": 0, "response": created_payload}
         if current_response.status_code >= 400:
             raise RuntimeError(f"PipeRun recusou a consulta do titular (HTTP {current_response.status_code}).")
         current = current_response.json().get("data", current_response.json())
