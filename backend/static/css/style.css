@@ -8301,6 +8301,16 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-owner-companies__table th:nth-child(4), .crm-owner-companies__table td:nth-child(4) { width: 135px; white-space: nowrap; }
 .crm-owner-companies__table tr:last-child td { border-bottom: 0; }
 .crm-owner-companies__empty { padding: 12px; color: #64748b; font-size: .82rem; }
+.crm-owner-row { gap: 8px; padding: 9px; }
+.crm-owner-row label { gap: 3px; font-size: .68rem; }
+.crm-owner-row input { padding: 6px 8px; }
+.crm-owner-companies { margin: 2px 0; padding: 9px 12px; }
+.crm-owner-companies__header { gap: 10px; }
+.crm-owner-companies__header strong { font-size: .7rem; }
+.crm-owner-companies__header small { font-size: .55rem; }
+.crm-owner-companies__count { min-width: 24px; height: 24px; padding: 0 6px; font-size: .6rem; }
+.crm-fidelity-open-btn { padding: 7px 10px; font-size: .7rem; }
+.crm-owner-fidelity { gap: 6px; margin-top: 4px; padding: 8px; }
 .crm-owner-partner { display: grid; gap: 2px; margin: 0 0 5px; }
 .crm-owner-partner:last-child { margin-bottom: 0; }
 .crm-owner-partner small { color: #64748b; font-size: .72rem; }
