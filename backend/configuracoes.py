@@ -1,6 +1,7 @@
 from copy import deepcopy
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 
 PIPERUN_FUNNELS = [
@@ -406,7 +407,10 @@ DEFAULT_CONFIG = {
     "regras_negocio_feedbacks": {},
 }
 
-RUNTIME_DIR = Path(__file__).resolve().parent / "runtime_data"
+# Render mounts the persistent disk at backend/data. Keep a local fallback for
+# development, but never store production configuration on the ephemeral layer.
+_persistent_dir = Path(__file__).resolve().parent / "data"
+RUNTIME_DIR = _persistent_dir if _persistent_dir.exists() or os.getenv("ENVIRONMENT") == "production" else Path(__file__).resolve().parent / "runtime_data"
 CONFIG_FILE = RUNTIME_DIR / "configuracoes.json"
 
 
@@ -485,10 +489,14 @@ def update_configuracoes(payload: dict) -> dict:
     if "regras_negocio_feedbacks" in payload and isinstance(payload["regras_negocio_feedbacks"], dict):
         _settings["regras_negocio_feedbacks"] = payload["regras_negocio_feedbacks"]
     if "piperun_owners" in payload and isinstance(payload["piperun_owners"], list):
+        previous_by_id = {str(owner.get("owner_id")): owner for owner in _settings.get("piperun_owners", []) if isinstance(owner, dict)}
         for owner in payload["piperun_owners"]:
             if isinstance(owner, dict):
                 owner["pipeline_ids"] = [int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()]
                 owner.pop("origens", None)
+                if "parceiros_fidelidade" not in owner:
+                    previous = previous_by_id.get(str(owner.get("owner_id"))) or {}
+                    owner["parceiros_fidelidade"] = deepcopy(previous.get("parceiros_fidelidade", []))
         _settings["piperun_owners"] = payload["piperun_owners"]
     if "piperun_owner_distribution_enabled" in payload:
         _settings["piperun_owner_distribution_enabled"] = bool(payload["piperun_owner_distribution_enabled"])

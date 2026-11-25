@@ -8639,7 +8639,7 @@ document.addEventListener("click", async (event) => {
     event.stopPropagation();
     refreshButton.disabled = true;
     try {
-      const response = await fetch(`/api/piperun-search/${encodeURIComponent(refreshButton.dataset.opportunityId)}`, { credentials: "same-origin", cache: "no-store" });
+      const response = await fetch(`/api/piperun-search/${encodeURIComponent(refreshButton.dataset.opportunityId)}/reprocess`, { method: "POST", credentials: "same-origin", cache: "no-store" });
       const payload = await response.json();
       if (!response.ok || !payload.success) throw new Error(payload.error || "Não foi possível reprocessar a oportunidade.");
       showToast("Oportunidade reprocessada pela PipeRun.", "success");
