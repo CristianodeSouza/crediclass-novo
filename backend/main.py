@@ -126,7 +126,7 @@ def _partner_fidelity_key(value: str, kind: str = "") -> str:
 def _partner_fidelity_owner(config: dict, dados: dict) -> tuple[dict | None, str]:
     fields = dados.get("campos_formulario") or {}
     raw = " ".join(str(v) for values in fields.values() for v in (values if isinstance(values, list) else [values]))
-    registered = any(token in raw.lower() for token in ("já tenho cadastro", "ja tenho cadastro", "cadastro na pessoa", "cadastro no"))
+    registered = any(token in raw.lower() for token in ("já tenho cadastro", "ja tenho cadastro", "cadastro na pessoa", "cadastro no", "sim, parceiro pessoa jurídica", "sim, parceiro pessoa juridica"))
     if not registered:
         return None, ""
     cnpj = re.sub(r"\D", "", str((dados.get("empresa_parceira") or {}).get("cnpj") or ""))
@@ -666,9 +666,23 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
         opportunity_id = str(deal.get("id") or item.get("crm_oportunidade_id") or "").strip()
         requirements_complete = False
         if person_id.isdigit() and opportunity_id.isdigit() and item.get("encontrado"):
-            titular = await update_opportunity_person(opportunity_id, person_id, item.get("dados") or {})
-            spouse = await sync_spouse(opportunity_id, item.get("dados") or {})
-            partners = await sync_partner_company(opportunity_id, item.get("dados") or {})
+            try:
+                titular = await update_opportunity_person(opportunity_id, person_id, item.get("dados") or {})
+            except (ValueError, RuntimeError) as error:
+                item["titular_atualizado"] = False
+                item["titular_erro"] = str(error)
+                logger.warning("Titular não processado; oportunidade ignorada nas etapas seguintes deal_id=%s person_id=%s: %s", opportunity_id, person_id, error)
+                synced.append(item)
+                continue
+            try:
+                spouse = await sync_spouse(opportunity_id, item.get("dados") or {})
+                partners = await sync_partner_company(opportunity_id, item.get("dados") or {})
+            except (ValueError, RuntimeError) as error:
+                item["titular_atualizado"] = titular.get("titular_atualizado", False)
+                item["integracao_erro"] = str(error)
+                logger.warning("Integração complementar falhou; oportunidade ignorada nas etapas seguintes deal_id=%s: %s", opportunity_id, error)
+                synced.append(item)
+                continue
             item = {**item, **titular, **spouse, **partners}
             spouse_required = any(str(item.get("dados", {}).get(field) or "").strip() for field in ("nome_conjuge", "email_conjuge", "cpf_conjuge"))
             requirements_complete = all((
