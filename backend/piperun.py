@@ -358,6 +358,13 @@ def _parse_form(text: str) -> dict:
             result["objetivo"] = "Contemplar - moderado - 12 meses"
         elif "até 6" in prazo or "rápido" in perfil:
             result["objetivo"] = "Contemplar - rapido - 6 meses"
+    elif raw_fields.get("Nome Completo"):
+        # O formulário unificado registra indicador e titular na mesma resposta.
+        # Para PF/PJ, o último nome informado é o titular que deve ser conciliado
+        # com o person_id da oportunidade; os demais participantes ficam em parceiros.
+        names = [part.strip() for part in raw_fields["Nome Completo"][-1].split("·") if part.strip()]
+        if names:
+            result["nome"] = names[-1]
     result["campos_formulario"] = raw_fields
     result["empresa_parceira"] = {
         "cnpj": re.sub(r"\D", "", str((raw_fields.get("CNPJ do parceiro cadastrado") or [""])[-1])),

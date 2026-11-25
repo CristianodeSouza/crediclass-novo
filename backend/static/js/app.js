@@ -1916,7 +1916,7 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview", requestOpti
     const records = items.map((item) => {
       const deal = item.oportunidade || {};
       const dados = item.dados || {};
-      return { crm_oportunidade_id: deal.id, titulo_oportunidade: deal.title || deal.name, criado_em: deal.created_at, nota_id: item.nota_id, owner_id: deal.owner_id || dados.owner_id || "", stage_id: item.etapa_stage_id || deal.stage_id || 0, titular_atualizado: item.titular_atualizado, ...dados };
+      return { crm_oportunidade_id: deal.id, titulo_oportunidade: deal.title || deal.name, criado_em: deal.created_at, nota_id: item.nota_id, owner_id: deal.owner_id || dados.owner_id || "", stage_id: item.etapa_stage_id ?? item.stage_id ?? deal.stage_id ?? 0, titular_atualizado: item.titular_atualizado, titular_erro: item.titular_erro, integracao_erro: item.integracao_erro, ...dados };
     });
     head.innerHTML = "<tr><th>ID da oportunidade</th><th>Oportunidade</th><th>Criada em</th><th>Status da nota</th></tr>";
     body.innerHTML = records.map((record) => {
