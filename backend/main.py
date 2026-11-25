@@ -164,7 +164,7 @@ def annotate_owner_eligibility(items: list[dict]) -> list[dict]:
                 continue
             pipeline_matches = [owner for owner in owners if pipeline_id and pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()}]
             credit_matches = [owner for owner in pipeline_matches if _owner_matches_credit(owner, credit)]
-            item["owner_distribution"] = {"eligible": bool(credit_matches), "reason": "eligible_without_owner" if credit_matches else "credit_outside_owner_ranges", "owner_id": "", "pipeline_id": pipeline_id, "credit_requested": credit, "matching_owner_ids": [owner.get("owner_id") for owner in credit_matches]}
+            item["owner_distribution"] = {"eligible": bool(credit_matches), "reason": "new_partner_without_fidelity" if credit_matches else "credit_outside_owner_ranges", "owner_id": "", "pipeline_id": pipeline_id, "credit_requested": credit, "matching_owner_ids": [owner.get("owner_id") for owner in credit_matches]}
     return items
 
 
@@ -664,6 +664,7 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
         deal = item.get("oportunidade") or {}
         person_id = str(deal.get("person_id") or "").strip()
         opportunity_id = str(deal.get("id") or item.get("crm_oportunidade_id") or "").strip()
+        requirements_complete = False
         if person_id.isdigit() and opportunity_id.isdigit() and item.get("encontrado"):
             titular = await update_opportunity_person(opportunity_id, person_id, item.get("dados") or {})
             spouse = await sync_spouse(opportunity_id, item.get("dados") or {})
@@ -676,17 +677,9 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
                 item.get("empresa_parceira_status") == "ok",
                 item.get("parceiros_status") == "ok",
             ))
-            if requirements_complete:
-                try:
-                    stage_result = await move_piperun_deal_to_stage(opportunity_id, 262860)
-                    item["etapa_atualizada"] = stage_result.get("changed", False) or stage_result.get("to") == 262860
-                    item["etapa_stage_id"] = stage_result.get("to")
-                except (ValueError, RuntimeError) as error:
-                    logger.warning("Mudança automática de etapa ignorada deal_id=%s: %s", opportunity_id, error)
-                    item["etapa_atualizada"] = False
         config = get_configuracoes()
         deal = item.get("oportunidade") or {}
-        if not deal.get("owner_id") and config.get("piperun_owner_distribution_enabled") and opportunity_id.isdigit():
+        if requirements_complete and not deal.get("owner_id") and config.get("piperun_owner_distribution_enabled") and opportunity_id.isdigit():
             pipeline_id = int(deal.get("pipeline_id") or 0)
             credit = _credit_value_from_note(item)
             def owner_range(owner):
@@ -702,6 +695,14 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
                     item["owner_atribuido"] = False
                     item["owner_atribuicao_erro"] = str(error)
                     logger.warning("Atribuição automática de owner falhou deal_id=%s: %s", opportunity_id, error)
+        if requirements_complete and opportunity_id.isdigit():
+            try:
+                stage_result = await move_piperun_deal_to_stage(opportunity_id, 262860)
+                item["etapa_atualizada"] = stage_result.get("changed", False) or stage_result.get("to") == 262860
+                item["etapa_stage_id"] = stage_result.get("to")
+            except (ValueError, RuntimeError) as error:
+                logger.warning("Mudança automática de etapa ignorada deal_id=%s: %s", opportunity_id, error)
+                item["etapa_atualizada"] = False
         synced.append(item)
     return synced
 
