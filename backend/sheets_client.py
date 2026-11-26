@@ -43,6 +43,7 @@ _motor360_warm_lock = threading.Lock()
 _detail_build_lock = threading.Lock()
 _defasagem_warm_lock = threading.Lock()
 _motor360_warm_started = False
+_service_local = threading.local()
 
 SUMMARY_FIELDS = [
     "administradora",
@@ -300,8 +301,18 @@ MONTH_ABBR_BY_NUMBER = {
 }
 
 
-@lru_cache
 def get_service():
+    """Return a Google Sheets client isolated to the current thread.
+
+    httplib2 transports are not thread-safe. Sharing the cached discovery
+    service between the startup warmup thread and request workers can corrupt
+    the native allocator and take the whole web process down. A thread-local
+    client preserves connection reuse within a worker without sharing the
+    transport across concurrent threads.
+    """
+    service = getattr(_service_local, "service", None)
+    if service is not None:
+        return service
     settings = get_settings()
     if not settings.google_sheets_id:
         raise RuntimeError("GOOGLE_SHEETS_ID nao configurado")
@@ -314,7 +325,9 @@ def get_service():
         credentials,
         http=httplib2.Http(timeout=SHEETS_HTTP_TIMEOUT_SECONDS),
     )
-    return build("sheets", "v4", http=authorized_http, cache_discovery=False)
+    service = build("sheets", "v4", http=authorized_http, cache_discovery=False)
+    _service_local.service = service
+    return service
 
 
 def format_duration_seconds_pt(duration_ms: float) -> str:
