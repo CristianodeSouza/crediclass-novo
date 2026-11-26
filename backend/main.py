@@ -40,7 +40,7 @@ from .consortium_viability_engine import MOTOR_VERSION, RULES_VERSION, analyze_c
 from .credit_options import available_credit_options
 from .defasagem import build_defasagem_report, update_defasagem_task
 from . import financial_studies
-from .piperun import PIPERUN_STAGES, activate_custom_form_public_link, assign_piperun_deal_owner, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes, fetch_piperun_companies_by_manager, fetch_piperun_persons_by_manager, fetch_piperun_owner, fetch_piperun_users, move_piperun_deal_to_stage, search_piperun_partners, sync_partner_company, sync_spouse, update_opportunity_person
+from .piperun import PIPERUN_STAGES, activate_custom_form_public_link, assign_piperun_deal_owner, create_opportunity_note, fetch_opportunities_preview, fetch_opportunity_notes, fetch_piperun_companies_by_manager, fetch_piperun_persons_by_manager, fetch_piperun_owner, fetch_piperun_users, move_piperun_deal_to_stage, search_piperun_partners, sync_partner_company, sync_spouse, update_opportunity_person, _cached_opportunities
 from .models import GrupoCreateRequest, GrupoCreateResponse, GrupoDetalhe, GrupoUpdateRequest, GruposResponse, HistoricoBatchUpdateRequest, HistoricoUpdateRequest, SuccessResponse, ViabilidadeRequest
 from .sheets_client import clear_rows_cache, create_grupo, delete_grupo, export_sheet_csv, get_cached_grupos_defasagem, get_grupo, list_grupos, list_grupos_detalhe, list_grupos_detalhe_by_ids, motor360_cache_status, read_piperun_opportunities, update_grupo, update_historico_mensal, update_historico_mensal_lote, upsert_piperun_opportunities, warm_grupos_defasagem_cache_async, warm_motor360_cache_async
 from .viabilidade import compatible_tipo_bem
@@ -172,11 +172,104 @@ def _partner_fidelity_owner(config: dict, dados: dict) -> tuple[dict | None, str
     return None, next(iter(keys), "")
 
 
+def _normalized_form_fields(dados: dict) -> dict[str, list[str]]:
+    return {re.sub(r"[^a-z0-9]", "", str(key).lower()): (value if isinstance(value, list) else [value]) for key, value in (dados.get("campos_formulario") or {}).items()}
+
+
+def _first_form_value(fields: dict[str, list[str]], *markers: str) -> str:
+    for key, values in fields.items():
+        if all(marker in key for marker in markers):
+            for value in reversed(values):
+                if str(value or "").strip() and str(value).strip().lower() != "adicionar valor":
+                    return str(value).strip()
+    return ""
+
+
+def _entry_type(dados: dict) -> str:
+    fields = _normalized_form_fields(dados)
+    value = _first_form_value(fields, "quem", "preench") or _first_form_value(fields, "tipodeentrada")
+    text = value.casefold()
+    if "colaborador" in text: return "colaborador"
+    if "parceiro" in text: return "parceiro"
+    if "cliente" in text: return "cliente"
+    if "terceiro" in text: return "terceiro"
+    return "terceiro"
+
+
+def _capture_source(dados: dict) -> str:
+    fields = _normalized_form_fields(dados)
+    value = (_first_form_value(fields, "como", "conheceu") or _first_form_value(fields, "origem") or _first_form_value(fields, "canal") or "").casefold()
+    aliases = {"whats": "whatsapp", "wpp": "whatsapp", "insta": "instagram", "face": "facebook", "google": "google", "linkedin": "linkedin", "email": "email_marketing", "mkt": "email_marketing"}
+    for marker, normalized in aliases.items():
+        if marker in value: return normalized
+    return value
+
+
+def _owner_is_consultant(owner: dict) -> bool:
+    role = str(owner.get("tipo") or owner.get("role") or "consultor").casefold()
+    return owner.get("consultor") is not False and role not in {"administrador", "admin", "operador", "backoffice"}
+
+
+def _owner_matches_pipeline_credit(owner: dict, pipeline_id: int, credit: float) -> bool:
+    return _owner_is_consultant(owner) and pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()} and _owner_matches_credit(owner, credit)
+
+
+def _client_identity(dados: dict) -> set[str]:
+    return {value for value in (re.sub(r"\D", "", str(dados.get("cpf") or "")), re.sub(r"\D", "", str(dados.get("celular") or "")), str(dados.get("email") or "").strip().casefold()) if value}
+
+
+def _previous_client_owner(config: dict, dados: dict, pipeline_id: int, credit: float) -> dict | None:
+    identity = _client_identity(dados)
+    if not identity: return None
+    owners = {str(owner.get("owner_id")): owner for owner in config.get("piperun_owners", [])}
+    matches = []
+    for item in _cached_opportunities():
+        old = item.get("dados") or {}
+        old_identity = _client_identity(old)
+        old_deal = item.get("oportunidade") or {}
+        owner = owners.get(str(old_deal.get("owner_id") or ""))
+        if owner and identity & old_identity:
+            matches.append((str(old_deal.get("created_at") or old_deal.get("updated_at") or ""), owner))
+    for _, owner in sorted(matches, reverse=True):
+        if _owner_matches_pipeline_credit(owner, pipeline_id, credit): return owner
+    return None
+
+
+def _collaborator_owner(config: dict, dados: dict, pipeline_id: int, credit: float) -> dict | None:
+    fields = _normalized_form_fields(dados)
+    value = _first_form_value(fields, "colaborador") or _first_form_value(fields, "consultor")
+    if not value: return None
+    digits = re.sub(r"\D", "", value)
+    for owner in config.get("piperun_owners", []):
+        if _owner_matches_pipeline_credit(owner, pipeline_id, credit) and (digits and str(owner.get("owner_id")) == digits or value.casefold() in str(owner.get("nome") or "").casefold()):
+            return owner
+    return None
+
+
+def _select_distribution_owner(candidates: list[dict], opportunity_id: str) -> dict | None:
+    if not candidates: return None
+    # Stable round-robin by opportunity id: repeated scans do not move an existing deal.
+    digest = hashlib.sha256(str(opportunity_id).encode()).hexdigest()
+    return sorted(candidates, key=lambda owner: int(owner.get("owner_id") or 0))[int(digest[:8], 16) % len(candidates)]
+
+
+def _distribution_decision(config: dict, item: dict) -> dict:
+    deal, dados = item.get("oportunidade") or {}, item.get("dados") or {}
+    pipeline_id, credit = int(deal.get("pipeline_id") or 0), _credit_value_from_note(item)
+    entry_type, source = _entry_type(dados), _capture_source(dados)
+    owners = config.get("piperun_owners", [])
+    candidates = [owner for owner in owners if _owner_matches_pipeline_credit(owner, pipeline_id, credit)]
+    direct = _partner_fidelity_owner(config, dados)[0] if entry_type == "parceiro" else None
+    if not direct and entry_type == "colaborador": direct = _collaborator_owner(config, dados, pipeline_id, credit)
+    if not direct and entry_type == "cliente": direct = _previous_client_owner(config, dados, pipeline_id, credit)
+    chosen = direct or _select_distribution_owner(candidates, deal.get("id") or "")
+    return {"eligible": bool(chosen), "reason": "direct_entry_owner" if direct else ("source_distribution" if chosen else "no_eligible_owner"), "entry_type": entry_type, "capture_source": source, "owner_id": chosen.get("owner_id") if chosen else "", "pipeline_id": pipeline_id, "credit_requested": credit, "matching_owner_ids": [owner.get("owner_id") for owner in candidates]}
+
+
 def annotate_owner_eligibility(items: list[dict]) -> list[dict]:
     config = get_configuracoes()
     owners = config.get("piperun_owners", [])
     distribution_enabled = bool(config.get("piperun_owner_distribution_enabled"))
-    ranges_configured = any(any(value is not None for value in _owner_credit_range(owner)) for owner in owners if isinstance(owner, dict))
     for item in items:
         deal = item.get("oportunidade") or {}
         dados = item.get("dados") or {}
@@ -186,17 +279,8 @@ def annotate_owner_eligibility(items: list[dict]) -> list[dict]:
             item["owner_distribution"] = {"eligible": False, "reason": "owner_already_assigned", "owner_id": owner_id}
         elif not distribution_enabled:
             item["owner_distribution"] = {"eligible": False, "reason": "owner_distribution_disabled", "owner_id": ""}
-        elif not ranges_configured:
-            item["owner_distribution"] = {"eligible": False, "reason": "owner_ranges_not_configured", "owner_id": ""}
         else:
-            credit = _credit_value_from_note(item)
-            fidelity_owner, fidelity_key = _partner_fidelity_owner(config, dados)
-            if fidelity_owner:
-                item["owner_distribution"] = {"eligible": True, "reason": "partner_fidelity", "owner_id": fidelity_owner.get("owner_id"), "fidelity_key": fidelity_key, "pipeline_id": pipeline_id, "credit_requested": credit, "matching_owner_ids": [fidelity_owner.get("owner_id")]}
-                continue
-            pipeline_matches = [owner for owner in owners if pipeline_id and pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()}]
-            credit_matches = [owner for owner in pipeline_matches if _owner_matches_credit(owner, credit)]
-            item["owner_distribution"] = {"eligible": bool(credit_matches), "reason": "new_partner_without_fidelity" if credit_matches else "credit_outside_owner_ranges", "owner_id": "", "pipeline_id": pipeline_id, "credit_requested": credit, "matching_owner_ids": [owner.get("owner_id") for owner in credit_matches]}
+            item["owner_distribution"] = _distribution_decision(config, item)
     return items
 
 
@@ -769,10 +853,9 @@ async def _sync_people_for_new_items(items: list[dict]) -> list[dict]:
         if requirements_complete and not deal.get("owner_id") and config.get("piperun_owner_distribution_enabled") and opportunity_id.isdigit():
             pipeline_id = int(deal.get("pipeline_id") or 0)
             credit = _credit_value_from_note(item)
-            def owner_range(owner):
-                return _owner_credit_range(owner)
-            fidelity_owner, _ = _partner_fidelity_owner(config, item.get("dados") or {})
-            candidates = [fidelity_owner] if fidelity_owner else [owner for owner in config.get("piperun_owners", []) if pipeline_id in {int(value) for value in owner.get("pipeline_ids", []) if str(value).isdigit()} and _owner_matches_credit(owner, credit)]
+            decision = _distribution_decision(config, item)
+            selected_owner_id = decision.get("owner_id")
+            candidates = [owner for owner in config.get("piperun_owners", []) if str(owner.get("owner_id")) == str(selected_owner_id)]
             if len(candidates) == 1:
                 try:
                     owner_result = await assign_piperun_deal_owner(opportunity_id, int(candidates[0]["owner_id"]))

@@ -86,10 +86,11 @@ class OwnerStageFlowTests(unittest.TestCase):
         result, calls = self.run_flow(make_item(credit=50_000_000), owners=[OWNERS[0]])
         self.assertEqual(calls, ["titular", "conjuge", "parceiros"])
 
-    def test_mais_de_um_candidato_nao_atribui_nem_muda_etapa(self):
+    def test_mais_de_um_candidato_distribui_de_forma_deterministica(self):
         duplicated = [OWNERS[0], {**OWNERS[0], "owner_id": 2700}]
         result, calls = self.run_flow(make_item(), owners=duplicated)
-        self.assertEqual(calls, ["titular", "conjuge", "parceiros"])
+        self.assertEqual(calls, ["titular", "conjuge", "parceiros", "owner:2602", f"etapa:{STAGE}"])
+        self.assertEqual(result["oportunidade"]["owner_id"], 2602)
 
     def test_falha_na_atribuicao_bloqueia_etapa(self):
         result, calls = self.run_flow(make_item(), assign_error=RuntimeError("PipeRun recusou"))

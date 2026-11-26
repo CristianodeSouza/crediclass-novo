@@ -391,6 +391,15 @@ def _parse_form(text: str) -> dict:
         if names:
             result["nome"] = names[-1]
     result["campos_formulario"] = raw_fields
+    def raw_last(*markers: str) -> str:
+        for label, values in raw_fields.items():
+            normalized = re.sub(r"[^a-z0-9]", "", label.lower())
+            if all(marker in normalized for marker in markers) and values:
+                return str(values[-1]).strip()
+        return ""
+    result["cpf"] = re.sub(r"\D", "", result.get("cpf") or raw_last("cpf"))
+    result["email"] = result.get("email") or raw_last("email")
+    result["celular"] = re.sub(r"\D", "", result.get("celular") or raw_last("celular"))
     result["empresa_parceira"] = {
         "cnpj": re.sub(r"\D", "", str((raw_fields.get("CNPJ do parceiro cadastrado") or [""])[-1])),
         "nome": (raw_fields.get("Nome da Empresa Parceira") or [""])[-1],
