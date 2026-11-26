@@ -63,6 +63,7 @@ const screens = {
 
 const financialStudyHistoryState = { items: [], selectedId: null, documentHtml: "", loaded: false, loading: false };
 const financialStudyApprovalState = { pendingKey: null, pendingFingerprint: null };
+const financialStudyAdhesionDateOverrides = new Map();
 
 const mapState = {
   page: 1,
@@ -846,7 +847,7 @@ function renderFinancialStudyInvestment() {
   const groups = activeStudyItems();
   const selectedScenarioIds = ["without_embedded", "with_embedded"];
   const investmentMetrics = selectedScenarioIds.map((scenarioId) => selectedCompositionScenarioMetrics(groups, scenarioId));
-  const availableCredit = investmentMetrics.reduce((sum, metrics) => sum + Number(metrics?.contractedCredit || 0), 0);
+  const availableCredit = investmentMetrics.reduce((sum, metrics) => sum + Number(metrics?.credit || 0), 0);
   const principal = availableCredit > 0 ? -Math.abs(availableCredit) : null;
   const confirmedGroups = groups.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
   const terms = confirmedGroups.map((item) => Number(item.prazo_restante)).filter((term) => Number.isFinite(term) && term > 0);
@@ -1304,6 +1305,7 @@ function renderFinancialStudyContracting() {
   const metricsByScenario = Object.fromEntries(scenarioIds.map((id) => [id, selectedCompositionScenarioMetrics(items, id)]));
   const rows = [];
   const numericValue = (value) => value === null || value === undefined || value === "" || !Number.isFinite(Number(value)) ? null : Number(value);
+  let contractSequence = 0;
   for (const item of items) {
     const groupKey = motor360GroupKey(item);
     const chosenScenarioIds = selectedScenarioIdsForGroup(groupKey);
@@ -1323,9 +1325,10 @@ function renderFinancialStudyContracting() {
       const annualRateInfo = financialStudyAnnualRate(entry.item);
       const annualRate = annualRateInfo.value;
       for (let contractIndex = 1; contractIndex <= entry.quotas; contractIndex += 1) {
+        contractSequence += 1;
         rows.push({
           scenarioId,
-          label: `${groupLabel} · Contrato ${contractIndex}`,
+          label: `${groupLabel} · Contrato ${contractSequence}`,
           scenarioWord: scenarioId === "with_embedded" ? "Com" : "Sem",
           credit: sourceCredit,
           contractedCredit,
@@ -1348,7 +1351,7 @@ function renderFinancialStudyContracting() {
     return;
   }
 
-  const body = rows.map((row) => `<tr><th scope="row" data-label="Contrato"><span class="financial-study-motor-value">${escapeHtml(row.label)}</span> · <strong class="financial-study-part7-scenario-emphasis">${row.scenarioWord}</strong> embutido</th><td data-label="Carta contratada">${formatMoney(row.contractedCredit)}</td><td data-label="Crédito líquido">${formatMoney(row.credit)}</td><td data-label="Lance embutido">${formatMoney(row.embeddedBid)}</td><td data-label="Parcela (sem seguro)">${formatMoney(row.installment)}</td><td data-label="Prazo">${row.term == null ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td><td data-label="Tx ADM total">${row.adminRate == null ? "Não informado" : formatPercent(row.adminRate)}</td><td data-label="Tx ADM ao ano" title="Origem: ${escapeHtml(row.annualRateSource)}">${row.annualRate == null ? "Não informado" : formatPercent(row.annualRate)}</td><td data-label="Fundo reserva total">${row.reserveRate == null ? "Não informado" : formatPercent(row.reserveRate)}</td><td data-label="Fundo reserva ao ano">${row.reserveAnnualRate == null ? "Não informado" : formatPercent(row.reserveAnnualRate)}</td></tr>`).join("");
+  const body = rows.map((row) => `<tr><th scope="row" data-label="Contrato"><span class="financial-study-motor-value">${escapeHtml(row.label)}</span> · <strong class="financial-study-part7-scenario-emphasis">${row.scenarioWord}</strong> lance embutido</th><td data-label="Carta contratada">${formatMoney(row.contractedCredit)}</td><td data-label="Crédito líquido">${formatMoney(row.credit)}</td><td data-label="Lance embutido">${formatMoney(row.embeddedBid)}</td><td data-label="Parcela (sem seguro)">${formatMoney(row.installment)}</td><td data-label="Prazo">${row.term == null ? "Não informado" : `${escapeHtml(String(row.term))} meses`}</td><td data-label="Tx ADM total">${row.adminRate == null ? "Não informado" : formatPercent(row.adminRate)}</td><td data-label="Tx ADM ao ano" title="Origem: ${escapeHtml(row.annualRateSource)}">${row.annualRate == null ? "Não informado" : formatPercent(row.annualRate)}</td><td data-label="Fundo reserva total">${row.reserveRate == null ? "Não informado" : formatPercent(row.reserveRate)}</td><td data-label="Fundo reserva ao ano">${row.reserveAnnualRate == null ? "Não informado" : formatPercent(row.reserveAnnualRate)}</td></tr>`).join("");
   const subtotalRows = (() => {
     if (!rows.length) return "";
     const sumAvailable = (field) => {
@@ -1543,7 +1546,7 @@ function renderFinancialStudyProjection() {
     const rows = profileProjectionRows(profile.id);
     return `<section class="financial-study-part10-profile"><h3>${profile.number}. ${escapeHtml(profile.label)}</h3>${tableFor(rows, `Projeção ${profile.label}`)}</section>`;
   }).join("");
-  target.innerHTML = `${reviewBanner}<section class="financial-study-part10-lottery"><h3>1. Sorteio Geral</h3>${tableFor(lotteryRows, "Projeção de contemplação por sorteio geral")}</section>${profileSections}<p class="financial-study-part10-source-note">Sorteio Geral considera os cenários e quantidades de contratos efetivamente selecionados, sem lance próprio. Nos demais quadros, os lances e percentuais vêm do valor manual definido por cota no Motor 360; crédito, embutido, parcela inicial e prazo vêm do cenário correspondente. Cada cenário permanece independente e a contemplação não é garantida.</p>`;
+  target.innerHTML = `${reviewBanner}<section class="financial-study-part10-lottery"><h3>1. Sorteio Geral</h3>${tableFor(lotteryRows, "Projeção de contemplação por sorteio geral")}</section>${profileSections}<p class="financial-study-part10-source-note">Sorteio Geral considera os cenários e quantidades de contratos efetivamente selecionados, sem lance próprio. Nos demais quadros, os percentuais de referência vêm do histórico de lances por grupo; os lances ideais são calculados a partir desses percentuais. Crédito, embutido, parcela inicial e prazo vêm do cenário correspondente. Cada cenário permanece independente e a contemplação não é garantida.</p>`;
 }
 
 function financialStudyAssemblyEvent(schedule, month, eventId) {
@@ -1618,13 +1621,25 @@ function renderFinancialStudyAdhesionDates() {
   const rows = items.map((item) => {
     const schedule = financialStudyAssemblyScheduleForGroup(item, data);
     const cycle = schedule ? financialStudyNextAdhesionCycle(schedule) : null;
+    const groupKey = motor360GroupKey(item);
     const label = `Grupo ${item.grupo || item.grupo_id || "-"} · ${item.administradora || "Administradora não identificada"}`;
-    return { label, cycle };
+    return { label, cycle, groupKey };
   });
   const dateText = (date) => date ? assemblyFormatDate(date) : "Não informado";
-  const body = rows.map(({ label, cycle }) => `<tr><th scope="row" data-label="Grupo"><span class="financial-study-motor-value">${escapeHtml(label)}</span></th><td data-label="Limite adesão – Reserva de vagas"><span class="financial-study-external-value">${dateText(cycle?.adhesion)}</span></td><td data-label="Limite adesão – Assembleia"><span class="financial-study-external-value">${dateText(cycle?.assemblyAdhesion)}</span></td><td data-label="Vencimento primeira parcela"><span class="financial-study-external-value">${dateText(cycle?.firstInstallment)}</span></td><td data-label="Próxima assembleia"><span class="financial-study-external-value">${dateText(cycle?.nextAssembly)}</span></td><td data-label="Vencimento pagamento lance"><span class="financial-study-external-value">${dateText(cycle?.bidPayment)}</span></td></tr>`).join("");
+  const dateInputValue = (date) => date ? `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}` : "";
+  const body = rows.map(({ label, cycle, groupKey }) => {
+    const override = financialStudyAdhesionDateOverrides.get(groupKey);
+    const adhesionDate = override ? new Date(`${override}T00:00:00`) : cycle?.adhesion;
+    return `<tr><th scope="row" data-label="Grupo"><span class="financial-study-motor-value">${escapeHtml(label)}</span></th><td data-label="Limite adesão – Reserva de vagas"><input class="financial-study-adhesion-date" type="date" value="${dateInputValue(adhesionDate)}" data-adhesion-group="${escapeHtml(groupKey)}" aria-label="Limite de adesão para reserva de vagas do ${escapeHtml(label)}"></td><td data-label="Limite adesão – Assembleia"><span class="financial-study-external-value">${dateText(cycle?.assemblyAdhesion)}</span></td><td data-label="Vencimento primeira parcela"><span class="financial-study-external-value">${dateText(cycle?.firstInstallment)}</span></td><td data-label="Próxima assembleia"><span class="financial-study-external-value">${dateText(cycle?.nextAssembly)}</span></td><td data-label="Vencimento pagamento lance"><span class="financial-study-external-value">${dateText(cycle?.bidPayment)}</span></td></tr>`;
+  }).join("");
   const noCycle = rows.some(({ cycle }) => !cycle);
   target.innerHTML = `${reviewBanner}<div class="financial-study-part11-table-wrap" role="region" aria-label="Próximas datas de adesão dos grupos selecionados" tabindex="0"><table class="financial-study-part11-table"><thead><tr><th scope="col">Grupo</th><th scope="col">Limite Adesão – Reserva Vagas Grupos</th><th scope="col">Limite Adesão – Assembleia</th><th scope="col">Vencimento Primeira Parcela</th><th scope="col">Próxima Assembleia</th><th scope="col">Vencimento Pagamento Lance</th></tr></thead><tbody>${body}</tbody></table></div><p class="financial-study-part11-source-note">Calendário consultado no Mapa Assembleia para a administradora e faixa de vencimento do grupo. A primeira data de adesão exibida é futura e anterior ao vencimento da parcela correspondente. A data considera o calendário carregado e o dia atual do estudo.${noCycle ? " Um grupo sem data disponível está identificado como ‘Não informado’; revise o calendário ou a associação da faixa." : ""}</p>`;
+  target.onchange = (event) => {
+    const input = event.target.closest(".financial-study-adhesion-date");
+    if (!input) return;
+    if (input.value) financialStudyAdhesionDateOverrides.set(input.dataset.adhesionGroup, input.value);
+    else financialStudyAdhesionDateOverrides.delete(input.dataset.adhesionGroup);
+  };
 }
 
 function renderFinancialStudySummary() {
@@ -1687,6 +1702,7 @@ function renderFinancialStudySummary() {
   const historySummary = () => {
     let hitCount = 0;
     let groupsWithHistory = 0;
+    const recordCounts = [];
     for (const item of items) {
       const months = [...(item.historico_12_meses || [])]
         .sort((left, right) => String(left.mes || "").localeCompare(String(right.mes || "")))
@@ -1700,10 +1716,12 @@ function renderFinancialStudySummary() {
         hitCount += quantity;
       }
       if (groupHasHistory) groupsWithHistory += 1;
+      recordCounts.push(months.filter((month) => month.qtd_contemplacoes !== null && month.qtd_contemplacoes !== undefined && month.qtd_contemplacoes !== "").length);
     }
     if (!groupsWithHistory) return "Histórico de contemplações: não informado.";
     const partial = groupsWithHistory < items.length ? " Há grupos sem histórico completo." : "";
-    return `Histórico informado: ${hitCount} contemplações somadas nos últimos 11 registros mensais disponíveis por grupo. Dado histórico agregado, não é previsão.${partial}`;
+    const recordLabel = [...new Set(recordCounts)].join(" e ");
+    return `Histórico informado: ${hitCount} contemplações somadas nos registros mensais disponíveis por grupo (${recordLabel} registros válidos nesta seleção). Dado histórico agregado, não é previsão.${partial}`;
   };
   const profileLabels = {
     conservative: "Conservador (24 meses)",
@@ -1795,31 +1813,25 @@ function renderFinancialStudySummary() {
         ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(postContemplationTerms.reduce((sum, value) => sum + value, 0) / postContemplationTerms.length)} meses`
         : "Prazo incompleto";
       const countProfileContemplations = (profileEntries, profileId) => {
-        const weightedThresholdBase = profileEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit || 0), 0);
-        if (!(weightedThresholdBase > 0)) return 0;
-        const threshold = profileEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit || 0) * Number(entry.profiles?.[profileId]?.percentual_referencia || 0), 0) / weightedThresholdBase;
-        const monthMap = new Map();
-        profileEntries.forEach((entry) => {
+        const counts = profileEntries.map((entry) => {
+          const threshold = Number(entry.profiles?.[profileId]?.percentual_referencia || 0);
+          if (!(threshold > 0)) return 0;
           const history = [...(Array.isArray(entry.item.historico_12_meses) ? entry.item.historico_12_meses : [])]
             .sort((left, right) => String(left.mes || "").localeCompare(String(right.mes || "")))
             .slice(-11);
-          history.forEach((month) => {
+          return history.filter((month) => {
             const bidRaw = Number(month?.menor_lance);
             const quantity = Number(month?.qtd_contemplacoes);
-            if (!Number.isFinite(bidRaw) || bidRaw <= 0 || !Number.isFinite(quantity) || quantity <= 0) return;
+            if (!Number.isFinite(bidRaw) || bidRaw <= 0 || !Number.isFinite(quantity) || quantity <= 0) return false;
             const bid = bidRaw > 1 ? bidRaw / 100 : bidRaw;
-            const current = monthMap.get(String(month.mes || "")) || { weightedBid: 0, weight: 0, quantity: 0 };
-            const weight = Number(entry.contractedCredit || 0);
-            current.weightedBid += bid * weight;
-            current.weight += weight;
-            current.quantity += quantity;
-            monthMap.set(String(month.mes || ""), current);
-          });
+            return threshold >= bid;
+          }).length;
         });
-        return [...monthMap.values()].filter((month) => month.weight > 0 && threshold >= month.weightedBid / month.weight && month.quantity > 0).length;
+        return counts.length ? Math.max(...counts) : 0;
       };
       const profileRows = ["conservative", "moderate", "aggressive", "super_aggressive"].map((profileId) => {
       const profileEntries = entries.filter((entry) => entry.profiles?.[profileId]);
+      const historyEntries = [...new Map(profileEntries.map((entry) => [motor360GroupKey(entry.item), entry])).values()];
       if (!profileEntries.length) return "";
       const profile = profileEntries.reduce((result, entry) => {
         const quotas = Math.max(1, Number(entry.quotas || 1));
@@ -1852,7 +1864,7 @@ function renderFinancialStudySummary() {
         result.terms.push(...Array.from({ length: quotas }, () => remainingTerm));
         return result;
       }, { own: 0, total: 0, embedded: 0, credit: 0, reduced: 0, reducedKnown: true, terms: [], contemplations: null });
-      profile.contemplations = countProfileContemplations(profileEntries, profileId);
+      profile.contemplations = countProfileContemplations(historyEntries, profileId);
       const validProfileTerms = profile.terms.filter((term) => Number.isFinite(term) && term > 0);
       const profileAverageTerm = validProfileTerms.length ? validProfileTerms.reduce((sum, term) => sum + term, 0) / validProfileTerms.length : null;
       const termLabel = profileAverageTerm == null ? "Prazo incompleto" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(profileAverageTerm)} meses`;
@@ -1860,7 +1872,7 @@ function renderFinancialStudySummary() {
       const reducedValue = profile.reducedKnown ? profile.reduced : null;
       const profileName = profileId === "conservative" ? "Conservador" : profileId === "moderate" ? "Moderado" : profileId === "aggressive" ? "Rápido" : "Urgente";
       const contemplationCount = profile.contemplations == null ? "Não informado" : `${profile.contemplations} ${profile.contemplations === 1 ? "vez" : "vezes"} nos últimos 11 meses`;
-      const historyBreakdown = profileEntries.map((entry) => `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"}: ${countProfileContemplations([entry], profileId)}`).join(" · ");
+      const historyBreakdown = historyEntries.map((entry) => `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"}: ${countProfileContemplations([entry], profileId)}`).join(" · ");
       const profileReferenceBase = profileEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit || 0), 0);
       const profileReference = profileReferenceBase > 0
         ? profileEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit || 0) * Number(entry.profiles?.[profileId]?.percentual_referencia || 0), 0) / profileReferenceBase
@@ -1882,11 +1894,15 @@ function renderFinancialStudySummary() {
   target.querySelector(".financial-study-part4-consolidated-note")?.remove();
   const detailTitle = target.querySelector(".financial-study-part4-profile-scenarios-title");
   if (detailTitle) detailTitle.textContent = "Detalhamento de cada cenário";
-  const strategyNames = { conservative: "Conservadora", moderate: "Moderada" };
+  const strategyNames = { conservative: "Conservadora", moderate: "Moderada", aggressive: "Rápida", super_aggressive: "Urgente" };
   Object.entries(strategyNames).forEach(([profileId, label]) => {
     const strategy = [...document.querySelectorAll(".financial-study-part8-strategy")].find((node) => node.querySelector("h3")?.textContent.includes(label));
     const row = target.querySelector(`[data-summary-profile="${profileId}"]`);
-    if (strategy && row) strategy.querySelector("p").textContent = `-> Sorteio + Lance Livre ${label} (referência histórica consolidada: ${row.dataset.summaryContemplations || "não informado"} contemplações nos últimos 11 meses válidos).`;
+    if (strategy && row) {
+      const count = Number(row.dataset.summaryContemplations);
+      const noun = count === 1 ? "contemplação" : "contemplações";
+      strategy.querySelector("p").textContent = `-> Sorteio + Lance Livre ${label} (referência histórica consolidada: ${Number.isFinite(count) ? count : "não informada"} ${Number.isFinite(count) ? noun : "nos últimos meses válidos"}).`;
+    }
   });
 }
 

@@ -6152,6 +6152,7 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-standard-secondary .financial-study-part4-standard-metric { grid-template-columns: 1fr; min-height: 58px; padding: 8px 9px; border-right: 1px solid #d4d8da; border-bottom: 1px solid #d4d8da; }
 .financial-study-part4-standard-secondary .financial-study-part4-standard-metric strong { text-align: left; }
 .financial-study-part4-standard-secondary .financial-study-part4-standard-metric:last-child { grid-column: auto; border-right: 0; }
+.financial-study-adhesion-date { width: 100%; min-width: 8.8rem; border: 1px solid #b9c3c7; border-radius: 3px; padding: 4px 5px; background: #fff; color: #147a48; font: inherit; font-weight: 700; font-variant-numeric: tabular-nums; }
 .financial-study-part4-standard-charge-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .financial-study-part4-standard-charge-grid > div { display: grid; gap: 3px; padding: 8px; border-right: 1px solid #d4d8da; font-size: .65rem; }
 .financial-study-part4-standard-charge-grid > div:last-child { border-right: 0; }
