@@ -62,6 +62,7 @@ const screens = {
 };
 
 const financialStudyHistoryState = { items: [], selectedId: null, documentHtml: "", loaded: false, loading: false };
+const financialStudyRevisionState = { sourceStudyId: null, draftId: null, restored: 0, missing: 0, pending: 0, refreshedAt: null, warnings: [] };
 const financialStudyApprovalState = { pendingKey: null, pendingFingerprint: null };
 const financialStudyAdhesionDateOverrides = new Map();
 
@@ -747,6 +748,7 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
     app_version: investorState.buildIdentity?.version || document.querySelector('meta[name="crediclass-build"]')?.content || null,
     app_commit: investorState.buildIdentity?.commit || null,
     motor360_base_fingerprint: investorState.audit?.data_source?.base_snapshot?.fingerprint || null,
+    lineage: financialStudyRevisionState.sourceStudyId ? { source_study_id: financialStudyRevisionState.sourceStudyId, revision_number: 1, created_from_history: true, draft_id: financialStudyRevisionState.draftId, refreshed_at: financialStudyRevisionState.refreshedAt } : null,
     study_contract_rule: "Cada cota selecionada representa um contrato independente; cotas com e sem embutido podem ser consolidadas quando selecionadas.",
     study_steps: [
       "introducao", "simulacao_investimento", "melhores_consorcios", "quadro_resumo",
@@ -766,6 +768,7 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
       contemplation_profile: client.contemplacao_perfil || investorState.result?.perfil_contemplacao || null,
       crm_opportunity_id: String(profile.crm_oportunidade_id || client.crm_oportunidade_id || "").trim() || null,
       crm_response: profile.crm_response || client.crm_response || null,
+      profile,
     },
     investment_simulation: investmentSimulation,
     adhesion_date_overrides: Object.fromEntries(financialStudyAdhesionDateOverrides),
@@ -989,12 +992,54 @@ function renderFinancialStudyHistory(items) {
     const agreementText = agreed ? `Aceite registrado${agreement.agreed_at ? ` · ${financialStudyHistoryDate(agreement.agreed_at)}` : ""}` : "Aguardando aceite";
     return `<tr><td data-label="Estudo"><strong>${escapeHtml(item.id)}</strong></td><td data-label="Cliente">${escapeHtml(item.client_name)}</td><td data-label="Oportunidade CRM">${item.crm_opportunity_id ? `<button class="financial-study-crm-link" type="button" data-financial-study-crm="${escapeHtml(item.id)}" title="Abrir dados importados desta oportunidade">${escapeHtml(item.crm_opportunity_id)}</button>` : "—"}</td><td data-label="Aprovado em">${escapeHtml(financialStudyHistoryDate(item.approved_at))}</td><td data-label="Responsável">${escapeHtml(item.approved_by)}</td><td data-label="Aceite"><span class="financial-study-agreement-badge ${agreed ? "is-agreed" : "is-pending"}">${escapeHtml(agreementText)}</span></td><td data-label="Ação"><button class="btn btn-outline-secondary btn-sm" type="button" data-financial-study-open="${escapeHtml(item.id)}">Visualizar</button> <button class="btn btn-primary btn-sm" type="button" data-financial-study-duplicate="${escapeHtml(item.id)}">Duplicar e atualizar</button></td></tr>`;
   }).join("");
+  rows.querySelectorAll("tr").forEach((row, index) => {
+    const lineage = items[index]?.source_study_id;
+    if (lineage && row.cells[0]) row.cells[0].insertAdjacentHTML("beforeend", `<small class="financial-study-lineage">Origem: ${escapeHtml(lineage)}</small>`);
+  });
   state.hidden = items.length > 0;
   state.textContent = "Nenhum estudo aprovado encontrado.";
   document.querySelector(".financial-study-history-list-wrap")?.classList.toggle("d-none", items.length === 0);
   rows.querySelectorAll("[data-financial-study-open]").forEach((button) => button.addEventListener("click", () => openFinancialStudyHistoryItem(button.dataset.financialStudyOpen)));
   rows.querySelectorAll("[data-financial-study-duplicate]").forEach((button) => button.addEventListener("click", () => duplicateFinancialStudy(button.dataset.financialStudyDuplicate)));
   rows.querySelectorAll("[data-financial-study-crm]").forEach((button) => button.addEventListener("click", () => openFinancialStudyHistoryItem(button.dataset.financialStudyCrm, { showCrm: true })));
+}
+
+function renderFinancialStudyRevisionBanner() {
+  const host = document.getElementById("financialStudyRevisionBanner");
+  if (!host) return;
+  const state = financialStudyRevisionState;
+  host.hidden = !state.sourceStudyId;
+  if (!state.sourceStudyId) return;
+  const warning = state.warnings.length ? ` · ${state.warnings.join(" · ")}` : "";
+  host.innerHTML = `<strong>Revisão carregada do estudo ${escapeHtml(state.sourceStudyId)}</strong><span>${state.restored} grupo(s) restaurado(s) · ${state.missing} ausente(s) · ${state.pending} pendência(s) · dados atualizados em ${escapeHtml(state.refreshedAt || "agora")}${escapeHtml(warning)}</span>`;
+}
+
+function reconcileFinancialStudyRevision(result) {
+  if (!financialStudyRevisionState.sourceStudyId) return;
+  const items = result?.final_items || result?.items || [];
+  const byKey = new Map(items.map((item) => [motor360GroupKey(item), item]));
+  const requested = [...investorState.selectedGroupIds];
+  const missing = requested.filter((key) => !byKey.has(key));
+  const warnings = [...financialStudyRevisionState.warnings];
+  let pending = 0;
+  validatePersistedManualBids(result);
+  requested.filter((key) => byKey.has(key)).forEach((key) => {
+    const item = byKey.get(key);
+    ["without_embedded", "with_embedded"].forEach((scenarioId) => {
+      if (!quotaCountFor(key, scenarioId)) return;
+      const scenario = (item.cenarios || []).find((entry) => entry.id === scenarioId);
+      const selected = selectedCreditFor(item, scenarioId);
+      const options = motor360CreditOptions(item).map((option) => Number(option.value));
+      if (!scenario || selected === null || (options.length && !options.some((value) => Math.abs(value - selected) < 0.01))) { pending += 1; warnings.push(`crédito pendente em ${key}`); }
+      if ([...investorState.invalidManualBids.keys()].some((entry) => entry.startsWith(`${key}|${scenarioId}|`))) { pending += 1; warnings.push(`lance pendente em ${key}`); }
+    });
+  });
+  financialStudyRevisionState.restored = requested.length - missing.length;
+  financialStudyRevisionState.missing = missing.length;
+  financialStudyRevisionState.pending = pending;
+  financialStudyRevisionState.warnings = missing.length ? [...warnings, `${missing.length} grupo(s) não encontrado(s) na base atual`] : warnings;
+  financialStudyRevisionState.refreshedAt = new Date().toLocaleString("pt-BR");
+  renderFinancialStudyRevisionBanner();
 }
 
 function applyFinancialStudyRevisionClient(client = {}) {
@@ -1006,6 +1051,12 @@ function applyFinancialStudyRevisionClient(client = {}) {
   money("clientProfileParcelaIdeal", client.desired_installment);
   set("clientProfileCrmOpportunityId", client.crm_opportunity_id);
   set("clientProfileContemplacaoPerfil", client.contemplation_profile);
+  const profile = client.profile || {};
+  Object.entries({ clientProfileFgtsTitular: profile.fgts_titular, clientProfileFgtsConjuge: profile.fgts_conjuge, clientProfileRendaTitular: profile.renda_titular, clientProfileRendaConjuge: profile.renda_conjuge, clientProfileParcelaLimite: profile.parcela_limite }).forEach(([id, value]) => money(id, value));
+  ["Conjuge", "Nascimento", "NascimentoConjuge", "Prazo", "Objetivo", "TipoContratacao", "TipoBem", "EstadoBem"].forEach((suffix) => {
+    const key = suffix === "Prazo" ? "prazo_desejado" : suffix.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`).replace(/^_/, "");
+    set(`clientProfile${suffix}`, profile[key]);
+  });
   document.getElementById("clientProfileForm")?.dispatchEvent(new Event("change", { bubbles: true }));
   updateClientProfileTotals();
 }
@@ -1017,6 +1068,8 @@ async function duplicateFinancialStudy(studyId) {
     const recipe = payload.recipe || {};
     if (!Array.isArray(recipe.groups) || !recipe.groups.length) throw new Error("O estudo não possui grupos selecionados para restaurar.");
     clearMotor360GroupSelection();
+    Object.assign(financialStudyRevisionState, { sourceStudyId: recipe.source_study_id || studyId, draftId: recipe.draft_id || null, restored: 0, missing: 0, pending: 0, warnings: [], refreshedAt: null });
+    if (recipe.source_approved_at && Date.now() - new Date(recipe.source_approved_at).getTime() > 30 * 24 * 60 * 60 * 1000) financialStudyRevisionState.warnings.push("datas do estudo original expiradas; datas atuais serão usadas");
     investorState.result = null;
     investorState.audit = null;
     investorState.analysisKey = null;
@@ -1034,6 +1087,7 @@ async function duplicateFinancialStudy(studyId) {
     });
     persistMotor360SelectionNow();
     await loadInvestorAnalysis();
+    reconcileFinancialStudyRevision(investorState.result);
     activateScreen("motor360");
     showToast(`Seleção do estudo ${studyId} carregada. O Motor 360 recalculou os dados atuais; revise as pendências antes de gerar o novo estudo.`, "success");
   } catch (error) {

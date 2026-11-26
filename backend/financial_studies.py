@@ -44,6 +44,7 @@ ARCHIVE_COLUMNS = {
     "archive": "financial_study_archive_v1",
     "crm_opportunity_id": "financial_study_crm_opportunity_id",
     "piperun_form_url": "financial_study_piperun_form_url",
+    "revision_draft": "financial_study_revision_draft_v1",
 }
 SHARE_COLUMNS = {
     "token_hash": "financial_study_public_token_sha256",
@@ -576,12 +577,15 @@ def list_studies(*, query: str = "", limit: int = 100) -> list[dict]:
             continue
         if normalized_query and normalized_query not in record["client_name"].casefold() and normalized_query not in record["study_id"].casefold() and normalized_query not in record["crm_opportunity_id"].casefold():
             continue
+        archive_data = _decompress_archive(record.get("archive")) if record.get("archive") else {}
+        lineage = (archive_data.get("snapshot") or {}).get("lineage") or {}
         items.append({"id": record["study_id"], "client_name": record["client_name"], "approved_at": record["created_at"],
                       "approved_by": record["operator"], "administrator": record["administrator"],
                       "group_count": int(record["group_count"]) if str(record["group_count"]).isdigit() else 0,
                       "crm_opportunity_id": record["crm_opportunity_id"],
                       "has_snapshot": bool(record["archive"]), "status": record["status"],
-                      "agreement": {"status": record["agreement_status"] or "pending", "agreed_at": record["agreement_at"]}})
+                      "agreement": {"status": record["agreement_status"] or "pending", "agreed_at": record["agreement_at"]},
+                      "source_study_id": lineage.get("source_study_id"), "revision_number": lineage.get("revision_number")})
     return list(reversed(items))[:max(1, min(int(limit), 200))]
 
 
@@ -648,7 +652,15 @@ def prepare_study_revision(study_id: str) -> dict | None:
             "selected_credits": dict(group.get("selected_credit_by_scenario") or {}),
             "manual_bids": dict(group.get("manual_bid_by_quota") or {}),
         })
+    draft_id = f"REV-{secrets.token_urlsafe(12)}"
+    draft = {"draft_id": draft_id, "source_study_id": study_id, "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"), "recipe": {"client": snapshot.get("client") or {}, "administrator": (recipe_groups[0].get("administrator") if recipe_groups else ""), "groups": recipe_groups}}
+    found = _find_study_row(study_id)
+    if found is not None:
+        headers, indexes, row_number = found
+        headers, indexes = _ensure_archive_columns(headers, indexes)
+        _update_row_fields(row_number, indexes, {"revision_draft": json.dumps(draft, ensure_ascii=False, separators=(",", ":"))})
     return {
+        "draft_id": draft_id,
         "source_study_id": study_id,
         "source_approved_at": study.get("approved_at"),
         "client": snapshot.get("client") or {},
