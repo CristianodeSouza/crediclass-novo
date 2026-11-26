@@ -6147,6 +6147,11 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-standard-metric strong { color: #087c55; font-size: .74rem; }
 .financial-study-part4-standard-secondary .financial-study-part4-standard-metric { grid-template-columns: minmax(0, 1fr) auto; min-height: 39px; border-right: 0; text-align: left; }
 .financial-study-part4-standard-secondary .financial-study-part4-standard-metric strong { text-align: right; }
+.financial-study-part4-standard-secondary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-content: start; }
+.financial-study-part4-standard-secondary .financial-study-part4-standard-section-title { grid-column: 1 / -1; }
+.financial-study-part4-standard-secondary .financial-study-part4-standard-metric { grid-template-columns: 1fr; min-height: 58px; padding: 8px 9px; border-right: 1px solid #d4d8da; border-bottom: 1px solid #d4d8da; }
+.financial-study-part4-standard-secondary .financial-study-part4-standard-metric strong { text-align: left; }
+.financial-study-part4-standard-secondary .financial-study-part4-standard-metric:last-child { grid-column: 1 / -1; border-right: 0; }
 .financial-study-part4-standard-charge-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .financial-study-part4-standard-charge-grid > div { display: grid; gap: 3px; padding: 8px; border-right: 1px solid #d4d8da; font-size: .65rem; }
 .financial-study-part4-standard-charge-grid > div:last-child { border-right: 0; }
@@ -6307,6 +6312,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
   .financial-study-part4-standard-charge-grid > div:last-child { border-bottom: 0; }
   .financial-study-part4-standard-simulations { padding: 0 7px 7px; }
   .financial-study-part4-standard-simulation-table { min-width: 0; table-layout: fixed; }
+  .financial-study-part4-standard-secondary { grid-template-columns: 1fr; }
+  .financial-study-part4-standard-secondary .financial-study-part4-standard-metric,
+  .financial-study-part4-standard-secondary .financial-study-part4-standard-metric:last-child { grid-column: 1 / -1; border-right: 0; }
 
   .financial-study-document {
     margin-top: 0;
