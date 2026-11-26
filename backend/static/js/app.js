@@ -896,7 +896,7 @@ function renderFinancialStudyInvestment() {
 
 document.getElementById("financialStudyPart2AnnualRate")?.addEventListener("input", renderFinancialStudyInvestment);
 
-async function approveCurrentFinancialStudy() {
+async function approveCurrentFinancialStudy({ automatic = false } = {}) {
   const items = activeStudyItems();
   if (!investorState.result?.audit_id) {
     updateFinancialStudyActionState();
@@ -908,7 +908,7 @@ async function approveCurrentFinancialStudy() {
     showToast("Revise quantidades pendentes e selecione ao menos uma cota por grupo antes de aprovar.", "warning");
     return;
   }
-  if (!window.confirm("Aprovar este estudo e salvar uma cópia imutável no Histórico de Estudos?")) return;
+  if (!automatic && !window.confirm("Aprovar este estudo e salvar uma cópia imutável no Histórico de Estudos?")) return;
   const button = document.getElementById("approveFinancialStudyBtn");
   button.disabled = true;
   button.textContent = "Salvando…";
@@ -948,7 +948,9 @@ async function approveCurrentFinancialStudy() {
     showToast(`Estudo ${payload.study.id} aprovado e salvo no histórico.`, "success");
     financialStudyHistoryState.loaded = false;
     activateScreen("historico-estudos");
+    return payload.study;
   } catch (error) {
+    if (automatic) throw error;
     showToast(error.message || "Não foi possível salvar o estudo aprovado.", "danger");
   } finally {
     button.textContent = "Aprovar estudo";
@@ -1088,8 +1090,15 @@ async function duplicateFinancialStudy(studyId) {
     persistMotor360SelectionNow();
     await loadInvestorAnalysis();
     reconcileFinancialStudyRevision(investorState.result);
-    activateScreen("motor360");
-    showToast(`Seleção do estudo ${studyId} carregada. O Motor 360 recalculou os dados atuais; revise as pendências antes de gerar o novo estudo.`, "success");
+    if (!financialStudyRevisionState.missing && !financialStudyRevisionState.pending) {
+      activateScreen("estudo");
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      const created = await approveCurrentFinancialStudy({ automatic: true });
+      showToast(`Nova versão ${created?.id || ""} criada automaticamente a partir do estudo ${studyId}.`, "success");
+    } else {
+      activateScreen("motor360");
+      showToast(`Seleção do estudo ${studyId} carregada. Corrija as pendências antes de aprovar a nova versão.`, "warning");
+    }
   } catch (error) {
     showToast(error.message || "Não foi possível duplicar o estudo.", "danger");
   }
