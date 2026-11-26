@@ -1088,7 +1088,12 @@ async function duplicateFinancialStudy(studyId) {
       investorState.manualBids.set(key, group.manual_bids || { without_embedded: [], with_embedded: [] });
     });
     persistMotor360SelectionNow();
-    await loadInvestorAnalysis();
+    // Profile restoration can trigger another analysis through the change
+    // event. Force this revision's request so approval uses its fresh audit.
+    await loadInvestorAnalysis({ force: true });
+    if (!investorState.result?.audit_id || !investorState.result?.engine_version) {
+      throw new Error("O Motor 360 terminou sem gerar a auditoria desta revisão. Execute a análise novamente antes de aprovar.");
+    }
     reconcileFinancialStudyRevision(investorState.result);
     if (!financialStudyRevisionState.missing && !financialStudyRevisionState.pending) {
       activateScreen("estudo");
@@ -7239,7 +7244,7 @@ function syncInvestorPreferencesFromInputs() {
   if (investorState.result) renderInvestorAnalysis(investorState.result);
 }
 
-async function loadInvestorAnalysis() {
+async function loadInvestorAnalysis({ force = false } = {}) {
   const status = document.getElementById("investorAnalysisStatus");
   if (!status) return;
   investorAnalysisController?.abort();
@@ -7258,11 +7263,11 @@ async function loadInvestorAnalysis() {
     return;
   }
   const analysisKey = investorAnalysisCacheKey(profile);
-  if (investorState.result && investorState.analysisKey === analysisKey) {
+  if (!force && investorState.result && investorState.analysisKey === analysisKey) {
     renderInvestorAnalysis(investorState.result);
     return;
   }
-  if (!investorState.result) {
+  if (!force && !investorState.result) {
     try {
       const cached = JSON.parse(sessionStorage.getItem(INVESTOR_ANALYSIS_CACHE_KEY) || "null");
       if (cached?.key === analysisKey && cached.result) {
