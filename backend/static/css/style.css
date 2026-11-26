@@ -6223,6 +6223,15 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-standard-simulation-table thead tr:first-child th:first-child,
 .financial-study-part4-standard-simulation-table thead tr:nth-child(2) th:first-child { width: 36%; }
 .financial-study-part4-standard-simulation-table tbody th[scope="row"] { width: 36%; }
+.financial-study-part4-standard-primary { align-self: start; }
+.financial-study-part4-standard-primary .financial-study-part4-standard-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.financial-study-part4-standard-primary .financial-study-part4-standard-charge-grid { min-height: 0; }
+.financial-study-part4-standard-simulation-table thead th { white-space: normal !important; }
+.financial-study-part4-standard-simulation-table tbody th,
+.financial-study-part4-standard-simulation-table tbody td { white-space: normal !important; overflow: visible; text-overflow: clip; }
+.financial-study-part4-standard-simulation-table tbody tr:not(.financial-study-part4-standard-lottery):not(.financial-study-part4-standard-category) th:first-child { width: 14%; }
+.financial-study-part4-standard-simulation-table tbody tr:not(.financial-study-part4-standard-lottery):not(.financial-study-part4-standard-category) td:nth-child(2) { width: 22%; text-align: left; line-height: 1.2; }
+.financial-study-part4-standard-simulation-table tbody tr:not(.financial-study-part4-standard-lottery):not(.financial-study-part4-standard-category) td:nth-child(3) { width: 9%; }
 .financial-study-part4-overview-table th,
 .financial-study-part4-overview-table td,
 .financial-study-part4-quota-table th,
@@ -8322,3 +8331,10 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .crm-owner-partner small { color: #64748b; font-size: .72rem; }
 .crm-owner-persons { grid-column: 1 / -1; margin: 0 0 2px; padding: 14px 16px; border: 1px solid #dbe4ec; border-radius: 10px; background: #fff; }
 @media (max-width: 760px) { .crm-owner-companies__table th:first-child, .crm-owner-companies__table td:first-child { width: 135px; } .crm-owner-companies { padding: 12px; } }
+
+/* Quadro resumo: preservar a leitura do histórico e a densidade do modelo validado. */
+.financial-study-part4-standard-simulation-table thead th,
+.financial-study-part4-standard-simulation-table tbody th,
+.financial-study-part4-standard-simulation-table tbody td { white-space: normal !important; overflow: visible !important; text-overflow: clip !important; }
+.financial-study-part4-standard-simulation-table tbody tr:not(.financial-study-part4-standard-lottery):not(.financial-study-part4-standard-category) td:nth-child(2) { line-height: 1.2; text-align: left; }
+.financial-study-part4-standard-primary { align-self: start; }

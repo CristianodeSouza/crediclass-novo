@@ -1763,7 +1763,7 @@ function renderFinancialStudySummary() {
       const totalEmbedded = sumField(entries, "embedded");
       const totalBid = sumField(entries, "totalBid");
       const termValues = entries.flatMap((entry) => Array.from({ length: Math.max(1, Number(entry.quotas || 1)) }, () => Number(entry.item.prazo_restante ?? entry.item.prazo_remanescente) - 1)).filter((value) => Number.isFinite(value) && value > 0);
-      const consolidatedTerm = termValues.length ? rangeLabel(termValues) : "Prazo incompleto";
+      const consolidatedTerm = consolidatedTermLabel;
       const countProfileContemplations = (entry, profileId) => {
         const profile = entry.profiles?.[profileId];
         const thresholdRaw = Number(profile?.percentual_referencia);
@@ -1813,7 +1813,9 @@ function renderFinancialStudySummary() {
         result.contemplations = result.contemplations === null ? count : Math.min(result.contemplations, count);
         return result;
       }, { own: 0, total: 0, embedded: 0, credit: 0, reduced: 0, reducedKnown: true, terms: [], contemplations: null });
-      const termLabel = profile.terms.every((term) => Number.isFinite(term) && term > 0) ? rangeLabel(profile.terms) : "Prazo incompleto";
+      const validProfileTerms = profile.terms.filter((term) => Number.isFinite(term) && term > 0);
+      const profileAverageTerm = validProfileTerms.length ? validProfileTerms.reduce((sum, term) => sum + term, 0) / validProfileTerms.length : null;
+      const termLabel = profileAverageTerm == null ? "Prazo incompleto" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(profileAverageTerm)} meses`;
       const ownPercent = profile.credit > 0 ? profile.own / profile.credit : null;
       const reducedValue = profile.reducedKnown ? profile.reduced : null;
       const profileName = profileId === "conservative" ? "Conservador" : profileId === "moderate" ? "Moderado" : profileId === "aggressive" ? "Rápido" : "Urgente";
