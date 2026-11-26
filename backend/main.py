@@ -323,6 +323,22 @@ def download_financial_study_pdf_route(study_id: str, request: Request, job: str
     return JSONResponse(status_code=202, content={"success": True, "status": "processing", "job_id": job_id})
 
 
+@app.post("/api/financial-studies/{study_id}/prepare-revision")
+def prepare_financial_study_revision(study_id: str, request: Request):
+    try:
+        recipe = financial_studies.prepare_study_revision(study_id)
+    except RuntimeError as error:
+        return JSONResponse(status_code=503, content={"success": False, "error": str(error)})
+    except ValueError as error:
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
+    except Exception:
+        logger.exception("Falha ao preparar revisão do estudo %s", study_id)
+        return JSONResponse(status_code=503, content={"success": False, "error": "Não foi possível preparar a atualização do estudo."})
+    if recipe is None:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
+    return {"success": True, "recipe": recipe}
+
+
 @app.get("/api/financial-studies/{study_id}")
 def read_financial_study(study_id: str, request: Request):
     try:

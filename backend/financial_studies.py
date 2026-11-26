@@ -623,6 +623,42 @@ def get_study(study_id: str) -> dict | None:
             "public_link": _share_state(row, indexes)}
 
 
+def prepare_study_revision(study_id: str) -> dict | None:
+    """Return only the original selection recipe for a fresh Motor 360 run."""
+    study = get_study(study_id)
+    if study is None:
+        return None
+    snapshot = study.get("snapshot") or {}
+    recipe_groups = []
+    for group in snapshot.get("groups") or []:
+        if not isinstance(group, dict):
+            continue
+        recipe_groups.append({
+            "group_key": group.get("group_key"),
+            "group": group.get("group") or group.get("group_id"),
+            "administrator": group.get("administrator") or "",
+            "selected_scenarios": [
+                scenario_id for scenario_id, count in (group.get("quotas_by_scenario") or {}).items()
+                if int(count or 0) > 0
+            ],
+            "quotas_by_scenario": {
+                "without_embedded": int((group.get("quotas_by_scenario") or {}).get("without_embedded") or 0),
+                "with_embedded": int((group.get("quotas_by_scenario") or {}).get("with_embedded") or 0),
+            },
+            "selected_credits": dict(group.get("selected_credit_by_scenario") or {}),
+            "manual_bids": dict(group.get("manual_bid_by_quota") or {}),
+        })
+    return {
+        "source_study_id": study_id,
+        "source_approved_at": study.get("approved_at"),
+        "client": snapshot.get("client") or {},
+        "administrator": (recipe_groups[0].get("administrator") if recipe_groups else ""),
+        "groups": recipe_groups,
+        "refresh_required": True,
+        "refresh_message": "Os dados financeiros serão recalculados pelo Motor 360 com a base atual.",
+    }
+
+
 def update_study_adhesion_dates(study_id: str, overrides: dict[str, str]) -> dict | None:
     """Persist operator-edited reservation dates in the archived study."""
     found = _find_study_row(study_id)

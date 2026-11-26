@@ -987,13 +987,58 @@ function renderFinancialStudyHistory(items) {
     const agreement = item.agreement || {};
     const agreed = agreement.status === "agreed";
     const agreementText = agreed ? `Aceite registrado${agreement.agreed_at ? ` · ${financialStudyHistoryDate(agreement.agreed_at)}` : ""}` : "Aguardando aceite";
-    return `<tr><td data-label="Estudo"><strong>${escapeHtml(item.id)}</strong></td><td data-label="Cliente">${escapeHtml(item.client_name)}</td><td data-label="Oportunidade CRM">${item.crm_opportunity_id ? `<button class="financial-study-crm-link" type="button" data-financial-study-crm="${escapeHtml(item.id)}" title="Abrir dados importados desta oportunidade">${escapeHtml(item.crm_opportunity_id)}</button>` : "—"}</td><td data-label="Aprovado em">${escapeHtml(financialStudyHistoryDate(item.approved_at))}</td><td data-label="Responsável">${escapeHtml(item.approved_by)}</td><td data-label="Aceite"><span class="financial-study-agreement-badge ${agreed ? "is-agreed" : "is-pending"}">${escapeHtml(agreementText)}</span></td><td data-label="Ação"><button class="btn btn-outline-secondary btn-sm" type="button" data-financial-study-open="${escapeHtml(item.id)}">Visualizar</button></td></tr>`;
+    return `<tr><td data-label="Estudo"><strong>${escapeHtml(item.id)}</strong></td><td data-label="Cliente">${escapeHtml(item.client_name)}</td><td data-label="Oportunidade CRM">${item.crm_opportunity_id ? `<button class="financial-study-crm-link" type="button" data-financial-study-crm="${escapeHtml(item.id)}" title="Abrir dados importados desta oportunidade">${escapeHtml(item.crm_opportunity_id)}</button>` : "—"}</td><td data-label="Aprovado em">${escapeHtml(financialStudyHistoryDate(item.approved_at))}</td><td data-label="Responsável">${escapeHtml(item.approved_by)}</td><td data-label="Aceite"><span class="financial-study-agreement-badge ${agreed ? "is-agreed" : "is-pending"}">${escapeHtml(agreementText)}</span></td><td data-label="Ação"><button class="btn btn-outline-secondary btn-sm" type="button" data-financial-study-open="${escapeHtml(item.id)}">Visualizar</button> <button class="btn btn-primary btn-sm" type="button" data-financial-study-duplicate="${escapeHtml(item.id)}">Duplicar e atualizar</button></td></tr>`;
   }).join("");
   state.hidden = items.length > 0;
   state.textContent = "Nenhum estudo aprovado encontrado.";
   document.querySelector(".financial-study-history-list-wrap")?.classList.toggle("d-none", items.length === 0);
   rows.querySelectorAll("[data-financial-study-open]").forEach((button) => button.addEventListener("click", () => openFinancialStudyHistoryItem(button.dataset.financialStudyOpen)));
+  rows.querySelectorAll("[data-financial-study-duplicate]").forEach((button) => button.addEventListener("click", () => duplicateFinancialStudy(button.dataset.financialStudyDuplicate)));
   rows.querySelectorAll("[data-financial-study-crm]").forEach((button) => button.addEventListener("click", () => openFinancialStudyHistoryItem(button.dataset.financialStudyCrm, { showCrm: true })));
+}
+
+function applyFinancialStudyRevisionClient(client = {}) {
+  const set = (id, value) => { const input = document.getElementById(id); if (input && value !== null && value !== undefined && value !== "") input.value = value; };
+  const money = (id, value) => { if (value !== null && value !== undefined && Number.isFinite(Number(value))) setMoneyInputValue(id, value); };
+  set("clientProfileNome", client.name);
+  money("clientProfileCredito", client.desired_credit);
+  money("clientProfileLanceProprio", client.own_resources);
+  money("clientProfileParcelaIdeal", client.desired_installment);
+  set("clientProfileCrmOpportunityId", client.crm_opportunity_id);
+  set("clientProfileContemplacaoPerfil", client.contemplation_profile);
+  document.getElementById("clientProfileForm")?.dispatchEvent(new Event("change", { bubbles: true }));
+  updateClientProfileTotals();
+}
+
+async function duplicateFinancialStudy(studyId) {
+  if (!studyId) return;
+  try {
+    const payload = await apiPost(`/financial-studies/${encodeURIComponent(studyId)}/prepare-revision`, {});
+    const recipe = payload.recipe || {};
+    if (!Array.isArray(recipe.groups) || !recipe.groups.length) throw new Error("O estudo não possui grupos selecionados para restaurar.");
+    clearMotor360GroupSelection();
+    investorState.result = null;
+    investorState.audit = null;
+    investorState.analysisKey = null;
+    try { sessionStorage.removeItem(INVESTOR_ANALYSIS_CACHE_KEY); } catch (_) { /* cache inválido */ }
+    investorState.administrator = recipe.administrator || "";
+    applyFinancialStudyRevisionClient(recipe.client || {});
+    recipe.groups.forEach((group) => {
+      const key = String(group.group_key || `${group.administrator || ""}|${group.group || ""}`);
+      if (!key || key.endsWith("|")) return;
+      investorState.selectedGroupIds.add(key);
+      investorState.selectedScenarioIds.set(key, group.selected_scenarios || []);
+      investorState.quotaCounts.set(key, group.quotas_by_scenario || { without_embedded: 0, with_embedded: 0 });
+      investorState.selectedCredits.set(key, group.selected_credits || { without_embedded: null, with_embedded: null });
+      investorState.manualBids.set(key, group.manual_bids || { without_embedded: [], with_embedded: [] });
+    });
+    persistMotor360SelectionNow();
+    await loadInvestorAnalysis();
+    activateScreen("motor360");
+    showToast(`Seleção do estudo ${studyId} carregada. O Motor 360 recalculou os dados atuais; revise as pendências antes de gerar o novo estudo.`, "success");
+  } catch (error) {
+    showToast(error.message || "Não foi possível duplicar o estudo.", "danger");
+  }
 }
 
 function syncFinancialStudyPipeRunControls() {
@@ -1158,6 +1203,8 @@ async function openFinancialStudyHistoryItem(studyId, { showCrm = false } = {}) 
     shareStatus.hidden = !shareStatus.textContent;
     generateButton.dataset.studyId = studyId;
     revokeButton.dataset.studyId = studyId;
+    const duplicateButton = document.getElementById("duplicateFinancialStudyBtn");
+    if (duplicateButton) duplicateButton.dataset.studyId = studyId;
     detail.classList.remove("d-none");
     financialStudyHistoryState.selectedId = studyId;
     if (showCrm) crmDetail?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -9051,6 +9098,10 @@ document.getElementById("reloadFinancialStudyHistoryBtn")?.addEventListener("cli
 document.getElementById("searchFinancialStudyHistoryBtn")?.addEventListener("click", loadFinancialStudyHistory);
 document.getElementById("closeFinancialStudyCrmBtn")?.addEventListener("click", () => {
   document.getElementById("financialStudyCrmDetail")?.classList.add("d-none");
+});
+document.getElementById("duplicateFinancialStudyBtn")?.addEventListener("click", (event) => {
+  const studyId = event.currentTarget.dataset.studyId;
+  if (studyId) duplicateFinancialStudy(studyId);
 });
 document.getElementById("financialStudyHistorySearch")?.addEventListener("keydown", (event) => {
   if (event.key === "Enter") loadFinancialStudyHistory();
