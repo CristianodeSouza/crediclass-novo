@@ -1762,8 +1762,10 @@ function renderFinancialStudySummary() {
       const totalManual = sumField(entries, "ownBid");
       const totalEmbedded = sumField(entries, "embedded");
       const totalBid = sumField(entries, "totalBid");
-      const termValues = entries.flatMap((entry) => Array.from({ length: Math.max(1, Number(entry.quotas || 1)) }, () => Number(entry.item.prazo_restante ?? entry.item.prazo_remanescente) - 1)).filter((value) => Number.isFinite(value) && value > 0);
-      const consolidatedTerm = consolidatedTermLabel;
+      const postContemplationTerms = entries.flatMap((entry) => Array.from({ length: Math.max(1, Number(entry.quotas || 1)) }, () => Number(entry.item.prazo_restante ?? entry.item.prazo_remanescente) - 1)).filter((value) => Number.isFinite(value) && value > 0);
+      const consolidatedTerm = postContemplationTerms.length
+        ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(postContemplationTerms.reduce((sum, value) => sum + value, 0) / postContemplationTerms.length)} meses`
+        : "Prazo incompleto";
       const countProfileContemplations = (entry, profileId) => {
         const profile = entry.profiles?.[profileId];
         const thresholdRaw = Number(profile?.percentual_referencia);
@@ -1826,8 +1828,10 @@ function renderFinancialStudySummary() {
       return `<section class="financial-study-part4-standard-simulation"><div class="financial-study-part4-table-wrap"><table class="financial-study-part4-table financial-study-part4-standard-simulation-table"><thead><tr><th colspan="3">Simulação</th><th>Lance</th><th>Carta de Crédito</th><th>Parcelas Reduzidas</th><th>Prazo</th></tr><tr><th colspan="3">Modalidades de Contemplação</th><th>Recurso Próprio</th><th>Disponível</th><th>Sem Correção</th><th>Meses</th></tr></thead><tbody><tr class="financial-study-part4-standard-lottery"><th scope="row" colspan="3"><strong>1 · Sorteio Geral</strong><small>Não necessita lance</small></th><td>Não necessita</td><td>${formatMoney(totalCredit)}</td><td>${formatMoney(totalInstallment)}</td><td>${escapeHtml(consolidatedTerm)}</td></tr><tr class="financial-study-part4-standard-category"><th colspan="7">2 · Lance Livre</th></tr>${profileRows || '<tr><td colspan="7">Perfis de contemplação não disponíveis neste cenário.</td></tr>'}</tbody></table></div><p class="financial-study-part4-standard-simulation-note">Total de ${totalQuotas} ${totalQuotas === 1 ? "cota" : "cotas"} contratadas: lance próprio ${formatMoney(totalManual)}, lance embutido ${formatMoney(totalEmbedded)} e lance total ${formatMoney(totalBid)}.</p></section>`;
   };
   const adminCharge = chargeTotal(consolidatedEntries, "taxa_adm");
-  const reserveCharge = chargeTotal(consolidatedEntries, "fundo_reserva");
-  const totalCharges = adminCharge == null || reserveCharge == null ? null : adminCharge + reserveCharge;
+  // No modelo validado, o valor monetário exibido na linha final é a soma
+  // da taxa administrativa contrato a contrato; o fundo de reserva fica
+  // demonstrado separadamente apenas pelos percentuais.
+  const totalCharges = adminCharge;
   const consolidatedSummary = `<section class="financial-study-part4-consolidated-summary"><h3>QUADRO RESUMO</h3><p class="financial-study-part4-standard-subtitle">Simulação consolidada de cartas de crédito em grupos estratégicos.</p><p class="financial-study-part4-standard-administrator">Administradora(s): <strong>${escapeHtml(adminLabel)}</strong></p><div class="financial-study-part4-standard-financial-grid"><div class="financial-study-part4-standard-primary"><div class="financial-study-part4-standard-section-title">Resumo da contratação</div><div class="financial-study-part4-standard-metrics">${summaryMetric("Carta de Crédito", formatMoney(consolidatedSum("contractedCredit")))}${summaryMetric("Parcelas<br><small>sem seguro</small>", formatMoney(consolidatedSum("installment")))}${summaryMetric("Prazo<br><small>Meses</small>", consolidatedTermLabel)}</div><div class="financial-study-part4-standard-charge-grid"><div><strong>Lance Embutido</strong><b>${formatMoney(consolidatedSum("embedded"))}</b></div><div><strong>Recurso Próprio</strong><b>${formatMoney(consolidatedSum("ownBid"))}</b></div></div></div><div class="financial-study-part4-standard-secondary"><div class="financial-study-part4-standard-section-title">Taxa e Fundo de Reserva</div>${summaryMetric("Taxa Administrativa<br><small>Ao Ano</small>", percentLabel(consolidatedAdminAnnual))}${summaryMetric("Taxa Administrativa<br><small>Total</small>", percentLabel(consolidatedAdminTotal))}${summaryMetric("Fundo de Reserva<br><small>Ao Ano</small>", percentLabel(consolidatedReserveAnnual))}${summaryMetric("Fundo de Reserva<br><small>Total</small>", percentLabel(consolidatedReserveTotal))}${summaryMetric("Valor total dos encargos", formatMoney(totalCharges))}</div></div><div class="financial-study-part4-standard-simulations">${standardSimulation()}</div></section>`;
   const incompleteGroupCount = items.length - Math.min(baseEntries.length, embeddedEntries.length);
   const adminsText = escapeHtml(adminLabel);
