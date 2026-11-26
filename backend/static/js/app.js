@@ -1766,18 +1766,29 @@ function renderFinancialStudySummary() {
       const consolidatedTerm = postContemplationTerms.length
         ? `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(postContemplationTerms.reduce((sum, value) => sum + value, 0) / postContemplationTerms.length)} meses`
         : "Prazo incompleto";
-      const countProfileContemplations = (entry, profileId) => {
-        const profile = entry.profiles?.[profileId];
-        const thresholdRaw = Number(profile?.percentual_referencia);
-        const threshold = thresholdRaw > 1 ? thresholdRaw / 100 : thresholdRaw;
-        if (!Number.isFinite(threshold)) return 0;
-        const history = Array.isArray(entry.item.historico_12_meses) ? entry.item.historico_12_meses : [];
-        return history.filter((month) => {
-          const bidRaw = Number(month?.menor_lance);
-          const historicalThreshold = bidRaw > 1 ? bidRaw / 100 : bidRaw;
-          const quantity = Number(month?.qtd_contemplacoes);
-          return Number.isFinite(bidRaw) && bidRaw > 0 && Number.isFinite(quantity) && quantity > 0 && threshold >= historicalThreshold;
-        }).length;
+      const countProfileContemplations = (profileEntries, profileId) => {
+        const weightedThresholdBase = profileEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit || 0), 0);
+        if (!(weightedThresholdBase > 0)) return 0;
+        const threshold = profileEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit || 0) * Number(entry.profiles?.[profileId]?.percentual_referencia || 0), 0) / weightedThresholdBase;
+        const monthMap = new Map();
+        profileEntries.forEach((entry) => {
+          const history = [...(Array.isArray(entry.item.historico_12_meses) ? entry.item.historico_12_meses : [])]
+            .sort((left, right) => String(left.mes || "").localeCompare(String(right.mes || "")))
+            .slice(-11);
+          history.forEach((month) => {
+            const bidRaw = Number(month?.menor_lance);
+            const quantity = Number(month?.qtd_contemplacoes);
+            if (!Number.isFinite(bidRaw) || bidRaw <= 0 || !Number.isFinite(quantity) || quantity <= 0) return;
+            const bid = bidRaw > 1 ? bidRaw / 100 : bidRaw;
+            const current = monthMap.get(String(month.mes || "")) || { weightedBid: 0, weight: 0, quantity: 0 };
+            const weight = Number(entry.contractedCredit || 0);
+            current.weightedBid += bid * weight;
+            current.weight += weight;
+            current.quantity += quantity;
+            monthMap.set(String(month.mes || ""), current);
+          });
+        });
+        return [...monthMap.values()].filter((month) => month.weight > 0 && threshold >= month.weightedBid / month.weight && month.quantity > 0).length;
       };
       const profileRows = ["conservative", "moderate", "aggressive", "super_aggressive"].map((profileId) => {
       const profileEntries = entries.filter((entry) => entry.profiles?.[profileId]);
@@ -1802,7 +1813,7 @@ function renderFinancialStudySummary() {
           balancePerQuota,
           initialPerQuota,
           totalPerQuota,
-          remainingTerm,
+          term,
         );
         result.own += ownBid;
         result.total += totalBid;
@@ -1811,10 +1822,9 @@ function renderFinancialStudySummary() {
         result.reduced += reduced == null ? 0 : reduced * quotas;
         result.reducedKnown = result.reducedKnown && reduced != null;
         result.terms.push(...Array.from({ length: quotas }, () => remainingTerm));
-        const count = countProfileContemplations(entry, profileId);
-        result.contemplations = result.contemplations === null ? count : Math.min(result.contemplations, count);
         return result;
       }, { own: 0, total: 0, embedded: 0, credit: 0, reduced: 0, reducedKnown: true, terms: [], contemplations: null });
+      profile.contemplations = countProfileContemplations(profileEntries, profileId);
       const validProfileTerms = profile.terms.filter((term) => Number.isFinite(term) && term > 0);
       const profileAverageTerm = validProfileTerms.length ? validProfileTerms.reduce((sum, term) => sum + term, 0) / validProfileTerms.length : null;
       const termLabel = profileAverageTerm == null ? "Prazo incompleto" : `${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 }).format(profileAverageTerm)} meses`;
@@ -1822,17 +1832,20 @@ function renderFinancialStudySummary() {
       const reducedValue = profile.reducedKnown ? profile.reduced : null;
       const profileName = profileId === "conservative" ? "Conservador" : profileId === "moderate" ? "Moderado" : profileId === "aggressive" ? "Rápido" : "Urgente";
       const contemplationCount = profile.contemplations == null ? "Não informado" : `${profile.contemplations} ${profile.contemplations === 1 ? "vez" : "vezes"} nos últimos 11 meses`;
-      const profileReference = entries.reduce((sum, entry) => sum + Number(entry.profiles?.[profileId]?.percentual_referencia || 0), 0) / Math.max(1, entries.length);
+      const profileReferenceBase = profileEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit || 0), 0);
+      const profileReference = profileReferenceBase > 0
+        ? profileEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit || 0) * Number(entry.profiles?.[profileId]?.percentual_referencia || 0), 0) / profileReferenceBase
+        : null;
       return `<tr><th scope="row"><strong>${profileName}</strong></th><td><span>${escapeHtml(`Contemplado ${contemplationCount}`)}</span></td><td>${profileReference ? formatPercent(profileReference) : "Não informado"}</td><td>${formatMoney(profile.own)}</td><td>${formatMoney(profile.credit)}</td><td>${reducedValue == null ? "Não informado" : formatMoney(reducedValue)}</td><td>${escapeHtml(termLabel)}</td></tr>`;
       }).join("");
-      return `<section class="financial-study-part4-standard-simulation"><div class="financial-study-part4-table-wrap"><table class="financial-study-part4-table financial-study-part4-standard-simulation-table"><thead><tr><th colspan="3">Simulação</th><th>Lance</th><th>Carta de Crédito</th><th>Parcelas Reduzidas</th><th>Prazo</th></tr><tr><th colspan="3">Modalidades de Contemplação</th><th>Recurso Próprio</th><th>Disponível</th><th>Sem Correção</th><th>Meses</th></tr></thead><tbody><tr class="financial-study-part4-standard-lottery"><th scope="row" colspan="3"><strong>1 · Sorteio Geral</strong><small>Não necessita lance</small></th><td>Não necessita</td><td>${formatMoney(totalCredit)}</td><td>${formatMoney(totalInstallment)}</td><td>${escapeHtml(consolidatedTerm)}</td></tr><tr class="financial-study-part4-standard-category"><th colspan="7">2 · Lance Livre</th></tr>${profileRows || '<tr><td colspan="7">Perfis de contemplação não disponíveis neste cenário.</td></tr>'}</tbody></table></div><p class="financial-study-part4-standard-simulation-note">Total de ${totalQuotas} ${totalQuotas === 1 ? "cota" : "cotas"} contratadas: lance próprio ${formatMoney(totalManual)}, lance embutido ${formatMoney(totalEmbedded)} e lance total ${formatMoney(totalBid)}.</p></section>`;
+      return `<section class="financial-study-part4-standard-simulation"><div class="financial-study-part4-table-wrap"><table class="financial-study-part4-table financial-study-part4-standard-simulation-table"><thead><tr><th colspan="3">Simulação</th><th>Lance</th><th>Carta de Crédito</th><th>Parcelas Reduzidas</th><th>Prazo</th></tr><tr><th colspan="3">Modalidades de Contemplação</th><th>Recurso Próprio</th><th>Disponível</th><th>Sem Correção</th><th>Meses</th></tr></thead><tbody><tr class="financial-study-part4-standard-lottery"><th scope="row" colspan="3"><strong>1 · Sorteio Geral</strong><small>Não necessita lance</small></th><td>Não necessita</td><td>${formatMoney(totalContractedCredit)}</td><td>${formatMoney(totalInstallment)}</td><td>${escapeHtml(consolidatedTerm)}</td></tr><tr class="financial-study-part4-standard-category"><th colspan="7">2 · Lance Livre</th></tr>${profileRows || '<tr><td colspan="7">Perfis de contemplação não disponíveis neste cenário.</td></tr>'}</tbody></table></div><p class="financial-study-part4-standard-simulation-note">Total de ${totalQuotas} ${totalQuotas === 1 ? "cota" : "cotas"} contratadas: lance manual ${formatMoney(totalManual)}, lance embutido ${formatMoney(totalEmbedded)} e lance total ${formatMoney(totalBid)}. As cotas selecionadas nos cenários sem e com embutido são contratos independentes e entram na consolidação.</p></section>`;
   };
   const adminCharge = chargeTotal(consolidatedEntries, "taxa_adm");
   // No modelo validado, o valor monetário exibido na linha final é a soma
   // da taxa administrativa contrato a contrato; o fundo de reserva fica
   // demonstrado separadamente apenas pelos percentuais.
   const totalCharges = adminCharge;
-  const consolidatedSummary = `<section class="financial-study-part4-consolidated-summary"><h3>QUADRO RESUMO</h3><p class="financial-study-part4-standard-subtitle">Simulação consolidada de cartas de crédito em grupos estratégicos.</p><p class="financial-study-part4-standard-administrator">Administradora(s): <strong>${escapeHtml(adminLabel)}</strong></p><div class="financial-study-part4-standard-financial-grid"><div class="financial-study-part4-standard-primary"><div class="financial-study-part4-standard-section-title">Resumo da contratação</div><div class="financial-study-part4-standard-metrics">${summaryMetric("Carta de Crédito", formatMoney(consolidatedSum("contractedCredit")))}${summaryMetric("Parcelas<br><small>sem seguro</small>", formatMoney(consolidatedSum("installment")))}${summaryMetric("Prazo<br><small>Meses</small>", consolidatedTermLabel)}</div><div class="financial-study-part4-standard-charge-grid"><div><strong>Lance Embutido</strong><b>${formatMoney(consolidatedSum("embedded"))}</b></div><div><strong>Recurso Próprio</strong><b>${formatMoney(consolidatedSum("ownBid"))}</b></div></div></div><div class="financial-study-part4-standard-secondary"><div class="financial-study-part4-standard-section-title">Taxa e Fundo de Reserva</div>${summaryMetric("Taxa Administrativa<br><small>Ao Ano</small>", percentLabel(consolidatedAdminAnnual))}${summaryMetric("Taxa Administrativa<br><small>Total</small>", percentLabel(consolidatedAdminTotal))}${summaryMetric("Fundo de Reserva<br><small>Ao Ano</small>", percentLabel(consolidatedReserveAnnual))}${summaryMetric("Fundo de Reserva<br><small>Total</small>", percentLabel(consolidatedReserveTotal))}${summaryMetric("Valor total dos encargos", formatMoney(totalCharges))}</div></div><div class="financial-study-part4-standard-simulations">${standardSimulation()}</div></section>`;
+  const consolidatedSummary = `<section class="financial-study-part4-consolidated-summary"><h3>QUADRO RESUMO</h3><p class="financial-study-part4-standard-subtitle">Simulação consolidada de cartas de crédito em grupos estratégicos.</p><p class="financial-study-part4-standard-administrator">Administradora(s): <strong>${escapeHtml(adminLabel)}</strong></p><div class="financial-study-part4-standard-financial-grid"><div class="financial-study-part4-standard-primary"><div class="financial-study-part4-standard-section-title">Resumo da contratação</div><div class="financial-study-part4-standard-metrics">${summaryMetric("Carta de Crédito", formatMoney(consolidatedSum("contractedCredit")))}${summaryMetric("Parcelas<br><small>sem seguro</small>", formatMoney(consolidatedSum("installment")))}${summaryMetric("Prazo<br><small>Meses</small>", consolidatedTermLabel)}</div><div class="financial-study-part4-standard-charge-grid"><div><strong>Lance Embutido</strong><b>${formatMoney(consolidatedSum("embedded"))}</b></div><div><strong>Lance Manual<br><small>Recurso próprio informado</small></strong><b>${formatMoney(consolidatedSum("ownBid"))}</b></div></div></div><div class="financial-study-part4-standard-secondary"><div class="financial-study-part4-standard-section-title">Taxa e Fundo de Reserva</div>${summaryMetric("Taxa Administrativa<br><small>Ao Ano</small>", percentLabel(consolidatedAdminAnnual))}${summaryMetric("Taxa Administrativa<br><small>Total</small>", percentLabel(consolidatedAdminTotal))}${summaryMetric("Fundo de Reserva<br><small>Ao Ano</small>", percentLabel(consolidatedReserveAnnual))}${summaryMetric("Fundo de Reserva<br><small>Total</small>", percentLabel(consolidatedReserveTotal))}${summaryMetric("Taxa administrativa total", formatMoney(totalCharges))}</div></div><div class="financial-study-part4-standard-simulations">${standardSimulation()}</div></section>`;
   const incompleteGroupCount = items.length - Math.min(baseEntries.length, embeddedEntries.length);
   const adminsText = escapeHtml(adminLabel);
   const excluded = selectedItems.filter((item) => !pendingReviewItems.includes(item) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)));
@@ -5725,7 +5738,11 @@ function manualBidLimitFor(item, scenarioId) {
   if (!sourceScenario) return null;
   const scenario = motor360ScenarioForSelectedCredit(item, sourceScenario);
   if (!scenario || scenario.saldo_devedor == null || scenario.parcela_inicial == null) return null;
-  return Math.round((Number(scenario.saldo_devedor) - Number(scenario.parcela_inicial) - Number(scenario.lance_embutido || 0) + Number.EPSILON) * 100) / 100;
+  const embedded = Number(scenario.lance_embutido || 0);
+  const balanceLimit = Number(scenario.saldo_devedor) - Number(scenario.parcela_inicial) - embedded;
+  const contractedCreditLimit = Number(scenario.credito_contratado ?? scenario.credito_liquido_projetado ?? 0) - embedded;
+  const limit = Math.min(balanceLimit, contractedCreditLimit);
+  return Math.round((Math.max(0, limit) + Number.EPSILON) * 100) / 100;
 }
 
 function validatePersistedManualBids(result = investorState.result) {
