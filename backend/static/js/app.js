@@ -117,6 +117,7 @@ const savedMotor360QuotaReview = (() => {
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.quotaReview") || "{}"); } catch { return {}; }
 })();
 const savedMotor360SelectedData = (() => {
+  if (savedMotor360Selection?.selectedGroupData) return savedMotor360Selection.selectedGroupData;
   try { return JSON.parse(localStorage.getItem("crediclass.motor360.selectedGroupData") || "{}"); } catch { return {}; }
 })();
 const savedMotor360SelectedCredits = (() => {
@@ -1834,11 +1835,12 @@ function renderFinancialStudySummary() {
       const reducedValue = profile.reducedKnown ? profile.reduced : null;
       const profileName = profileId === "conservative" ? "Conservador" : profileId === "moderate" ? "Moderado" : profileId === "aggressive" ? "Rápido" : "Urgente";
       const contemplationCount = profile.contemplations == null ? "Não informado" : `${profile.contemplations} ${profile.contemplations === 1 ? "vez" : "vezes"} nos últimos 11 meses`;
+      const historyBreakdown = profileEntries.map((entry) => `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"}: ${countProfileContemplations([entry], profileId)}`).join(" · ");
       const profileReferenceBase = profileEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit || 0), 0);
       const profileReference = profileReferenceBase > 0
         ? profileEntries.reduce((sum, entry) => sum + Number(entry.contractedCredit || 0) * Number(entry.profiles?.[profileId]?.percentual_referencia || 0), 0) / profileReferenceBase
         : null;
-      return `<tr><th scope="row"><strong>${profileName}</strong></th><td><span>${escapeHtml(`Contemplado ${contemplationCount}`)}</span></td><td>${profileReference ? formatPercent(profileReference) : "Não informado"}</td><td>${formatMoney(profile.own)}</td><td>${formatMoney(profile.credit)}</td><td>${reducedValue == null ? "Não informado" : formatMoney(reducedValue)}</td><td>${escapeHtml(termLabel)}</td></tr>`;
+      return `<tr data-summary-profile="${profileId}" data-summary-contemplations="${profile.contemplations ?? ""}"><th scope="row"><strong>${profileName}</strong></th><td><span>${escapeHtml(`Contemplado ${contemplationCount}`)}</span><small>${escapeHtml(historyBreakdown)}</small></td><td>${profileReference ? formatPercent(profileReference) : "Não informado"}</td><td>${formatMoney(profile.own)}</td><td>${formatMoney(profile.credit)}</td><td>${reducedValue == null ? "Não informado" : formatMoney(reducedValue)}</td><td>${escapeHtml(termLabel)}</td></tr>`;
       }).join("");
       return `<section class="financial-study-part4-standard-simulation"><div class="financial-study-part4-table-wrap"><table class="financial-study-part4-table financial-study-part4-standard-simulation-table"><thead><tr><th colspan="3">Simulação</th><th>Lance</th><th>Carta de Crédito</th><th>Parcelas Reduzidas</th><th>Prazo</th></tr><tr><th colspan="3">Modalidades de Contemplação</th><th>Recurso Próprio</th><th>Disponível</th><th>Sem Correção</th><th>Meses</th></tr></thead><tbody><tr class="financial-study-part4-standard-lottery"><th scope="row" colspan="3"><strong>1 · Sorteio Geral</strong><small>Não necessita lance</small></th><td>Não necessita</td><td>${formatMoney(totalContractedCredit)}</td><td>${formatMoney(totalInstallment)}</td><td>${escapeHtml(consolidatedTerm)}</td></tr><tr class="financial-study-part4-standard-category"><th colspan="7">2 · Lance Livre</th></tr>${profileRows || '<tr><td colspan="7">Perfis de contemplação não disponíveis neste cenário.</td></tr>'}</tbody></table></div><p class="financial-study-part4-standard-simulation-note">Total de ${totalQuotas} ${totalQuotas === 1 ? "cota" : "cotas"} contratadas: lance manual ${formatMoney(totalManual)}, lance embutido ${formatMoney(totalEmbedded)} e lance total ${formatMoney(totalBid)}. As cotas selecionadas nos cenários sem e com embutido são contratos independentes e entram na consolidação.</p></section>`;
   };
@@ -1855,6 +1857,12 @@ function renderFinancialStudySummary() {
   target.querySelector(".financial-study-part4-consolidated-note")?.remove();
   const detailTitle = target.querySelector(".financial-study-part4-profile-scenarios-title");
   if (detailTitle) detailTitle.textContent = "Detalhamento de cada cenário";
+  const strategyNames = { conservative: "Conservadora", moderate: "Moderada" };
+  Object.entries(strategyNames).forEach(([profileId, label]) => {
+    const strategy = [...document.querySelectorAll(".financial-study-part8-strategy")].find((node) => node.querySelector("h3")?.textContent.includes(label));
+    const row = target.querySelector(`[data-summary-profile="${profileId}"]`);
+    if (strategy && row) strategy.querySelector("p").textContent = `-> Sorteio + Lance Livre ${label} (referência histórica consolidada: ${row.dataset.summaryContemplations || "não informado"} contemplações nos últimos 11 meses válidos).`;
+  });
 }
 
 function clearRetiredFinancialStudyState() {
@@ -5628,11 +5636,12 @@ function persistMotor360SelectionNow() {
     quotaReview: Object.fromEntries(motor360QuotaReview),
     selectedCredits: Object.fromEntries(investorState.selectedCredits),
     manualBids: Object.fromEntries(investorState.manualBids),
+    selectedGroupData: Object.fromEntries(investorState.selectedGroupData),
     administrator: investorState.administrator || "",
   };
   try {
     localStorage.setItem("crediclass.motor360.selection.v2", JSON.stringify(snapshot));
-    localStorage.removeItem("crediclass.motor360.selectedGroupData");
+    localStorage.setItem("crediclass.motor360.selectedGroupData", JSON.stringify(snapshot.selectedGroupData));
   }
   catch (error) { console.warn("Não foi possível persistir a composição do Motor 360.", error); }
 }

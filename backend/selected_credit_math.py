@@ -29,10 +29,11 @@ def calculate_selected_credit(*, credit, embedded_percent, administration_rate, 
     admin = (gross * admin_ratio).quantize(MONEY, rounding=ROUND_HALF_UP)
     reserve = (gross * reserve_ratio).quantize(MONEY, rounding=ROUND_HALF_UP)
     balance = gross + admin + reserve
-    installment = (balance / term).quantize(MONEY, rounding=ROUND_HALF_UP) if term and term > 0 else None
+    installment_raw = balance / term if term and term > 0 else None
+    installment = installment_raw.quantize(MONEY, rounding=ROUND_HALF_UP) if installment_raw is not None else None
     total_bid = own + embedded
     post_installment = (
-        (balance - (installment or Decimal("0")) - total_bid) / (term - 1)
+        (balance - (installment_raw or Decimal("0")) - total_bid) / (term - 1)
     ).quantize(MONEY, rounding=ROUND_HALF_UP) if term and term > 1 and installment is not None else None
     return {
         "contracted_credit": _rounded(gross),
