@@ -6220,6 +6220,9 @@ body[data-theme="escuro"] .btn-outline-secondary {
 .financial-study-part4-standard-simulation-table th:first-child { width: 27%; }
 .financial-study-part4-standard-simulation-table th:not(:first-child),
 .financial-study-part4-standard-simulation-table td:not(:first-child) { width: 12.16%; }
+.financial-study-part4-standard-simulation-table thead tr:first-child th:first-child,
+.financial-study-part4-standard-simulation-table thead tr:nth-child(2) th:first-child { width: 36%; }
+.financial-study-part4-standard-simulation-table tbody th[scope="row"] { width: 36%; }
 .financial-study-part4-overview-table th,
 .financial-study-part4-overview-table td,
 .financial-study-part4-quota-table th,
