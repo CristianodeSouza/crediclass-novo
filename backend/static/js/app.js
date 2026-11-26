@@ -9210,6 +9210,11 @@ document.getElementById("sendFinancialStudyPipeRunBtn")?.addEventListener("click
   if (status) status.textContent = "Enviando URL ao PipeRun…";
   try {
     const result = await apiPost(`/financial-studies/${encodeURIComponent(studyId)}/piperun`, { opportunity_id: opportunityId });
+    const historyItem = financialStudyHistoryState.items.find((item) => String(item.id) === String(studyId));
+    if (historyItem) {
+      historyItem.crm_opportunity_id = opportunityId;
+      renderFinancialStudyHistory(financialStudyHistoryState.items);
+    }
     if (status) status.textContent = `URL enviada ao PipeRun${result.note_id ? ` (nota ${result.note_id})` : ""}.`;
     showToast("URL do estudo enviada ao PipeRun.", "success");
   } catch (error) {
