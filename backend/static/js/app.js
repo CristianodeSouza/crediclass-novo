@@ -1721,6 +1721,12 @@ function renderFinancialStudySummary() {
     aggressive: "Agressivo / Rápido (6 meses)",
     super_aggressive: "Super agressivo / Urgente (3 meses)",
   };
+  const fixedProfileContemplationText = {
+    conservative: "Contemplado em 2 dos últimos 12 meses de assembleia",
+    moderate: "Contemplado em 2 dos últimos 9 meses de assembleia",
+    aggressive: "Contemplado em 2 dos últimos 6 meses de assembleia",
+    super_aggressive: "Contemplado em 2 dos últimos 3 meses de assembleia",
+  };
   const profileRowsForScenario = (scenarioId) => {
     const entries = metricsByScenario[scenarioId]?.entries || [];
     if (!entries.length) return [];
@@ -1863,14 +1869,12 @@ function renderFinancialStudySummary() {
       const ownPercent = profile.credit > 0 ? profile.own / profile.credit : null;
       const reducedValue = profile.reducedKnown ? profile.reduced : null;
       const profileName = profileId === "conservative" ? "Conservador" : profileId === "moderate" ? "Moderado" : profileId === "aggressive" ? "Rápido" : "Urgente";
-      const contemplationCount = profile.contemplations == null ? "Não informado" : `${profile.contemplations} ${profile.contemplations === 1 ? "vez" : "vezes"} nos últimos 11 meses`;
-      const historyBreakdown = historyEntries.map((entry) => `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"}: ${countProfileContemplations([entry], profileId)}`).join(" · ");
       // No Quadro Resumo, o percentual precisa representar o recurso próprio
       // necessário sobre o crédito disponível consolidado. O crédito disponível
       // é a base de 100%; não se deve exibir a média ponderada do percentual
       // histórico sobre o crédito contratado.
       const profileReference = profile.credit > 0 ? profile.own / profile.credit : null;
-      return `<tr data-summary-profile="${profileId}" data-summary-contemplations="${profile.contemplations ?? ""}"><th scope="row"><strong>${profileName}</strong></th><td><span>${escapeHtml(`Contemplado ${contemplationCount}`)}</span><small>${escapeHtml(historyBreakdown)}</small></td><td>${profileReference ? formatPercent(profileReference) : "Não informado"}</td><td>${formatMoney(profile.own)}</td><td>${formatMoney(profile.credit)}</td><td>${reducedValue == null ? "Não informado" : formatMoney(reducedValue)}</td><td>${escapeHtml(termLabel)}</td></tr>`;
+      return `<tr data-summary-profile="${profileId}" data-summary-contemplations="${profile.contemplations ?? ""}"><th scope="row"><strong>${profileName}</strong></th><td>${escapeHtml(fixedProfileContemplationText[profileId])}</td><td>${profileReference ? formatPercent(profileReference) : "Não informado"}</td><td>${formatMoney(profile.own)}</td><td>${formatMoney(profile.credit)}</td><td>${reducedValue == null ? "Não informado" : formatMoney(reducedValue)}</td><td>${escapeHtml(termLabel)}</td></tr>`;
       }).join("");
       return `<section class="financial-study-part4-standard-simulation"><div class="financial-study-part4-table-wrap"><table class="financial-study-part4-table financial-study-part4-standard-simulation-table"><thead><tr><th colspan="3">Simulação</th><th>Lance</th><th>Carta de Crédito</th><th>Parcelas Reduzidas</th><th>Prazo</th></tr><tr><th colspan="3">Modalidades de Contemplação</th><th>Recurso Próprio</th><th>Disponível</th><th>Sem Correção</th><th>Meses</th></tr></thead><tbody><tr class="financial-study-part4-standard-lottery"><th scope="row" colspan="3"><strong>1 · Sorteio Geral</strong><small>Não necessita lance</small></th><td>Não necessita</td><td>${formatMoney(totalContractedCredit)}</td><td>${formatMoney(totalInstallment)}</td><td>${escapeHtml(consolidatedTerm)}</td></tr><tr class="financial-study-part4-standard-category"><th colspan="7">2 · Lance Livre</th></tr>${profileRows || '<tr><td colspan="7">Perfis de contemplação não disponíveis neste cenário.</td></tr>'}</tbody></table></div><p class="financial-study-part4-standard-simulation-note">Total de ${totalQuotas} ${totalQuotas === 1 ? "cota" : "cotas"} contratadas: lance manual ${formatMoney(totalManual)}, lance embutido ${formatMoney(totalEmbedded)} e lance total ${formatMoney(totalBid)}. As cotas selecionadas nos cenários sem e com embutido são contratos independentes e entram na consolidação.</p></section>`;
   };
