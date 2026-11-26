@@ -503,6 +503,19 @@ function closeUserMenu() {
   document.querySelector(".sidebar")?.classList.remove("user-menu-open");
 }
 
+function renderFinancialStudyScreen() {
+  clearRetiredFinancialStudyState();
+  renderFinancialStudySelectedAdministrator();
+  renderFinancialStudyInvestment();
+  renderFinancialStudySummary();
+  renderFinancialStudyBenefits();
+  renderFinancialStudyContracting();
+  renderFinancialStudyContemplationHistory();
+  renderFinancialStudyProjection();
+  renderFinancialStudyAdhesionDates();
+  updateFinancialStudyActionState();
+}
+
 function activateScreen(screenName) {
   const meta = screens[screenName];
   if (!meta) return;
@@ -567,17 +580,20 @@ function activateScreen(screenName) {
   }
   if (screenName === "mapa-assembleia") loadAssemblyMap();
   if (screenName === "estudo") {
-    if (!investorState.result) hydrateInvestorAnalysisFromCache();
-    clearRetiredFinancialStudyState();
-    renderFinancialStudySelectedAdministrator();
-    renderFinancialStudyInvestment();
-    renderFinancialStudySummary();
-    renderFinancialStudyBenefits();
-    renderFinancialStudyContracting();
-    renderFinancialStudyContemplationHistory();
-    renderFinancialStudyProjection();
-    renderFinancialStudyAdhesionDates();
-    updateFinancialStudyActionState();
+    const hydrated = investorState.result || hydrateInvestorAnalysisFromCache();
+    if (!hydrated) {
+      renderFinancialStudyScreen();
+      loadInvestorAnalysis()
+        .then(() => {
+          if (investorState.result) renderFinancialStudyScreen();
+        })
+        .catch((error) => {
+          console.error("Falha ao carregar dados do estudo financeiro", error);
+          renderFinancialStudyScreen();
+        });
+    } else {
+      renderFinancialStudyScreen();
+    }
   }
   if (screenName === "historico-estudos") loadFinancialStudyHistory();
   if (screenName === "configuracoes") {
