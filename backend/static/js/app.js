@@ -505,15 +505,24 @@ function closeUserMenu() {
 
 function renderFinancialStudyScreen() {
   clearRetiredFinancialStudyState();
-  renderFinancialStudySelectedAdministrator();
-  renderFinancialStudyInvestment();
-  renderFinancialStudySummary();
-  renderFinancialStudyBenefits();
-  renderFinancialStudyContracting();
-  renderFinancialStudyContemplationHistory();
-  renderFinancialStudyProjection();
-  renderFinancialStudyAdhesionDates();
-  updateFinancialStudyActionState();
+  const renderers = [
+    renderFinancialStudySelectedAdministrator,
+    renderFinancialStudyInvestment,
+    renderFinancialStudySummary,
+    renderFinancialStudyBenefits,
+    renderFinancialStudyContracting,
+    renderFinancialStudyContemplationHistory,
+    renderFinancialStudyProjection,
+    renderFinancialStudyAdhesionDates,
+    updateFinancialStudyActionState,
+  ];
+  renderers.forEach((render) => {
+    try {
+      render();
+    } catch (error) {
+      console.error("Falha ao renderizar uma seção do estudo financeiro", error);
+    }
+  });
 }
 
 function activateScreen(screenName) {
@@ -870,7 +879,7 @@ function renderFinancialStudyInvestment() {
   return {
     desired_credit: availableCredit > 0 ? availableCredit : null,
     available_credit: availableCredit > 0 ? availableCredit : null,
-    scenario_id: investmentScenarioId,
+    scenario_id: selectedScenarioIds.length === 1 ? selectedScenarioIds[0] : null,
     redemption_amount: principal,
     annual_rate: rate,
     average_remaining_term_months: averageTerm,
