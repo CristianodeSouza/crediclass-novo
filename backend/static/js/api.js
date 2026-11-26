@@ -51,10 +51,11 @@ function apiPost(path, payload, options = {}) {
   });
 }
 
-function apiPut(path, payload) {
+function apiPut(path, payload, options = {}) {
   return apiRequest(path, {
     method: "PUT",
     body: JSON.stringify(payload || {}),
+    ...options,
   });
 }
 

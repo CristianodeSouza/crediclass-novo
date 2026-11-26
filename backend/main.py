@@ -262,6 +262,10 @@ class FinancialStudyShareRequest(BaseModel):
     opportunity_id: str | None = Field(default=None, max_length=32)
 
 
+class FinancialStudyDatesUpdateRequest(BaseModel):
+    adhesion_date_overrides: dict[str, str] = Field(default_factory=dict)
+
+
 class FinancialStudyAgreementRequest(BaseModel):
     agreed: bool = True
 
@@ -466,6 +470,20 @@ async def generate_financial_study_share(study_id: str, payload: FinancialStudyS
     except Exception as error:
         logger.exception("Falha ao gerar link público do PipeRun para o estudo %s", study_id)
         result["piperun_error"] = str(error)
+    return result
+
+
+@app.put("/api/financial-studies/{study_id}/dates")
+def update_financial_study_dates(study_id: str, payload: FinancialStudyDatesUpdateRequest, request: Request):
+    try:
+        result = financial_studies.update_study_adhesion_dates(study_id, payload.adhesion_date_overrides)
+    except ValueError as error:
+        return JSONResponse(status_code=422, content={"success": False, "error": str(error)})
+    except Exception:
+        logger.exception("Falha ao atualizar datas de adesão do estudo %s", study_id)
+        return JSONResponse(status_code=503, content={"success": False, "error": "Não foi possível salvar as datas do estudo."})
+    if result is None:
+        return JSONResponse(status_code=404, content={"success": False, "error": "Estudo não encontrado."})
     return result
 
 

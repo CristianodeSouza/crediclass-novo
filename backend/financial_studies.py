@@ -623,6 +623,48 @@ def get_study(study_id: str) -> dict | None:
             "public_link": _share_state(row, indexes)}
 
 
+def update_study_adhesion_dates(study_id: str, overrides: dict[str, str]) -> dict | None:
+    """Persist operator-edited reservation dates in the archived study."""
+    found = _find_study_row(study_id)
+    if found is None:
+        return None
+    headers, indexes, row_number = found
+    headers, indexes = _ensure_archive_columns(headers, indexes)
+    settings = get_settings()
+    row = get_service().spreadsheets().values().get(
+        spreadsheetId=settings.google_sheets_id,
+        range=f"{_quoted_sheet()}!A{row_number}:ZZ{row_number}",
+    ).execute().get("values", [[]])[0]
+    archive_index = _optional_index(indexes, "archive")
+    if archive_index is None or archive_index >= len(row) or not row[archive_index]:
+        raise ValueError("Este estudo não possui snapshot completo para atualizar.")
+    archive = _decompress_archive(row[archive_index])
+    normalized = {}
+    for key, value in (overrides or {}).items():
+        key, value = str(key).strip(), str(value or "").strip()
+        if not key:
+            continue
+        if value and not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+            raise ValueError("A data de adesão deve estar no formato AAAA-MM-DD.")
+        normalized[key] = value
+    def replace_input(match):
+        tag = match.group(0)
+        group_match = re.search(r'data-adhesion-group="([^"]+)"', tag)
+        if not group_match or group_match.group(1) not in normalized:
+            return tag
+        value = html.escape(normalized[group_match.group(1)], quote=True)
+        return re.sub(r'\bvalue="[^"]*"', f'value="{value}"', tag, count=1)
+    document_html = str(archive.get("document_html") or "")
+    archive["document_html"] = re.sub(r"<input\b[^>]*>", replace_input, document_html, flags=re.IGNORECASE)
+    snapshot = dict(archive.get("snapshot") or {})
+    existing = dict(snapshot.get("adhesion_date_overrides") or {})
+    existing.update(normalized)
+    snapshot["adhesion_date_overrides"] = existing
+    archive_value = _compress_archive(snapshot, archive["document_html"], archive.get("app_version", ""))
+    _update_row_fields(row_number, indexes, {"archive": archive_value})
+    return {"success": True, "adhesion_date_overrides": existing}
+
+
 def create_public_link(study_id: str) -> dict | None:
     found = _find_study_row(study_id)
     if found is None:

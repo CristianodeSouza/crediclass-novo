@@ -768,6 +768,7 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
       crm_response: profile.crm_response || client.crm_response || null,
     },
     investment_simulation: investmentSimulation,
+    adhesion_date_overrides: Object.fromEntries(financialStudyAdhesionDateOverrides),
     groups: items.map((item) => ({
       group_key: motor360GroupKey(item),
       group: item.grupo || item.grupo_id || "",
@@ -9055,6 +9056,14 @@ document.getElementById("generateFinancialStudyShareBtn")?.addEventListener("cli
   const button = event.currentTarget;
   button.disabled = true;
   try {
+    const frame = document.getElementById("financialStudyHistoryFrame");
+    const dateOverrides = Object.fromEntries([...frame?.contentDocument?.querySelectorAll(".financial-study-adhesion-date") || []]
+      .filter((input) => input.dataset.adhesionGroup)
+      .map((input) => [input.dataset.adhesionGroup, input.value || ""]));
+    if (Object.keys(dateOverrides).length) {
+      await apiPut(`/financial-studies/${encodeURIComponent(studyId)}/dates`, { adhesion_date_overrides: dateOverrides });
+      financialStudyHistoryState.documentHtml = frame?.contentDocument?.querySelector(".financial-study-document")?.outerHTML || financialStudyHistoryState.documentHtml;
+    }
     const opportunityId = document.getElementById("financialStudyPipeRunOpportunityId")?.value.trim() || "";
     const result = await apiPost(`/financial-studies/${encodeURIComponent(studyId)}/share`, { opportunity_id: opportunityId || null });
     document.getElementById("financialStudyShareUrl").value = result.url;
