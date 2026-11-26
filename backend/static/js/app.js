@@ -720,7 +720,7 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
     app_version: investorState.buildIdentity?.version || document.querySelector('meta[name="crediclass-build"]')?.content || null,
     app_commit: investorState.buildIdentity?.commit || null,
     motor360_base_fingerprint: investorState.audit?.data_source?.base_snapshot?.fingerprint || null,
-    study_contract_rule: "Cada cota selecionada representa um contrato independente; cenários com e sem embutido são alternativas.",
+    study_contract_rule: "Cada cota selecionada representa um contrato independente; cotas com e sem embutido podem ser consolidadas quando selecionadas.",
     study_steps: [
       "introducao", "simulacao_investimento", "melhores_consorcios", "quadro_resumo",
       "especialistas", "beneficios", "contratacao", "estrategias_contemplacao",
@@ -788,6 +788,9 @@ function financialStudyApprovalSnapshot(items, investmentSimulation = null) {
           if (ownBid > maximumOwnBid + 0.01) {
             throw new Error(`O lance da cota ${index + 1} do grupo ${item.grupo || item.grupo_id || "-"} (${scenarioId === "with_embedded" ? "com embutido" : "sem embutido"}) excede o saldo disponível após a parcela inicial. Reduza o lance manual.`);
           }
+          if (totalBid > Number(entry.grossCreditPerQuota || 0) + 0.01) {
+            throw new Error(`O lance total da cota ${index + 1} do grupo ${item.grupo || item.grupo_id || "-"} supera 100% do crédito contratado. Reduza o lance manual.`);
+          }
           const postInstallment = calculatePostContemplationInstallment(remainingBalance, initialInstallment, totalBid, remainingTerm);
           return {
             contract_index: index + 1,
@@ -816,9 +819,8 @@ function renderFinancialStudyInvestment() {
 
   const groups = activeStudyItems();
   const selectedScenarioIds = ["without_embedded", "with_embedded"];
-  const investmentScenarioId = selectedScenarioIds.find((scenarioId) => Number(selectedCompositionScenarioMetrics(groups, scenarioId)?.credit || 0) > 0) || null;
-  const investmentMetrics = investmentScenarioId ? selectedCompositionScenarioMetrics(groups, investmentScenarioId) : null;
-  const availableCredit = Number(investmentMetrics?.credit || 0);
+  const investmentMetrics = selectedScenarioIds.map((scenarioId) => selectedCompositionScenarioMetrics(groups, scenarioId));
+  const availableCredit = investmentMetrics.reduce((sum, metrics) => sum + Number(metrics?.contractedCredit || 0), 0);
   const principal = availableCredit > 0 ? -Math.abs(availableCredit) : null;
   const confirmedGroups = groups.filter((item) => !motor360QuotaReview.has(motor360GroupKey(item)));
   const terms = confirmedGroups.map((item) => Number(item.prazo_restante)).filter((term) => Number.isFinite(term) && term > 0);
@@ -1478,7 +1480,7 @@ function renderFinancialStudyProjection() {
         contractedCredit: entry.grossCreditPerQuota,
         credit: entry.credit / entry.quotas,
         installment: entry.installment / entry.quotas,
-        term: entry.item.prazo_restante,
+        term: Number.isFinite(Number(entry.item.prazo_restante)) ? Math.max(0, Number(entry.item.prazo_restante) - 1) : null,
       }));
     });
   });
@@ -1498,7 +1500,7 @@ function renderFinancialStudyProjection() {
         contractedCredit: entry.grossCreditPerQuota,
         credit: entry.grossCreditPerQuota,
         installment: entry.installment / entry.quotas,
-        term: entry.item.prazo_restante,
+        term: Number.isFinite(Number(entry.item.prazo_restante)) ? Math.max(0, Number(entry.item.prazo_restante) - 1) : null,
       }));
     });
   });
@@ -1715,7 +1717,7 @@ function renderFinancialStudySummary() {
     const scenarioTerm = scenarioTerms.length === entries.length ? rangeLabel(scenarioTerms) : "Prazo incompleto";
     const scenarioRates = `<div class="financial-study-part4-rates-wrap"><table class="financial-study-part4-table financial-study-part4-rate-summary"><thead><tr><th>Encargo</th><th>Ao ano</th><th>Total</th><th>Valor total</th></tr></thead><tbody>${scenarioRateRows(entries)}</tbody></table></div>`;
     const quotaRows = entries.flatMap((entry) => {
-      const groupLabel = `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"}`;
+      const groupLabel = `Grupo ${entry.item.grupo || entry.item.grupo_id || "-"} · ${scenarioLabel}`;
       const quotaCount = Math.max(1, Number(entry.quotas || 1));
       const perQuota = (field) => entry[field] === null || entry[field] === undefined ? null : Number(entry[field]) / quotaCount;
       const term = Number(entry.item.prazo_restante ?? entry.item.prazo_remanescente);
@@ -1809,7 +1811,7 @@ function renderFinancialStudySummary() {
         const creditPerQuota = credit / quotas;
         const initialPerQuota = initial / quotas;
         const balancePerQuota = Number(entry.balance || 0) / quotas;
-        const reduced = remainingTerm == null ? null : calculatePostContemplationInstallment(
+        const reduced = remainingTerm == null ? null : calculatePostContemplationInstallmentRaw(
           balancePerQuota,
           initialPerQuota,
           totalPerQuota,
@@ -1849,7 +1851,7 @@ function renderFinancialStudySummary() {
   const incompleteGroupCount = items.length - Math.min(baseEntries.length, embeddedEntries.length);
   const adminsText = escapeHtml(adminLabel);
   const excluded = selectedItems.filter((item) => !pendingReviewItems.includes(item) && !groupHasPositiveScenarioQuota(motor360GroupKey(item)));
-  target.innerHTML = `${renderQuotaReviewBannerForStudy(selectedItems)}<div data-financial-study-exclusions>${excluded.length ? `<div class="motor360-quota-review-alert" role="status"><strong>Grupos fora do estudo</strong><span>${excluded.map((item) => `Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")} selecionado sem cotas; fora dos cálculos.`).join("<br>")}</span></div>` : ""}</div><p class="financial-study-part4-administrator">Administradora(s): <strong class="financial-study-motor-value">${adminsText}</strong></p>${consolidatedSummary}<div class="financial-study-part4-profile-scenarios"><h3 class="financial-study-part4-profile-scenarios-title">Cenários, perfis e discriminação das cotas do Motor 360</h3>${scenarioTables}</div><p class="financial-study-part4-source-note">Os cenários de contratação são alternativas e permanecem separados. Cada cenário usa o crédito selecionado pelo Motor 360; o cabeçalho de cada cenário usa a carta contratada e as linhas de lance usam o crédito disponível. ${historySummary()} ${incompleteGroupCount > 0 ? `Há grupos sem dados naquele cenário; cada resumo inclui somente contratos ativos do próprio cenário.` : ""}</p>`;
+  target.innerHTML = `${renderQuotaReviewBannerForStudy(selectedItems)}<div data-financial-study-exclusions>${excluded.length ? `<div class="motor360-quota-review-alert" role="status"><strong>Grupos fora do estudo</strong><span>${excluded.map((item) => `Grupo ${escapeHtml(item.grupo || item.grupo_id || "-")} selecionado sem cotas; fora dos cálculos.`).join("<br>")}</span></div>` : ""}</div><p class="financial-study-part4-administrator">Administradora(s): <strong class="financial-study-motor-value">${adminsText}</strong></p>${consolidatedSummary}<div class="financial-study-part4-profile-scenarios"><h3 class="financial-study-part4-profile-scenarios-title">Detalhamento dos contratos independentes selecionados</h3>${scenarioTables}</div><p class="financial-study-part4-source-note">Cada cota selecionada representa um contrato independente. Cotas sem e com lance embutido podem ser selecionadas simultaneamente e entram na consolidação. Cada detalhamento mantém o cenário de origem, e o crédito, parcela e prazo vêm do contrato correspondente. ${historySummary()} ${incompleteGroupCount > 0 ? `Há grupos sem dados naquele cenário; cada resumo inclui somente contratos ativos do próprio cenário.` : ""}</p>`;
   target.querySelector(".financial-study-part4-consolidated-note")?.remove();
   const detailTitle = target.querySelector(".financial-study-part4-profile-scenarios-title");
   if (detailTitle) detailTitle.textContent = "Detalhamento de cada cenário";
@@ -2026,7 +2028,7 @@ async function loadPipeRunPreview(endpoint = "/api/piperun-preview", requestOpti
 }
 
 const moneyFormatter = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const percentFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 3 });
+const percentFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
 const decimalInputFormatters = new Map();
 
 function formatMoney(value) {
@@ -4447,7 +4449,7 @@ function renderSelectedGroupsCompactComposition(items) {
   }).join("");
   const scenario = (scenarioId, label) => {
     const metrics = selectedCompositionScenarioMetrics(items, scenarioId, Number(client.credito_liquido_desejado || 0));
-    if (!metrics.entries.length) return `<section class="selected-composition-scenario is-empty"><header><strong>${label}</strong><span>Nenhuma cota selecionada</span></header><p>Este cenário permanece independente e não recebe valores do outro cenário.</p></section>`;
+    if (!metrics.entries.length) return `<section class="selected-composition-scenario is-empty"><header><strong>${label}</strong><span>Nenhum contrato selecionado</span></header><p>Selecione contratos independentes neste cenário para incluí-los na consolidação.</p></section>`;
     const ownBid = metrics.entries.reduce((sum, entry) => sum + Number(entry.ownBid || 0), 0);
     const totalBid = metrics.entries.reduce((sum, entry) => sum + Number(entry.totalBid || 0), 0);
     const rows = metrics.entries.map((entry) => {
@@ -5726,11 +5728,16 @@ function manualBidTotalFor(itemOrGroup, scenarioId, countOverride = null) {
   return manualBidValuesFor(itemOrGroup, scenarioId, countOverride).reduce((sum, value) => sum + Number(value || 0), 0);
 }
 
-function calculatePostContemplationInstallment(balance, initialInstallment, totalBid, term) {
+function calculatePostContemplationInstallmentRaw(balance, initialInstallment, totalBid, term) {
   const remainingTerm = Number(term);
   if (!Number.isFinite(remainingTerm) || remainingTerm <= 1) return null;
   const value = (Number(balance || 0) - Number(initialInstallment || 0) - Number(totalBid || 0)) / (remainingTerm - 1);
-  return Number.isFinite(value) ? Math.round((value + Number.EPSILON) * 100) / 100 : null;
+  return Number.isFinite(value) ? value : null;
+}
+
+function calculatePostContemplationInstallment(balance, initialInstallment, totalBid, term) {
+  const value = calculatePostContemplationInstallmentRaw(balance, initialInstallment, totalBid, term);
+  return value == null ? null : Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 function manualBidLimitFor(item, scenarioId) {
@@ -6055,7 +6062,7 @@ function updateMotor360SelectionSummary() {
   const summary = document.getElementById("motor360SelectionSummary");
   const items = selectedMotor360Items();
   const counts = ["without_embedded", "with_embedded"].map((scenarioId) => items.reduce((total, item) => total + quotaCountFor(item, scenarioId), 0));
-  if (summary) summary.textContent = `${investorState.selectedGroupIds.size} grupo(s) · Sem embutido: ${counts[0]} cota(s) · Com embutido: ${counts[1]} cota(s) — cenários apresentados como alternativas independentes`;
+  if (summary) summary.textContent = `${investorState.selectedGroupIds.size} grupo(s) · Sem embutido: ${counts[0]} contrato(s) · Com embutido: ${counts[1]} contrato(s) — cada seleção é um contrato independente e entra na consolidação`;
 }
 
 function renderMotor360ChanceChart(items) {

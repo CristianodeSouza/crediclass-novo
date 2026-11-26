@@ -462,6 +462,14 @@ def _validate_selected_credit_basis(snapshot: dict) -> None:
                         f"lance total {calculated['total_bid']:.2f}, limite {maximum_total_bid:.2f}, tolerância 0.02. "
                         "Reduza o lance manual."
                     )
+                contracted_credit_limit = calculated["contracted_credit"]
+                if calculated["total_bid"] > contracted_credit_limit + 0.02:
+                    raise ValueError(
+                        f"O lance da cota {contract.get('contract_index', '?')} do grupo {group.get('group') or '-'} "
+                        f"({scenario_id}) supera 100% do crédito contratado: "
+                        f"lance total {calculated['total_bid']:.2f}, limite {contracted_credit_limit:.2f}. "
+                        "Reduza o lance manual."
+                    )
                 for field, expected_key, label in (
                     ("contracted_credit", "contracted_credit", "Crédito bruto do contrato"),
                     ("liquid_credit", "liquid_credit", "Crédito líquido do contrato"),
