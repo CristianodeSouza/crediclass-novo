@@ -401,6 +401,7 @@ def render_financial_study_pdf(study: dict, request: Request):
         "background:#fff!important;writing-mode:horizontal-tb!important}"
         ".financial-study-document{width:190mm!important;min-width:190mm!important;"
         "max-width:none!important;margin:0!important;transform:none!important}"
+        ".financial-study-part4-profile-scenarios{display:none!important}"
         "</style></head><body>"
         f"{document_html}</body></html>"
     )
@@ -626,7 +627,7 @@ def read_public_financial_study(token: str):
         "</div>"
         "</section>"
     )
-    document += f"<main class='shared-study-content'>{study['document_html']}{agreement_markup}{followup_markup}</main></div>"
+    document += f"<main class='shared-study-content'><style>.financial-study-part4-profile-scenarios{{display:none!important}}</style>{study['document_html']}{agreement_markup}{followup_markup}</main></div>"
     document += f"<script nonce='{nonce}' src='/static/js/shared-study.js?v={release_version}' defer></script></body></html>"
     policy = f"default-src 'none'; script-src 'nonce-{nonce}'; connect-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
     return HTMLResponse(document, headers={"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive", "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "Content-Security-Policy": policy})
